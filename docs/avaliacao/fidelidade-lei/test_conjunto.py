@@ -93,7 +93,7 @@ class RegraTest(unittest.TestCase):
             ("**IC de 80%**", r["icConfianca"] == 0.80),
             ("semente fixa 20261112", r["bootstrapSemente"] == 20261112),
             ("10.000 reamostragens", r["bootstrapReamostragens"] == 10_000),
-            ("**10 pontos percentuais**", r["aceitasQuedaMaxima"] == 0.10),
+            ("**3** perguntas", r["falsoDescarteMaximo"] == 3),
             ("**5 pontos percentuais**", r["recusaFalsaAltaMaxima"] == 0.05),
             ("**1,25 ×**", r["p50Fator"] == 1.25),
             ("**1,40 ×**", r["p95Fator"] == 1.40),
@@ -107,8 +107,9 @@ class RegraTest(unittest.TestCase):
             self.assertTrue(confere, trecho)
 
     def test_juizes_fixados_no_documento(self):
-        self.assertEqual(comum.JUIZES, {"J1": "opus", "J2": "fable", "J3": "opus"})
-        self.assertIn("**J1 = `opus`**, **J2 = `fable`**, **J3 = `opus`**", self.texto)
+        self.assertEqual(comum.JUIZES, {"J1": "opus", "J2": "sonnet", "J3": "opus"})
+        self.assertIn("**J1 = `opus`**, **J2 = `sonnet`**, **J3 = `opus`**", self.texto)
+        self.assertNotIn("fable", self.texto.lower().split("## 5.")[0].split("4.1")[1])
         self.assertNotIn("haiku", " ".join(comum.JUIZES.values()))
 
 

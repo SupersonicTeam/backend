@@ -13,8 +13,11 @@ from pathlib import Path
 
 DIR = Path(__file__).resolve().parent
 CONJUNTO = DIR / "perguntas-fidelidade-lei.json"
-VERSAO_REGRA = "2026-11-12.1"
+VERSAO_REGRA = "2026-11-12.2"
 
+#: O braço de referência: todo braço comparado é medido contra ele (regra, seção 1).
+BASE = "desligada"
+#: Os dois braços do desenho padrão; a rodada pode trazer outros (manifesto `bracos`).
 BRACOS = ("desligada", "ligada")
 
 CLASSES = ("CAPUT", "PARAGRAFO", "EXCECAO", "AMPLA", "AUSENTE", "SIMPLES")
@@ -41,7 +44,7 @@ TIPOS_RESPOSTA = ("AFIRMA", "RECUSA")
 VEREDITOS = ("FIEL", "COM_RESSALVA", "INFIEL")
 SUBTIPOS = {"FIEL": (None,), "COM_RESSALVA": ("CITACAO", "OUTRA"),
             "INFIEL": ("ALEM_DO_TRECHO", "CONTRARIO")}
-JUIZES = {"J1": "opus", "J2": "fable", "J3": "opus"}
+JUIZES = {"J1": "opus", "J2": "sonnet", "J3": "opus"}
 
 # --- Margens e limiares (regra, seção 7.1). Mudar um valor aqui sem subir a versão da regra
 # invalida a rodada: o teste `test_regra` compara com o documento. -------------------------------
@@ -54,7 +57,7 @@ REGRA = {
     "bootstrapReamostragens": 10_000,
     "bootstrapSemente": 20261112,
     "pioraMaximaPorTipo": 1,
-    "aceitasQuedaMaxima": 0.10,
+    "falsoDescarteMaximo": 3,
     "recusaFalsaAltaMaxima": 0.05,
     "ausenteInfielAltaMaxima": 1,
     "p50Fator": 1.25,

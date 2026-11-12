@@ -51,3 +51,13 @@ menores. Nenhuma pergunta foi trocada. Tudo abaixo foi aplicado ao conjunto ante
 - As perguntas FL04, FL05, FL15 e outras assumem um contribuinte do regime regular; o produtor não
   contribuinte nem apropria crédito. A pergunta não diz isso e o gabarito não pune a resposta que
   também lembre a condição.
+
+## Segunda rodada (versão 2026-11-12.2): 24 substitutas
+
+Depois do portão de proximidade com os conjuntos antigos, 24 perguntas foram trocadas (ids novos
+FL37 a FL60; mantidas 12: FL07–FL11, FL13, FL14, FL17, FL18, FL20, FL28, FL30; 6 por classe). Dois
+subagentes independentes conferiram só as substitutas contra o texto da lei: nenhum fato essencial
+errado; ajustes aplicados em permitidos, armadilhas e observações (FL43, FL45, FL47, FL48, FL50 com a
+exceção do art. 76, § 3º, FL51 com o art. 181, FL54 reescrita porque a EC 132, ADCT art. 136, trata
+em termos gerais das contribuições a fundos estaduais, FL55, FL57, FL58, FL59 com o art. 90). Os 173
+rótulos do conjunto existem na base. A classe de FL45 ficou EXCECAO (condição e prazo da opção).

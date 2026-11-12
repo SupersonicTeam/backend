@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Executor da medição de fidelidade da rota de lei da Ceres (#269).
 
-Roda as 36 perguntas de `perguntas-fidelidade-lei.json` em dois braços, no MESMO jar (o head do PR da
-correção): `desligada` (flag da correção desligada, igual à `main`) e `ligada`. Sobe as duas
-instâncias em portas diferentes, contra um banco novo e só dele (com a base de lei copiada do banco
-de origem), e intercala as execuções (cada pergunta vai a um braço e logo ao outro, em ordem
-alternada). Grava as respostas brutas e, de cada uma, a linha de auditoria (`assistente_interacao`):
+Roda as 36 perguntas de `perguntas-fidelidade-lei.json` em dois ou mais braços, no MESMO jar (o head
+do PR da correção): `desligada` (flag da correção desligada, igual à `main`, o braço de referência) e
+`ligada`, mais os braços extras que a correção tiver (`--braco`). Sobe uma instância por braço em
+portas diferentes, contra um banco novo e só dele (com a base de lei copiada do banco de origem), e
+intercala as execuções (cada pergunta vai a todos os braços em seguida, com a ordem dos braços
+girando). Grava as respostas brutas e, de cada uma, a linha de auditoria (`assistente_interacao`):
 desfecho, tokens e latência do servidor. Não avalia nada: a leitura dos juízes e a decisão são do
 `leitura_fidelidade.py` e do `decidir_fidelidade.py`.
 
@@ -21,8 +22,10 @@ Uso (da raiz do repositório; o jar é o do head do PR da correção, `./mvnw -D
         --env-ligada NOME_DA_FLAG=true [--env-desligada NOME_DA_FLAG=false] \\
         --commit <sha do head do PR>
 
-`--env-desligada`/`--env-ligada` repetem (CHAVE=valor). O que não é a flag é igual nos dois braços; as
-variáveis de identidade da medição (modelo, perfil, banco, porta, chave) são do executor e a
+`--env-desligada`/`--env-ligada` repetem (CHAVE=valor). Um terceiro braço (ou mais) vai em
+`--braco NOME:CHAVE=valor,CHAVE=valor` (repetível; cada braço é comparado ao `desligada`; cada JVM
+gasta memória, e todos os braços usam a mesma conta semeada). O que não é a flag é igual em todos os
+braços; as variáveis de identidade da medição (modelo, perfil, banco, porta, chave) são do executor e a
 tentativa de sobrescrevê-las é recusada. `--so-verificar` confere o conjunto, os argumentos e mostra
 o plano sem subir nada.
 """
@@ -48,7 +51,7 @@ import fidelidade_comum as comum  # noqa: E402
 
 FUSO = zoneinfo.ZoneInfo("America/Sao_Paulo")
 MODELO = "claude-haiku-5-5"
-CONTAS = {"desligada": "joao.produtor@example.com", "ligada": "maria.agricultora@example.com"}
+CONTA = "joao.produtor@example.com"  # uma só para todos os braços: a rodada é sequencial
 PORTA_BASE = 18110
 TIMEOUT_PERGUNTA_S = 330   # acima do timeout da pergunta no servidor (5 min)
 INTERVALO_MINIMO_S = 3.5   # o chat tem limite de 20 por minuto por identidade (#150)
@@ -93,11 +96,40 @@ def validar_banco(banco: str, origem: str) -> None:
                          "sistema: a rodada o apagaria; use um banco só dela (padrão fidelidade_lei)")
 
 
-def validar_bracos(desligada: dict, ligada: dict) -> None:
-    if not ligada:
-        raise ValueError("--env-ligada é obrigatória: sem ela os dois braços seriam iguais")
-    if desligada == ligada:
-        raise ValueError("os dois braços têm o mesmo ambiente: a flag precisa diferenciar")
+def analisar_braco(texto: str) -> tuple:
+    """`NOME:CHAVE=valor,CHAVE=valor` -> (nome, env)."""
+    nome, separador, resto = texto.partition(":")
+    if not separador or not re.fullmatch(r"[a-z][a-z0-9_]{0,23}", nome):
+        raise ValueError(f"--braco: use NOME:CHAVE=valor com nome em minúsculas ({texto!r})")
+    itens = [i for i in resto.split(",") if i]
+    return nome, analisar_env(itens, nome)
+
+
+def montar_bracos(env_desligada: list, env_ligada: list, extras: list) -> dict:
+    """{nome: env}, o `desligada` primeiro. `--env-ligada` é o atalho do braço `ligada`."""
+    bracos = {comum.BASE: analisar_env(env_desligada, comum.BASE)}
+    if env_ligada:
+        bracos["ligada"] = analisar_env(env_ligada, "ligada")
+    for texto in extras or []:
+        nome, env = analisar_braco(texto)
+        if nome in bracos:
+            raise ValueError(f"o braço '{nome}' aparece mais de uma vez")
+        bracos[nome] = env
+    validar_bracos(bracos)
+    return bracos
+
+
+def validar_bracos(bracos: dict) -> None:
+    """Ao menos um braço além do `desligada`, e nenhum com o ambiente igual ao de outro."""
+    if comum.BASE not in bracos or len(bracos) < 2:
+        raise ValueError("informe ao menos um braço além do desligada (--env-ligada ou --braco): "
+                         "sem ele não há o que comparar")
+    nomes = list(bracos)
+    for i, a in enumerate(nomes):
+        for b in nomes[i + 1:]:
+            if bracos[a] == bracos[b]:
+                raise ValueError(f"os braços '{a}' e '{b}' têm o mesmo ambiente: a flag precisa "
+                                 "diferenciar")
 
 
 def mostrar_env(env: dict) -> dict:
@@ -105,16 +137,18 @@ def mostrar_env(env: dict) -> dict:
     return {k: ("***" if PADRAO_SEGREDO.search(k) else v) for k, v in env.items()}
 
 
-def plano_de_execucao(ids: list, repeticoes: int, semente: int) -> list:
-    """[(repeticao, id, [braco, braco])]: ordem das perguntas sorteada por repetição e a ordem dos
-    braços alternada, para a hora do dia e a latência da API pesarem igual nos dois."""
+def plano_de_execucao(ids: list, repeticoes: int, semente: int, nomes=comum.BRACOS) -> list:
+    """[(repeticao, id, [braco, ...])]: ordem das perguntas sorteada por repetição e a ordem dos
+    braços girando de pergunta em pergunta (com dois, alternando), para a hora do dia e a latência da
+    API pesarem igual em todos."""
+    nomes = list(nomes)
     plano = []
     for rep in range(1, repeticoes + 1):
         ordem = list(ids)
         random.Random(semente * 1000 + rep).shuffle(ordem)
         for i, pergunta in enumerate(ordem):
-            bracos = list(comum.BRACOS) if (i + rep) % 2 == 0 else list(reversed(comum.BRACOS))
-            plano.append((rep, pergunta, bracos))
+            giro = (i + rep) % len(nomes)
+            plano.append((rep, pergunta, nomes[giro:] + nomes[:giro]))
     return plano
 
 
@@ -172,7 +206,7 @@ class CotaEsgotada(Exception):
 # --- Banco e instâncias ------------------------------------------------------------------------
 
 class Ambiente:
-    """O banco novo da rodada e as duas instâncias da aplicação."""
+    """O banco novo da rodada e uma instância da aplicação por braço."""
 
     def __init__(self, args, senha_seed: str, saida: Path):
         self.args = args
@@ -183,6 +217,7 @@ class Ambiente:
         self.tokens = {}
         self.ids_produtor = {}
         self.inicio_token = {}
+        self.auditorias_vistas = set()
 
     def psql(self, banco: str, sql: str, saida: bool = True) -> str:
         proc = subprocess.run(self.psql_base + ["-d", banco, "-At", "-c", sql],
@@ -242,7 +277,7 @@ class Ambiente:
 
     def entrar(self, braco: str, porta: int) -> None:
         status, corpo, _ = requisitar(f"http://127.0.0.1:{porta}/api/auth/login",
-                                      {"email": CONTAS[braco], "senha": self.senha_seed}, {})
+                                      {"email": CONTA, "senha": self.senha_seed}, {})
         if status != 200 or "accessToken" not in corpo:
             # Nunca imprime a senha nem o corpo da resposta.
             raise RuntimeError(f"login do braço '{braco}' falhou: HTTP {status} {codigo_erro(corpo)}")
@@ -256,8 +291,9 @@ class Ambiente:
         return self.tokens[braco]
 
     def auditoria(self, braco: str, desde: datetime.datetime):
-        """Linha de auditoria mais recente do produtor do braço depois de `desde` (sem o texto da
-        pergunta nem o da resposta: a tabela nunca os guarda, #144)."""
+        """Linha de auditoria mais recente do produtor depois de `desde` que ainda não foi vista
+        (sem o texto da pergunta nem o da resposta: a tabela nunca os guarda, #144). A rodada é
+        sequencial e todos os braços usam a mesma conta; a linha vista não vale duas vezes."""
         sql = ("select row_to_json(a) from assistente_interacao a "
                f"where a.produtor_id = '{self.ids_produtor[braco]}' "
                f"and a.criado_em >= '{desde.astimezone(datetime.timezone.utc).isoformat()}' "
@@ -265,7 +301,10 @@ class Ambiente:
         for _ in range(10):
             saida = self.psql(self.args.banco, sql)
             if saida:
-                return json.loads(saida)
+                linha = json.loads(saida)
+                if linha.get("id") not in self.auditorias_vistas:
+                    self.auditorias_vistas.add(linha.get("id"))
+                    return linha
             time.sleep(0.5)
         return None
 
@@ -300,7 +339,7 @@ def encerrar(proc) -> None:
 
 def perguntar(amb: Ambiente, braco: str, porta: int, pergunta: dict, repeticao: int,
               tentativa: int) -> dict:
-    desde = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=2)
+    desde = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=0.5)
     for _ in range(MAX_ESPERAS + 1):
         inicio = time.monotonic()
         status, corpo, cabecalhos = requisitar(
@@ -335,11 +374,12 @@ def executar(args, conjunto: dict, saida: Path) -> int:
     chave_api = os.environ.get("ANTHROPIC_API_KEY", "")
     amb = Ambiente(args, senha_seed, saida)
     brutas = saida / "respostas-brutas.jsonl"
-    portas = {"desligada": args.porta, "ligada": args.porta + 1}
-    plano = plano_de_execucao(ids, args.repeticoes, args.semente)
+    nomes = list(args.bracos)
+    portas = {nome: args.porta + i for i, nome in enumerate(nomes)}
+    plano = plano_de_execucao(ids, args.repeticoes, args.semente, nomes)
     interrompida = None
     registros = []
-    ultimo_pedido = {b: 0.0 for b in comum.BRACOS}
+    ultimo_pedido = {b: 0.0 for b in nomes}
 
     def uma(braco, p, rep, tentativa):
         espera = INTERVALO_MINIMO_S - (time.monotonic() - ultimo_pedido[braco])
@@ -357,10 +397,11 @@ def executar(args, conjunto: dict, saida: Path) -> int:
 
     try:
         amb.preparar_banco()
-        amb.subir("desligada", portas["desligada"], args.env_desligada)
+        amb.subir(comum.BASE, portas[comum.BASE], args.bracos[comum.BASE])
         amb.copiar_lei()
-        amb.subir("ligada", portas["ligada"], args.env_ligada)
-        for braco in comum.BRACOS:
+        for braco in nomes[1:]:
+            amb.subir(braco, portas[braco], args.bracos[braco])
+        for braco in nomes:
             amb.entrar(braco, portas[braco])
         for rep, p, bracos in plano:
             for braco in bracos:
@@ -390,7 +431,7 @@ def gravar_manifesto(args, conjunto, saida: Path, plano: list, registros: list, 
     ultimas = {}
     for r in registros:  # vale a última tentativa de cada (pergunta, braço, repetição)
         ultimas[(r["id"], r["braco"], r["repeticao"])] = r
-    contagem = {b: {} for b in comum.BRACOS}
+    contagem = {b: {} for b in args.bracos}
     for (_, braco, _), r in ultimas.items():
         contagem[braco][r["classe"]] = contagem[braco].get(r["classe"], 0) + 1
     manifesto = {
@@ -401,9 +442,9 @@ def gravar_manifesto(args, conjunto, saida: Path, plano: list, registros: list, 
         "commit": args.commit, "jarSha256": comum.sha256_arquivo(args.jar) if args.jar and args.jar.exists()
         else None,
         "modelo": MODELO, "repeticoes": args.repeticoes, "semente": args.semente,
-        "bancoDaRodada": args.banco, "execucoesPlanejadas": len(plano) * len(comum.BRACOS),
-        "ambientes": {"desligada": mostrar_env(args.env_desligada),
-                      "ligada": mostrar_env(args.env_ligada)},
+        "bancoDaRodada": args.banco, "execucoesPlanejadas": len(plano) * len(args.bracos),
+        "bracos": list(args.bracos),
+        "ambientes": {nome: mostrar_env(env) for nome, env in args.bracos.items()},
         "iniciadoEm": args.iniciado_em, "terminadoEm": datetime.datetime.now(FUSO).isoformat(),
         "contagemPorBraco": contagem, "interrompida": interrompida,
         "observacao": "A URL, as contas e as senhas da rodada nunca entram neste arquivo.",
@@ -418,7 +459,10 @@ def montar_parser() -> argparse.ArgumentParser:
     p.add_argument("--jar", type=Path, help="jar do head do PR da correção")
     p.add_argument("--commit", default=None, help="sha do head do PR (registrado no manifesto)")
     p.add_argument("--env-desligada", action="append", default=[], metavar="CHAVE=valor")
-    p.add_argument("--env-ligada", action="append", default=[], metavar="CHAVE=valor")
+    p.add_argument("--env-ligada", action="append", default=[], metavar="CHAVE=valor",
+                   help="atalho do braço 'ligada'")
+    p.add_argument("--braco", action="append", default=[], metavar="NOME:CHAVE=valor,CHAVE=valor",
+                   help="braço extra, comparado ao desligada (repetível)")
     p.add_argument("--repeticoes", type=int, default=3)
     p.add_argument("--semente", type=int, default=20261112)
     p.add_argument("--perguntas", default="", help="ids separados por vírgula (padrão: todos)")
@@ -442,9 +486,7 @@ def main(argv=None) -> int:
     args.perguntas = {i.strip() for i in args.perguntas.split(",") if i.strip()}
     args.iniciado_em = datetime.datetime.now(FUSO).isoformat()
     try:
-        args.env_desligada = analisar_env(args.env_desligada, "desligada")
-        args.env_ligada = analisar_env(args.env_ligada, "ligada")
-        validar_bracos(args.env_desligada, args.env_ligada)
+        args.bracos = montar_bracos(args.env_desligada, args.env_ligada, args.braco)
         validar_banco(args.banco, args.banco_origem)
         conjunto = comum.carregar_conjunto()
     except (ValueError, comum.ErroDeConjunto) as erro:
@@ -453,12 +495,12 @@ def main(argv=None) -> int:
     if desconhecidas:
         sys.exit(f"ids fora do conjunto: {sorted(desconhecidas)}")
     ids = [i for i in comum.perguntas_por_id(conjunto) if not args.perguntas or i in args.perguntas]
-    plano = plano_de_execucao(ids, args.repeticoes, args.semente)
+    plano = plano_de_execucao(ids, args.repeticoes, args.semente, list(args.bracos))
     if args.so_verificar:
         print(f"conjunto {conjunto['versao']} ok; {len(ids)} perguntas x {args.repeticoes} "
-              f"repetições x 2 braços = {len(plano) * 2} execuções")
-        print("desligada:", json.dumps(mostrar_env(args.env_desligada)))
-        print("ligada:", json.dumps(mostrar_env(args.env_ligada)))
+              f"repetições x {len(args.bracos)} braços = {len(plano) * len(args.bracos)} execuções")
+        for nome, env in args.bracos.items():
+            print(f"{nome}:", json.dumps(mostrar_env(env)))
         return 0
     if not args.jar or not args.jar.exists():
         sys.exit("--jar: informe o jar do head do PR da correção (./mvnw -DskipTests package)")

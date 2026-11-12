@@ -10,7 +10,7 @@ Três passos, sobre a pasta de uma rodada do `executar_fidelidade.py`:
 `lotes` grava, em `RODADA/leitura/`: `chave.json` (id opaco -> pergunta, braço, repetição; **só para
 quem aplica a regra**, nunca para o juiz), `lotes/lote-NN.json` (o que o juiz vê) e, para cada juiz,
 `prompts/J1/lote-NN.md` e `prompts/J2/lote-NN.md`: o prompt completo (papel + lote + onde gravar o
-JSON). Cada prompt vai a um subagente do modelo fixado na regra (J1 opus, J2 fable), em contexto
+JSON). Cada prompt vai a um subagente do modelo fixado na regra (J1 opus, J2 sonnet), em contexto
 novo; o subagente grava o JSON em `juizes/<J>/lote-NN.json`. O juiz nunca vê o braço.
 
 `desacordos` compara J1 e J2 por item (veredito calculado pelos rótulos) e põe só os itens em que
@@ -174,7 +174,7 @@ def comando_lotes(rodada: Path) -> None:
         json.dumps(chave, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"{len(chave)} respostas aceitas em {len(nomes)} lotes. Chave (não mostre ao juiz): "
           f"{rodada / 'leitura' / 'chave.json'}")
-    print("Dispare um subagente por prompt: J1 = opus, J2 = fable (regra, seção 4.1).")
+    print("Dispare um subagente por prompt: J1 = opus, J2 = sonnet (regra, seção 4.1).")
 
 
 def comando_desacordos(rodada: Path) -> None:

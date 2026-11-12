@@ -6,17 +6,24 @@ uma rodada invalida a rodada: muda-se a regra, sobe-se a versão do conjunto/da 
 novo. Quem escreveu esta regra e o conjunto nunca viu os conjuntos anteriores da Ceres nem o código
 da correção.
 
-Versão da regra: `2026-11-12.1` (a mesma do conjunto).
+Versão da regra: `2026-11-12.2` (a mesma do conjunto).
 
 ## 1. O que se compara
 
-Dois braços **no mesmo commit** (o head do PR da correção), com o mesmo jar, o mesmo banco e o mesmo
-modelo:
+Dois ou mais braços **no mesmo commit** (o head do PR da correção), com o mesmo jar, o mesmo banco e
+o mesmo modelo. O desenho padrão tem dois:
 
 | Braço | Configuração |
 |-------|--------------|
-| `desligada` | flag da correção desligada (comportamento da `main`) |
+| `desligada` | flag da correção desligada (comportamento da `main`): o braço de **referência** |
 | `ligada` | flag da correção ligada |
+
+A rodada pode trazer **outros braços** (por exemplo, a mesma correção em camadas: só a camada em
+código, ou a camada em código mais uma segunda chamada que só reprova). **Cada braço extra é
+comparado ao `desligada`, um a um, com a mesma regra** (seções 5 a 7); não se comparam braços entre si
+e cada comparação tem o seu desfecho. A leitura dos juízes é uma só (as respostas aceitas de todos os
+braços, embaralhadas), e a concordância entre os juízes vale para todas as comparações. O `desligada`
+é sempre o primeiro braço do manifesto da rodada.
 
 - Modelo: `claude-haiku-5-5` pela API da Anthropic (`AI_CHAT_PROVIDER=anthropic`,
   `AI_ANTHROPIC_MODEL=claude-haiku-5-5`, `AI_ANTHROPIC_THINKING=disabled`). A temperatura é a do
@@ -26,9 +33,11 @@ modelo:
   lei ausente), **3 repetições por braço**: 108 execuções por braço.
 - Uma **execução** é uma pergunta, em um braço, em uma repetição.
 - As variáveis de ambiente de cada braço chegam por parâmetro ao executor
-  (`--env-desligada`, `--env-ligada`); o que não é a flag é igual nos dois braços.
-- As execuções dos dois braços são **intercaladas** (cada pergunta vai a um braço e logo ao outro, em
-  ordem alternada), para que a latência da API e a hora do dia pesem igual nos dois.
+  (`--env-desligada`, `--env-ligada`, e `--braco NOME:CHAVE=valor,...` para os extras); o que não é a
+  flag é igual em todos os braços.
+- As execuções dos braços são **intercaladas** (cada pergunta vai a todos os braços em seguida, com a
+  ordem dos braços girando de uma pergunta para a outra), para que a latência da API e a hora do dia
+  pesem igual em todos.
 
 ## 2. Falha técnica
 
@@ -45,7 +54,7 @@ Tratamento:
 1. Ao fim de cada braço, o executor **refaz uma vez** só as execuções com falha técnica (a tentativa
    original e a nova ficam nas respostas brutas; vale a nova).
 2. Continuando a falhar, a execução é **falha técnica** e é só contada.
-3. A rodada é **inválida** (veredito `INCONCLUSIVA`) se, em qualquer braço, mais de **10%** das
+3. A comparação é **inválida** (veredito `INCONCLUSIVA`) se, em qualquer dos dois braços, mais de **10%** das
    execuções (mais de 10 de 108) forem falha técnica, ou se `429 LIMITE_USO_ASSISTENTE` interromper a
    rodada.
 4. Por pergunta, só entra nas leituras por pergunta (seção 6) quem tem **ao menos 2 execuções
@@ -71,7 +80,7 @@ e **sai** da leitura de fidelidade.
 
 ## 4. A leitura de fidelidade
 
-Só as execuções **aceitas** são lidas, de todas as classes de pergunta, dos dois braços.
+Só as execuções **aceitas** são lidas, de todas as classes de pergunta, de todos os braços.
 
 ### 4.1 Juízes
 
@@ -80,7 +89,7 @@ Só as execuções **aceitas** são lidas, de todas as classes de pergunta, dos 
   aplica a regra, em arquivo à parte).
 - Um terceiro juiz (J3) lê só os itens em que J1 e J2 deram **veredito de resposta diferente**.
 - Os juízes são subagentes com **modelo fixado**, diferente do Haiku medido:
-  **J1 = `opus`**, **J2 = `fable`**, **J3 = `opus`**, em contexto novo, sem acesso ao repositório do
+  **J1 = `opus`**, **J2 = `sonnet`**, **J3 = `opus`**, em contexto novo, sem acesso ao repositório do
   código da Ceres nem ao nome do braço. A concordância entre J1 e J2 (% e kappa de Cohen no veredito:
   `FIEL`, `COM_RESSALVA`, `INFIEL` ou `RECUSA`) é registrada no resultado.
 - O juiz recebe, por item: a pergunta, o texto da resposta, as citações (norma, dispositivo e o texto
@@ -131,13 +140,14 @@ das 6 de lei ausente (**ausentes**).
 | Id | Medida | Como se conta |
 |----|--------|---------------|
 | M1 | **defeitos de fidelidade entregues** | nas execuções válidas **com base**: número de execuções com veredito `INFIEL` e número com `COM_RESSALVA`/citação. Denominador: todas as execuções válidas com base, também as não aceitas, porque uma resposta descartada não entrega defeito ao produtor. A taxa entre as aceitas lidas é calculada à parte, só para leitura |
-| M2 | **aceitas** | % de execuções válidas **com base** classificadas como aceitas (e que não são `RECUSA` pelos juízes) |
+| M2 | **aceitas** (informativa) | % de execuções válidas **com base** classificadas como aceitas (e que não são `RECUSA` pelos juízes). **Não decide**: descartar uma resposta infiel é o que a correção deve fazer, e punir a queda da taxa puniria o acerto |
+| M2b | **falso descarte por pergunta** | número de perguntas **com base**, com 2 ou mais execuções válidas em cada braço, que no braço de referência **não são defeituosas** (menos da metade das execuções válidas com defeito, seção 6) **e** são **aceitas na maioria** das repetições (mais da metade das execuções válidas aceitas), e que no braço comparado **deixam de ser aceitas na maioria**. Pergunta que já era defeituosa no `desligada` nunca conta: derrubar a resposta ruim não é falso descarte |
 | M3 | **recusa falsa** | % de execuções válidas **com base** classificadas como recusa (seção 3) ou aceitas lidas como `RECUSA` |
 | M4 | **lei ausente** | nas execuções válidas **ausentes**: execuções com veredito `INFIEL` (a resposta passou a afirmar). Um acerto é recusa, descartada, ou aceita lida como `RECUSA` |
 | M5 | **tempo** | p50 e p95 da latência medida pelo cliente (ms), pelo método nearest-rank (igual ao relatório da avaliação), nas execuções válidas **de todas** as perguntas |
 | M6 | **tokens** | média de tokens por execução válida = soma dos campos `tokens_entrada*` e `tokens_saida*` da linha de auditoria (qualquer chamada que a correção acrescentar entra, desde que grave nesses campos) |
 
-M1 e M4 são **medidas de fidelidade**; M2, M3, M5 e M6 são as **medidas de não piora**.
+M1 e M4 são **medidas de fidelidade**; M2b, M3, M5 e M6 são as **medidas de não piora** (M2 só informa).
 
 ## 6. Três formas de contar
 
@@ -165,7 +175,7 @@ Há ainda uma **regressão por pergunta**: pergunta com 0 defeitos nas execuçõ
 | Melhora mínima de M1 (defeitos totais) | queda de **25%** em relação ao `desligada` **e** de pelo menos **4** execuções |
 | Intervalo de confiança da melhora | bootstrap por pergunta (10.000 reamostragens, semente fixa 20261112), **IC de 80%** da queda em defeitos: o limite inferior tem de ser **maior que 0** |
 | Piora de cada tipo isolado (`INFIEL`, `COM_RESSALVA`/citação) | no máximo **+1** execução em relação ao `desligada` |
-| M2 aceitas | `ligada` ≥ `desligada` − **10 pontos percentuais** |
+| M2b falso descarte por pergunta | no máximo **3** perguntas (10% das 30 perguntas com base) |
 | M3 recusa falsa | `ligada` ≤ `desligada` + **5 pontos percentuais** |
 | M4 lei ausente | `INFIEL` de `ligada` ≤ `desligada` + **1** execução, e **nenhuma** pergunta ausente com maioria afirmando no `ligada` que não afirme em maioria no `desligada` |
 | M5 tempo | p50 `ligada` ≤ **1,25 ×** p50 `desligada` e p95 `ligada` ≤ **1,40 ×** p95 `desligada` |
@@ -180,7 +190,7 @@ Os desfechos saem de um procedimento **em ordem**; vale o primeiro passo que se 
 1. **`INCONCLUSIVA`** se a rodada é inválida (seção 2, item 3) ou foi interrompida.
 2. **`INCONCLUSIVA`** se a leitura não é confiável (seção 4.3: kappa abaixo de 0,40 ou desacordo
    acima de 30%).
-3. **`NAO_ENTRA`** se qualquer medida de não piora (M2, M3, M4, M5, M6, regressões por pergunta,
+3. **`NAO_ENTRA`** se qualquer medida de não piora (M2b, M3, M4, M5, M6, regressões por pergunta,
    perguntas defeituosas por maioria, piora de um tipo isolado) está **fora da margem**, qualquer que
    seja a melhora e **mesmo que a base tenha poucos defeitos**: uma piora clara não fica escondida
    atrás de "pouco a medir".
@@ -193,6 +203,8 @@ Os desfechos saem de um procedimento **em ordem**; vale o primeiro passo que se 
 7. **`INCONCLUSIVA`** nos demais casos: há melhora em M1, mas ela não atinge a melhora mínima ou o IC
    de 80% inclui zero (a diferença pode ser ruído das 3 repetições); a ação sugerida é repetir com mais
    repetições (5) sem mudar o resto.
+
+O procedimento vale para **cada comparação** (cada braço extra contra o `desligada`).
 
 Os três desfechos usam só os números e as margens desta tabela. O que o resultado traz além disso
 (taxas entre as aceitas, subtipos, instabilidade, lista de perguntas) é para leitura humana e não
@@ -210,8 +222,8 @@ decide.
 
 ## 8. Contagem e registro
 
-O script `decidir_fidelidade.py decidir` aplica esta regra aos arquivos de uma rodada e grava
-`resultado.json` e `resultado.md`, com: os números de M1 a M6 por braço (por execução, por maioria e
+O script `decidir_fidelidade.py` aplica esta regra aos arquivos de uma rodada e grava
+`resultado.json` e `resultado.md`, com uma seção por comparação (cada braço contra o `desligada`) e: os números de M1 a M6 por braço (por execução, por maioria e
 por qualquer repetição), a concordância dos juízes, o IC, cada margem com o valor medido e o
 resultado de cada teste, as perguntas excluídas e as falhas técnicas por braço, o desfecho e o
 motivo em uma frase. O resultado nunca traz o texto das respostas.

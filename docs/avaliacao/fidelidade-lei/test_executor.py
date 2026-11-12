@@ -26,11 +26,29 @@ class AmbienteTest(unittest.TestCase):
 
     def test_bracos_precisam_diferir(self):
         with self.assertRaises(ValueError):
-            ex.validar_bracos({}, {})
+            ex.montar_bracos([], [], [])
         with self.assertRaises(ValueError):
-            ex.validar_bracos({"F": "1"}, {"F": "1"})
-        ex.validar_bracos({}, {"F": "true"})
-        ex.validar_bracos({"F": "false"}, {"F": "true"})
+            ex.montar_bracos(["F=1"], ["F=1"], [])
+        self.assertEqual(list(ex.montar_bracos([], ["F=true"], [])), ["desligada", "ligada"])
+        self.assertEqual(ex.montar_bracos(["F=false"], ["F=true"], [])["desligada"], {"F": "false"})
+
+    def test_bracos_extras_por_nome(self):
+        bracos = ex.montar_bracos([], ["F=true"], ["camada:F=true,G=2", "dupla:F=true,G=3,H=x"])
+        self.assertEqual(list(bracos), ["desligada", "ligada", "camada", "dupla"])
+        self.assertEqual(bracos["dupla"], {"F": "true", "G": "3", "H": "x"})
+        # só os braços extras, sem o atalho --env-ligada
+        self.assertEqual(list(ex.montar_bracos([], [], ["camada:F=true"])), ["desligada", "camada"])
+
+    def test_braco_extra_invalido(self):
+        for texto in ("SemDoisPontos", "Maiuscula:F=1", "x:minuscula=1", "x:AI_CHAT_PROVIDER=y"):
+            with self.assertRaises(ValueError, msg=texto):
+                ex.analisar_braco(texto)
+        with self.assertRaises(ValueError):
+            ex.montar_bracos([], ["F=1"], ["ligada:F=2"])  # nome repetido
+        with self.assertRaises(ValueError):
+            ex.montar_bracos([], ["F=1"], ["outro:F=1"])  # mesmo ambiente de outro braço
+        with self.assertRaises(ValueError):
+            ex.montar_bracos([], [], ["desligada:F=1"])  # o desligada é o de referência
 
     def test_manifesto_esconde_o_que_parece_segredo(self):
         self.assertEqual(ex.mostrar_env({"FLAG": "true", "X_API_KEY": "abc", "SENHA_Y": "z"}),
@@ -92,6 +110,17 @@ class PlanoTest(unittest.TestCase):
         primeiros = [b[0] for _, _, b in plano]
         self.assertGreater(primeiros.count("desligada"), 30)
         self.assertGreater(primeiros.count("ligada"), 30)
+
+    def test_tres_bracos_giram_e_cada_um_roda_em_todas_as_perguntas(self):
+        nomes = ["desligada", "ligada", "camada"]
+        ids = [f"FL{i:02d}" for i in range(1, 37)]
+        plano = ex.plano_de_execucao(ids, 3, 20261112, nomes)
+        self.assertEqual(len(plano), 108)
+        for _, _, bracos in plano:
+            self.assertEqual(sorted(bracos), sorted(nomes))
+        primeiros = [b[0] for _, _, b in plano]
+        for nome in nomes:
+            self.assertGreater(primeiros.count(nome), 25)
 
     def test_plano_e_deterministico_e_a_ordem_muda_por_repeticao(self):
         ids = [f"FL{i:02d}" for i in range(1, 13)]

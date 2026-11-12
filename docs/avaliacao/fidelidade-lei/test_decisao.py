@@ -151,16 +151,56 @@ class DecisaoTest(unittest.TestCase):
         self.assertEqual(r["desfecho"], "ENTRA", r["motivo"])
         self.assertEqual(r["m1"]["queda"], 18)
 
-    def test_nao_entra_se_as_aceitas_caem_alem_da_margem(self):
-        execs = rodada(24, 6)
-        n = 0  # a correção descarta 20 respostas fiéis do ligado
-        for x in execs:
-            if x["braco"] == "ligada" and COM_BASE[x["id"]] and x["veredito"] == "FIEL" and n < 20:
-                x["estado"], x["veredito"] = "descartada", None
+    def descartar_perguntas_boas_do_ligado(self, execs, quantas):
+        """Descarta as 3 repetições de `quantas` perguntas que no desligado são boas e aceitas."""
+        n = 0
+        for pid, com_base in COM_BASE.items():
+            if not com_base or n >= quantas:
+                continue
+            do_pid = [x for x in execs if x["id"] == pid and x["braco"] == "ligada"]
+            no_base = [x for x in execs if x["id"] == pid and x["braco"] == "desligada"]
+            if all(x["veredito"] == "FIEL" for x in do_pid + no_base):
+                for x in do_pid:
+                    x["estado"], x["veredito"] = "descartada", None
                 n += 1
+
+    def test_falso_descarte_alem_da_margem_nao_entra(self):
+        execs = rodada(24, 6)
+        self.descartar_perguntas_boas_do_ligado(execs, 5)  # 5 perguntas boas deixam de ser aceitas
         r = self.avaliar(execs)
         self.assertEqual(r["desfecho"], "NAO_ENTRA")
-        self.assertIn("M2 aceitas", r["motivo"])
+        self.assertIn("M2b falso descarte", r["motivo"])
+        self.assertEqual(len(r["porPergunta"]["falsosDescartes"]), 5)
+
+    def test_descartar_a_resposta_infiel_nao_e_falso_descarte(self):
+        # a correção derruba as respostas defeituosas do desligado: é o que ela deve fazer
+        r = self.avaliar(rodada(24, 0))
+        for p in r["porPergunta"]["falsosDescartes"]:
+            self.assertEqual(r["porPergunta"]["tabela"][p]["desligada"]["defeituosa"], False)
+        self.assertEqual(r["desfecho"], "ENTRA", r["motivo"])
+        execs = rodada(24, 0)
+        for x in execs:  # as defeituosas do desligado viram descartadas no ligado
+            if x["braco"] == "ligada" and COM_BASE[x["id"]] and x["id"] in ("Q01", "Q02", "Q03", "Q04", "Q05", "Q06", "Q07", "Q08"):
+                x["estado"], x["veredito"] = "descartada", None
+        r = self.avaliar(execs)
+        self.assertEqual(r["porPergunta"]["falsosDescartes"], [])
+
+    def test_falso_descarte_dentro_da_margem_passa(self):
+        execs = rodada(24, 6)
+        self.descartar_perguntas_boas_do_ligado(execs, 3)
+        r = self.avaliar(execs)
+        self.assertEqual(len(r["porPergunta"]["falsosDescartes"]), 3)
+        self.assertEqual(r["desfecho"], "ENTRA", r["motivo"])
+
+    def test_taxa_de_aceitas_e_so_informativa(self):
+        execs = rodada(24, 6)
+        for x in execs:  # as aceitas caem 40 pontos, mas em execuções soltas (nenhuma pergunta inteira)
+            if x["braco"] == "ligada" and COM_BASE[x["id"]] and x["rep"] == 3 and x["veredito"] == "FIEL":
+                x["estado"], x["veredito"] = "descartada", None
+        r = self.avaliar(execs)
+        self.assertLess(r["braco"]["ligada"]["taxaAceitas"], r["braco"]["desligada"]["taxaAceitas"] - 0.2)
+        self.assertNotIn("M2 aceitas", [t["teste"] for t in r["testesDeNaoPiora"]])
+        self.assertEqual(r["desfecho"], "ENTRA", r["motivo"])
 
     def test_nao_entra_se_a_recusa_falsa_sobe(self):
         execs = rodada(24, 6)
@@ -224,14 +264,10 @@ class DecisaoTest(unittest.TestCase):
 
     def test_piora_clara_com_base_pequena_e_nao_entra_e_nao_inconclusiva(self):
         execs = rodada(3, 3)  # só 3 defeitos no desligado: pouco a medir...
-        n = 0  # ...mas o ligado descarta 25 respostas fiéis (aceitas despencam)
-        for x in execs:
-            if x["braco"] == "ligada" and COM_BASE[x["id"]] and x["veredito"] == "FIEL" and n < 25:
-                x["estado"], x["veredito"] = "descartada", None
-                n += 1
+        self.descartar_perguntas_boas_do_ligado(execs, 6)  # ...mas o ligado derruba 6 perguntas boas
         r = self.avaliar(execs)
         self.assertEqual(r["desfecho"], "NAO_ENTRA")
-        self.assertIn("M2 aceitas", r["motivo"])
+        self.assertIn("M2b falso descarte", r["motivo"])
 
     def test_inconclusiva_com_melhora_pequena(self):
         r = self.avaliar(rodada(20, 17))  # queda de 3, abaixo de 4 e de 25%
@@ -283,9 +319,66 @@ class DecisaoTest(unittest.TestCase):
     def test_resultado_nao_traz_texto_de_resposta(self):
         resultado = self.avaliar(rodada(24, 6))
         self.assertNotIn("texto de", json.dumps(resultado, ensure_ascii=False))
-        md = dec.relatorio_md({**resultado,
+        md = dec.relatorio_md({"versaoDaRegra": comum.VERSAO_REGRA, "bracos": ["desligada", "ligada"],
+                               "comparacoes": {"ligada": resultado}, "leitura": {},
                                "rodada": {"commit": "abc", "modelo": "m", "repeticoes": 3}})
-        self.assertIn("Desfecho: ENTRA", md)
+        self.assertIn("desligada × ligada: ENTRA", md)
+
+
+class VariosBracosTest(unittest.TestCase):
+    def test_cada_braco_e_comparado_ao_desligada_com_a_mesma_regra(self):
+        execs = rodada(24, 6)  # desligada x ligada
+        for x in rodada(24, 24):  # um terceiro braço que não melhora nada
+            if x["braco"] == "ligada":
+                execs.append({**x, "braco": "camada"})
+        boa = dec.avaliar(execs, COM_BASE, LEITURA_BOA, None, "desligada", "ligada")
+        ruim = dec.avaliar(execs, COM_BASE, LEITURA_BOA, None, "desligada", "camada")
+        self.assertEqual(boa["desfecho"], "ENTRA", boa["motivo"])
+        self.assertEqual(ruim["desfecho"], "NAO_ENTRA")
+        self.assertIn("sem melhora", ruim["motivo"])
+        self.assertEqual(set(ruim["braco"]), {"desligada", "camada"})  # o terceiro não entra na conta
+
+    def test_rodada_em_disco_com_tres_bracos(self):
+        conjunto = comum.carregar_conjunto()
+        nomes = ["desligada", "ligada", "camada"]
+        with tempfile.TemporaryDirectory() as pasta:
+            raiz = Path(pasta)
+            brutas = [{"id": pid, "braco": b, "repeticao": rep, "tentativa": 1, "status": 200,
+                       "rota": "LEGISLACAO", "modoFallback": False, "latenciaMs": 1000,
+                       "resposta": "texto", "citacoes": [],
+                       "auditoria": {"desfecho": "RESPONDIDA", "tokens_entrada": 1, "tokens_saida": 1}}
+                      for pid in ("FL07", "FL28") for b in nomes for rep in (1, 2, 3)]
+            comum.gravar_jsonl(raiz / "respostas-brutas.jsonl", brutas)
+            (raiz / "execucao.json").write_text(json.dumps({
+                "conjunto": {"sha256": comum.sha256_arquivo(comum.CONJUNTO)}, "repeticoes": 3,
+                "bracos": nomes, "execucoesPlanejadas": 18, "interrompida": None}), encoding="utf-8")
+            lotes, chave = lei.montar_lotes(brutas, conjunto, 1)
+            lei.gravar_lotes(raiz, lotes, chave, ("J1", "J2"))
+            (raiz / "leitura" / "chave.json").write_text(json.dumps(chave), encoding="utf-8")
+            for juiz in ("J1", "J2"):
+                for n, lote in enumerate(lotes, start=1):
+                    itens = [{"id": i["id"], "tipoResposta": "AFIRMA", "frases": [{"rotulo": "SUPORTADA"}]}
+                             for i in lote]
+                    (raiz / "leitura" / "juizes" / juiz / f"lote-{n:02d}.json").write_text(
+                        json.dumps({"itens": itens}), encoding="utf-8")
+            r = dec.decidir_rodada(raiz)
+        self.assertEqual(set(r["comparacoes"]), {"ligada", "camada"})
+        self.assertEqual(r["bracos"], nomes)
+        md = dec.relatorio_md(r)
+        self.assertIn("desligada × ligada", md)
+        self.assertIn("desligada × camada", md)
+
+    def test_primeiro_braco_do_manifesto_tem_de_ser_o_desligada(self):
+        with tempfile.TemporaryDirectory() as pasta:
+            raiz = Path(pasta)
+            (raiz / "leitura").mkdir()
+            (raiz / "leitura" / "chave.json").write_text("{}", encoding="utf-8")
+            comum.gravar_jsonl(raiz / "respostas-brutas.jsonl", [])
+            (raiz / "execucao.json").write_text(json.dumps({
+                "conjunto": {"sha256": comum.sha256_arquivo(comum.CONJUNTO)}, "repeticoes": 3,
+                "bracos": ["ligada", "camada"]}), encoding="utf-8")
+            with self.assertRaises(dec.RodadaIncompleta):
+                dec.decidir_rodada(raiz)
 
 
 class RodadaEmDiscoTest(unittest.TestCase):
@@ -293,7 +386,7 @@ class RodadaEmDiscoTest(unittest.TestCase):
 
     def test_rodada_completa(self):
         conjunto = comum.carregar_conjunto()
-        ids = ["FL01", "FL02", "FL25"]
+        ids = ["FL07", "FL08", "FL28"]
         with tempfile.TemporaryDirectory() as pasta:
             raiz = Path(pasta)
             brutas = []
@@ -328,15 +421,15 @@ class RodadaEmDiscoTest(unittest.TestCase):
             with self.assertRaises(dec.RodadaIncompleta):
                 dec.decidir_rodada(raiz)
         # tudo fiel nos dois braços: não há o que melhorar
-        self.assertEqual(r["desfecho"], "INCONCLUSIVA")
-        self.assertEqual(r["braco"]["ligada"]["fiel"], 6)
+        self.assertEqual(r["desfechos"], {"ligada": "INCONCLUSIVA"})
+        self.assertEqual(r["comparacoes"]["ligada"]["braco"]["ligada"]["fiel"], 6)
         self.assertEqual(r["leitura"]["concordanciaJ1J2"], 1.0)
 
     def test_rodada_interrompida_e_inconclusiva_e_nao_incompleta(self):
         conjunto = comum.carregar_conjunto()
         with tempfile.TemporaryDirectory() as pasta:
             raiz = Path(pasta)
-            brutas = [{"id": "FL01", "braco": b, "repeticao": 1, "tentativa": 1, "status": 200,
+            brutas = [{"id": "FL07", "braco": b, "repeticao": 1, "tentativa": 1, "status": 200,
                        "rota": "LEGISLACAO", "modoFallback": False, "latenciaMs": 1, "resposta": "t",
                        "citacoes": [], "auditoria": {"desfecho": "RESPONDIDA"}} for b in comum.BRACOS]
             comum.gravar_jsonl(raiz / "respostas-brutas.jsonl", brutas)
@@ -353,8 +446,9 @@ class RodadaEmDiscoTest(unittest.TestCase):
                 (raiz / "leitura" / "juizes" / juiz / "lote-01.json").write_text(
                     json.dumps({"itens": itens}), encoding="utf-8")
             r = dec.decidir_rodada(raiz)
-        self.assertEqual(r["desfecho"], "INCONCLUSIVA")
-        self.assertIn("interrompida", r["motivo"])
+        c = r["comparacoes"]["ligada"]
+        self.assertEqual(c["desfecho"], "INCONCLUSIVA")
+        self.assertIn("interrompida", c["motivo"])
 
     def test_json_do_juiz_com_cerca_de_codigo_e_lido(self):
         with tempfile.TemporaryDirectory() as pasta:

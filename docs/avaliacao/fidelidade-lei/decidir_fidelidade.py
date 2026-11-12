@@ -115,17 +115,17 @@ def medidas_do_braco(execs: list, com_base: dict, braco: str) -> dict:
     }
 
 
-def visao_por_pergunta(execs: list, com_base: dict) -> dict:
+def visao_por_pergunta(execs: list, com_base: dict, nomes: tuple = comum.BRACOS) -> dict:
     """Por pergunta e braço: execuções válidas, com defeito e a maioria (regra, seção 6)."""
     minimo = R["minimoDeExecucoesValidasPorBraco"]
     por = {}
     for e in execs:
-        if e["estado"] == "falha":
+        if e["estado"] == "falha" or e["braco"] not in nomes:
             continue
-        por.setdefault(e["id"], {b: [] for b in comum.BRACOS})[e["braco"]].append(e)
+        por.setdefault(e["id"], {b: [] for b in nomes})[e["braco"]].append(e)
     elegiveis, excluidas = {}, []
     for pid, bracos in sorted(por.items()):
-        if all(len(bracos[b]) >= minimo for b in comum.BRACOS):
+        if all(len(bracos[b]) >= minimo for b in nomes):
             elegiveis[pid] = bracos
         else:
             excluidas.append(pid)
@@ -137,7 +137,9 @@ def visao_por_pergunta(execs: list, com_base: dict) -> dict:
         for b, lista in bracos.items():
             defeitos = sum(1 for e in lista if defeito(e))
             infieis = sum(1 for e in lista if defeito(e) == "INFIEL")
+            aceitas = sum(1 for e in lista if e["estado"] == "aceita")
             linha[b] = {"validas": len(lista), "defeitos": defeitos, "infieis": infieis,
+                        "aceitas": aceitas, "aceitaEmMaioria": aceitas * 2 > len(lista),
                         "defeituosa": defeitos * 2 > len(lista),
                         "afirmaEmMaioria": infieis * 2 > len(lista),
                         "algumaRepeticao": defeitos > 0}
@@ -145,12 +147,12 @@ def visao_por_pergunta(execs: list, com_base: dict) -> dict:
     return {"porPergunta": resumo, "excluidas": sorted(set(excluidas))}
 
 
-def intervalo_da_queda(execs: list, com_base: dict, resumo: dict) -> dict:
-    """Bootstrap por pergunta (regra, seção 7.1) da queda de defeitos desligada - ligada."""
+def intervalo_da_queda(com_base: dict, resumo: dict, base: str, comparado: str) -> dict:
+    """Bootstrap por pergunta (regra, seção 7.1) da queda de defeitos base - comparado."""
     ids = [p for p in resumo if com_base[p]]
     if not ids:
         return {"inferior": None, "superior": None, "pontual": 0, "perguntas": 0}
-    dif = {p: resumo[p]["desligada"]["defeitos"] - resumo[p]["ligada"]["defeitos"] for p in ids}
+    dif = {p: resumo[p][base]["defeitos"] - resumo[p][comparado]["defeitos"] for p in ids}
     sorteador = random.Random(R["bootstrapSemente"])
     somas = []
     for _ in range(R["bootstrapReamostragens"]):
@@ -166,12 +168,15 @@ def teste(nome: str, valor, limite, ok: bool, descricao: str) -> dict:
     return {"teste": nome, "valor": valor, "limite": limite, "ok": bool(ok), "descricao": descricao}
 
 
-def avaliar(execs: list, com_base: dict, info_leitura: dict, interrompida=None) -> dict:
-    off = medidas_do_braco(execs, com_base, "desligada")
-    on = medidas_do_braco(execs, com_base, "ligada")
-    visao = visao_por_pergunta(execs, com_base)
+def avaliar(execs: list, com_base: dict, info_leitura: dict, interrompida=None,
+            base: str = "desligada", comparado: str = "ligada") -> dict:
+    """Uma comparação: o braço `comparado` contra o `base`, com a regra da seção 7."""
+    execs = [e for e in execs if e["braco"] in (base, comparado)]
+    off = medidas_do_braco(execs, com_base, base)
+    on = medidas_do_braco(execs, com_base, comparado)
+    visao = visao_por_pergunta(execs, com_base, (base, comparado))
     resumo = visao["porPergunta"]
-    ic = intervalo_da_queda(execs, com_base, resumo)
+    ic = intervalo_da_queda(com_base, resumo, base, comparado)
 
     defeitos_off = off["infiel"] + off["ressalvaCitacao"]
     defeitos_on = on["infiel"] + on["ressalvaCitacao"]
@@ -181,58 +186,63 @@ def avaliar(execs: list, com_base: dict, info_leitura: dict, interrompida=None) 
     perguntas_base = [p for p in resumo if com_base[p]]
     perguntas_aus = [p for p in resumo if not com_base[p]]
     defeituosas = {b: sum(1 for p in perguntas_base if resumo[p][b]["defeituosa"])
-                   for b in comum.BRACOS}
+                   for b in (base, comparado)}
     qualquer = {b: sum(1 for p in perguntas_base if resumo[p][b]["algumaRepeticao"])
-                for b in comum.BRACOS}
+                for b in (base, comparado)}
     regressoes = [p for p in perguntas_base
-                  if resumo[p]["desligada"]["defeitos"] == 0 and resumo[p]["ligada"]["defeituosa"]]
+                  if resumo[p][base]["defeitos"] == 0 and resumo[p][comparado]["defeituosa"]]
     aus_novas = [p for p in perguntas_aus
-                 if resumo[p]["ligada"]["afirmaEmMaioria"] and not resumo[p]["desligada"]["afirmaEmMaioria"]]
+                 if resumo[p][comparado]["afirmaEmMaioria"] and not resumo[p][base]["afirmaEmMaioria"]]
+    # Falso descarte (regra, seção 5, M2b): pergunta com base que no braço base não é defeituosa e é
+    # aceita na maioria das repetições e que, no comparado, deixa de ser aceita na maioria.
+    falsos_descartes = [p for p in perguntas_base
+                        if not resumo[p][base]["defeituosa"] and resumo[p][base]["aceitaEmMaioria"]
+                        and not resumo[p][comparado]["aceitaEmMaioria"]]
 
     def razao(a, b):
         return None if a is None or not b else a / b
 
+    def diferenca(a, b):
+        return None if a is None or b is None else round(a - b, 4)
+
     nao_piora = [
-        teste("M2 aceitas", None if on["taxaAceitas"] is None or off["taxaAceitas"] is None
-              else round(on["taxaAceitas"] - off["taxaAceitas"], 4), -R["aceitasQuedaMaxima"],
-              on["taxaAceitas"] is not None and off["taxaAceitas"] is not None
-              and on["taxaAceitas"] >= off["taxaAceitas"] - R["aceitasQuedaMaxima"],
-              "ligada >= desligada - 10 pontos percentuais"),
-        teste("M3 recusa falsa", None if on["taxaRecusaFalsa"] is None or off["taxaRecusaFalsa"] is None
-              else round(on["taxaRecusaFalsa"] - off["taxaRecusaFalsa"], 4),
+        teste("M2b falso descarte por pergunta", len(falsos_descartes), R["falsoDescarteMaximo"],
+              len(falsos_descartes) <= R["falsoDescarteMaximo"],
+              "no máximo 3 perguntas boas e aceitas na maioria no base que deixam de ser aceitas"),
+        teste("M3 recusa falsa", diferenca(on["taxaRecusaFalsa"], off["taxaRecusaFalsa"]),
               R["recusaFalsaAltaMaxima"],
               on["taxaRecusaFalsa"] is not None and off["taxaRecusaFalsa"] is not None
               and on["taxaRecusaFalsa"] <= off["taxaRecusaFalsa"] + R["recusaFalsaAltaMaxima"],
-              "ligada <= desligada + 5 pontos percentuais"),
+              "comparado <= base + 5 pontos percentuais"),
         teste("M4 lei ausente (execuções que afirmam)", on["ausenteInfiel"] - off["ausenteInfiel"],
               R["ausenteInfielAltaMaxima"],
               on["ausenteInfiel"] <= off["ausenteInfiel"] + R["ausenteInfielAltaMaxima"],
-              "ligada <= desligada + 1 execução"),
+              "comparado <= base + 1 execução"),
         teste("M4 lei ausente (perguntas que passam a afirmar em maioria)", len(aus_novas), 0,
-              not aus_novas, "nenhuma pergunta ausente com maioria afirmando só no ligada"),
+              not aus_novas, "nenhuma pergunta ausente com maioria afirmando só no comparado"),
         teste("M5 p50", razao(on["p50Ms"], off["p50Ms"]), R["p50Fator"],
               off["p50Ms"] is not None and on["p50Ms"] is not None
-              and on["p50Ms"] <= off["p50Ms"] * R["p50Fator"], "p50 ligada <= 1,25 x desligada"),
+              and on["p50Ms"] <= off["p50Ms"] * R["p50Fator"], "p50 comparado <= 1,25 x base"),
         teste("M5 p95", razao(on["p95Ms"], off["p95Ms"]), R["p95Fator"],
               off["p95Ms"] is not None and on["p95Ms"] is not None
-              and on["p95Ms"] <= off["p95Ms"] * R["p95Fator"], "p95 ligada <= 1,40 x desligada"),
+              and on["p95Ms"] <= off["p95Ms"] * R["p95Fator"], "p95 comparado <= 1,40 x base"),
         teste("M6 tokens", razao(on["tokensMedios"], off["tokensMedios"]), R["tokensFator"],
               off["tokensMedios"] is not None and on["tokensMedios"] is not None
               and on["tokensMedios"] <= off["tokensMedios"] * R["tokensFator"],
-              "média ligada <= 1,50 x desligada"),
+              "média comparado <= 1,50 x base"),
         teste("Piora de INFIEL", on["infiel"] - off["infiel"], R["pioraMaximaPorTipo"],
               on["infiel"] <= off["infiel"] + R["pioraMaximaPorTipo"],
-              "INFIEL ligada <= desligada + 1"),
+              "INFIEL comparado <= base + 1"),
         teste("Piora de ressalva de citação", on["ressalvaCitacao"] - off["ressalvaCitacao"],
               R["pioraMaximaPorTipo"],
               on["ressalvaCitacao"] <= off["ressalvaCitacao"] + R["pioraMaximaPorTipo"],
-              "ressalva de citação ligada <= desligada + 1"),
+              "ressalva de citação comparado <= base + 1"),
         teste("Regressões por pergunta", len(regressoes), R["regressoesPorPerguntaMaximas"],
               len(regressoes) <= R["regressoesPorPerguntaMaximas"],
-              "no máximo 1 pergunta sem defeito no desligada e defeituosa em maioria no ligada"),
-        teste("Perguntas defeituosas por maioria", defeituosas["ligada"] - defeituosas["desligada"], 0,
-              defeituosas["ligada"] <= defeituosas["desligada"],
-              "ligada não pode ter mais perguntas defeituosas que a desligada"),
+              "no máximo 1 pergunta sem defeito no base e defeituosa em maioria no comparado"),
+        teste("Perguntas defeituosas por maioria", defeituosas[comparado] - defeituosas[base], 0,
+              defeituosas[comparado] <= defeituosas[base],
+              "o comparado não pode ter mais perguntas defeituosas que o base"),
     ]
     violadas = [t for t in nao_piora if not t["ok"]]
 
@@ -266,11 +276,11 @@ def avaliar(execs: list, com_base: dict, info_leitura: dict, interrompida=None) 
         motivo = "fora da margem: " + "; ".join(t["teste"] for t in violadas)
     elif defeitos_off < R["defeitosMinimosNaBase"]:
         desfecho = "INCONCLUSIVA"
-        motivo = (f"o braço desligado tem só {defeitos_off} defeitos de fidelidade "
+        motivo = (f"o braço {base} tem só {defeitos_off} defeitos de fidelidade "
                   f"(mínimo {R['defeitosMinimosNaBase']}): não há o que medir")
     elif defeitos_on >= defeitos_off:
         desfecho = "NAO_ENTRA"
-        motivo = f"sem melhora: {defeitos_on} defeitos no ligado contra {defeitos_off} no desligado"
+        motivo = f"sem melhora: {defeitos_on} defeitos no {comparado} contra {defeitos_off} no {base}"
     elif all(t["ok"] for t in melhora):
         desfecho = "ENTRA"
         motivo = (f"defeitos de fidelidade de {defeitos_off} para {defeitos_on} "
@@ -282,14 +292,15 @@ def avaliar(execs: list, com_base: dict, info_leitura: dict, interrompida=None) 
 
     return {
         "desfecho": desfecho, "motivo": motivo, "versaoDaRegra": comum.VERSAO_REGRA,
-        "braco": {"desligada": off, "ligada": on},
-        "m1": {"defeitosDesligada": defeitos_off, "defeitosLigada": defeitos_on,
+        "base": base, "comparado": comparado,
+        "braco": {base: off, comparado: on},
+        "m1": {"defeitosBase": defeitos_off, "defeitosComparado": defeitos_on,
                "queda": queda, "quedaRelativa": queda_rel, "ic80": ic},
         "porPergunta": {"defeituosasPorMaioria": defeituosas, "comDefeitoEmQualquerRepeticao": qualquer,
                         "regressoes": regressoes, "ausentesQuePassamAAfirmar": aus_novas,
+                        "falsosDescartes": falsos_descartes,
                         "excluidas": visao["excluidas"], "tabela": resumo},
         "testesDeNaoPiora": nao_piora, "testesDeMelhora": melhora,
-        "leitura": info_leitura,
     }
 
 
@@ -308,6 +319,7 @@ def informacao_da_leitura(j1: dict, j2: dict, lidas: list) -> dict:
 
 
 def decidir_rodada(rodada: Path) -> dict:
+    """Resultado de uma rodada: uma comparação de cada braço contra o `desligada`."""
     for nome in ("execucao.json", "respostas-brutas.jsonl", "leitura/chave.json"):
         if not (rodada / nome).exists():
             raise RodadaIncompleta(f"falta {nome} em {rodada}")
@@ -315,10 +327,14 @@ def decidir_rodada(rodada: Path) -> dict:
     conjunto = comum.carregar_conjunto()
     if manifesto["conjunto"]["sha256"] != comum.sha256_arquivo(comum.CONJUNTO):
         raise RodadaIncompleta("o conjunto da rodada não é o conjunto congelado atual")
+    bracos = manifesto.get("bracos") or list(comum.BRACOS)
+    if bracos[0] != comum.BASE or len(bracos) < 2:
+        raise RodadaIncompleta(f"o primeiro braço do manifesto tem de ser '{comum.BASE}' e ter outro "
+                               f"para comparar ({bracos})")
     perguntas = comum.perguntas_por_id(conjunto)
     com_base = {pid: bool(p["temBaseLegal"]) for pid, p in perguntas.items()}
     ids_rodada = sorted({r["id"] for r in comum.ler_jsonl(rodada / "respostas-brutas.jsonl")})
-    esperadas = [(pid, b, rep) for pid in ids_rodada for b in comum.BRACOS
+    esperadas = [(pid, b, rep) for pid in ids_rodada for b in bracos
                  for rep in range(1, manifesto["repeticoes"] + 1)]
     planejadas = manifesto.get("execucoesPlanejadas")
     if planejadas and not manifesto.get("interrompida") and len(esperadas) != planejadas:
@@ -331,23 +347,24 @@ def decidir_rodada(rodada: Path) -> dict:
     execs = montar_execucoes(ultimas, esperadas, chave, finais)
     com_base_da_rodada = {pid: com_base[pid] for pid in ids_rodada}
     info = informacao_da_leitura(j1, j2, sorted(chave))
-    resultado = avaliar(execs, com_base_da_rodada, info, manifesto.get("interrompida"))
-    resultado["rodada"] = {"commit": manifesto.get("commit"), "conjunto": manifesto["conjunto"],
-                           "modelo": manifesto.get("modelo"), "repeticoes": manifesto["repeticoes"]}
-    return resultado
+    comparacoes = {b: avaliar(execs, com_base_da_rodada, info, manifesto.get("interrompida"),
+                              comum.BASE, b) for b in bracos[1:]}
+    return {"versaoDaRegra": comum.VERSAO_REGRA, "bracos": bracos,
+            "desfechos": {b: c["desfecho"] for b, c in comparacoes.items()},
+            "comparacoes": comparacoes, "leitura": info,
+            "rodada": {"commit": manifesto.get("commit"), "conjunto": manifesto["conjunto"],
+                       "modelo": manifesto.get("modelo"), "repeticoes": manifesto["repeticoes"]}}
 
 
 def percentual(x):
     return "—" if x is None else f"{x:.1%}"
 
 
-def relatorio_md(r: dict) -> str:
-    off, on = r["braco"]["desligada"], r["braco"]["ligada"]
-    linhas = [f"# Resultado da medição de fidelidade da rota de lei (#269)", "",
-              f"**Desfecho: {r['desfecho']}** — {r['motivo']}", "",
-              f"Regra `{r['versaoDaRegra']}`; commit `{r['rodada'].get('commit')}`; modelo "
-              f"`{r['rodada'].get('modelo')}`; {r['rodada']['repeticoes']} repetições.", "",
-              "| Medida | desligada | ligada |", "|---|---|---|"]
+def secao_md(c: dict) -> list:
+    base, comp = c["base"], c["comparado"]
+    off, on = c["braco"][base], c["braco"][comp]
+    linhas = [f"## {base} × {comp}: {c['desfecho']}", "", f"{c['motivo']}", "",
+              f"| Medida | {base} | {comp} |", "|---|---|---|"]
     for nome, chave in (("execuções", "execucoes"), ("falhas técnicas", "falhasTecnicas"),
                         ("válidas com base", "validasComBase"), ("INFIEL", "infiel"),
                         ("COM_RESSALVA/citação", "ressalvaCitacao"),
@@ -357,33 +374,47 @@ def relatorio_md(r: dict) -> str:
                         ("descartadas (com base)", "descartadasComBase"),
                         ("lei ausente que afirma", "ausenteInfiel")):
         linhas.append(f"| {nome} | {off[chave]} | {on[chave]} |")
-    for nome, chave in (("taxa de aceitas", "taxaAceitas"), ("taxa de recusa falsa", "taxaRecusaFalsa"),
+    for nome, chave in (("taxa de aceitas (M2, informativa)", "taxaAceitas"),
+                        ("taxa de recusa falsa", "taxaRecusaFalsa"),
                         ("INFIEL entre as aceitas", "taxaInfielEntreAceitas")):
         linhas.append(f"| {nome} | {percentual(off[chave])} | {percentual(on[chave])} |")
     linhas.append(f"| p50 / p95 (ms) | {off['p50Ms']} / {off['p95Ms']} | {on['p50Ms']} / {on['p95Ms']} |")
     tok = lambda b: "—" if b["tokensMedios"] is None else f"{b['tokensMedios']:.0f}"  # noqa: E731
     linhas.append(f"| tokens médios | {tok(off)} | {tok(on)} |")
-    m1 = r["m1"]
-    linhas += ["", f"**M1:** defeitos {m1['defeitosDesligada']} → {m1['defeitosLigada']} "
+    m1 = c["m1"]
+    linhas += ["", f"**M1:** defeitos {m1['defeitosBase']} → {m1['defeitosComparado']} "
                f"(queda {m1['queda']}, {m1['quedaRelativa']:.0%}); IC de 80% da queda por pergunta: "
                f"[{m1['ic80']['inferior']}, {m1['ic80']['superior']}] "
                f"({m1['ic80']['perguntas']} perguntas).", "",
-               "## Testes de melhora", "", "| Teste | Valor | Limite | OK |", "|---|---|---|---|"]
-    for t in r["testesDeMelhora"]:
+               "### Testes de melhora", "", "| Teste | Valor | Limite | OK |", "|---|---|---|---|"]
+    for t in c["testesDeMelhora"]:
         linhas.append(f"| {t['teste']} | {t['valor']} | {t['limite']} | {'sim' if t['ok'] else 'NÃO'} |")
-    linhas += ["", "## Testes de não piora", "", "| Teste | Valor | Limite | OK |", "|---|---|---|---|"]
-    for t in r["testesDeNaoPiora"]:
+    linhas += ["", "### Testes de não piora", "", "| Teste | Valor | Limite | OK |", "|---|---|---|---|"]
+    for t in c["testesDeNaoPiora"]:
         linhas.append(f"| {t['teste']} | {t['valor']} | {t['limite']} | {'sim' if t['ok'] else 'NÃO'} |")
-    pp = r["porPergunta"]
+    pp = c["porPergunta"]
+    linhas += ["", "### Por pergunta", "",
+               f"Defeituosas por maioria: {base} {pp['defeituosasPorMaioria'][base]}, "
+               f"{comp} {pp['defeituosasPorMaioria'][comp]}. Com defeito em qualquer repetição: "
+               f"{base} {pp['comDefeitoEmQualquerRepeticao'][base]}, "
+               f"{comp} {pp['comDefeitoEmQualquerRepeticao'][comp]}. "
+               f"Regressões: {pp['regressoes'] or 'nenhuma'}. Falsos descartes: "
+               f"{pp['falsosDescartes'] or 'nenhum'}. Ausentes que passam a afirmar: "
+               f"{pp['ausentesQuePassamAAfirmar'] or 'nenhuma'}. Excluídas: "
+               f"{pp['excluidas'] or 'nenhuma'}.", ""]
+    return linhas
+
+
+def relatorio_md(r: dict) -> str:
+    rod = r.get("rodada", {})
+    linhas = ["# Resultado da medição de fidelidade da rota de lei (#269)", "",
+              f"Regra `{r['versaoDaRegra']}`; commit `{rod.get('commit')}`; modelo "
+              f"`{rod.get('modelo')}`; {rod.get('repeticoes')} repetições; braços {r['bracos']}. "
+              "Cada braço é comparado ao desligada.", ""]
+    for c in r["comparacoes"].values():
+        linhas += secao_md(c)
     lei = r["leitura"]
-    linhas += ["", "## Por pergunta", "",
-               f"Defeituosas por maioria: desligada {pp['defeituosasPorMaioria']['desligada']}, "
-               f"ligada {pp['defeituosasPorMaioria']['ligada']}. Com defeito em qualquer repetição: "
-               f"desligada {pp['comDefeitoEmQualquerRepeticao']['desligada']}, "
-               f"ligada {pp['comDefeitoEmQualquerRepeticao']['ligada']}. "
-               f"Regressões: {pp['regressoes'] or 'nenhuma'}. Ausentes que passam a afirmar: "
-               f"{pp['ausentesQuePassamAAfirmar'] or 'nenhuma'}. Excluídas: {pp['excluidas'] or 'nenhuma'}.",
-               "", "## Leitura dos juízes", "",
+    linhas += ["## Leitura dos juízes", "",
                f"Itens lidos: {lei.get('itensLidos')}; concordância J1 × J2: "
                f"{percentual(lei.get('concordanciaJ1J2'))}; kappa: "
                f"{'—' if lei.get('kappaJ1J2') is None else round(lei['kappaJ1J2'], 3)}; itens ao J3: "
@@ -408,7 +439,8 @@ def main(argv=None) -> int:
     (rodada / "resultado.json").write_text(json.dumps(resultado, ensure_ascii=False, indent=2),
                                            encoding="utf-8")
     (rodada / "resultado.md").write_text(relatorio_md(resultado), encoding="utf-8")
-    print(f"{resultado['desfecho']}: {resultado['motivo']}")
+    for braco, c in resultado["comparacoes"].items():
+        print(f"{comum.BASE} x {braco}: {c['desfecho']}: {c['motivo']}")
     return 0
 
 

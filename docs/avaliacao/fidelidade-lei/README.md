@@ -19,7 +19,7 @@ com o Haiku 5.5 pela API da Anthropic, 3 repetições por braço.
 | `regra-de-decisao.md` | A regra de decisão (`ENTRA` / `NAO_ENTRA` / `INCONCLUSIVA`), escrita antes de qualquer rodada |
 | `conferencia-do-gabarito.md` | A conferência independente do gabarito contra o texto da lei, as divergências e como foram resolvidas |
 | `prompts/juiz.md` | O papel dos juízes (os três usam o mesmo texto) |
-| `executar_fidelidade.py` | Sobe as duas instâncias, roda o conjunto nos dois braços e grava as respostas brutas e a auditoria |
+| `executar_fidelidade.py` | Sobe uma instância por braço (dois ou mais), roda o conjunto em todos e grava as respostas brutas e a auditoria |
 | `leitura_fidelidade.py` | Cega e embaralha as respostas aceitas em lotes, valida o que os juízes entregaram, monta o lote do J3 |
 | `decidir_fidelidade.py` | Aplica a regra e grava `resultado.json` e `resultado.md` |
 | `fidelidade_comum.py` | Constantes da regra (as margens), classificação das execuções, kappa, percentil |
@@ -69,10 +69,10 @@ python3 -I docs/avaliacao/fidelidade-lei/executar_fidelidade.py \
 O que o executor faz, e o que ele exige da outra sessão:
 
 - **Nome da flag e valores:** por `--env-ligada` e `--env-desligada` (repetíveis, `CHAVE=valor`). A
-  `--env-ligada` é obrigatória e os dois braços têm de diferir. Se a flag nasce **desligada** por
+  `--env-ligada` (atalho do braço `ligada`) ou ao menos um `--braco` é obrigatório, e os braços têm de diferir entre si. Se a flag nasce **desligada** por
   padrão, basta a `--env-ligada` (o desligado é a ausência da variável); se nasce **ligada**, passe
   também `--env-desligada` com o valor que desliga. Se a correção precisar de mais de uma variável
-  (limiar, modelo do verificador), repita o argumento: o que não é a flag é igual nos dois braços.
+  (limiar, modelo do verificador), repita o argumento: o que não é a flag é igual em todos os braços.
 - **O que ele fixa e recusa sobrescrever:** perfil `dev`, banco, porta, `SEED_SENHA`, chave da API,
   `AI_CHAT_PROVIDER=anthropic`, `AI_ANTHROPIC_MODEL=claude-haiku-5-5`, `AI_ANTHROPIC_THINKING=disabled`,
   o Ollama do embedding e a cota semanal (levada a 1 bilhão para a rodada não parar; ela não é o que
@@ -80,10 +80,13 @@ O que o executor faz, e o que ele exige da outra sessão:
 - **Banco:** um banco **novo** (`fidelidade_lei`, recriado a cada rodada) com o Liquibase do commit e a
   base de lei copiada do banco de origem (`--banco-origem`, padrão `agrocontabil`). Nunca toca no banco
   de desenvolvimento.
-- **Duas instâncias** do mesmo jar, portas `--porta` e `--porta`+1, contas semeadas do `DataLoader`
-  (uma por braço; a senha da rodada é sorteada e nunca impressa nem gravada).
-- **Intercala** as execuções (cada pergunta vai a um braço e logo ao outro, em ordem alternada, com a
-  ordem das perguntas sorteada por repetição, semente fixa).
+- **Uma instância por braço** do mesmo jar (portas `--porta`, `--porta`+1, ...), todas com a mesma conta
+  semeada do `DataLoader` (a senha da rodada é sorteada e nunca impressa nem gravada). Com três braços
+  são três JVMs: confira a memória. **Mais braços:** `--braco NOME:CHAVE=valor,CHAVE=valor`
+  (repetível, nome em minúsculas, ambiente diferente de todos os outros); cada braço é comparado ao
+  `desligada`, um a um, com a mesma regra. O manifesto grava a lista (`bracos`) e a decisão lê dela.
+- **Intercala** as execuções (cada pergunta vai a todos os braços em seguida, com a ordem dos braços
+  girando; a ordem das perguntas é sorteada por repetição, semente fixa).
 - **Auditoria:** depois de cada resposta, lê a linha de `assistente_interacao` do produtor do braço
   (desfecho, tokens, latência do servidor). Os **tokens** da regra são a soma de todos os campos
   `tokens_entrada*` e `tokens_saida*` da linha: **se a correção fizer uma chamada nova ao modelo, ela
@@ -106,7 +109,7 @@ python3 -I docs/avaliacao/fidelidade-lei/leitura_fidelidade.py lotes $R
 ```
 
 Cada `prompts/J1/lote-NN.md` vai, **inteiro**, a um subagente novo com `model: opus` (J1), e cada
-`prompts/J2/lote-NN.md` a um subagente novo com `model: fable` (J2). O prompt já traz o papel, o lote e
+`prompts/J2/lote-NN.md` a um subagente novo com `model: sonnet` (J2). O prompt já traz o papel, o lote e
 o caminho onde o subagente grava o JSON (`leitura/juizes/J1|J2/lote-NN.json`). Os juízes não veem o
 braço (a chave `leitura/chave.json` fica fora dos prompts), não leem o repositório e não falam entre si.
 
@@ -118,7 +121,7 @@ python3 -I docs/avaliacao/fidelidade-lei/decidir_fidelidade.py $R              #
 ```
 
 O veredito de cada resposta é calculado em código pelos rótulos das frases (o juiz não dá veredito).
-A decisão traz as três contagens (por execução, por maioria das repetições, por qualquer repetição), a
+A decisão traz uma seção por comparação (cada braço contra o `desligada`), com as três contagens (por execução, por maioria das repetições, por qualquer repetição), a
 concordância dos juízes (kappa), o intervalo de confiança, cada margem com o valor medido e o
 desfecho com o motivo. Ela nunca copia o texto das respostas.
 
