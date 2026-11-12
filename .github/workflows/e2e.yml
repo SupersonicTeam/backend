@@ -1,0 +1,92 @@
+name: E2E - Playwright (sob demanda)
+
+# Suite E2E dos casos de uso UC001 a UC005 (issue #321, guia em e2e/README.md). So roda quando
+# alguem dispara (Actions > "E2E - Playwright (sob demanda)" > Run workflow, ou
+# `gh workflow run e2e.yml --ref <branch>`): nunca em PR nem em push. Sobe a stack isolada do
+# e2e/compose.yaml (banco, backend e frontend) dentro do runner, roda o Playwright e publica o
+# relatorio, os traces e o log da stack como artefato. Nada aqui fala com a VPS.
+on:
+  workflow_dispatch:
+    inputs:
+      backend_image:
+        description: 'Imagem do backend. Vazio = construir deste branch. Ex.: ghcr.io/supersonicteam/backend:latest'
+        required: false
+        default: ''
+      frontend_image:
+        description: 'Imagem do frontend (GHCR, main do SupersonicTeam/frontend)'
+        required: false
+        default: 'ghcr.io/supersonicteam/frontend:latest'
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    name: Playwright (UC001 a UC005)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Dependencias da suite
+        working-directory: e2e
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npx playwright install --with-deps chromium
+
+      # A imagem do frontend (e a do backend, quando escolhida) e privada no GHCR.
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Sem imagem escolhida, o backend e o deste branch, com o cache do Maven entre rodadas.
+      - name: Set up Buildx
+        if: inputs.backend_image == ''
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build do backend deste branch
+        if: inputs.backend_image == ''
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: agroconia-e2e-backend:local
+          cache-from: type=gha,scope=e2e-backend
+          cache-to: type=gha,mode=max,scope=e2e-backend
+
+      - name: Stack e suite
+        working-directory: e2e
+        env:
+          # Tag local (sem "/") = a imagem construida acima, sem novo build nem pull.
+          E2E_BACKEND_IMAGE: ${{ inputs.backend_image || 'agroconia-e2e-backend:local' }}
+          E2E_FRONTEND_IMAGE: ${{ inputs.frontend_image }}
+        run: bash rodar.sh
+
+      - name: Relatorio, traces e log da stack
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-playwright
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+            e2e/stack.log
+          retention-days: 14

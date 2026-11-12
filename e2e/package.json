@@ -1,0 +1,16 @@
+{
+  "name": "agroconia-e2e",
+  "private": true,
+  "description": "Testes end-to-end do AgroConIA (UC001 a UC005) com Playwright, issue #321.",
+  "scripts": {
+    "e2e": "bash ./rodar.sh",
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "relatorio": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3"
+  }
+}

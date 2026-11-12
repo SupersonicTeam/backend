@@ -391,6 +391,20 @@ Bean Validation customizada (anotação + validator):
 - Padrão: `*Test.java` (unitário Mockito) + teste de integração (Spring + H2)
 - `ProdutorTestFixtures` — emitente com IE e endereço (`produtorCompleto`, `enderecoParaUf`, variantes inválidas) exigido pelos fluxos de emissão desde a issue #88
 
+## Testes end-to-end em `e2e/` (Playwright, #321)
+Fora do Maven (TypeScript, `package.json` próprio); a CI normal não roda. Guia em `e2e/README.md`.
+| Arquivo | Responsabilidade |
+|---------|-----------------|
+| `compose.yaml` | Stack isolada `agroconia-e2e`: pgvector em tmpfs, backend deste checkout (`homolog`, seed da banca, SEFAZ simulada com `autorizar-terceiros`, `AI_CHAT_PROVIDER=none`, limites de taxa altos só aqui) e frontend do GHCR (nginx repassa `/api` ao serviço `backend`); só `127.0.0.1:18321` publicado |
+| `rodar.sh` | Gera os segredos de teste no `e2e/.env` (fora do git), constrói/baixa as imagens, sobe com `--wait`, roda o Playwright e derruba (`--manter`, `--sem-subir`, `--derrubar`, `-- <args>`); grava `stack.log` |
+| `playwright.config.ts` | Um worker, sem repetição, trace de todo caso no CI; `E2E_BASE_URL`/`E2E_PORTA` |
+| `support/tela.ts` | `entrar` (login pela tela), fixture `outraPessoa` (outro contexto, outra conta), `abrirNota` (`/documentos?nota=<id>`), `respostaDe` (espera a resposta da API que a ação dispara) |
+| `support/api.ts` | `Api` para preparar dados e conferir o estado final (login, nota, revisão, XML, SEFAZ, Ceres); `notaAutorizadaDoCarlos` |
+| `support/cenario.ts` | Espelho do `CenarioDemonstracao` (CPF do Carlos, comprador da soja, DV de CPF/CNPJ) e `numeroDeNotaUnico` |
+| `support/contas.ts` | E-mails do seed (Carlos, Patrícia, Maria do `DataLoader`) e a senha de teste do ambiente |
+| `tests/uc00N-*.spec.ts` | UC001 emitir (revisão → aprovação → XML → SEFAZ), UC002 importar XML (nota da Maria ao Carlos), UC003 Ceres (atalho, sem modelo), UC004 PDF de conformidade, UC005 cancelar |
+| `.github/workflows/e2e.yml` | Só `workflow_dispatch`: build do backend do branch (ou imagem escolhida), suíte e artefato `e2e-playwright` |
+
 ## Migrations (Liquibase)
 - `db/changelog/db.changelog-master.yaml` — master changelog
 - `db/changelog/changes/` — changesets `.xml` individuais: `0001-initial-schema` … `0038-carteira-contador` (0045-nota-fiscal-chave-por-produtor = chave única por produtor+chave+origem, #223; 0046-ncm-codigos-oficiais = NCMs inexistentes trocados pelos oficiais, #282; 0047-ibs-2026-estadual = IBS 2026 todo estadual, #277; 0048-classificacao-tributaria-oficial = tabela oficial de redução, #272; próximo número livre: **0064** (0063 = verificação do CNPJ do escritório, CHECK e índice parcial `uq_escritorio_cnpj_verificado` só no PG, #520; 0062 = tipo, telefone e endereço postal do escritório e aceite dos termos na credencial, #519; 0061 = modelos de pedido do escritório, `modelo_pedido`, #517; 0060 = 1 crédito por token da Ceres, #511; 0059 = slug do escritório e carência, `escritorio_slug_anterior`, #464; 0058 = quem encerrou o vínculo e o motivo, #402; 0057 = acentos dos modelos de obrigação, #408; 0049 = base IBS/CBS cheia, #278; 0050 = camada da classificação na auditoria da Ceres, #265; 0051 = arroz em casca in natura, #284; 0052 = os 6 NCMs de leite do Anexo I na referência, #284; 0053 = descrição UHT do 0401.20.10, #380; 0054 = CST e origem do ICMS por item, #376; 0055 = versão da regra fiscal da nota, #389; 0056 = busca com itens e documento, #271); 0038 migra `contador_produtor` → `carteira_vinculo` e tem índices únicos parciais só no PG; 0037 usa `pg_trgm` + `btree_gin`; 0026 e 0027 são só PostgreSQL — extensão `vector`, `tsvector`)
