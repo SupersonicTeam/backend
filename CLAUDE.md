@@ -796,7 +796,10 @@ no cadastro (decisão do Murillo, 2026-10-19).
   (`MensagemLogMascaradaConverter` em `logback-spring.xml`, no lugar de `%m`/`%msg`/`%message`):
   CPF, CNPJ, e-mail e telefone viram marcadores (CPF/CNPJ só isolados, sem letra ou dígito colado,
   desde o PR #310 — antes UUID e hash com 11 dígitos seguidos de letra viravam `[CPF]`; CPF grudado
-  em letra sem separador passa, limite aceito); a chave de acesso fica (não é pessoal e a
+  em letra sem separador passa, limite aceito); o CNPJ alfanumérico da RFB também vira `[CNPJ]`
+  desde a #313, mas só com o DV conferido e só em maiúsculas, porque o log carrega hash em hex
+  minúsculo (o `DataSanitizer` da Ceres ainda não o reconhece: espera a rodada do benchmark,
+  decisão de 2026-11-11); a chave de acesso fica (não é pessoal e a
   operação precisa dela); o **stack trace** também (`ExcecaoLogMascaradaConverter`, via
   `LOG_EXCEPTION_CONVERSION_WORD`). IP dos logs de limite truncado pelos bytes. A exclusão do
   produtor desfaz os vínculos com contadores (o ex-contador perdia o acesso só quando ele próprio

@@ -84,6 +84,44 @@ class DocumentoFiscalValidatorTest {
   }
 
   @Nested
+  @DisplayName("CNPJ alfanumerico da RFB (#313)")
+  class CnpjAlfanumerico {
+
+    @Test
+    @DisplayName("o exemplo da RFB e valido; o mesmo com o ultimo DV trocado, nao")
+    void exemploDaRfb() {
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoValido("12ABC34501DE35")).isTrue();
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoValido("12ABC34501DE36")).isFalse();
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoValido("12ABC34501DE45")).isFalse();
+    }
+
+    @Test
+    @DisplayName("CNPJ so de digitos valido tambem passa")
+    void numericoTambemPassa() {
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoValido("11222333000181")).isTrue();
+    }
+
+    @Test
+    @DisplayName("minuscula, pontuacao, letra no DV, tamanho errado, iguais e nulo sao recusados")
+    void formatoInvalido() {
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoValido("12abc34501de35")).isFalse();
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoValido("12.ABC.345/01DE-35"))
+          .isFalse();
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoValido("12ABC34501DE3A")).isFalse();
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoValido("12ABC34501DE3")).isFalse();
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoValido("00000000000000")).isFalse();
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoValido(null)).isFalse();
+    }
+
+    @Test
+    @DisplayName("a porta de entrada segue so numerica: isCnpjValido recusa o alfanumerico")
+    void portaDeEntradaSegueNumerica() {
+      assertThat(DocumentoFiscalValidator.isCnpjValido("12ABC34501DE35")).isFalse();
+      assertThat(DocumentoFiscalValidator.isCpfCnpjValido("12ABC34501DE35")).isFalse();
+    }
+  }
+
+  @Nested
   @DisplayName("isCpfCnpjValido (dispatch por comprimento)")
   class CpfCnpjDispatch {
 
