@@ -327,8 +327,9 @@ def decidir_rodada(rodada: Path) -> dict:
         if not (rodada / nome).exists():
             raise RodadaIncompleta(f"falta {nome} em {rodada}")
     manifesto = json.loads((rodada / "execucao.json").read_text(encoding="utf-8"))
-    conjunto = comum.carregar_conjunto()
-    if manifesto["conjunto"]["sha256"] != comum.sha256_arquivo(comum.CONJUNTO):
+    arquivo_conjunto = comum.conjunto_do_manifesto(manifesto)
+    conjunto = comum.carregar_conjunto(arquivo_conjunto)
+    if manifesto["conjunto"]["sha256"] != comum.sha256_arquivo(arquivo_conjunto):
         raise RodadaIncompleta("o conjunto da rodada não é o conjunto congelado atual")
     bracos = manifesto.get("bracos") or list(comum.BRACOS)
     if bracos[0] != comum.BASE or len(bracos) < 2:

@@ -439,7 +439,8 @@ def gravar_manifesto(args, conjunto, saida: Path, plano: list, registros: list, 
     manifesto = {
         "regra": {"versao": comum.VERSAO_REGRA, "parametros": comum.REGRA},
         "conjunto": {"versao": conjunto["versao"],
-                     "sha256": comum.sha256_arquivo(comum.CONJUNTO),
+                     "arquivo": args.arquivo_conjunto.name,
+                     "sha256": comum.sha256_arquivo(args.arquivo_conjunto),
                      "perguntas": len({r["id"] for r in registros}) or None},
         "commit": args.commit, "jarSha256": comum.sha256_arquivo(args.jar) if args.jar and args.jar.exists()
         else None,
@@ -467,6 +468,8 @@ def montar_parser() -> argparse.ArgumentParser:
                    help="braço extra, comparado ao desligada (repetível)")
     p.add_argument("--repeticoes", type=int, default=3)
     p.add_argument("--semente", type=int, default=20261112)
+    p.add_argument("--conjunto", default="v1", metavar="v1|v2|ARQUIVO",
+                   help="conjunto de perguntas (padrão: v1; o v2 é o conjunto da segunda medição)")
     p.add_argument("--perguntas", default="", help="ids separados por vírgula (padrão: todos)")
     p.add_argument("--saida", type=Path, default=comum.DIR / "rodadas")
     p.add_argument("--banco", default="fidelidade_lei", help="banco novo da rodada (recriado)")
@@ -490,8 +493,9 @@ def main(argv=None) -> int:
     try:
         args.bracos = montar_bracos(args.env_desligada, args.env_ligada, args.braco)
         validar_banco(args.banco, args.banco_origem)
-        conjunto = comum.carregar_conjunto()
-    except (ValueError, comum.ErroDeConjunto) as erro:
+        args.arquivo_conjunto = comum.resolver_conjunto(args.conjunto)
+        conjunto = comum.carregar_conjunto(args.arquivo_conjunto)
+    except (ValueError, OSError, comum.ErroDeConjunto) as erro:
         sys.exit(str(erro))
     desconhecidas = args.perguntas - set(comum.perguntas_por_id(conjunto))
     if desconhecidas:

@@ -241,3 +241,25 @@ O script `decidir_fidelidade.py` aplica esta regra aos arquivos de uma rodada e 
 por qualquer repetição), a concordância dos juízes, o IC, cada margem com o valor medido e o
 resultado de cada teste, as perguntas excluídas e as falhas técnicas por braço, o desfecho e o
 motivo em uma frase. O resultado nunca traz o texto das respostas.
+
+## 9. Conjunto v2 (segunda medição)
+
+A correção foi ajustada depois da primeira rodada, olhando os números do conjunto v1. Por isso o v1
+deixou de ser teste cego para a segunda medição: quem ajustou a correção viu o que ele mostrou. A
+segunda medição usa o **conjunto v2**, `perguntas-fidelidade-lei-v2.json` (versão `2026-11-13.v2`,
+sha256 em `perguntas-fidelidade-lei-v2.json.sha256`), escrito por uma sessão que nunca viu o v1, os
+conjuntos anteriores nem o código da correção.
+
+- **A regra é a mesma** (`2026-11-12.4`): mesmas medidas, margens, limiares, juízes (J1 `opus`, J2
+  `sonnet`, J3 `opus`), braços (`desligada`, `camada1`, `camada1+juiz`), 3 repetições e o mesmo modelo.
+  Nada nesta regra muda por causa do v2; só muda o arquivo de perguntas.
+- **Mesma forma do v1:** 36 perguntas, 6 por classe (`CAPUT`, `PARAGRAFO`, `EXCECAO`, `AMPLA`,
+  `AUSENTE`, `SIMPLES`), ids com prefixo `F2-`, gabarito de fidelidade tirado do texto de
+  `legislacao_trecho` e conferido por um subagente independente.
+- **O v1 e os resultados dele ficam como estão.** O executor, a leitura e a decisão escolhem o conjunto
+  por `--conjunto v1|v2` (padrão `v1`); o manifesto da rodada guarda `conjunto.arquivo` e a leitura e a
+  decisão usam o conjunto do manifesto.
+- Mudar uma pergunta, um fato ou o gabarito do v2 depois do congelamento muda o sha256: suba a versão
+  do conjunto (`VERSAO_CONJUNTO_V2` em `fidelidade_comum.py`), grave o novo hash e rode de novo.
+- **Teste cego do v2:** vale a mesma regra do v1. Quem escreve ou revisa a correção não lê o v2, não o
+  usa em exemplo, treino ou teste e recebe só os ids (`F2-07`).

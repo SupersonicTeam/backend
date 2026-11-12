@@ -190,7 +190,11 @@ correção da fidelidade **não lê** o conjunto (nem o gabarito, os prompts dos
 e a mensagem a essa sessão cita só o id (`FL07`). O `ConjuntoFidelidadeLeiTest` e os testes Python
 da pasta (`python3 -m unittest discover -s docs/avaliacao/fidelidade-lei -p "test_*.py"`, na CI)
 guardam o hash, o treino e o prompt; a regra (`regra-de-decisao.md`) e as margens do
-`fidelidade_comum.py` são uma coisa só: mudou uma, mude a outra e a versão.
+`fidelidade_comum.py` são uma coisa só: mudou uma, mude a outra e a versão. **Conjunto v2:** a correção
+foi ajustada depois da primeira rodada, olhando os números do v1; a segunda medição usa o
+`perguntas-fidelidade-lei-v2.json` (versão própria e sha256 ao lado, ids `F2-07`), escrito por uma
+sessão que não viu o v1 nem a correção, com a mesma regra e os mesmos scripts (`--conjunto v1|v2`; a
+regra, seção 9). A regra do teste cego vale para o v2 do mesmo jeito.
 
 ## Arquitetura — regras inegociáveis
 

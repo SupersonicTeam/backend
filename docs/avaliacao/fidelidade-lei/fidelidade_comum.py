@@ -13,6 +13,11 @@ from pathlib import Path
 
 DIR = Path(__file__).resolve().parent
 CONJUNTO = DIR / "perguntas-fidelidade-lei.json"
+#: Segundo conjunto (v2): escrito depois da primeira rodada, por sessão que não viu o v1. A regra e
+#: os scripts são os mesmos; o conjunto tem versão e sha256 próprios (regra, seção 9).
+CONJUNTO_V2 = DIR / "perguntas-fidelidade-lei-v2.json"
+VERSAO_CONJUNTO_V2 = "2026-11-13.v2"
+CONJUNTOS = {"v1": CONJUNTO, "v2": CONJUNTO_V2}
 VERSAO_REGRA = "2026-11-12.4"
 
 #: O braço de referência: todo braço comparado é medido contra ele (regra, seção 1).
@@ -105,6 +110,24 @@ def carregar_conjunto(caminho: Path = CONJUNTO, verificar_hash: bool = True) -> 
     if len(ids) != len(set(ids)):
         raise ErroDeConjunto("ids repetidos no conjunto")
     return conjunto
+
+
+def resolver_conjunto(valor) -> Path:
+    """Caminho do conjunto pedido: `v1`, `v2`, o nome de um arquivo da pasta ou um caminho.
+    Sem valor, o v1 (o comportamento de antes do v2)."""
+    if not valor:
+        return CONJUNTO
+    if valor in CONJUNTOS:
+        return CONJUNTOS[valor]
+    caminho = Path(valor)
+    if not caminho.is_absolute() and (DIR / valor).exists():
+        caminho = DIR / valor  # nome de um arquivo da pasta, qualquer que seja o diretório atual
+    return caminho
+
+
+def conjunto_do_manifesto(manifesto: dict) -> Path:
+    """Arquivo do conjunto usado na rodada (campo `conjunto.arquivo`; manifesto de antes do v2 = v1)."""
+    return resolver_conjunto((manifesto.get("conjunto") or {}).get("arquivo"))
 
 
 def perguntas_por_id(conjunto: dict) -> dict:
