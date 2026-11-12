@@ -480,7 +480,9 @@ br.com.agrocontabil
   ligado na VPS e, desde a #464, em dev); nunca ler o cabeçalho cru. O cookie de refresh segue
   *host-only* (nunca `Domain=.agroconia.com.br`) e o CORS segue a lista fixa: a SPA do subdomínio
   chama `/api` na mesma origem. **Invariante:** todo subdomínio serve o mesmo SPA, sem conteúdo
-  enviado pelo cliente (o `SameSite=Strict` não separa subdomínios). **Infra:** no Caddy, os
+  enviado pelo cliente (o `SameSite=Strict` não separa subdomínios). A única pasta servida do disco
+  é a `jornada/` dos quadros da landing (frontend#174, `/jornada/*`): só a equipe publica nela e o
+  Caddy só entrega dela imagem e JSON (`deploy/README.md`, "Jornada da landing"). **Infra:** no Caddy, os
   endereços dos escritórios são um site *catch-all* `https://` com `tls { on_demand }` e o "ask" do
   backend (`deploy/Caddyfile`), com o mesmo snippet `(app)` de cabeçalhos do `www` e
   `X-Robots-Tag: noindex` (frontend#175); **nunca** o site curinga `*.{$SITE_DOMINIO}`, que no Caddy 2.10 faz o

@@ -235,6 +235,9 @@ services:
       TLS_ASK_CHAVE: ${TLS_ASK_CHAVE:?defina TLS_ASK_CHAVE no .env (deploy/README.md, Endereco proprio do escritorio)}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Quadros da jornada 3D da landing (frontend#174), servidos em /jornada/* pelo Caddyfile. Crie a
+      # pasta antes do up: se faltar, o Docker a cria vazia e do root (deploy/README.md, Jornada da landing).
+      - ./jornada:/srv/jornada:ro
       - caddy_data:/data
       - caddy_config:/config
     networks: [interna]
