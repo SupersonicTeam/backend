@@ -23,6 +23,8 @@ import java.util.UUID;
  * @param tipo        PESSOAL ou EMPRESARIAL (issue #519)
  * @param telefone    telefone do escritório, só dígitos; nulo sem ele (issue #519)
  * @param endereco    endereço postal; nulo sem ele (issue #519)
+ * @param escritorioVerificado o CNPJ foi verificado pelo AgroConIA (issue #520)? Só verificado o
+ *                    endereço próprio é servido; trocar o CNPJ tira a verificação, trocar o nome não
  */
 @Schema(description = "Escritório do contador autenticado")
 public record EscritorioResponse(
@@ -52,7 +54,11 @@ public record EscritorioResponse(
         nullable = true)
     String telefone,
     @Schema(description = "Endereço postal do escritório; nulo sem ele", nullable = true)
-    EnderecoPostalResponse endereco) implements ResultadoAuditavel {
+    EnderecoPostalResponse endereco,
+    @Schema(description = "O CNPJ foi verificado pelo AgroConIA (#520)? Sem a verificação, o "
+        + "endereço próprio fica reservado, mas não é servido. Trocar o CNPJ tira a verificação; "
+        + "trocar o nome, não", example = "true")
+    boolean escritorioVerificado) implements ResultadoAuditavel {
 
   @JsonIgnore
   @Override

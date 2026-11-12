@@ -16,10 +16,10 @@ public interface EnvioConviteCarteira {
    * Avisa o convidado.
    *
    * @param destinatario e-mail convidado
-   * @param escritorio   nome do escritório que convidou
+   * @param escritorio   nome do escritório que convidou e, só se verificado, o CNPJ (#520)
    * @param link         página onde o produtor responde os convites
    * @param expiraEm     fim da validade do convite (vai no texto como data e hora de Brasília)
    */
-  void enviarConvite(String destinatario, String escritorio, String link,
+  void enviarConvite(String destinatario, EscritorioDoConvite escritorio, String link,
       OffsetDateTime expiraEm);
 }

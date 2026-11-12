@@ -1,5 +1,6 @@
 package br.com.agrocontabil.config;
 
+import br.com.agrocontabil.service.EscritorioDoConvite;
 import br.com.agrocontabil.service.MensagensEmail;
 import br.com.agrocontabil.service.MensagensEmail.Mensagem;
 import br.com.agrocontabil.service.TetoEnvioEmail;
@@ -45,9 +46,14 @@ class PreviaEmailsManual {
     OffsetDateTime agora = OffsetDateTime.parse("2026-11-10T15:30:00-03:00");
 
     Map<String, Mensagem> emails = new LinkedHashMap<>();
-    emails.put("1-convite-carteira", MensagensEmail.conviteCarteira(ESCRITORIO,
-        SITE + "/escritorio", agora.plus(Duration.ofDays(14)), CONTATO));
-    emails.put("2-convite-equipe", MensagensEmail.conviteEquipe(ESCRITORIO,
+    emails.put("1-convite-carteira", MensagensEmail.conviteCarteira(
+        new EscritorioDoConvite(ESCRITORIO, "48315276000195"), SITE + "/escritorio",
+        agora.plus(Duration.ofDays(14)), CONTATO));
+    emails.put("1b-convite-carteira-nao-verificado", MensagensEmail.conviteCarteira(
+        new EscritorioDoConvite(ESCRITORIO, null), SITE + "/escritorio",
+        agora.plus(Duration.ofDays(14)), CONTATO));
+    emails.put("2-convite-equipe", MensagensEmail.conviteEquipe(
+        new EscritorioDoConvite(ESCRITORIO, null),
         SITE + "/equipe/convite#token=" + TOKEN, agora.plus(Duration.ofDays(7)), CONTATO));
     emails.put("3-redefinicao-senha", MensagensEmail.redefinicaoSenha(
         SITE + "/redefinir-senha#token=" + TOKEN, Duration.ofMinutes(30), CONTATO));

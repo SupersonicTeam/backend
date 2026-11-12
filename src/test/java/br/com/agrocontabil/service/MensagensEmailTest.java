@@ -49,8 +49,8 @@ class MensagensEmailTest {
   @Test
   @DisplayName("convite da carteira: nome em negrito, data em Brasilia e /escritorio")
   void conviteCarteira() {
-    Mensagem m = MensagensEmail.conviteCarteira("Contabilidade São João", LINK_CARTEIRA, VENCE,
-        CONTATO);
+    Mensagem m = MensagensEmail.conviteCarteira(naoVerificado("Contabilidade São João"),
+        LINK_CARTEIRA, VENCE, CONTATO);
     assertThat(m.assunto()).isEqualTo("Convite de escritório de contabilidade no AgroConIA")
         .doesNotContain("São João");
     assertThat(m.preCabecalho()).isEqualTo("Contabilidade São João quer atender você pelo "
@@ -64,10 +64,61 @@ class MensagensEmailTest {
         .contains(">Ver convite</a>");
   }
 
+  private static EscritorioDoConvite naoVerificado(String nome) {
+    return new EscritorioDoConvite(nome, null);
+  }
+
+  @Test
+  @DisplayName("convite de escritorio verificado (#520): CNPJ formatado ao lado do nome, sem aviso")
+  void conviteVerificado() {
+    EscritorioDoConvite verificado =
+        new EscritorioDoConvite("Contabilidade São João", "11444777000161");
+    Mensagem carteira = MensagensEmail.conviteCarteira(verificado, LINK_CARTEIRA, VENCE, CONTATO);
+    assertThat(carteira.texto())
+        .contains("O escritório Contabilidade São João (CNPJ 11.444.777/0001-61, verificado "
+            + "pelo AgroConIA) convidou você para a carteira de clientes dele no AgroConIA.")
+        .doesNotContain("ainda não verificado");
+    assertThat(carteira.html()).contains("<strong>Contabilidade São João</strong>")
+        .contains("(CNPJ 11.444.777/0001-61, verificado pelo AgroConIA)");
+
+    Mensagem equipe = MensagensEmail.conviteEquipe(verificado, LINK_EQUIPE, VENCE, CONTATO);
+    assertThat(equipe.texto()).contains("(CNPJ 11.444.777/0001-61, verificado pelo AgroConIA)"
+        + " convidou você para a equipe dele").doesNotContain("ainda não verificado");
+  }
+
+  @Test
+  @DisplayName("convite de escritorio nao verificado (#520): aviso logo depois de quem convidou")
+  void conviteNaoVerificado() {
+    Mensagem carteira = MensagensEmail.conviteCarteira(naoVerificado("Contabilidade São João"),
+        LINK_CARTEIRA, VENCE, CONTATO);
+    assertThat(carteira.texto())
+        .contains("Escritório ainda não verificado. O AgroConIA ainda não conferiu o CNPJ deste "
+            + "escritório, e o nome foi informado por ele mesmo. Antes de aceitar, confirme o "
+            + "convite com o seu contador por um canal que você já conhece")
+        .doesNotContain("verificado pelo AgroConIA");
+    assertThat(carteira.texto().indexOf("ainda não verificado"))
+        .isGreaterThan(carteira.texto().indexOf("convidou você"))
+        .isLessThan(carteira.texto().indexOf("O que muda se você aceitar"));
+    assertThat(carteira.html()).contains("<strong>Escritório ainda não verificado.</strong>");
+
+    Mensagem equipe = MensagensEmail.conviteEquipe(naoVerificado("Contabilidade São João"),
+        LINK_EQUIPE, VENCE, CONTATO);
+    assertThat(equipe.texto()).contains("Escritório ainda não verificado.")
+        .contains("Antes de entrar, confirme o convite com o escritório");
+  }
+
+  @Test
+  @DisplayName("CNPJ formatado para o e-mail; fora dos 14 caracteres, como veio")
+  void cnpjFormatado() {
+    assertThat(MensagensEmail.cnpjFormatado("11444777000161")).isEqualTo("11.444.777/0001-61");
+    assertThat(MensagensEmail.cnpjFormatado("12ABC34501DE35")).isEqualTo("12.ABC.345/01DE-35");
+    assertThat(MensagensEmail.cnpjFormatado("123")).isEqualTo("123");
+  }
+
   @Test
   @DisplayName("convite de equipe: prazo, link com token e nome vazio sem aspas")
   void conviteEquipe() {
-    Mensagem m = MensagensEmail.conviteEquipe(" ", LINK_EQUIPE, VENCE, CONTATO);
+    Mensagem m = MensagensEmail.conviteEquipe(naoVerificado(" "), LINK_EQUIPE, VENCE, CONTATO);
     assertThat(m.assunto()).isEqualTo("Convite para a equipe de um escritório no AgroConIA");
     assertThat(m.texto())
         .contains("Um escritório de contabilidade convidou você para a equipe dele no AgroConIA.")
@@ -79,7 +130,7 @@ class MensagensEmailTest {
   @Test
   @DisplayName("nome do escritorio e link sao escapados no HTML")
   void escapaHtml() {
-    Mensagem m = MensagensEmail.conviteCarteira("Escritório <b>\"A&B\"</b>",
+    Mensagem m = MensagensEmail.conviteCarteira(naoVerificado("Escritório <b>\"A&B\"</b>"),
         "https://www.agroconia.com.br/escritorio?a=1&b=\"2\"", VENCE, CONTATO);
     assertThat(m.html())
         .contains("Escritório &lt;b&gt;&quot;A&amp;B&quot;&lt;/b&gt;")
@@ -116,8 +167,8 @@ class MensagensEmailTest {
         .isEqualTo("https://www.agroconia.com.br");
     assertThat(ModeloEmail.origem("https://www.agroconia.com.br"))
         .isEqualTo("https://www.agroconia.com.br");
-    assertThat(MensagensEmail.conviteCarteira("X", "http://localhost:4200/escritorio", VENCE,
-        CONTATO).html()).contains("src=\"http://localhost:4200/apple-touch-icon.png\"")
+    assertThat(MensagensEmail.conviteCarteira(naoVerificado("X"),
+        "http://localhost:4200/escritorio", VENCE, CONTATO).html()).contains("src=\"http://localhost:4200/apple-touch-icon.png\"")
         .contains("href=\"http://localhost:4200/politica-dados\"");
   }
 
