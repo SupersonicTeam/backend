@@ -53,8 +53,8 @@ class MensagensEmailTest {
         LINK_CARTEIRA, VENCE, CONTATO);
     assertThat(m.assunto()).isEqualTo("Convite de escritório de contabilidade no AgroConIA")
         .doesNotContain("São João");
-    assertThat(m.preCabecalho()).isEqualTo("Contabilidade São João quer atender você pelo "
-        + "AgroConIA. O convite vale até 24/11/2026.");
+    assertThat(m.preCabecalho()).isEqualTo("Contabilidade São João (escritório não verificado) "
+        + "quer atender você pelo AgroConIA. O convite vale até 24/11/2026.");
     assertThat(m.texto())
         .contains("O escritório Contabilidade São João convidou você para a carteira")
         .contains("O convite vale até 24/11/2026, às 15h30 (horário de Brasília).")
@@ -80,6 +80,8 @@ class MensagensEmailTest {
         .doesNotContain("ainda não verificado");
     assertThat(carteira.html()).contains("<strong>Contabilidade São João</strong>")
         .contains("(CNPJ 11.444.777/0001-61, verificado pelo AgroConIA)");
+    assertThat(carteira.preCabecalho()).isEqualTo("Contabilidade São João quer atender você "
+        + "pelo AgroConIA. O convite vale até 24/11/2026.");
 
     Mensagem equipe = MensagensEmail.conviteEquipe(verificado, LINK_EQUIPE, VENCE, CONTATO);
     assertThat(equipe.texto()).contains("(CNPJ 11.444.777/0001-61, verificado pelo AgroConIA)"
@@ -105,6 +107,11 @@ class MensagensEmailTest {
         LINK_EQUIPE, VENCE, CONTATO);
     assertThat(equipe.texto()).contains("Escritório ainda não verificado.")
         .contains("Antes de entrar, confirme o convite com o escritório");
+    // O aviso vai ja no pre-cabecalho, que a caixa de entrada mostra antes de abrir.
+    assertThat(equipe.preCabecalho()).startsWith("Contabilidade São João (escritório não "
+        + "verificado) convidou você para a equipe.");
+    assertThat(MensagensEmail.conviteEquipe(naoVerificado(" "), LINK_EQUIPE, VENCE, CONTATO)
+        .preCabecalho()).startsWith("Um escritório de contabilidade não verificado convidou");
   }
 
   @Test

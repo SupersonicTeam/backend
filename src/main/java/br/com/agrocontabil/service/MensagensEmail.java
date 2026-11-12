@@ -86,7 +86,7 @@ public final class MensagensEmail {
       OffsetDateTime expiraEm, String contato) {
     return montar(new Email(
         "Convite de escritório de contabilidade no AgroConIA",
-        quemNoPreCabecalho(escritorio.nome()) + " quer atender você pelo AgroConIA. O convite vale até " + data(expiraEm) + ".",
+        quemNoPreCabecalho(escritorio) + " quer atender você pelo AgroConIA. O convite vale até " + data(expiraEm) + ".",
         "Você recebeu um convite de escritório",
         semNulos(
             new Paragrafo(concatenar(quemConvidou(escritorio),
@@ -129,7 +129,7 @@ public final class MensagensEmail {
       OffsetDateTime expiraEm, String contato) {
     return montar(new Email(
         "Convite para a equipe de um escritório no AgroConIA",
-        quemNoPreCabecalho(escritorio.nome()) + " convidou você para a equipe. O convite vale até " + data(expiraEm) + ".",
+        quemNoPreCabecalho(escritorio) + " convidou você para a equipe. O convite vale até " + data(expiraEm) + ".",
         "Você recebeu um convite para uma equipe",
         semNulos(
             new Paragrafo(concatenar(quemConvidou(escritorio),
@@ -236,8 +236,17 @@ public final class MensagensEmail {
         + cnpj.substring(8, 12) + "-" + cnpj.substring(12);
   }
 
-  private static String quemNoPreCabecalho(String escritorio) {
-    return vazio(escritorio) ? "Um escritório de contabilidade" : escritorio;
+  /**
+   * Quem convida, no pré-cabeçalho (o que a caixa de entrada mostra antes de abrir). Sem a
+   * verificação do CNPJ (#520), o aviso vai já aqui: o nome sozinho não diz quem convidou.
+   */
+  private static String quemNoPreCabecalho(EscritorioDoConvite escritorio) {
+    if (vazio(escritorio.nome())) {
+      return escritorio.verificado() ? "Um escritório de contabilidade"
+          : "Um escritório de contabilidade não verificado";
+    }
+    return escritorio.verificado() ? escritorio.nome()
+        : escritorio.nome() + " (escritório não verificado)";
   }
 
   private static List<Trecho> concatenar(List<Trecho> inicio, Trecho fim) {
