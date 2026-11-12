@@ -114,6 +114,8 @@ braco() {
   local NOME CONJ STATUS
   for NOME in 516 497; do
     if [ "$NOME" = 516 ]; then CONJ=$CONJUNTO_516; else CONJ=$CONJUNTO_497; fi
+    # O ritmo de 3,5 s é de cada executor: entre dois, a folga fica aqui (20 por minuto no chat).
+    sleep 4
     python "$SCRIPTS/executar.py" --url "http://localhost:$PORTA" --pasta "$WT" \
       --banco "$BANCO" --modelo anthropic/claude-haiku-5-5 --email "$EMAIL" \
       --conjunto "$CONJ" --saida "$DIR/rodada-$NOME.jsonl" 2>&1 | tee "$DIR/executor-$NOME.log"
