@@ -39,6 +39,10 @@ class AmbienteTest(unittest.TestCase):
         # só os braços extras, sem o atalho --env-ligada
         self.assertEqual(list(ex.montar_bracos([], [], ["camada:F=true"])), ["desligada", "camada"])
 
+    def test_nome_de_braco_com_mais(self):
+        bracos = ex.montar_bracos([], [], ["camada1:F=true", "camada1+juiz:F=true,J=true"])
+        self.assertEqual(list(bracos), ["desligada", "camada1", "camada1+juiz"])
+
     def test_braco_extra_invalido(self):
         for texto in ("SemDoisPontos", "Maiuscula:F=1", "x:minuscula=1", "x:AI_CHAT_PROVIDER=y"):
             with self.assertRaises(ValueError, msg=texto):

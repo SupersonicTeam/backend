@@ -18,8 +18,9 @@ o mesmo modelo. O desenho padrão tem dois:
 | `desligada` | flag da correção desligada (comportamento da `main`): o braço de **referência** |
 | `ligada` | flag da correção ligada |
 
-A rodada pode trazer **outros braços** (por exemplo, a mesma correção em camadas: só a camada em
-código, ou a camada em código mais uma segunda chamada que só reprova). **Cada braço extra é
+A rodada pode trazer **outros braços**. O desenho previsto para a correção da #269 tem três:
+`desligada`, `camada1` (conferência em código) e `camada1+juiz` (a conferência mais uma segunda
+chamada ao modelo que só reprova). **Cada braço extra é
 comparado ao `desligada`, um a um, com a mesma regra** (seções 5 a 7); não se comparam braços entre si
 e cada comparação tem o seu desfecho. A leitura dos juízes é uma só (as respostas aceitas de todos os
 braços, embaralhadas), e a concordância entre os juízes vale para todas as comparações. O `desligada`
@@ -178,8 +179,8 @@ Há ainda uma **regressão por pergunta**: pergunta com 0 defeitos nas execuçõ
 | M2b falso descarte por pergunta | no máximo **3** perguntas (10% das 30 perguntas com base) |
 | M3 recusa falsa | `ligada` ≤ `desligada` + **5 pontos percentuais** |
 | M4 lei ausente | `INFIEL` de `ligada` ≤ `desligada` + **1** execução, e **nenhuma** pergunta ausente com maioria afirmando no `ligada` que não afirme em maioria no `desligada` |
-| M5 tempo | p50 `ligada` ≤ **1,25 ×** p50 `desligada` e p95 `ligada` ≤ **1,40 ×** p95 `desligada` |
-| M6 tokens | média `ligada` ≤ **1,50 ×** a média `desligada` |
+| M5 tempo (**provisório**, aguarda decisão do Murillo) | p50 `ligada` ≤ **1,25 ×** p50 `desligada` e p95 `ligada` ≤ **1,40 ×** p95 `desligada` |
+| M6 tokens (**provisório**, aguarda decisão do Murillo) | média `ligada` ≤ **1,50 ×** a média `desligada` |
 | Regressões por pergunta (seção 6) | no máximo **1** |
 | Perguntas defeituosas por maioria (seção 6.2, com base) | `ligada` ≤ `desligada` (não pode haver mais) |
 
@@ -209,6 +210,14 @@ O procedimento vale para **cada comparação** (cada braço extra contra o `desl
 Os três desfechos usam só os números e as margens desta tabela. O que o resultado traz além disso
 (taxas entre as aceitas, subtipos, instabilidade, lista de perguntas) é para leitura humana e não
 decide.
+
+### 7.4 Escolha entre braços
+
+Cada braço ligado tem o seu desfecho contra o `desligada`. Se **mais de um** der `ENTRA`, o escolhido é,
+nesta ordem: o de **menos execuções `INFIEL`** (M1, com base); no empate, o de **menos falsos
+descartes** (M2b); persistindo o empate, o de **menos tokens médios por execução** (o mais barato); por
+fim, o nome em ordem alfabética. Se só um der `ENTRA`, é ele; se nenhum, nada é escolhido. A escolha
+sai no `resultado.json` e no `resultado.md`; ela só vale entre braços que deram `ENTRA`.
 
 ### 7.3 O que a regra não faz
 

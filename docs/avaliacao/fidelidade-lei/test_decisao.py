@@ -368,6 +368,25 @@ class VariosBracosTest(unittest.TestCase):
         self.assertIn("desligada × ligada", md)
         self.assertIn("desligada × camada", md)
 
+    def test_escolha_entre_bracos_que_dao_entra(self):
+        def comp(nome, infiel, falsos, tokens, desfecho="ENTRA"):
+            return {"desfecho": desfecho, "braco": {nome: {"infiel": infiel, "tokensMedios": tokens}},
+                    "porPergunta": {"falsosDescartes": ["Q"] * falsos}}
+        esc = dec.escolher_entre_bracos({"camada1": comp("camada1", 4, 1, 3000),
+                                         "camada1+juiz": comp("camada1+juiz", 2, 2, 5000)})
+        self.assertEqual(esc["escolhido"], "camada1+juiz")  # menos INFIEL
+        esc = dec.escolher_entre_bracos({"camada1": comp("camada1", 2, 1, 5000),
+                                         "camada1+juiz": comp("camada1+juiz", 2, 2, 3000)})
+        self.assertEqual(esc["escolhido"], "camada1")  # empate: menos falso descarte
+        esc = dec.escolher_entre_bracos({"camada1": comp("camada1", 2, 1, 5000),
+                                         "camada1+juiz": comp("camada1+juiz", 2, 1, 3000)})
+        self.assertEqual(esc["escolhido"], "camada1+juiz")  # empate: o mais barato
+        esc = dec.escolher_entre_bracos({"camada1": comp("camada1", 2, 1, 5000),
+                                         "camada1+juiz": comp("camada1+juiz", 0, 0, 1, "NAO_ENTRA")})
+        self.assertEqual(esc["escolhido"], "camada1")  # só quem deu ENTRA concorre
+        self.assertIsNone(dec.escolher_entre_bracos(
+            {"camada1": comp("camada1", 0, 0, 1, "INCONCLUSIVA")})["escolhido"])
+
     def test_primeiro_braco_do_manifesto_tem_de_ser_o_desligada(self):
         with tempfile.TemporaryDirectory() as pasta:
             raiz = Path(pasta)

@@ -351,9 +351,28 @@ def decidir_rodada(rodada: Path) -> dict:
                               comum.BASE, b) for b in bracos[1:]}
     return {"versaoDaRegra": comum.VERSAO_REGRA, "bracos": bracos,
             "desfechos": {b: c["desfecho"] for b, c in comparacoes.items()},
+            "escolha": escolher_entre_bracos(comparacoes),
             "comparacoes": comparacoes, "leitura": info,
             "rodada": {"commit": manifesto.get("commit"), "conjunto": manifesto["conjunto"],
                        "modelo": manifesto.get("modelo"), "repeticoes": manifesto["repeticoes"]}}
+
+
+def escolher_entre_bracos(comparacoes: dict) -> dict:
+    """Entre os braços que deram `ENTRA`, o escolhido (regra, seção 7.4): menos `INFIEL`; no empate,
+    menos falsos descartes; depois, menos tokens por execução (o mais barato); por fim, o nome."""
+    entram = {b: c for b, c in comparacoes.items() if c["desfecho"] == "ENTRA"}
+    if not entram:
+        return {"escolhido": None, "candidatos": [], "criterio": "nenhum braço deu ENTRA"}
+
+    def chave(item):
+        nome, c = item
+        medidas = c["braco"][nome]
+        return (medidas["infiel"], len(c["porPergunta"]["falsosDescartes"]),
+                medidas["tokensMedios"] if medidas["tokensMedios"] is not None else float("inf"), nome)
+
+    ordenados = sorted(entram.items(), key=chave)
+    return {"escolhido": ordenados[0][0], "candidatos": [n for n, _ in ordenados],
+            "criterio": "menos INFIEL, depois menos falsos descartes, depois menos tokens"}
 
 
 def percentual(x):
@@ -413,6 +432,11 @@ def relatorio_md(r: dict) -> str:
               "Cada braço é comparado ao desligada.", ""]
     for c in r["comparacoes"].values():
         linhas += secao_md(c)
+    if len(r["comparacoes"]) > 1 and r.get("escolha"):
+        esc = r["escolha"]
+        linhas += ["## Escolha entre os braços", "",
+                   f"Escolhido: {esc['escolhido'] or 'nenhum'} (candidatos com ENTRA, em ordem: "
+                   f"{esc['candidatos']}); critério: {esc['criterio']}.", ""]
     lei = r["leitura"]
     linhas += ["## Leitura dos juízes", "",
                f"Itens lidos: {lei.get('itensLidos')}; concordância J1 × J2: "
@@ -441,6 +465,8 @@ def main(argv=None) -> int:
     (rodada / "resultado.md").write_text(relatorio_md(resultado), encoding="utf-8")
     for braco, c in resultado["comparacoes"].items():
         print(f"{comum.BASE} x {braco}: {c['desfecho']}: {c['motivo']}")
+    if len(resultado["comparacoes"]) > 1:
+        print(f"escolhido: {resultado['escolha']['escolhido']}")
     return 0
 
 

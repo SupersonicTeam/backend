@@ -99,6 +99,18 @@ O que o executor faz, e o que ele exige da outra sessão:
   jar, ambiente dos braços sem segredo, contagens), `logs/` (com segredos mascarados). Nada de URL,
   conta ou senha.
 
+### Três braços (desenho previsto para a correção da #269)
+
+```bash
+python3 -I docs/avaliacao/fidelidade-lei/executar_fidelidade.py --jar <jar> --commit <sha>     --braco "camada1:NOME_DA_FLAG=true"     --braco "camada1+juiz:NOME_DA_FLAG=true,NOME_DA_FLAG_DO_JUIZ=true"
+```
+
+Cada braço ligado é comparado ao `desligada` pela mesma regra; se mais de um der `ENTRA`, a regra
+escolhe entre eles (seção 7.4). Os tokens da segunda chamada entram na medida M6 desde que a
+auditoria os grave em colunas `tokens_entrada*`/`tokens_saida*` (o executor e a decisão somam por
+prefixo, nunca por nome exato). **As margens de tempo (M5) e de tokens (M6) são provisórias**, à espera
+da decisão do Murillo; estão numa tabela só (`REGRA` em `fidelidade_comum.py`, espelhada na seção 7.1).
+
 ## Leitura dos juízes e decisão
 
 ```bash

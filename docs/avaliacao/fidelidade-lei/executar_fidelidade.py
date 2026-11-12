@@ -23,7 +23,8 @@ Uso (da raiz do repositório; o jar é o do head do PR da correção, `./mvnw -D
         --commit <sha do head do PR>
 
 `--env-desligada`/`--env-ligada` repetem (CHAVE=valor). Um terceiro braço (ou mais) vai em
-`--braco NOME:CHAVE=valor,CHAVE=valor` (repetível; cada braço é comparado ao `desligada`; cada JVM
+`--braco NOME:CHAVE=valor,CHAVE=valor` (repetível, nome em minúsculas, dígitos, `_` ou `+`, como
+`camada1+juiz`; cada braço é comparado ao `desligada`; cada JVM
 gasta memória, e todos os braços usam a mesma conta semeada). O que não é a flag é igual em todos os
 braços; as variáveis de identidade da medição (modelo, perfil, banco, porta, chave) são do executor e a
 tentativa de sobrescrevê-las é recusada. `--so-verificar` confere o conjunto, os argumentos e mostra
@@ -99,7 +100,7 @@ def validar_banco(banco: str, origem: str) -> None:
 def analisar_braco(texto: str) -> tuple:
     """`NOME:CHAVE=valor,CHAVE=valor` -> (nome, env)."""
     nome, separador, resto = texto.partition(":")
-    if not separador or not re.fullmatch(r"[a-z][a-z0-9_]{0,23}", nome):
+    if not separador or not re.fullmatch(r"[a-z][a-z0-9_+]{0,23}", nome):
         raise ValueError(f"--braco: use NOME:CHAVE=valor com nome em minúsculas ({texto!r})")
     itens = [i for i in resto.split(",") if i]
     return nome, analisar_env(itens, nome)
