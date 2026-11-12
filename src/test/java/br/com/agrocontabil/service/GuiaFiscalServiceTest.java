@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.dto.GuiaFiscalRequest;
 import br.com.agrocontabil.dto.GuiaFiscalResponse;
+import br.com.agrocontabil.dto.NovaGuiaFiscalRequest;
 import br.com.agrocontabil.exception.GuiaJaPagaException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.model.GuiaFiscal;
@@ -224,5 +225,77 @@ class GuiaFiscalServiceTest {
         .status(StatusGuiaFiscal.PENDENTE)
         .createdAt(OffsetDateTime.now(CLOCK_FIXO))
         .build();
+  }
+
+  // -------------------------------------------------------------------------
+  // Rotas separadas (issue #273)
+  // -------------------------------------------------------------------------
+
+  private NovaGuiaFiscalRequest novaRequest() {
+    return new NovaGuiaFiscalRequest(
+        TipoGuiaFiscal.ICMS, LocalDate.of(2026, 8, 20), new BigDecimal("1250.00"), null);
+  }
+
+  @Test
+  @DisplayName("criarDoProdutorAutenticado() grava para o produtor da identidade, sem resolver id")
+  void criarDoProdutorAutenticadoUsaAIdentidade() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(guiaFiscalRepository.save(any(GuiaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    GuiaFiscalResponse response = service.criarDoProdutorAutenticado(novaRequest());
+
+    assertThat(response.produtorId()).isEqualTo(produtor.getId());
+    assertThat(response.status()).isEqualTo("PENDENTE");
+    verify(produtorEmContexto, never()).resolver(any());
+  }
+
+  @Test
+  @DisplayName("criarDaCarteira() exige o contador com acesso antes de gravar; negado = nada gravado")
+  void criarDaCarteiraExigeContadorComAcesso() {
+    UUID alvo = UUID.randomUUID();
+    org.mockito.Mockito.doThrow(new ResourceNotFoundException("Produtor", alvo))
+        .when(produtorEmContexto).exigirContadorComAcesso(alvo);
+
+    assertThatThrownBy(() -> service.criarDaCarteira(alvo, novaRequest()))
+        .isInstanceOf(ResourceNotFoundException.class);
+
+    verify(guiaFiscalRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("criarDaCarteira() grava para o produtor do path")
+  void criarDaCarteiraGravaParaOProdutorDoPath() {
+    when(produtorEmContexto.resolver(produtor.getId())).thenReturn(produtor);
+    when(guiaFiscalRepository.save(any(GuiaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    GuiaFiscalResponse response = service.criarDaCarteira(produtor.getId(), novaRequest());
+
+    assertThat(response.produtorId()).isEqualTo(produtor.getId());
+    verify(produtorEmContexto).exigirContadorComAcesso(produtor.getId());
+  }
+
+  @Test
+  @DisplayName("listarDaCarteira() exige o contador com acesso antes de consultar")
+  void listarDaCarteiraExigeContadorComAcesso() {
+    UUID alvo = UUID.randomUUID();
+    org.mockito.Mockito.doThrow(new ResourceNotFoundException("Produtor", alvo))
+        .when(produtorEmContexto).exigirContadorComAcesso(alvo);
+
+    assertThatThrownBy(() -> service.listarDaCarteira(alvo, 0, 100))
+        .isInstanceOf(ResourceNotFoundException.class);
+
+    verify(guiaFiscalRepository, never()).findByProdutorId(any(), any());
+  }
+
+  @Test
+  @DisplayName("listarDoProdutorAutenticado() consulta só o produtor da identidade")
+  void listarDoProdutorAutenticadoUsaAIdentidade() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(guiaFiscalRepository.findByProdutorId(eq(produtor.getId()), any(Pageable.class)))
+        .thenReturn(org.springframework.data.domain.Page.empty());
+
+    assertThat(service.listarDoProdutorAutenticado(0, 100).getTotalElements()).isZero();
+
+    verify(guiaFiscalRepository).findByProdutorId(eq(produtor.getId()), any(Pageable.class));
   }
 }

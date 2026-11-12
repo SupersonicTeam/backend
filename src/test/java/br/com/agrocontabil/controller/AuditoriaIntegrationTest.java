@@ -176,6 +176,36 @@ class AuditoriaIntegrationTest {
   }
 
   @Test
+  @DisplayName("rotas novas de guia (#273) tambem sao auditadas: criar pela carteira e pelo produtor, pagar")
+  void guiasPelasRotasNovas() throws Exception {
+    String corpo = "{\"tipoGuia\": \"DARF\", \"dataVencimento\": \"2026-12-20\", \"valor\": 500.00}";
+    MvcResult criada = mockMvc.perform(
+            post("/api/contador/produtores/{id}/guias", produtor.usuarioId())
+            .header(HttpHeaders.AUTHORIZATION, token(EMAIL_CONTADOR))
+            .contentType(MediaType.APPLICATION_JSON).content(corpo))
+        .andExpect(status().isCreated()).andReturn();
+    String guiaId = objectMapper.readTree(criada.getResponse().getContentAsString())
+        .get("id").asText();
+    String tokenProdutor = token(EMAIL_PRODUTOR);
+    mockMvc.perform(post("/api/guias")
+            .header(HttpHeaders.AUTHORIZATION, tokenProdutor)
+            .contentType(MediaType.APPLICATION_JSON).content(corpo))
+        .andExpect(status().isCreated());
+    mockMvc.perform(patch("/api/guias/{id}/pagar", guiaId)
+            .header(HttpHeaders.AUTHORIZATION, tokenProdutor))
+        .andExpect(status().isOk());
+
+    List<RegistroAuditoria> registros = registros();
+    assertThat(registros).extracting(RegistroAuditoria::getAcao).containsExactly(
+        AcaoAuditada.GUIA_CRIADA, AcaoAuditada.GUIA_CRIADA, AcaoAuditada.GUIA_PAGA);
+    assertThat(registros.get(0).getPapel()).isEqualTo("CONTADOR");
+    assertThat(registros.get(0).getProdutorId()).isEqualTo(produtor.usuarioId());
+    assertThat(registros.get(1).getPapel()).isEqualTo("PRODUTOR");
+    assertThat(registros.get(2).getEstadoAntes()).isEqualTo("PENDENTE");
+    assertThat(registros.get(2).getEstadoDepois()).isEqualTo("PAGA");
+  }
+
+  @Test
   @DisplayName("troca de senha e registrada sobre a conta, sem nada da senha")
   void trocaDeSenha() throws Exception {
     mockMvc.perform(post("/api/auth/senha/alterar")

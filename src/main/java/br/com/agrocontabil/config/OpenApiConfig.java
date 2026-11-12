@@ -42,7 +42,7 @@ public class OpenApiConfig {
             "relatorios", new String[] {"/api/relatorios/**"},
             "contador", new String[] {"/api/contador/**", "/api/escritorio/**", "/api/convites/**",
                 "/api/vinculos/**", "/api/pendencias/**", "/api/notificacao/**",
-                "/api/auditoria/**", "/api/calendario-fiscal/**"},
+                "/api/auditoria/**", "/api/calendario-fiscal/**", "/api/guias/**"},
             "auth", new String[] {"/api/auth/**", "/api/usuarios/**", "/api/politica-dados",
                 "/api/v1/health"},
             "publico", new String[] {"/api/publico/**"});
