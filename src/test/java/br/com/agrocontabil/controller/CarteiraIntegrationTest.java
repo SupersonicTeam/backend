@@ -22,6 +22,8 @@ import br.com.agrocontabil.repository.VinculoCarteiraRepository;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
 import br.com.agrocontabil.service.EnvioConviteCarteira;
+import br.com.agrocontabil.service.EscritorioDoConvite;
+import br.com.agrocontabil.support.EscritoriosDeTeste;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -81,14 +83,19 @@ class CarteiraIntegrationTest {
   /** E-mails de convite enviados, na ordem. */
   static final BlockingQueue<String> ENVIADOS = new LinkedBlockingQueue<>();
 
+  /** Quem convidou, em cada e-mail enviado (o selo do #520). */
+  static final BlockingQueue<EscritorioDoConvite> REMETENTES = new LinkedBlockingQueue<>();
+
   /** Troca o envio real por uma captura. */
   @TestConfiguration
   static class CapturaConvite {
     @Bean
     @Primary
     EnvioConviteCarteira envioConviteCapturado() {
-      return (destinatario, escritorio, link, validade) ->
-          ENVIADOS.add(destinatario + "|" + escritorio);
+      return (destinatario, escritorio, link, validade) -> {
+        REMETENTES.add(escritorio);
+        ENVIADOS.add(destinatario + "|" + escritorio.nome());
+      };
     }
   }
 
@@ -112,6 +119,7 @@ class CarteiraIntegrationTest {
   void setUp() throws Exception {
     cleaner.limparTudo();
     ENVIADOS.clear();
+    REMETENTES.clear();
     produtorA = cadastroService.cadastrar(new CadastroRequest(
         PapelUsuario.PRODUTOR, "Joaquim Conceição", CPF_A, EMAIL_A, SENHA));
     produtorB = cadastroService.cadastrar(new CadastroRequest(
@@ -543,6 +551,62 @@ class CarteiraIntegrationTest {
     assertThat(encerrados.get(0).get("cpfCnpj").isNull()).isTrue();
     assertThat(encerrados.get(0).get("uf").isNull()).isTrue();
     assertThat(encerrados.get(0).get("regime").isNull()).isTrue();
+  }
+
+  @Test
+  @DisplayName("selo (#520): convite, vinculo, escritorio e e-mail dizem se o CNPJ e verificado; "
+      + "trocar o nome mantem, trocar o CNPJ tira")
+  void seloDoEscritorioVerificado() throws Exception {
+    convidar(tokenContador, EMAIL_A).andExpect(status().isAccepted());
+    assertThat(REMETENTES.poll(5, TimeUnit.SECONDS))
+        .isEqualTo(new EscritorioDoConvite("Escritorio Campo", null));
+    mockMvc.perform(get("/api/convites").header(HttpHeaders.AUTHORIZATION, tokenA))
+        .andExpect(jsonPath("$[0].escritorioVerificado").value(false))
+        .andExpect(jsonPath("$[0].escritorioCnpj").doesNotExist());
+
+    // Com CNPJ e sem a verificacao: ainda sem selo, e o CNPJ nao sai.
+    jdbcTemplate.update("UPDATE escritorio SET cnpj = '11444777000161' WHERE id ="
+        + " (SELECT escritorio_id FROM contadores WHERE id = ?)", contador.usuarioId());
+    mockMvc.perform(get("/api/convites").header(HttpHeaders.AUTHORIZATION, tokenA))
+        .andExpect(jsonPath("$[0].escritorioVerificado").value(false))
+        .andExpect(jsonPath("$[0].escritorioCnpj").doesNotExist());
+
+    EscritoriosDeTeste.verificarCnpj(jdbcTemplate, contador.usuarioId());
+    String conviteId = json(mockMvc.perform(get("/api/convites")
+            .header(HttpHeaders.AUTHORIZATION, tokenA))
+        .andExpect(jsonPath("$[0].escritorioVerificado").value(true))
+        .andExpect(jsonPath("$[0].escritorioCnpj").value("11444777000161")))
+        .get(0).get("id").asText();
+    convidar(tokenContador, EMAIL_B).andExpect(status().isAccepted());
+    assertThat(REMETENTES.poll(5, TimeUnit.SECONDS))
+        .isEqualTo(new EscritorioDoConvite("Escritorio Campo", "11444777000161"));
+    mockMvc.perform(post("/api/convites/{id}/aceitar", conviteId)
+            .header(HttpHeaders.AUTHORIZATION, tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.escritorioVerificado").value(true));
+    mockMvc.perform(get("/api/vinculos").header(HttpHeaders.AUTHORIZATION, tokenA))
+        .andExpect(jsonPath("$[0].escritorioVerificado").value(true))
+        .andExpect(jsonPath("$[0].escritorioCnpj").value("11444777000161"));
+    comoContador("/api/escritorio").andExpect(jsonPath("$.escritorioVerificado").value(true));
+
+    // Trocar o nome mantem o selo: ele mostra o CNPJ verificado ao lado do nome.
+    mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenContador)
+            .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Campo Verde Ltda\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.escritorioVerificado").value(true));
+    mockMvc.perform(get("/api/vinculos").header(HttpHeaders.AUTHORIZATION, tokenA))
+        .andExpect(jsonPath("$[0].escritorio").value("Campo Verde Ltda"))
+        .andExpect(jsonPath("$[0].escritorioVerificado").value(true));
+
+    // Trocar o CNPJ tira o selo na hora.
+    mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, tokenContador)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"nome\":\"Campo Verde Ltda\",\"cnpj\":\"11222333000181\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.escritorioVerificado").value(false));
+    mockMvc.perform(get("/api/vinculos").header(HttpHeaders.AUTHORIZATION, tokenA))
+        .andExpect(jsonPath("$[0].escritorioVerificado").value(false))
+        .andExpect(jsonPath("$[0].escritorioCnpj").doesNotExist());
   }
 
   @Test

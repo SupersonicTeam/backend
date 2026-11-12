@@ -569,10 +569,13 @@ public class CarteiraService {
 
   private static VinculoProdutorResponse vinculoDoProdutor(VinculoCarteira vinculo,
       Escritorio escritorio, Contador responsavel) {
+    boolean verificado = escritorio != null && escritorio.cnpjVerificado();
     return new VinculoProdutorResponse(
         vinculo.getId(),
         vinculo.getEscritorioId(),
         escritorio == null ? null : escritorio.getNome(),
+        verificado,
+        verificado ? escritorio.getCnpj() : null,
         responsavel == null ? null : responsavel.getNomeCompleto(),
         responsavel == null ? null : responsavel.getCrc(),
         vinculo.getSituacao(),

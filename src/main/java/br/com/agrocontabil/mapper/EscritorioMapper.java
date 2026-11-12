@@ -35,7 +35,8 @@ public final class EscritorioMapper {
       Instant enderecoAlteravelEm) {
     return new EscritorioResponse(escritorio.getId(), escritorio.getNome(), escritorio.getCnpj(),
         minhaFuncao, membros, escritorio.getSlug(), enderecoHost, enderecoAlteravelEm,
-        escritorio.getTipo(), escritorio.getTelefone(), paraResponse(escritorio.getEndereco()));
+        escritorio.getTipo(), escritorio.getTelefone(), paraResponse(escritorio.getEndereco()),
+        escritorio.cnpjVerificado());
   }
 
   /**

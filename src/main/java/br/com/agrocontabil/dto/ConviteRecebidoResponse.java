@@ -10,7 +10,11 @@ import java.util.UUID;
  * Convite na visão do produtor (issue #177).
  *
  * @param id         convite
- * @param escritorio   nome do escritório que convidou
+ * @param escritorio   nome do escritório que convidou (texto livre, escolhido pelo escritório)
+ * @param escritorioVerificado o CNPJ do escritório foi verificado pelo AgroConIA (#520)? O nome
+ *     não prova quem convidou: sem a verificação, a tela avisa o produtor
+ * @param escritorioCnpj CNPJ do escritório, só dígitos, só quando verificado (o selo o mostra ao
+ *     lado do nome); nulo sem verificação
  * @param convidadoPor nome do contador que mandou o convite (#228)
  * @param crc          registro dele no conselho regional
  * @param situacao   situação do convite
@@ -23,6 +27,13 @@ public record ConviteRecebidoResponse(
     UUID id,
     @Schema(description = "Nome do escritório que convidou", example = "Escritório Campo Verde")
     String escritorio,
+    @Schema(description = "O CNPJ do escritório foi verificado pelo AgroConIA (#520)? O nome é "
+        + "texto livre e não prova quem convidou: sem a verificação, mostre um aviso para o "
+        + "produtor confirmar o convite com o contador antes de aceitar", example = "true")
+    boolean escritorioVerificado,
+    @Schema(description = "CNPJ do escritório, só dígitos, só quando verificado: o selo o mostra "
+        + "ao lado do nome. Nulo sem verificação", example = "11444777000161", nullable = true)
+    String escritorioCnpj,
     @Schema(description = "Nome do contador que enviou o convite", example = "Ana Souza")
     String convidadoPor,
     @Schema(description = "Registro do contador no conselho regional", example = "MT-12345")

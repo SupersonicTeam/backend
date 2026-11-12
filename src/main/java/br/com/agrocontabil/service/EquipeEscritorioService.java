@@ -370,12 +370,13 @@ public class EquipeEscritorioService {
           .expiraEm(agora.plus(propriedades.validade()))
           .convidadoPor(admin.getId())
           .build());
-      String nome = ConviteCarteiraService.nomeParaEmail(escritorio.getNome());
+      EscritorioDoConvite remetente = EscritorioDoConvite.de(escritorio,
+          ConviteCarteiraService.nomeParaEmail(escritorio.getNome()));
       TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
         @Override
         public void afterCommit() {
-          enviarEmSegundoPlano(normalizado, nome, propriedades.urlFrontend() + "#token=" + token,
-              salvo.getExpiraEm());
+          enviarEmSegundoPlano(normalizado, remetente,
+              propriedades.urlFrontend() + "#token=" + token, salvo.getExpiraEm());
         }
       });
       return salvo;
@@ -574,7 +575,7 @@ public class EquipeEscritorioService {
         TipoEscritorio.EMPRESARIAL);
   }
 
-  private void enviarEmSegundoPlano(String email, String escritorio, String link,
+  private void enviarEmSegundoPlano(String email, EscritorioDoConvite escritorio, String link,
       OffsetDateTime expiraEm) {
     try {
       executor.execute(() -> {

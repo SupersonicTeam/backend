@@ -14,6 +14,7 @@ import br.com.agrocontabil.dto.CadastroResponse;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
 import br.com.agrocontabil.service.EnvioConviteEquipe;
+import br.com.agrocontabil.service.EscritorioDoConvite;
 import br.com.agrocontabil.support.EscritoriosDeTeste;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -67,13 +68,19 @@ class EscritorioEquipeIntegrationTest {
   /** Links de convite de equipe enviados, na ordem. */
   static final BlockingQueue<String> LINKS = new LinkedBlockingQueue<>();
 
+  /** Quem convidou, em cada e-mail de convite de equipe (o selo do #520). */
+  static final BlockingQueue<EscritorioDoConvite> REMETENTES = new LinkedBlockingQueue<>();
+
   /** Troca o envio real por uma captura do link. */
   @TestConfiguration
   static class CapturaConvite {
     @Bean
     @Primary
     EnvioConviteEquipe envioConviteEquipeCapturado() {
-      return (destinatario, escritorio, link, validade) -> LINKS.add(destinatario + "|" + link);
+      return (destinatario, escritorio, link, validade) -> {
+        REMETENTES.add(escritorio);
+        LINKS.add(destinatario + "|" + link);
+      };
     }
   }
 
@@ -93,6 +100,7 @@ class EscritorioEquipeIntegrationTest {
   void setUp() throws Exception {
     cleaner.limparTudo();
     LINKS.clear();
+    REMETENTES.clear();
     adminA = cadastroService.cadastrar(new CadastroRequest(
         PapelUsuario.CONTADOR, "Escritorio A", "11222333000181", EMAIL_ADMIN_A, SENHA));
     adminB = cadastroService.cadastrar(new CadastroRequest(
@@ -167,6 +175,23 @@ class EscritorioEquipeIntegrationTest {
     assertThat(escritorioDe(adminA.usuarioId())).isNotEqualTo(escritorioDe(adminB.usuarioId()));
     mockMvc.perform(get("/api/escritorio").header(HttpHeaders.AUTHORIZATION, token(EMAIL_PRODUTOR)))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  @DisplayName("selo (#520): o e-mail do convite de equipe leva o CNPJ so do escritorio verificado")
+  void seloNoConviteDeEquipe() throws Exception {
+    convidarMembro(tokenAdminA, "primeiro@lugar.nenhum", "CONTADOR")
+        .andExpect(status().isAccepted());
+    assertThat(REMETENTES.poll(5, TimeUnit.SECONDS))
+        .isEqualTo(new EscritorioDoConvite("Escritorio A", null));
+
+    jdbcTemplate.update("UPDATE escritorio SET cnpj = '11444777000161' WHERE id = ?",
+        escritorioDe(adminA.usuarioId()));
+    EscritoriosDeTeste.verificarCnpj(jdbcTemplate, adminA.usuarioId());
+    convidarMembro(tokenAdminA, "segundo@lugar.nenhum", "CONTADOR")
+        .andExpect(status().isAccepted());
+    assertThat(REMETENTES.poll(5, TimeUnit.SECONDS))
+        .isEqualTo(new EscritorioDoConvite("Escritorio A", "11444777000161"));
   }
 
   @Test
