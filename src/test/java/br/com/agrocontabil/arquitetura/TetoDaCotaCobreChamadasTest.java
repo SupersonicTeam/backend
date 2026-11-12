@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.assistente.RotaLegislacao;
+import br.com.agrocontabil.assistente.explicacao.ExplicadorResposta;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.orquestracao.LlmClassificadorIntencao;
 import br.com.agrocontabil.config.AssistenteProperties;
@@ -33,6 +34,11 @@ import org.springframework.ai.chat.model.ChatModel;
  * <p>Desde a #499 toda chamada passa por {@link ContextoAssistente#chamar}, o ponto único que
  * confere a reserva, avisa o streaming (o comentário que percebe o cliente que saiu) e guarda a
  * estimativa cobrada no cancelamento: as chamadas são contadas nele, e só ele chama a porta.
+ *
+ * <p>Desde a #268 há um quarto ponto, a explicação depois da resposta de dados
+ * ({@link ExplicadorResposta}), que fica <strong>fora</strong> da fórmula da pergunta: ela tem
+ * reserva própria, feita só quando a explicação vai acontecer
+ * ({@link AssistenteProperties.Cota#tetoDaExplicacao}, uma chamada).
  */
 class TetoDaCotaCobreChamadasTest {
 
@@ -46,8 +52,8 @@ class TetoDaCotaCobreChamadasTest {
   }
 
   @Test
-  @DisplayName("#166/#270/#499: exatamente as 3 chamadas da formula, uma por classe")
-  void soAsTresChamadasDaFormula() {
+  @DisplayName("#166/#270/#499/#268: as 3 chamadas da formula e a da explicacao, uma por classe")
+  void soAsTresChamadasDaFormulaEADaExplicacao() {
     List<JavaMethodCall> chamadas = producao.stream()
         .flatMap(c -> c.getMethodCallsFromSelf().stream())
         .filter(c -> c.getTargetOwner().isEquivalentTo(ContextoAssistente.class)
@@ -60,8 +66,24 @@ class TetoDaCotaCobreChamadasTest {
     assertThat(porClasse).containsOnly(
         Map.entry(LlmClassificadorIntencao.class.getName(), 1L),
         Map.entry(RotaDados.class.getName(), 1L),
-        Map.entry(RotaLegislacao.class.getName(), 1L));
-    assertThat(chamadas).hasSize(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA);
+        Map.entry(RotaLegislacao.class.getName(), 1L),
+        Map.entry(ExplicadorResposta.class.getName(), 1L));
+    // A da explicacao (#268) tem reserva propria: as outras sao as da formula da pergunta.
+    assertThat(chamadas.stream()
+        .filter(c -> !c.getOriginOwner().isEquivalentTo(ExplicadorResposta.class)))
+        .hasSize(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA);
+  }
+
+  @Test
+  @DisplayName("#268/#511: a reserva da explicacao cobre uma chamada com o teto proprio: "
+      + "8.192 + 256 x 4 = 9.216 com os padroes")
+  void reservaDaExplicacao() {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    assertThat(propriedades.getCota().tetoDaExplicacao(propriedades.getTetos(), 1.0))
+        .isEqualTo(9_216);
+    // O fator do modelo vale como nas outras chamadas.
+    assertThat(propriedades.getCota().tetoDaExplicacao(propriedades.getTetos(), 2.0))
+        .isEqualTo(18_432);
   }
 
   @Test

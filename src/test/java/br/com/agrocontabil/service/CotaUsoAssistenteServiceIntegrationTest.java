@@ -133,6 +133,54 @@ class CotaUsoAssistenteServiceIntegrationTest {
   }
 
   @Test
+  @DisplayName("#268: explicacao com reserva propria, acertada pelo uso real sem contar outra "
+      + "pergunta; sem saldo, vazio e nunca 429")
+  void reservaDaExplicacao() {
+    CotaUsoAssistenteService service = service(QUARTA);
+    // Uma chamada: 8.192 de entrada + 256 de saida x 4 = 9.216.
+    assertThat(service.tetoDaExplicacao("ollama/qwen3")).isEqualTo(9_216);
+
+    CotaUsoAssistenteService.Reserva pergunta =
+        service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3");
+    service.acertar(pergunta, 1000, 100, "ollama/qwen3");
+    CotaUsoAssistenteService.Reserva explicacao = service.reservarExplicacao(
+        TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3").orElseThrow();
+    assertThat(explicacao.creditos()).isEqualTo(9_216);
+    assertThat(uso().getCreditosReservados()).isEqualTo(9_216);
+
+    assertThat(service.acertarExplicacao(explicacao, 600, 50, "ollama/qwen3")).isEqualTo(800);
+    assertThat(uso().getCreditosReservados()).isZero();
+    assertThat(uso().getCreditosConsumidos()).isEqualTo(1400 + 800);
+    assertThat(uso().getTokensEntrada()).isEqualTo(1600);
+    // A explicacao nao e outra pergunta.
+    assertThat(uso().getPerguntas()).isEqualTo(1);
+
+    // Saldo menor que o teto da explicacao: vazio, sem excecao e sem reservar nada.
+    UUID semSaldo = UUID.randomUUID();
+    UsoSemanalAssistenteId linha = new UsoSemanalAssistenteId(TipoTitularCota.PRODUTOR, semSaldo,
+        LocalDate.of(2026, 10, 12));
+    repository.save(UsoSemanalAssistente.builder().id(linha).creditosConsumidos(300_000 - 9_000)
+        .atualizadoEm(QUARTA.atZone(ZONE).toOffsetDateTime()).build());
+    assertThat(service.reservarExplicacao(TipoTitularCota.PRODUTOR, semSaldo, "ollama/qwen3"))
+        .isEmpty();
+    assertThat(repository.findById(linha).orElseThrow().getCreditosReservados()).isZero();
+  }
+
+  @Test
+  @DisplayName("#268: com a cota desligada, a reserva da explicacao e inativa e nao mexe na linha")
+  void reservaDaExplicacaoComCotaDesligada() {
+    propriedades.getCota().setHabilitada(false);
+    CotaUsoAssistenteService service = service(QUARTA);
+
+    CotaUsoAssistenteService.Reserva reserva = service.reservarExplicacao(
+        TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3").orElseThrow();
+
+    assertThat(reserva.ativa()).isFalse();
+    assertThat(service.acertarExplicacao(reserva, 600, 50, "ollama/qwen3")).isZero();
+    assertThat(repository.count()).isZero();
+  }
+
+  @Test
   @DisplayName("Virada da semana em Brasilia: domingo 23:59 x segunda 00:00, sem acumulo")
   void viradaDaSemana() {
     CotaUsoAssistenteService domingo = service(LocalDateTime.of(2026, 10, 18, 23, 59));

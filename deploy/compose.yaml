@@ -169,10 +169,15 @@ services:
       AI_ANTHROPIC_MODEL: ${AI_ANTHROPIC_MODEL:-claude-haiku-5-5}
       # Sem os dois-pontos: vazio no .env chega vazio (= nao enviar o campo de raciocinio).
       AI_ANTHROPIC_THINKING: ${AI_ANTHROPIC_THINKING-disabled}
+      # Explicacao depois da resposta de dados (#268), desligada por padrao: ligar so com a medicao
+      # do modelo real e o OK do Murillo (docs/avaliacao/explicacao/README.md).
+      AI_EXPLICACAO_HABILITADA: ${AI_EXPLICACAO_HABILITADA:-false}
+      AI_EXPLICACAO_TIMEOUT: ${AI_EXPLICACAO_TIMEOUT:-8s}
       # Janela de contexto, teto geral e tetos por tipo de chamada (#270); padroes = os do yml.
       AI_OLLAMA_NUM_CTX: ${AI_OLLAMA_NUM_CTX:-8192}
       AI_MAX_TOKENS: ${AI_MAX_TOKENS:-1024}
       AI_TETO_FUNCOES: ${AI_TETO_FUNCOES:-512}
+      AI_TETO_EXPLICACAO: ${AI_TETO_EXPLICACAO:-256}
       AI_TETO_CLASSIFICACAO: ${AI_TETO_CLASSIFICACAO:-256}
       AI_TETO_LEGISLACAO: ${AI_TETO_LEGISLACAO:-1024}
       ANTIVIRUS_MODO: CLAMAV

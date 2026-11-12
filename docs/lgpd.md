@@ -80,6 +80,11 @@ país (transferência internacional, art. 33). O que vai:
   de produto e NCM;
 - trechos de lei, que são públicos.
 
+Com a explicação depois da resposta de dados ligada (#268, `AI_EXPLICACAO_HABILITADA`, desligada
+por padrão), vai também o texto da resposta de dados já montado pelo backend, depois do
+`DataSanitizer`, com o resumo das consultas: são os mesmos dados de negócio acima, já mostrados ao
+produtor.
+
 O que não vai: nome, documento, contato e endereço do produtor, e o XML das notas. A política
 pública (`GET /api/politica-dados`) declara o compartilhamento em "Provedor do modelo da Ceres,
 quando configurado por API". A retenção e o uso dos dados pelo provedor seguem o contrato dele;

@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import br.com.agrocontabil.config.SchedulingConfig;
+import br.com.agrocontabil.model.DesfechoExplicacao;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EscritorioSlugAnteriorRepository;
+import br.com.agrocontabil.service.AssistenteInteracaoService;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -119,6 +121,9 @@ class LiquibaseChangelogIntegrationTest {
 
   @Autowired
   private PlatformTransactionManager transactionManager;
+
+  @Autowired
+  private AssistenteInteracaoService interacaoService;
 
   @Test
   @DisplayName("changeSet 0022 cria nota_fiscal.version como BIGINT NOT NULL com default 0")
@@ -547,6 +552,57 @@ class LiquibaseChangelogIntegrationTest {
         + " JOIN classificacao_tributaria_anexo_item i ON i.id = n.item_id"
         + " WHERE n.ncm = '04012090' AND n.permissao = 'PERMITIDO' ORDER BY 1", String.class))
         .containsExactly("200003");
+  }
+
+  @Test
+  @DisplayName("changeSet 0064: desfecho e metricas da explicacao, nulos ate ela acontecer, "
+      + "gravados uma vez so e sem texto (#268)")
+  void changeSet0064ExplicacaoNaAuditoria() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'assistente_interacao'"
+            + " AND column_name LIKE '%explicacao%' ORDER BY column_name");
+    assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
+        c -> c.get("is_nullable"),
+        c -> c.get("character_maximum_length") == null ? null
+            : ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(
+            tuple("desfecho_explicacao", "character varying", "YES", 60),
+            tuple("latencia_explicacao_ms", "bigint", "YES", null),
+            tuple("tokens_entrada_explicacao", "integer", "YES", null),
+            tuple("tokens_saida_explicacao", "integer", "YES", null));
+    // O maior desfecho cabe na coluna.
+    assertThat(java.util.Arrays.stream(DesfechoExplicacao.values())
+        .mapToInt(d -> d.name().length()).max().orElseThrow()).isLessThanOrEqualTo(60);
+
+    String produtor = UUID.randomUUID().toString();
+    UUID interacao = UUID.randomUUID();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor 0064')",
+        produtor);
+    jdbc.update("INSERT INTO assistente_interacao (id, produtor_id, rota, desfecho,"
+        + " chamadas_funcao, latencia_ms, tamanho_pergunta, tokens_estimados, criado_em)"
+        + " VALUES (?, ?::uuid, 'DADOS', 'RESPONDIDA', 1, 10, 20, false, now())",
+        interacao, produtor);
+    assertThat(jdbc.queryForObject("SELECT desfecho_explicacao FROM assistente_interacao"
+        + " WHERE id = ?", String.class, interacao)).isNull();
+
+    interacaoService.registrarExplicacao(interacao, DesfechoExplicacao.EXPLICACAO_ACEITA, 1234,
+        800, 60);
+
+    assertThat(jdbc.queryForMap("SELECT desfecho_explicacao, latencia_explicacao_ms,"
+        + " tokens_entrada_explicacao, tokens_saida_explicacao FROM assistente_interacao"
+        + " WHERE id = ?", interacao))
+        .containsEntry("desfecho_explicacao", "EXPLICACAO_ACEITA")
+        .containsEntry("latencia_explicacao_ms", 1234L)
+        .containsEntry("tokens_entrada_explicacao", 800)
+        .containsEntry("tokens_saida_explicacao", 60);
+    // Uma vez so: o registro ja completado nao muda.
+    assertThatThrownBy(() -> interacaoService.registrarExplicacao(interacao,
+        DesfechoExplicacao.EXPLICACAO_DESCARTADA_ERRO, 1, null, null))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(jdbc.queryForObject("SELECT desfecho_explicacao FROM assistente_interacao"
+        + " WHERE id = ?", String.class, interacao)).isEqualTo("EXPLICACAO_ACEITA");
   }
 
   @Test
@@ -1384,12 +1440,14 @@ class LiquibaseChangelogIntegrationTest {
             + " WHERE table_name = 'assistente_interacao' ORDER BY column_name",
         String.class);
 
+    // As colunas da explicacao (#268, changeSet 0064) tambem sao so desfecho e metricas.
     assertThat(colunas).containsExactly(
         "camada_classificacao", "chamadas_funcao", "criado_em", "desfecho", "desfecho_dados",
-        "desfecho_legislacao",
-        "funcoes", "id", "latencia_ms", "modelo", "pergunta_lei_reescrita", "produtor_id", "rota",
-        "tamanho_pergunta", "tokens_entrada", "tokens_estimados", "tokens_saida",
-        "trechos_citados");
+        "desfecho_explicacao", "desfecho_legislacao",
+        "funcoes", "id", "latencia_explicacao_ms", "latencia_ms", "modelo",
+        "pergunta_lei_reescrita", "produtor_id", "rota",
+        "tamanho_pergunta", "tokens_entrada", "tokens_entrada_explicacao", "tokens_estimados",
+        "tokens_saida", "tokens_saida_explicacao", "trechos_citados");
     // A auditoria registra o que o sistema fez, nunca o que o usuario disse.
     assertThat(colunas).noneMatch(c -> c.contains("resposta") || c.equals("pergunta")
         || c.equals("texto"));

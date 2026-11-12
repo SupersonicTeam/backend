@@ -1,5 +1,6 @@
 package br.com.agrocontabil.assistente.porta;
 
+import br.com.agrocontabil.model.DesfechoExplicacao;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -16,9 +17,19 @@ public interface AuditoriaPorta {
    * Grava o registro numa transação curta e própria.
    *
    * @param registro interação a registrar
+   * @return id do registro, para completá-lo com a explicação (#268)
    * @throws RuntimeException se não gravar — quem chama decide que a resposta não é entregue
    */
-  void registrar(RegistroInteracao registro);
+  UUID registrar(RegistroInteracao registro);
+
+  /**
+   * Completa o registro da pergunta com o desfecho da explicação depois da resposta de dados
+   * (#268), numa transação curta e própria. Uma vez só por registro.
+   *
+   * @param registro desfecho e métricas da explicação, sem o texto
+   * @throws RuntimeException se não gravar — quem chama não entrega a explicação
+   */
+  void registrarExplicacao(RegistroExplicacao registro);
 
   /**
    * Uma interação com a Ceres, sem conteúdo.
@@ -51,4 +62,16 @@ public interface AuditoriaPorta {
       int chamadasFuncao, String trechosCitadosJson, String modelo, long latenciaMs,
       Integer tokensEntrada, Integer tokensSaida, boolean tokensEstimados, int tamanhoPergunta,
       OffsetDateTime criadoEm) {}
+
+  /**
+   * Desfecho da explicação de uma pergunta (#268), sem o texto dela.
+   *
+   * @param interacaoId   registro da pergunta ({@link #registrar})
+   * @param desfecho      aceita ou o motivo do descarte
+   * @param latenciaMs    tempo da explicação
+   * @param tokensEntrada tokens de entrada da chamada; nulo se ela não terminou
+   * @param tokensSaida   tokens de saída da chamada; nulo se ela não terminou
+   */
+  record RegistroExplicacao(UUID interacaoId, DesfechoExplicacao desfecho, long latenciaMs,
+      Integer tokensEntrada, Integer tokensSaida) {}
 }

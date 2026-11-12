@@ -4,7 +4,9 @@ import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.DataSanitizer;
 import br.com.agrocontabil.assistente.FonteDado;
 import br.com.agrocontabil.assistente.porta.AuditoriaPorta;
+import br.com.agrocontabil.assistente.porta.AuditoriaPorta.RegistroExplicacao;
 import br.com.agrocontabil.assistente.porta.AuditoriaPorta.RegistroInteracao;
+import br.com.agrocontabil.model.DesfechoExplicacao;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,6 +15,7 @@ import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
@@ -50,10 +53,11 @@ public class AuditoriaAssistente {
    * @param modelo          {@code provedor/modelo}
    * @param latenciaMs      duração total da pergunta
    * @param tamanhoPergunta tamanho da pergunta, em caracteres
+   * @return id do registro, para completá-lo com a explicação (#268); nulo se a porta não o deu
    */
-  public void registrar(ContextoAssistente contexto, String rota, DesfechoInteracao desfecho,
+  public UUID registrar(ContextoAssistente contexto, String rota, DesfechoInteracao desfecho,
       String modelo, long latenciaMs, int tamanhoPergunta) {
-    porta.registrar(new RegistroInteracao(
+    return porta.registrar(new RegistroInteracao(
         contexto.produtorId(),
         rota,
         desfecho,
@@ -71,6 +75,23 @@ public class AuditoriaAssistente {
         contexto.tokensEstimados(),
         tamanhoPergunta,
         OffsetDateTime.now(clock)));
+  }
+
+  /**
+   * Completa o registro da pergunta com o desfecho da explicação depois da resposta de dados
+   * (#268): só o desfecho, o tempo e os tokens da chamada, nunca o texto (#144).
+   *
+   * @param interacaoId   registro da pergunta
+   * @param desfecho      aceita ou o motivo do descarte
+   * @param latenciaMs    tempo da explicação
+   * @param tokensEntrada tokens de entrada da chamada; nulo se ela não terminou
+   * @param tokensSaida   tokens de saída da chamada; nulo se ela não terminou
+   * @throws RuntimeException se não gravar — quem chama não entrega a explicação
+   */
+  public void registrarExplicacao(UUID interacaoId, DesfechoExplicacao desfecho, long latenciaMs,
+      Integer tokensEntrada, Integer tokensSaida) {
+    porta.registrarExplicacao(new RegistroExplicacao(
+        interacaoId, desfecho, latenciaMs, tokensEntrada, tokensSaida));
   }
 
   private String funcoesJson(List<FonteDado> fontes) {

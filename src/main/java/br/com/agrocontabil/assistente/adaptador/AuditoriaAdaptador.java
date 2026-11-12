@@ -3,6 +3,7 @@ package br.com.agrocontabil.assistente.adaptador;
 import br.com.agrocontabil.assistente.porta.AuditoriaPorta;
 import br.com.agrocontabil.model.AssistenteInteracao;
 import br.com.agrocontabil.service.AssistenteInteracaoService;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
@@ -19,8 +20,8 @@ public class AuditoriaAdaptador implements AuditoriaPorta {
   }
 
   @Override
-  public void registrar(RegistroInteracao r) {
-    interacaoService.registrar(AssistenteInteracao.builder()
+  public UUID registrar(RegistroInteracao r) {
+    return interacaoService.registrar(AssistenteInteracao.builder()
         .produtorId(r.produtorId())
         .rota(r.rota())
         .desfecho(r.desfecho())
@@ -39,5 +40,11 @@ public class AuditoriaAdaptador implements AuditoriaPorta {
         .tamanhoPergunta(r.tamanhoPergunta())
         .criadoEm(r.criadoEm())
         .build());
+  }
+
+  @Override
+  public void registrarExplicacao(RegistroExplicacao r) {
+    interacaoService.registrarExplicacao(r.interacaoId(), r.desfecho(), r.latenciaMs(),
+        r.tokensEntrada(), r.tokensSaida());
   }
 }
