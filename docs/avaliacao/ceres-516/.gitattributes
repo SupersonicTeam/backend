@@ -1,0 +1,3 @@
+# Conjunto da #516: o hash .sha256 é dos bytes do conjunto, e o CRLF do checkout no Windows o quebraria.
+conjunto-516.json -text
+conjunto-516.json.sha256 -text
