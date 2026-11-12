@@ -1,6 +1,6 @@
 {
   "conjunto": "fidelidade-lei",
-  "versao": "2026-11-12.3",
+  "versao": "2026-11-12.4",
   "issue": "SupersonicTeam/backend#269",
   "descricao": "Perguntas de lei, na linguagem do produtor rural, com o gabarito de fidelidade escrito a partir do texto da base ingerida (legislacao_trecho, 8.304 trechos vigentes em 2026-11-12). Serve para medir a correção da fidelidade da rota de lei da Ceres, nos dois braços (flag desligada x ligada). Conjunto de TESTE: não entra no treino, não entra em prompt e não é lido por quem escreve a correção.",
   "baseDeLei": {

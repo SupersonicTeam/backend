@@ -13,7 +13,7 @@ from pathlib import Path
 
 DIR = Path(__file__).resolve().parent
 CONJUNTO = DIR / "perguntas-fidelidade-lei.json"
-VERSAO_REGRA = "2026-11-12.3"
+VERSAO_REGRA = "2026-11-12.4"
 
 #: O braço de referência: todo braço comparado é medido contra ele (regra, seção 1).
 BASE = "desligada"
@@ -60,9 +60,10 @@ REGRA = {
     "falsoDescarteMaximo": 3,
     "recusaFalsaAltaMaxima": 0.05,
     "ausenteInfielAltaMaxima": 1,
-    "p50Fator": 1.25,
-    "p95Fator": 1.40,
-    "tokensFator": 1.50,
+    "p50Fator": 2.0,
+    "p95Fator": 2.0,
+    "p95TetoMs": 10_000,
+    "tokensFator": 2.0,
     "regressoesPorPerguntaMaximas": 1,
     "falhaTecnicaMaxima": 0.10,
     "kappaMinimo": 0.40,

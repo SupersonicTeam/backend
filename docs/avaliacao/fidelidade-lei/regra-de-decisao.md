@@ -6,7 +6,7 @@ uma rodada invalida a rodada: muda-se a regra, sobe-se a versão do conjunto/da 
 novo. Quem escreveu esta regra e o conjunto nunca viu os conjuntos anteriores da Ceres nem o código
 da correção.
 
-Versão da regra: `2026-11-12.3` (a mesma do conjunto).
+Versão da regra: `2026-11-12.4` (a mesma do conjunto).
 
 ## 1. O que se compara
 
@@ -179,10 +179,15 @@ Há ainda uma **regressão por pergunta**: pergunta com 0 defeitos nas execuçõ
 | M2b falso descarte por pergunta | no máximo **3** perguntas (10% das 30 perguntas com base) |
 | M3 recusa falsa | `ligada` ≤ `desligada` + **5 pontos percentuais** |
 | M4 lei ausente | `INFIEL` de `ligada` ≤ `desligada` + **1** execução, e **nenhuma** pergunta ausente com maioria afirmando no `ligada` que não afirme em maioria no `desligada` |
-| M5 tempo (**provisório**, aguarda decisão do Murillo) | p50 `ligada` ≤ **1,25 ×** p50 `desligada` e p95 `ligada` ≤ **1,40 ×** p95 `desligada` |
-| M6 tokens (**provisório**, aguarda decisão do Murillo) | média `ligada` ≤ **1,50 ×** a média `desligada` |
+| M5 tempo | p50 `ligada` ≤ **2,0 ×** p50 `desligada`, p95 `ligada` ≤ **2,0 ×** p95 `desligada` e, além disso, p95 `ligada` ≤ **10 segundos** (teto absoluto) |
+| M6 tokens | média `ligada` ≤ **2,0 ×** a média `desligada` |
 | Regressões por pergunta (seção 6) | no máximo **1** |
 | Perguntas defeituosas por maioria (seção 6.2, com base) | `ligada` ≤ `desligada` (não pode haver mais) |
+
+**Margens de custo (M5 e M6): decisão do Murillo, de 2026-11-12, antes de qualquer rodada** ("até o
+dobro"). A correção faz o modelo escrever a evidência junto da resposta e o juiz acrescenta uma
+chamada, então a saída e o tempo crescem por construção; ele aceita esse custo em troca de resposta de
+lei fiel. Valem para cada braço ligado contra o `desligada`. Não há mais valor provisório.
 
 ### 7.2 Desfechos
 

@@ -110,8 +110,7 @@ python3 -I docs/avaliacao/fidelidade-lei/executar_fidelidade.py --jar <jar> --co
 Cada braço ligado é comparado ao `desligada` pela mesma regra; se mais de um der `ENTRA`, a regra
 escolhe entre eles (seção 7.4). Os tokens da segunda chamada entram na medida M6 desde que a
 auditoria os grave em colunas `tokens_entrada*`/`tokens_saida*` (o executor e a decisão somam por
-prefixo, nunca por nome exato). **As margens de tempo (M5) e de tokens (M6) são provisórias**, à espera
-da decisão do Murillo; estão numa tabela só (`REGRA` em `fidelidade_comum.py`, espelhada na seção 7.1).
+prefixo, nunca por nome exato). **As margens de tempo (M5: até 2,0 × o p50 e o p95 do `desligada` e p95 de até 10 s) e de tokens (M6: até 2,0 ×) são decisão do Murillo, de 2026-11-12**; ficam numa tabela só (`REGRA` em `fidelidade_comum.py`, espelhada na seção 7.1).
 
 ## Leitura dos juízes e decisão
 

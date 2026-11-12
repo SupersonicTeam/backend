@@ -232,11 +232,30 @@ class DecisaoTest(unittest.TestCase):
         self.assertEqual(r["desfecho"], "NAO_ENTRA")
         self.assertIn("M5", r["motivo"])
 
+    def test_tempo_ate_o_dobro_passa_e_o_teto_de_10_segundos_vale(self):
+        execs = rodada(24, 6)
+        for x in execs:
+            x["latenciaMs"] = 4000 if x["braco"] == "desligada" else 7600  # 1,9 x
+        self.assertEqual(self.avaliar(execs)["desfecho"], "ENTRA")
+        execs = rodada(24, 6)
+        for x in execs:
+            x["latenciaMs"] = 6000 if x["braco"] == "desligada" else 11000  # 1,83 x, mas acima de 10 s
+        r = self.avaliar(execs)
+        self.assertEqual(r["desfecho"], "NAO_ENTRA")
+        self.assertIn("teto absoluto", r["motivo"])
+
+    def test_tokens_ate_o_dobro_passa(self):
+        execs = rodada(24, 6)
+        for x in execs:
+            if x["braco"] == "ligada":
+                x["tokens"] = 5800  # 1,93 x
+        self.assertEqual(self.avaliar(execs)["desfecho"], "ENTRA")
+
     def test_nao_entra_se_gasta_muito_mais_tokens(self):
         execs = rodada(24, 6)
         for x in execs:
             if x["braco"] == "ligada":
-                x["tokens"] = 6000
+                x["tokens"] = 6100
         r = self.avaliar(execs)
         self.assertEqual(r["desfecho"], "NAO_ENTRA")
         self.assertIn("M6", r["motivo"])
