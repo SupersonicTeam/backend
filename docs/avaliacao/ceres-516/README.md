@@ -80,4 +80,6 @@ Dois cuidados na contagem:
   python3 -m unittest discover -s docs/avaliacao/ceres-516 -p "test_*.py"
   ```
 
-  A CI ainda não roda este teste: o passo entra no `ci.yml` junto com o executor da medição.
+  A CI roda este teste e o `test_decidir.py` (passo "Medicao da #516" do `ci.yml`).
+- `regra-de-decisao.md`, `decidir.py` e `rodar_medicao_516.sh`: a regra da medição da correção,
+  gravada antes da rodada por outra sessão, e as ferramentas que a aplicam.

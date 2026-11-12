@@ -40,6 +40,10 @@ jobs:
       - name: Medicao da #497 (testes do executor e da leitura)
         run: python3 -m unittest discover -s docs/avaliacao/ceres-497 -p "test_*.py"
 
+      # Conjunto e decisao da medicao da #516 (falso positivo da recusa firme): so biblioteca padrao.
+      - name: Medicao da #516 (testes do conjunto e da decisao)
+        run: python3 -m unittest discover -s docs/avaliacao/ceres-516 -p "test_*.py"
+
       # Conjunto de conversas da continuidade da Ceres (#499): forma, tokens e sha256.
       - name: Continuidade da #499 (testes do conjunto)
         run: python3 -m unittest discover -s docs/avaliacao/continuidade -p "test_*.py"
