@@ -166,6 +166,8 @@ def itens_em_desacordo(j1: dict, j2: dict) -> list:
 
 def comando_lotes(rodada: Path) -> None:
     brutas = comum.ler_jsonl(rodada / "respostas-brutas.jsonl")
+    if not (rodada / "execucao.json").exists():
+        sys.exit(f"falta execucao.json em {rodada}: o manifesto diz qual conjunto a rodada usou")
     manifesto = json.loads((rodada / "execucao.json").read_text(encoding="utf-8"))
     conjunto = comum.carregar_conjunto(comum.conjunto_do_manifesto(manifesto))
     lotes, chave = montar_lotes(brutas, conjunto, comum.REGRA["bootstrapSemente"])

@@ -133,6 +133,65 @@ class EscolhaDoConjuntoTest(unittest.TestCase):
             self.assertEqual(ex.main(["--so-verificar", "--env-ligada", "FLAG=true"]), 0)
         self.assertIn(f"conjunto {comum.VERSAO_REGRA} ok; 36 perguntas", saida.getvalue())
 
+    def test_valor_desconhecido_e_recusado_com_mensagem_clara(self):
+        for valor in ("V2", "v3", "nao-existe.json"):
+            with self.assertRaises(comum.ErroDeConjunto, msg=valor):
+                comum.resolver_conjunto(valor)
+
+    def test_manifesto_guarda_nome_na_pasta_e_caminho_fora_dela(self):
+        self.assertEqual(ex.nome_do_conjunto(comum.CONJUNTO_V2), comum.CONJUNTO_V2.name)
+        with tempfile.TemporaryDirectory() as pasta:
+            fora = Path(pasta) / "meu.json"
+            fora.write_text("{}", encoding="utf-8")
+            guardado = ex.nome_do_conjunto(fora)
+            self.assertEqual(Path(guardado), fora.resolve())
+            self.assertEqual(comum.conjunto_do_manifesto({"conjunto": {"arquivo": guardado}}), fora.resolve())
+
+
+class RodadaDoV2Test(unittest.TestCase):
+    """A leitura usa o conjunto do manifesto: a rodada do v2 não pode ser lida contra o v1."""
+
+    def _rodada(self, pasta: Path, arquivo):
+        manifesto = {"conjunto": {"sha256": "x"}}
+        if arquivo:
+            manifesto["conjunto"]["arquivo"] = arquivo
+        (pasta / "execucao.json").write_text(json.dumps(manifesto), encoding="utf-8")
+        resposta = {"id": "F2-01", "braco": "desligada", "repeticao": 1, "tentativa": 1, "status": 200,
+                    "modoFallback": False, "rota": "LEGISLACAO", "resposta": "texto", "citacoes": [],
+                    "auditoria": {"desfecho": "RESPONDIDA", "rota": "LEGISLACAO"}}
+        comum.gravar_jsonl(pasta / "respostas-brutas.jsonl", [resposta])
+
+    def test_lotes_da_rodada_do_v2_levam_a_pergunta_do_v2(self):
+        import leitura_fidelidade as leitura
+        pergunta = comum.perguntas_por_id(comum.carregar_conjunto(comum.CONJUNTO_V2))["F2-01"]["pergunta"]
+        with tempfile.TemporaryDirectory() as dir_:
+            pasta = Path(dir_)
+            self._rodada(pasta, comum.CONJUNTO_V2.name)
+            with contextlib.redirect_stdout(io.StringIO()):
+                leitura.comando_lotes(pasta)
+            lote = json.loads((pasta / "leitura" / "lotes" / "lote-01.json").read_text(encoding="utf-8"))
+            self.assertEqual(lote[0]["pergunta"], pergunta)
+
+    def test_lotes_sem_manifesto_param_com_mensagem(self):
+        import leitura_fidelidade as leitura
+        with tempfile.TemporaryDirectory() as dir_:
+            pasta = Path(dir_)
+            comum.gravar_jsonl(pasta / "respostas-brutas.jsonl", [])
+            with self.assertRaises(SystemExit):
+                leitura.comando_lotes(pasta)
+
+    def test_decisao_le_o_conjunto_do_manifesto(self):
+        import decidir_fidelidade as dec
+        with tempfile.TemporaryDirectory() as dir_:
+            pasta = Path(dir_)
+            (pasta / "leitura").mkdir()
+            (pasta / "leitura" / "chave.json").write_text("{}", encoding="utf-8")
+            self._rodada(pasta, comum.CONJUNTO_V2.name)
+            # o sha256 do manifesto não é o do v2: a decisão recusa pelo conjunto do manifesto
+            with self.assertRaises(dec.RodadaIncompleta) as erro:
+                dec.decidir_rodada(pasta)
+            self.assertIn("conjunto", str(erro.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

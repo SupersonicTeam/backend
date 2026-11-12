@@ -122,11 +122,15 @@ def resolver_conjunto(valor) -> Path:
     caminho = Path(valor)
     if not caminho.is_absolute() and (DIR / valor).exists():
         caminho = DIR / valor  # nome de um arquivo da pasta, qualquer que seja o diretório atual
+    if not caminho.exists():
+        raise ErroDeConjunto(f"conjunto {valor!r} não encontrado: use v1, v2, o nome de um arquivo "
+                             f"da pasta {DIR.name} ou o caminho de um arquivo")
     return caminho
 
 
 def conjunto_do_manifesto(manifesto: dict) -> Path:
-    """Arquivo do conjunto usado na rodada (campo `conjunto.arquivo`; manifesto de antes do v2 = v1)."""
+    """Arquivo do conjunto usado na rodada (campo `conjunto.arquivo`: nome na pasta ou caminho
+    completo; manifesto de antes do v2 = v1)."""
     return resolver_conjunto((manifesto.get("conjunto") or {}).get("arquivo"))
 
 

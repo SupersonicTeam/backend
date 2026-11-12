@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Executor da medição de fidelidade da rota de lei da Ceres (#269).
 
-Roda as 36 perguntas de `perguntas-fidelidade-lei.json` em dois ou mais braços, no MESMO jar (o head
+Roda as 36 perguntas do conjunto escolhido (`--conjunto v1|v2`; padrão `v1`,
+`perguntas-fidelidade-lei.json`; o `v2`, `perguntas-fidelidade-lei-v2.json`, é o da segunda
+medição) em dois ou mais braços, no MESMO jar (o head
 do PR da correção): `desligada` (flag da correção desligada, igual à `main`, o braço de referência) e
 `ligada`, mais os braços extras que a correção tiver (`--braco`). Sobe uma instância por braço em
 portas diferentes, contra um banco novo e só dele (com a base de lei copiada do banco de origem), e
@@ -429,6 +431,13 @@ def executar(args, conjunto: dict, saida: Path) -> int:
     return 0
 
 
+def nome_do_conjunto(arquivo: Path) -> str:
+    """O nome, se o conjunto está na pasta do executor; senão o caminho completo, para a leitura e a
+    decisão acharem o mesmo arquivo."""
+    arquivo = Path(arquivo).resolve()
+    return arquivo.name if arquivo.parent == comum.DIR else str(arquivo)
+
+
 def gravar_manifesto(args, conjunto, saida: Path, plano: list, registros: list, interrompida) -> None:
     ultimas = {}
     for r in registros:  # vale a última tentativa de cada (pergunta, braço, repetição)
@@ -439,7 +448,7 @@ def gravar_manifesto(args, conjunto, saida: Path, plano: list, registros: list, 
     manifesto = {
         "regra": {"versao": comum.VERSAO_REGRA, "parametros": comum.REGRA},
         "conjunto": {"versao": conjunto["versao"],
-                     "arquivo": args.arquivo_conjunto.name,
+                     "arquivo": nome_do_conjunto(args.arquivo_conjunto),
                      "sha256": comum.sha256_arquivo(args.arquivo_conjunto),
                      "perguntas": len({r["id"] for r in registros}) or None},
         "commit": args.commit, "jarSha256": comum.sha256_arquivo(args.jar) if args.jar and args.jar.exists()
