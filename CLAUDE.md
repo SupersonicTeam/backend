@@ -404,6 +404,9 @@ br.com.agrocontabil
 | GET | `/api/notas/{id}/status-sefaz` | Consulta e sincroniza status na SEFAZ |
 | POST | `/api/notas/{id}/cancelar` | Cancela NF-e autorizada (limite 30 dias — RN006). Compra `IMPORTADA` → 409 `CANCELAMENTO_COMPRA_IMPORTADA`, antes de qualquer transmissão (#418) |
 | GET | `/api/notas/{id}/validacoes` | Histórico de inconsistências de validação (anti-IDOR 404) |
+| POST/GET | `/api/guias` (+ `PATCH /api/guias/{id}/pagar`) | Guias do **produtor autenticado** (#273), sem `produtorId` em corpo, query nem path (um `produtorId` no JSON é ignorado): `POST` corpo `{tipoGuia, dataVencimento, valor, observacoes?}` (`NovaGuiaFiscalRequest`), 201 com `Location`; `GET` `page`/`size` (padrão 100, máx. 200, página até 10.000) e `X-Total-Count`, array; `pagar` 404 para guia de outro produtor, 409 se já paga. Contador 403 `PAPEL_NAO_AUTORIZADO` nas três (cadeia: `/api/guias/**` só `PRODUTOR`). Mesmo `GuiaFiscalService` das rotas antigas e da carteira |
+| POST/GET | `/api/contador/produtores/{produtorId}/guias` | Guias de um cliente da **carteira ativa** (#273): mesmo corpo, paginação e `X-Total-Count` de `/api/guias`; `exigirContadorComAcesso` (fora da carteira, suspenso ou encerrado 404; produtor 403, até para si mesmo; corpo não escolhe o alvo) |
+| POST/GET/PATCH | `/api/contador/guias` (+ `/{id}/pagar`) — **`deprecated`** (#273) | Rotas antigas, seguem respondendo igual (o `produtorId` vem no corpo/query e o `ProdutorEmContextoResolver` decide); marcadas `deprecated` no OpenAPI, saem depois que o Angular migrar |
 | POST | `/api/contador/guias` | Cria guia fiscal (produtorId deve ser o do usuário autenticado; 404 se divergir) |
 | GET | `/api/contador/guias?produtorId=&page=&size=` | Lista paginada (padrão 100, máx. 200) das guias do usuário autenticado (404 se o id for de outro); corpo array + total em `X-Total-Count` (#103) |
 | PATCH | `/api/contador/guias/{id}/pagar` | Marca guia como paga (só papel PRODUTOR; contador recebe 403) |
@@ -435,7 +438,9 @@ br.com.agrocontabil
   | `GET /interno/tls/permitido` (#464) | público na cadeia, protegido pela chave e pela rede interna | idem |
   | `/api/notas/**`, `/api/dashboard`, `/api/apuracao/**`, `/api/creditos`, `/api/relatorios/**`, `/api/assistente/**`, `/api/alertas`, `/api/notificacao/**` (#182) | próprios dados | **403** no service — o contador usa as rotas da carteira (linha abaixo, #255) |
   | `GET /api/contador/produtores/{produtorId}/apuracao`, `/relatorios/conformidade/**`, `/creditos`, `/dashboard` (#255) | **403** | qualquer membro, carteira ativa (404 fora dela) |
-  | `POST`/`GET /api/contador/guias` | próprias guias (404 para outro produtor) | guias dos produtores da carteira (404 fora dela) |
+  | `POST`/`GET /api/guias`, `PATCH /api/guias/{id}/pagar` (#273) | próprias guias (404 para guia de outro) | **403** — a cadeia barra |
+  | `POST`/`GET /api/contador/produtores/{produtorId}/guias` (#273) | **403** | guias dos clientes da carteira ativa (404 fora dela) |
+  | `POST`/`GET /api/contador/guias` (`deprecated`, #273) | próprias guias (404 para outro produtor) | guias dos produtores da carteira (404 fora dela) |
   | `PATCH /api/contador/guias/{id}/pagar` | sim (anti-IDOR 404) | **403** — quitar a guia é ato do produtor |
   | `GET /api/calendario-fiscal/{produtorId}/vencimentos` | próprio calendário | calendário dos produtores da carteira |
   | `GET /api/auditoria` | **403** | auditoria dos produtores da carteira (404 fora dela) |

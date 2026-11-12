@@ -71,7 +71,9 @@ public class GuiaFiscalController {
   @PostMapping
   @Operation(
       summary = "Cria uma guia fiscal",
-      description = "Cria a guia com status PENDENTE para o produtorId informado no corpo, que "
+      deprecated = true,
+      description = "DEPRECATED (#273): use POST /api/guias (produtor) ou POST "
+          + "/api/contador/produtores/{produtorId}/guias (contador). Cria a guia com status PENDENTE para o produtorId informado no corpo, que "
           + "precisa ser o do produtor autenticado (404 caso contrario). Retorna 201 com header "
           + "Location apontando para a listagem do produtor.")
   @ApiResponses({
@@ -106,7 +108,9 @@ public class GuiaFiscalController {
   @GetMapping
   @Operation(
       summary = "Lista guias fiscais de um produtor, paginadas",
-      description = "Retorna uma pagina das guias fiscais do produtorId informado, mais recentes "
+      deprecated = true,
+      description = "DEPRECATED (#273): use GET /api/guias (produtor) ou GET "
+          + "/api/contador/produtores/{produtorId}/guias (contador). Retorna uma pagina das guias fiscais do produtorId informado, mais recentes "
           + "primeiro (vencimento desc, id desc). O corpo continua sendo um array, compativel com "
           + "o cliente que nao pagina; o total de guias vai no header X-Total-Count. Padrao: "
           + "page=0, size=100 (maximo 200). O produtorId precisa ser o do produtor autenticado "
@@ -144,7 +148,8 @@ public class GuiaFiscalController {
   @PatchMapping("/{id}/pagar")
   @Operation(
       summary = "Marca uma guia fiscal como paga",
-      description = "Acao do produtor autenticado. Retorna 404 se a guia nao existir ou nao "
+      deprecated = true,
+      description = "DEPRECATED (#273): use PATCH /api/guias/{id}/pagar. Acao do produtor autenticado. Retorna 404 se a guia nao existir ou nao "
           + "pertencer ao produtor autenticado (anti-IDOR) e 409 se ja estiver paga.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Guia marcada como paga"),

@@ -2,6 +2,7 @@ package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.dto.GuiaFiscalRequest;
 import br.com.agrocontabil.dto.GuiaFiscalResponse;
+import br.com.agrocontabil.dto.NovaGuiaFiscalRequest;
 import br.com.agrocontabil.exception.GuiaJaPagaException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.mapper.GuiaFiscalMapper;
@@ -95,8 +96,38 @@ public class GuiaFiscalService {
    */
   @Auditado(acao = AcaoAuditada.GUIA_CRIADA, recurso = RecursoAuditado.GUIA_FISCAL)
   public GuiaFiscalResponse criar(GuiaFiscalRequest request) {
-    Produtor produtor = produtorEmContexto.resolver(request.produtorId());
+    return gravar(produtorEmContexto.resolver(request.produtorId()), request);
+  }
 
+  /**
+   * Cria uma guia para o produtor autenticado (issue #273, {@code POST /api/guias}): o produtor
+   * vem da identidade, nunca do corpo. Contador recebe 403.
+   *
+   * @param request dados da guia, sem produtor
+   * @return a guia criada, com status PENDENTE
+   */
+  @Auditado(acao = AcaoAuditada.GUIA_CRIADA, recurso = RecursoAuditado.GUIA_FISCAL)
+  public GuiaFiscalResponse criarDoProdutorAutenticado(NovaGuiaFiscalRequest request) {
+    Produtor produtor = produtorProvider.get();
+    return gravar(produtor, request.comProdutor(produtor.getId()));
+  }
+
+  /**
+   * Cria uma guia para um cliente da carteira (issue #273, {@code POST
+   * /api/contador/produtores/{produtorId}/guias}): só contador com vínculo ativo (produtor 403,
+   * fora da carteira 404).
+   *
+   * @param produtorId produtor do path
+   * @param request    dados da guia, sem produtor
+   * @return a guia criada, com status PENDENTE
+   */
+  @Auditado(acao = AcaoAuditada.GUIA_CRIADA, recurso = RecursoAuditado.GUIA_FISCAL)
+  public GuiaFiscalResponse criarDaCarteira(UUID produtorId, NovaGuiaFiscalRequest request) {
+    produtorEmContexto.exigirContadorComAcesso(produtorId);
+    return gravar(produtorEmContexto.resolver(produtorId), request.comProdutor(produtorId));
+  }
+
+  private GuiaFiscalResponse gravar(Produtor produtor, GuiaFiscalRequest request) {
     GuiaFiscal guia = GuiaFiscalMapper.toEntity(request, produtor);
     GuiaFiscal salva = guiaFiscalRepository.save(guia);
     return GuiaFiscalMapper.toResponse(salva);
@@ -119,7 +150,30 @@ public class GuiaFiscalService {
   @Transactional(readOnly = true)
   public Page<GuiaFiscalResponse> listar(UUID produtorId, int pagina, int tamanho) {
     produtorEmContexto.exigirAcesso(produtorId);
+    return paginaDe(produtorId, pagina, tamanho);
+  }
 
+  /**
+   * Lista as guias do produtor autenticado (issue #273, {@code GET /api/guias}): sem
+   * {@code produtorId}; contador recebe 403.
+   */
+  @Transactional(readOnly = true)
+  public Page<GuiaFiscalResponse> listarDoProdutorAutenticado(int pagina, int tamanho) {
+    return paginaDe(produtorProvider.get().getId(), pagina, tamanho);
+  }
+
+  /**
+   * Lista as guias de um cliente da carteira (issue #273, {@code GET
+   * /api/contador/produtores/{produtorId}/guias}): só contador com vínculo ativo (produtor 403,
+   * fora da carteira 404).
+   */
+  @Transactional(readOnly = true)
+  public Page<GuiaFiscalResponse> listarDaCarteira(UUID produtorId, int pagina, int tamanho) {
+    produtorEmContexto.exigirContadorComAcesso(produtorId);
+    return paginaDe(produtorId, pagina, tamanho);
+  }
+
+  private Page<GuiaFiscalResponse> paginaDe(UUID produtorId, int pagina, int tamanho) {
     return guiaFiscalRepository
         .findByProdutorId(produtorId, PageRequest.of(pagina, tamanho, ORDEM_LISTAGEM))
         .map(GuiaFiscalMapper::toResponse);

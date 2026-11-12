@@ -98,6 +98,26 @@ class SecurityConfigRbacIntegrationTest {
   }
 
   @Test
+  @DisplayName("guias do produtor (#273): sem identidade 401; contador barrado pela cadeia 403")
+  @WithMockUser(roles = "CONTADOR")
+  void guiasDoProdutorBarramContadorNaCadeia() throws Exception {
+    mockMvc.perform(get("/api/guias"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.errors[0].code").value("PAPEL_NAO_AUTORIZADO"));
+    mockMvc.perform(patch("/api/guias/{id}/pagar", UUID.randomUUID()))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.errors[0].code").value("PAPEL_NAO_AUTORIZADO"));
+  }
+
+  @Test
+  @DisplayName("guias do produtor (#273) sem identidade: 401")
+  void guiasDoProdutorSemIdentidade() throws Exception {
+    mockMvc.perform(get("/api/guias"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.errors[0].code").value("NAO_AUTENTICADO"));
+  }
+
+  @Test
   @DisplayName("papel desconhecido nao alcanca endpoint de negocio")
   @WithMockUser(roles = "VISITANTE")
   void papelDesconhecidoRecebe403() throws Exception {
