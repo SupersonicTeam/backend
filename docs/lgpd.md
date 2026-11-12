@@ -113,3 +113,13 @@ dados**. Linhas gravadas antes da #147 são cifradas na subida (`CifragemLegadoR
 Fora do escopo, de propósito: os dados de destinatário/emitente das notas e o XML assinado (que
 traz todos os dados da NF-e) — cifrar só a coluna não protegeria nada enquanto o XML estiver em
 claro; fica como débito.
+
+**Texto de busca das notas (#399).** A `nota_fiscal.busca_normalizada`, indexada por trigrama,
+guardou o CPF/CNPJ do destinatário da #271 até a #399: uma cópia a mais do documento em claro,
+inclusive no índice. Desde a regra 3 da `NormalizacaoBusca` ela leva só número, nome do
+destinatário, natureza e descrição e NCM dos itens, e o `BuscaNotasLegadoRunner` reescreve as
+notas antigas na subida, em segundo plano. A busca por documento é por igualdade na coluna
+`destinatario_cpf_cnpj`, que uma cifra futura das notas cobre como cobre a busca por CPF da
+carteira. O documento segue em claro em `destinatario_cpf_cnpj`, `emitente_cpf_cnpj` e
+`xml_gerado`, o débito acima. As versões antigas das linhas (até o `VACUUM`) e os backups
+anteriores guardam o texto da regra 2 até a rotação deles.
