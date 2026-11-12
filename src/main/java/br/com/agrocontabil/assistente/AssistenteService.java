@@ -469,11 +469,17 @@ public class AssistenteService implements DisposableBean {
    */
   private Optional<String> explicar(Execucao execucao) {
     try {
-      Duration prazo = prazoDaExplicacao(execucao);
       Optional<ExplicacaoDaResposta.Pedido> pedido = explicacao.preparar(execucao.resultado,
-          execucao.contexto, execucao.interacaoId, prazo);
+          execucao.contexto, execucao.interacaoId, prazoDaExplicacao(execucao));
       if (pedido.isEmpty()) {
         return Optional.empty();
+      }
+      // A reserva e as conferencias levaram tempo: o prazo conta o que resta agora, para o fim da
+      // explicacao nunca passar do limite da pergunta menos a margem.
+      Duration prazo = prazoDaExplicacao(execucao);
+      if (prazo.isNegative() || prazo.isZero()) {
+        execucao.esgotarExplicacao();
+        return explicacao.concluir(pedido.get(), true);
       }
       ScheduledFuture<?> limite;
       try {

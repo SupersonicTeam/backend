@@ -754,7 +754,7 @@ template sai sozinho. De propósito mais estrita que o necessário, no espírito
 |---|---|
 | Um parágrafo, sem lista nem título, de `min-frases` a `max-frases` (2 a 3) frases e de `min-caracteres` a `max-caracteres` (40 a 480) | `EXPLICACAO_DESCARTADA_TAMANHO` |
 | Rótulo da mensagem, nome de função em camelCase, fala sobre o prompt ou 8 palavras seguidas da instrução de sistema | `EXPLICACAO_DESCARTADA_VAZAMENTO` |
-| Todo número, data ou percentual está no template (`ValidadorNumeros` com o template como única fonte): nenhum novo, nenhum alterado | `EXPLICACAO_DESCARTADA_NUMERO` |
+| Todo número, data ou percentual está no template (`ValidadorNumeros` com o template como única fonte): nenhum novo, nenhum alterado. O cardinal por extenso ("três guias") também tem de estar no template; grandeza ou conta por extenso ("mil", "metade") descarta | `EXPLICACAO_DESCARTADA_NUMERO` |
 | Sigla do glossário explicada na explicação ou no template, que o produtor vê logo acima | `EXPLICACAO_DESCARTADA_SIGLA` |
 | Nenhuma conclusão legal sem fonte: direito, isenção, "não precisa pagar", obrigação, multa e juros, aproveitamento de crédito, benefício fiscal, lei, artigo ou norma. As definições do glossário não contam (a do crédito diz "você pode descontar"): são texto revisado por humano | `EXPLICACAO_DESCARTADA_CONCLUSAO_LEGAL` |
 
@@ -803,6 +803,19 @@ SELECT desfecho_explicacao,
 
 **LGPD:** com o provedor por API e a flag ligada, o texto da resposta de dados (já mascarado) vai
 ao provedor; ver `docs/lgpd.md`.
+
+**Limites conhecidos (a medição e os exemplos ao Murillo são a guarda deles):**
+
+- **Sentido sem número não é conferido.** A explicação pode dizer o contrário do template sem
+  número, sigla nem termo legal ("está tudo em dia" diante de guias em atraso), o mesmo risco da
+  #347. Os exemplos do modelo real mostrados antes de ligar existem para isso.
+- **Cache do prefixo no Ollama.** Com um slot só (`OLLAMA_NUM_PARALLEL=1`), a chamada da
+  explicação troca o prefixo em cache: a pergunta de dados seguinte volta a processar as
+  definições das funções do zero (~4.500 tokens, o gargalo em CPU, seção #270). Ligada com o
+  Ollama, meça também o tempo da pergunta **seguinte**; com o provedor por API isso não vale.
+- **`EXPLICACAO_ACEITA` é o que passou nas conferências**, gravado antes do envio: se o cliente
+  sair entre a auditoria e o evento `explicacao` (ou, no síncrono, se a pergunta vencer nesse
+  instante), o registro fica aceito sem a entrega.
 
 ## Inferência local na VPS: chamadas ao modelo e cache do prefixo (#270)
 

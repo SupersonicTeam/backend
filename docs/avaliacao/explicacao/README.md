@@ -34,7 +34,10 @@ nada no banco.
 **Tempo extra no ambiente publicado:** o tempo da ferramenta é o da chamada, na máquina de quem
 roda. O da VPS sai da auditoria, com a flag ligada lá:
 `assistente_interacao.latencia_explicacao_ms` (e os tokens em `tokens_*_explicacao`), por
-`desfecho_explicacao`.
+`desfecho_explicacao`. Com o Ollama de um slot só, a explicação troca o prefixo em cache, e a
+pergunta de dados **seguinte** paga o processamento das funções de novo: meça também a
+`latencia_ms` das perguntas de dados com a flag ligada e desligada (`docs/ceres-assistente.md`,
+"Limites conhecidos" da explicação).
 
 ## Formato do conjunto
 

@@ -2,12 +2,16 @@ package br.com.agrocontabil.assistente.explicacao;
 
 import br.com.agrocontabil.assistente.GlossarioProdutor;
 import br.com.agrocontabil.assistente.ValidadorNumeros;
+import br.com.agrocontabil.assistente.VerificadorNegativaDados;
 import br.com.agrocontabil.common.NormalizacaoBusca;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.model.DesfechoExplicacao;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,7 +38,8 @@ import org.springframework.stereotype.Component;
  *       interno de função;</li>
  *   <li><strong>números</strong>: todo número, data ou percentual tem de estar no texto do template
  *       ({@link ValidadorNumeros}, com o template como única fonte): nenhum número novo, nenhum
- *       número do template alterado;</li>
+ *       número do template alterado; o cardinal por extenso ("três guias") também, e a grandeza
+ *       ou conta por extenso ("mil", "metade") descarta;</li>
  *   <li><strong>sigla</strong> do glossário sem explicação na explicação nem no template, que o
  *       produtor vê logo acima;</li>
  *   <li><strong>conclusão legal sem fonte</strong>: direito, isenção, "não precisa pagar",
@@ -55,9 +60,28 @@ public class VerificadorFidelidade {
   static final int PALAVRAS_DO_VAZAMENTO = 8;
 
   /** Fim de frase: ponto, exclamação, interrogação ou reticências, seguido de espaço. */
-  private static final Pattern FIM_DE_FRASE = Pattern.compile("(?<=[.!?…])\\s+");
+  private static final String FINS_DE_FRASE = ".!?…";
 
   private static final Pattern LETRA = Pattern.compile("\\p{L}");
+
+  private static final Pattern PALAVRA = Pattern.compile("\\p{L}+");
+
+  /** Cardinais por extenso, já sem acento; "um" e "uma" ficam de fora (são artigo). */
+  private static final Map<String, Integer> CARDINAIS = Map.ofEntries(
+      Map.entry("dois", 2), Map.entry("duas", 2), Map.entry("tres", 3), Map.entry("quatro", 4),
+      Map.entry("cinco", 5), Map.entry("seis", 6), Map.entry("sete", 7), Map.entry("oito", 8),
+      Map.entry("nove", 9), Map.entry("dez", 10), Map.entry("onze", 11), Map.entry("doze", 12),
+      Map.entry("treze", 13), Map.entry("catorze", 14), Map.entry("quatorze", 14),
+      Map.entry("quinze", 15), Map.entry("dezesseis", 16), Map.entry("dezessete", 17),
+      Map.entry("dezoito", 18), Map.entry("dezenove", 19), Map.entry("vinte", 20),
+      Map.entry("trinta", 30), Map.entry("quarenta", 40), Map.entry("cinquenta", 50),
+      Map.entry("sessenta", 60), Map.entry("setenta", 70), Map.entry("oitenta", 80),
+      Map.entry("noventa", 90), Map.entry("cem", 100));
+
+  /** Grandeza ou conta por extenso: valor que não dá para conferir com o template. */
+  private static final Pattern GRANDEZA_POR_EXTENSO = Pattern.compile("\\b(cento|duzent\\w*|"
+      + "trezent\\w*|quatrocent\\w*|quinhent\\w*|seiscent\\w*|setecent\\w*|oitocent\\w*|"
+      + "novecent\\w*|mil|milhao|milhoes|bilhao|bilhoes|dobro|triplo|metade)\\b");
 
   /** Item de lista, título ou ênfase em markdown no começo de uma linha. */
   private static final Pattern MARCACAO =
@@ -151,7 +175,8 @@ public class VerificadorFidelidade {
     if (vazaPrompt(texto, normalizado)) {
       return DesfechoExplicacao.EXPLICACAO_DESCARTADA_VAZAMENTO;
     }
-    if (!validadorNumeros.verificar(texto, List.of(template), List.of()).rastreavel()) {
+    if (!validadorNumeros.verificar(texto, List.of(template), List.of()).rastreavel()
+        || !porExtensoNoTemplate(normalizado, template)) {
       return DesfechoExplicacao.EXPLICACAO_DESCARTADA_NUMERO;
     }
     String templateNormalizado = NormalizacaoBusca.normalizar(template);
@@ -179,10 +204,64 @@ public class VerificadorFidelidade {
         || texto.length() > limites.getMaxCaracteres()) {
       return false;
     }
-    long frases = Arrays.stream(FIM_DE_FRASE.split(texto))
-        .filter(f -> LETRA.matcher(f).find())
-        .count();
+    int frases = frases(texto);
     return frases >= limites.getMinFrases() && frases <= limites.getMaxFrases();
+  }
+
+  /**
+   * Frases do parágrafo: termina em ponto, exclamação, interrogação ou reticências seguidos de
+   * espaço (ou no fim), menos o ponto de abreviação ({@code VerificadorNegativaDados.ABREVIACOES}:
+   * "ex.", "Sr.", "art."). Só conta trecho com letra.
+   */
+  static int frases(String texto) {
+    int frases = 0;
+    int inicio = 0;
+    for (int i = 0; i < texto.length(); i++) {
+      char c = texto.charAt(i);
+      boolean fim = FINS_DE_FRASE.indexOf(c) >= 0
+          && (i + 1 == texto.length() || Character.isWhitespace(texto.charAt(i + 1)));
+      if (fim && !(c == '.' && abreviacao(texto, inicio, i))) {
+        if (LETRA.matcher(texto.substring(inicio, i + 1)).find()) {
+          frases++;
+        }
+        inicio = i + 1;
+      }
+    }
+    if (inicio < texto.length() && LETRA.matcher(texto.substring(inicio)).find()) {
+      frases++;
+    }
+    return frases;
+  }
+
+  private static boolean abreviacao(String texto, int inicio, int ponto) {
+    int j = ponto;
+    while (j > inicio && Character.isLetter(texto.charAt(j - 1))) {
+      j--;
+    }
+    return VerificadorNegativaDados.ABREVIACOES.contains(
+        texto.substring(j, ponto).toLowerCase(Locale.ROOT));
+  }
+
+  /**
+   * Número por extenso (#268, achado do review): o {@link ValidadorNumeros} só lê dígitos e
+   * percentual por extenso, então "três guias" diante de "2 guias" passaria. Cardinal de dois a
+   * cem tem de estar entre os valores do template; grandeza ("mil", "milhão") e conta ("dobro",
+   * "metade") não dá para conferir e descarta. "Um" e "uma" ficam de fora: são artigo.
+   */
+  private static boolean porExtensoNoTemplate(String normalizado, String template) {
+    if (GRANDEZA_POR_EXTENSO.matcher(normalizado).find()) {
+      return false;
+    }
+    Set<BigDecimal> doTemplate = ValidadorNumeros.valoresMencionados(template);
+    Matcher palavra = PALAVRA.matcher(normalizado);
+    while (palavra.find()) {
+      Integer valor = CARDINAIS.get(palavra.group());
+      if (valor != null
+          && !doTemplate.contains(BigDecimal.valueOf(valor).stripTrailingZeros())) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private boolean vazaPrompt(String texto, String normalizado) {

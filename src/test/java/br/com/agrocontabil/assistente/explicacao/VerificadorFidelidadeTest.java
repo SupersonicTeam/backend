@@ -67,6 +67,29 @@ class VerificadorFidelidadeTest {
 
   @ParameterizedTest
   @ValueSource(strings = {
+      // Contagem por extenso que não está no template (ele diz 2).
+      "Você tem três cobranças vencidas. Vale conferir com o seu escritório.",
+      // Grandeza por extenso: não dá para conferir.
+      "A guia do Funrural passa de mil reais. Vale conferir com o seu escritório.",
+      // Conta por extenso.
+      "A guia do IBS é cerca de um quarto da metade do total. Vale conferir com o escritório."})
+  @DisplayName("Número por extenso fora do template, grandeza ou conta por extenso: NUMERO")
+  void numeroPorExtenso(String explicacao) {
+    assertThat(verificar(explicacao)).isEqualTo(DesfechoExplicacao.EXPLICACAO_DESCARTADA_NUMERO);
+  }
+
+  @Test
+  @DisplayName("Ponto de abreviação ('ex.', 'Sr.') não conta como fim de frase")
+  void abreviacaoNaoEncerraFrase() {
+    assertThat(VerificadorFidelidade.frases("Por ex. a guia do Funrural venceu. Confira."))
+        .isEqualTo(2);
+    assertThat(verificar("As duas cobranças já passaram do vencimento, por ex. a do Funrural."
+        + " Elas ainda aparecem como não pagas. Vale conferir com o seu escritório."))
+        .isEqualTo(DesfechoExplicacao.EXPLICACAO_ACEITA);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
       // Uma frase só.
       "Você tem duas cobranças vencidas que ainda aparecem como não pagas no sistema.",
       // Quatro frases.
