@@ -1109,4 +1109,44 @@ class NotaFiscalServiceTest {
     nota.addItem(item);
     return nota;
   }
+
+  // -------------------------------------------------------------------------
+  // proximoNumero (issue #539)
+  // -------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("proximoNumero: sem nota própria na série vale 1")
+  void proximoNumeroSemNotaVale1() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findMaiorNumeroPropria(produtorId, 1)).thenReturn(Optional.empty());
+
+    var resposta = notaFiscalService.proximoNumero(1);
+
+    assertThat(resposta.serie()).isEqualTo(1);
+    assertThat(resposta.numero()).isEqualTo(1L);
+  }
+
+  @Test
+  @DisplayName("proximoNumero: maior número mais 1, consultando só o produtor autenticado")
+  void proximoNumeroSomaUm() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findMaiorNumeroPropria(produtorId, 2))
+        .thenReturn(Optional.of(3184L));
+
+    assertThat(notaFiscalService.proximoNumero(2).numero()).isEqualTo(3185L);
+  }
+
+  @Test
+  @DisplayName("proximoNumero: último número do layout aceito como maior sugere o limite; no limite, 409")
+  void proximoNumeroNoLimite() {
+    when(produtorProvider.get()).thenReturn(produtor);
+    when(notaFiscalRepository.findMaiorNumeroPropria(produtorId, 1))
+        .thenReturn(Optional.of(999_999_998L));
+    assertThat(notaFiscalService.proximoNumero(1).numero()).isEqualTo(999_999_999L);
+
+    when(notaFiscalRepository.findMaiorNumeroPropria(produtorId, 1))
+        .thenReturn(Optional.of(999_999_999L));
+    assertThatThrownBy(() -> notaFiscalService.proximoNumero(1))
+        .isInstanceOf(br.com.agrocontabil.exception.SerieEsgotadaException.class);
+  }
 }

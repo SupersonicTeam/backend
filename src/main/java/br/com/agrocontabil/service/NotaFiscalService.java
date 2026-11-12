@@ -18,6 +18,7 @@ import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.SerieEsgotadaException;
 import br.com.agrocontabil.exception.XmlGenerationException;
 import br.com.agrocontabil.exception.XmlIndisponivelException;
+import br.com.agrocontabil.nfe.FiscalRulesValidator;
 import br.com.agrocontabil.mapper.NotaFiscalMapper;
 import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.NotaFiscal;
@@ -127,9 +128,6 @@ public class NotaFiscalService {
       StatusNotaFiscal.RASCUNHO, StatusNotaFiscal.COM_INCONSISTENCIAS, StatusNotaFiscal.DEVOLVIDA,
       StatusNotaFiscal.APROVADA);
 
-  /** Maior {@code nNF} do layout da NF-e (9 dígitos). */
-  static final long NUMERO_MAXIMO = 999_999_999L;
-
   private final NotaFiscalRepository notaFiscalRepository;
   private final AuthenticatedProdutorProvider produtorProvider;
   private final TributacaoService tributacaoService;
@@ -205,7 +203,7 @@ public class NotaFiscalService {
   public ProximoNumeroResponse proximoNumero(int serie) {
     UUID produtorId = produtorProvider.get().getId();
     long maior = notaFiscalRepository.findMaiorNumeroPropria(produtorId, serie).orElse(0L);
-    if (maior >= NUMERO_MAXIMO) {
+    if (maior >= FiscalRulesValidator.NUMERO_MAXIMO) {
       throw new SerieEsgotadaException(serie);
     }
     return new ProximoNumeroResponse(serie, maior + 1);

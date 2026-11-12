@@ -50,7 +50,7 @@ import org.springframework.stereotype.Component;
 public class FiscalRulesValidator {
 
   /** Maior nNF representavel nos 9 digitos do layout e da chave de acesso (issue #88). */
-  private static final long NUMERO_MAXIMO = 999_999_999L;
+  public static final long NUMERO_MAXIMO = 999_999_999L;
 
   /** Maior serie representavel nos 3 digitos do layout e da chave de acesso (issue #88). */
   private static final int SERIE_MAXIMA = 999;
