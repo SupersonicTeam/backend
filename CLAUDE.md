@@ -55,6 +55,7 @@ Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
   adquirente (RN009) sai **destacado no `infCpl`** e nos Dados Adicionais do DANFE (#332):
   `NotaFiscalNfeMapper.textoFunrural`, valores do `RetencaoService.funruralDaVenda` (a mesma conta
   da RN009, em qualquer status); 1,5% até a pergunta A da #284 (o contador citou 1,63%).
+- **Ordem dos runners (#470):** `DataLoader` (`@Order` 10) roda antes do `SeedDemonstracao` (`@Order` 20); o seed fecha os meses antigos de todos os produtores que existem, então a ordem muda a apuração dos produtores do `DataLoader` (travada pelo `OrdemDosRunnersTest`). Ordem nova de runner: declare `@Order`.
 - **Demonstração:** o produtor semeado é optante (art. 165), nas observações do vínculo semeado.
   Mudança de seed chega à VPS pelo **reset dos dados da demonstração** (`docs/demonstracao/reset-*.sql`,
   procedimento em `docs/demonstracao-banca.md`, testado no PostgreSQL pelo

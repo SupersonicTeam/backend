@@ -2,6 +2,7 @@ package br.com.agrocontabil.config.demonstracao;
 
 import br.com.agrocontabil.common.ErrorDetail;
 import br.com.agrocontabil.common.NormalizacaoBusca;
+import br.com.agrocontabil.config.DataLoader;
 import br.com.agrocontabil.config.demonstracao.CenarioDemonstracao.Cliente;
 import br.com.agrocontabil.config.demonstracao.CenarioDemonstracao.Endereco;
 import br.com.agrocontabil.config.demonstracao.CenarioDemonstracao.LinhaCompra;
@@ -100,6 +101,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -141,7 +143,14 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Component
 @ConditionalOnProperty(name = "app.demonstracao.habilitada", havingValue = "true")
+@Order(SeedDemonstracao.ORDEM)
 public class SeedDemonstracao implements CommandLineRunner {
+
+  /**
+   * Posição entre os {@code CommandLineRunner}: depois do {@code DataLoader} (issue #470), porque
+   * {@link #semear()} fecha os meses antigos de todos os produtores que já existem.
+   */
+  public static final int ORDEM = DataLoader.ORDEM + 10;
 
   private static final Logger log = LoggerFactory.getLogger(SeedDemonstracao.class);
 
