@@ -1481,10 +1481,11 @@ class LiquibaseChangelogIntegrationTest {
             + " WHERE table_name = 'assistente_interacao' ORDER BY column_name",
         String.class);
 
-    // As colunas da explicacao (#268, changeSet 0064) tambem sao so desfecho e metricas.
+    // As colunas da explicacao (#268, changeSet 0064) e da fidelidade da lei (#269, changeSet
+    // 0065) tambem sao so desfecho e metricas.
     assertThat(colunas).containsExactly(
         "camada_classificacao", "chamadas_funcao", "criado_em", "desfecho", "desfecho_dados",
-        "desfecho_explicacao", "desfecho_legislacao",
+        "desfecho_explicacao", "desfecho_legislacao", "fidelidade_lei",
         "funcoes", "id", "latencia_explicacao_ms", "latencia_ms", "modelo",
         "pergunta_lei_reescrita", "produtor_id", "rota",
         "tamanho_pergunta", "tokens_entrada", "tokens_entrada_explicacao", "tokens_estimados",
