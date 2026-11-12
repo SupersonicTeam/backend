@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Roda o conjunto da #497 contra uma Ceres local e grava um JSONL para o pontuar.py.
+"""Roda o conjunto da #497 (ou outro, por --conjunto) contra uma Ceres local e grava um JSONL.
 
 Só biblioteca padrão. Cada pergunta é feita `--repeticoes` vezes (repetição por repetição), pela
 conta indicada. Depois de cada chamada o executor lê no banco a linha de `assistente_interacao`
@@ -235,12 +235,14 @@ def main(argv: list[str] | None = None) -> int:
                             help="segundos mínimos entre duas chamadas ao chat")
     analisador.add_argument("--ollama", default="http://localhost:11434")
     analisador.add_argument("--embedding", default="bge-m3")
+    analisador.add_argument("--conjunto", type=Path, default=CONJUNTO,
+                            help="conjunto congelado (o da #497 ou o ceres-516-v1)")
     args = analisador.parse_args(argv)
 
     senha = os.environ.get("CERES_SENHA")
     if not senha:
         raise SystemExit("Defina CERES_SENHA com a senha da conta (nunca em arquivo)")
-    conjunto = pontuar.carregar_conjunto(CONJUNTO)
+    conjunto = pontuar.carregar_conjunto(args.conjunto)
     pontuar.validar_conjunto(conjunto)
     perguntas = conjunto["perguntas"]
     if args.ids:
