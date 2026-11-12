@@ -17,6 +17,7 @@ import br.com.agrocontabil.model.CredencialUsuario;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.EnderecoProdutor;
 import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.MetodoVerificacaoCnpj;
 import br.com.agrocontabil.model.EtiquetaCarteira;
 import br.com.agrocontabil.model.GuiaFiscal;
 import br.com.agrocontabil.model.ModeloPedido;
@@ -67,6 +68,7 @@ import br.com.agrocontabil.service.CreditoTributarioService;
 import br.com.agrocontabil.service.GeracaoNotaFiscalService;
 import br.com.agrocontabil.service.PoliticaSenha;
 import br.com.agrocontabil.service.TributacaoService;
+import br.com.agrocontabil.service.VerificacaoCnpjService;
 import br.com.agrocontabil.sefaz.SefazAmbiente;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -185,6 +187,7 @@ public class SeedDemonstracao implements CommandLineRunner {
   private final ApuracaoService apuracaoService;
   private final AlertaTributarioService alertaService;
   private final CotaDemonstracaoCeres cotaCeres;
+  private final VerificacaoCnpjService verificacaoCnpj;
   private final PasswordEncoder passwordEncoder;
   private final PoliticaSenha politicaSenha;
   private final TransactionTemplate transactionTemplate;
@@ -206,7 +209,8 @@ public class SeedDemonstracao implements CommandLineRunner {
       GeracaoNotaFiscalService geracaoService, NotaFiscalNfeMapper nfeMapper,
       XmlGenerator xmlGenerator, NfeAssinador assinador, NfeToNotaFiscalMapper importacaoMapper,
       ApuracaoService apuracaoService, AlertaTributarioService alertaService,
-      CotaDemonstracaoCeres cotaCeres, PasswordEncoder passwordEncoder,
+      CotaDemonstracaoCeres cotaCeres, VerificacaoCnpjService verificacaoCnpj,
+      PasswordEncoder passwordEncoder,
       PoliticaSenha politicaSenha, PlatformTransactionManager transactionManager, Clock clock,
       Environment ambiente, @Value("${app.seed.senha:}") String senhaSeed) {
     exigirPerfilPermitido(ambiente);
@@ -233,6 +237,7 @@ public class SeedDemonstracao implements CommandLineRunner {
     this.apuracaoService = apuracaoService;
     this.alertaService = alertaService;
     this.cotaCeres = cotaCeres;
+    this.verificacaoCnpj = verificacaoCnpj;
     this.passwordEncoder = passwordEncoder;
     this.politicaSenha = politicaSenha;
     // Transacao propria, com prazo de semeadura: o padrao de 30 s (#98) e para requisicao, e
@@ -263,6 +268,8 @@ public class SeedDemonstracao implements CommandLineRunner {
     try {
       boolean semeado = jaSemeado();
       if (semeado) {
+        // Primeiro e com falha propria: sem a verificacao, o endereco da banca nao e servido (#520).
+        verificarEscritorioSemFalhar();
         completarCredenciais();
         log.info("Demonstracao da banca ja semeada: nada recriado.");
       } else {
@@ -279,6 +286,17 @@ public class SeedDemonstracao implements CommandLineRunner {
       }
     } catch (RuntimeException e) {
       log.error("Demonstracao da banca nao semeada; a aplicacao segue sem ela.", e);
+    }
+  }
+
+  private void verificarEscritorioSemFalhar() {
+    try {
+      if (verificarEscritorio()) {
+        log.info("Demonstracao da banca: CNPJ do escritorio marcado como verificado.");
+      }
+    } catch (RuntimeException e) {
+      log.error("CNPJ do escritorio da demonstracao nao verificado: o endereco proprio dele nao e "
+          + "servido ate a verificacao manual (deploy/README.md).", e);
     }
   }
 
@@ -308,6 +326,27 @@ public class SeedDemonstracao implements CommandLineRunner {
       produtorRepository.findByCpfCnpj(cliente.documento()).ifPresent(produtor -> credencial(ex,
           cliente.email(), PapelUsuario.PRODUTOR, cliente.documento(), produtor.getId(), null));
     }
+  }
+
+  /**
+   * Marca como verificado o CNPJ do escritório da demonstração (#520) quando ele ainda não está: o
+   * banco semeado antes da verificação (a VPS) mantém o endereço da banca no ar depois do deploy,
+   * sem passo manual. Pelo {@link VerificacaoCnpjService}, como o comando manual, e auditado. Só o
+   * escritório da administradora com o CNPJ do seed: se um ensaio trocou o CNPJ, a verificação
+   * caiu e fica caída (o CNPJ novo não foi conferido). Uma revogação pelo comando manual não dura
+   * neste escritório (a subida seguinte o verifica de novo): para tirá-lo do ar, remova o endereço.
+   *
+   * @return {@code true} se marcou agora
+   */
+  boolean verificarEscritorio() {
+    return contadorRepository.findByCpfCnpj(CenarioDemonstracao.EQUIPE.get(0).cpf())
+        .map(Contador::getEscritorioId)
+        .flatMap(escritorioRepository::findById)
+        .filter(e -> CenarioDemonstracao.ESCRITORIO_CNPJ.equals(e.getCnpj()))
+        .filter(e -> !e.cnpjVerificado())
+        .map(e -> verificacaoCnpj.verificar(e.getId(), CenarioDemonstracao.ESCRITORIO_CNPJ,
+            MetodoVerificacaoCnpj.DEMONSTRACAO).mudou())
+        .orElse(false);
   }
 
   /**
@@ -365,7 +404,9 @@ public class SeedDemonstracao implements CommandLineRunner {
   // ===============================================================================================
 
   private void gravar(Execucao ex) {
-    // Empresarial, com equipe, telefone, endereco postal e endereco proprio (#519).
+    // Empresarial, com equipe, telefone, endereco postal e endereco proprio (#519), ja com o CNPJ
+    // verificado (#520): sem isso o endereco da banca nao e servido. O CNPJ e ficticio, dai o
+    // metodo DEMONSTRACAO.
     Escritorio escritorio = escritorioRepository.save(Escritorio.builder()
         .tipo(TipoEscritorio.EMPRESARIAL)
         .nome(CenarioDemonstracao.ESCRITORIO_NOME)
@@ -373,6 +414,8 @@ public class SeedDemonstracao implements CommandLineRunner {
         .telefone(CenarioDemonstracao.ESCRITORIO_TELEFONE)
         .endereco(CenarioDemonstracao.escritorioEndereco())
         .slug(CenarioDemonstracao.ESCRITORIO_SLUG)
+        .cnpjVerificadoEm(OffsetDateTime.now(clock))
+        .cnpjVerificacaoMetodo(MetodoVerificacaoCnpj.DEMONSTRACAO)
         .build());
 
     List<Contador> equipe = new ArrayList<>();

@@ -6,6 +6,7 @@ import br.com.agrocontabil.dto.CadastroRequest;
 import br.com.agrocontabil.dto.CadastroResponse;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
+import br.com.agrocontabil.support.EscritoriosDeTeste;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -54,6 +55,7 @@ class HostEncaminhadoIntegrationTest {
       jdbcTemplate.update("UPDATE escritorio SET slug = 'ruraloeste', cnpj = '11222333000181'"
           + " WHERE id = (SELECT escritorio_id FROM contadores WHERE id = ?)",
           admin.usuarioId());
+      EscritoriosDeTeste.verificarCnpj(jdbcTemplate, admin.usuarioId());
     }
 
     int loginComHostEncaminhado(String host) throws Exception {

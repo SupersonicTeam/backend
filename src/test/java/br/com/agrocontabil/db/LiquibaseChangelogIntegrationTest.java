@@ -298,6 +298,12 @@ class LiquibaseChangelogIntegrationTest {
     UUID contadorId = UUID.randomUUID();
     jdbc.update("INSERT INTO contadores (id, nome_completo, escritorio_id, funcao_escritorio)"
         + " VALUES (?, 'Contador 0059', ?, 'ADMINISTRADOR')", contadorId, emUsoId);
+    // Com CNPJ e sem a verificacao (#520): reservado, mas nada e servido.
+    assertThat(escritorioRepository.findAtivoPorSlug("emuso0059")).isEmpty();
+    assertThat(escritorioRepository.findDestinoDaCarencia("carencia0059", agora)).isEmpty();
+    assertThat(escritorioRepository.membroDoEnderecoAtivo("emuso0059", contadorId)).isFalse();
+    jdbc.update("UPDATE escritorio SET cnpj_verificado_em = now(), cnpj_verificacao_metodo ="
+        + " 'MANUAL' WHERE id = ?", emUsoId);
     assertThat(escritorioRepository.findAtivoPorSlug("emuso0059")).isPresent();
     assertThat(escritorioRepository.findDestinoDaCarencia("carencia0059", agora))
         .hasValueSatisfying(destino -> assertThat(destino.getSlug()).isEqualTo("emuso0059"));
@@ -310,6 +316,71 @@ class LiquibaseChangelogIntegrationTest {
     jdbc.update("DELETE FROM escritorio_slug_anterior WHERE slug = 'carencia0059'");
     jdbc.update("DELETE FROM escritorio WHERE slug = 'emuso0059'");
     jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", segundo);
+  }
+
+  @Test
+  @DisplayName("changeSet 0063: verificacao do CNPJ do escritorio, CHECK e CNPJ verificado unico (#520)")
+  void changeSet0063CnpjVerificado() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'escritorio'"
+            + " AND column_name IN ('cnpj_verificado_em', 'cnpj_verificacao_metodo')"
+            + " ORDER BY column_name");
+    assertThat(colunas).extracting(c -> c.get("column_name"), c -> c.get("data_type"),
+        c -> c.get("is_nullable"),
+        c -> c.get("character_maximum_length") == null ? null
+            : ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(
+            tuple("cnpj_verificacao_metodo", "character varying", "YES", 20),
+            tuple("cnpj_verificado_em", "timestamp with time zone", "YES", null));
+
+    String cnpj = "11222333000181";
+    String primeiro = UUID.randomUUID().toString();
+    String segundo = UUID.randomUUID().toString();
+    String terceiro = UUID.randomUUID().toString();
+    // O mesmo CNPJ nao verificado repete a vontade: cadastro e PATCH nunca recusam (sem oraculo).
+    for (String id : List.of(primeiro, segundo, terceiro)) {
+      jdbc.update("INSERT INTO escritorio (id, nome, cnpj) VALUES (?::uuid, 'Escritorio 0063', ?)",
+          id, cnpj);
+    }
+    jdbc.update("UPDATE escritorio SET cnpj_verificado_em = now(), cnpj_verificacao_metodo ="
+        + " 'MANUAL' WHERE id = ?::uuid", primeiro);
+    // Um CNPJ verificado em um escritorio so: o indice parcial barra o segundo.
+    assertThatThrownBy(() -> jdbc.update("UPDATE escritorio SET cnpj_verificado_em = now(),"
+        + " cnpj_verificacao_metodo = 'MANUAL' WHERE id = ?::uuid", segundo))
+        .isInstanceOf(DataIntegrityViolationException.class);
+    assertThat(escritorioRepository.existsByCnpjAndCnpjVerificadoEmIsNotNullAndIdNot(cnpj,
+        UUID.fromString(segundo))).isTrue();
+    assertThat(escritorioRepository.existsByCnpjAndCnpjVerificadoEmIsNotNullAndIdNot(cnpj,
+        UUID.fromString(primeiro))).isFalse();
+    // CHECK: metodo fora da lista, verificacao sem metodo e verificacao sem CNPJ.
+    assertThatThrownBy(() -> jdbc.update("UPDATE escritorio SET cnpj = '99888777000164',"
+        + " cnpj_verificado_em = now(), cnpj_verificacao_metodo = 'RECEITA' WHERE id = ?::uuid",
+        segundo)).isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> jdbc.update("UPDATE escritorio SET cnpj_verificado_em = now()"
+        + " WHERE id = ?::uuid", terceiro)).isInstanceOf(DataIntegrityViolationException.class);
+    assertThatThrownBy(() -> jdbc.update("UPDATE escritorio SET cnpj = NULL WHERE id = ?::uuid",
+        primeiro)).isInstanceOf(DataIntegrityViolationException.class);
+
+    // A entidade limpa a verificacao no mesmo UPDATE que troca o CNPJ (#520): trocar para o CNPJ
+    // verificado de outro escritorio nao esbarra no indice, e o PATCH nunca vira oraculo.
+    jdbc.update("UPDATE escritorio SET cnpj = '99888777000164' WHERE id = ?::uuid", segundo);
+    jdbc.update("UPDATE escritorio SET cnpj_verificado_em = now(), cnpj_verificacao_metodo ="
+        + " 'MANUAL' WHERE id = ?::uuid", segundo);
+    new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+      var escritorio = escritorioRepository.findById(UUID.fromString(segundo)).orElseThrow();
+      escritorio.setCnpj(cnpj);
+      escritorioRepository.saveAndFlush(escritorio);
+    });
+    assertThat(jdbc.queryForMap("SELECT cnpj, cnpj_verificado_em, cnpj_verificacao_metodo"
+        + " FROM escritorio WHERE id = ?::uuid", segundo))
+        .containsEntry("cnpj", cnpj).containsEntry("cnpj_verificado_em", null)
+        .containsEntry("cnpj_verificacao_metodo", null);
+
+    for (String id : List.of(primeiro, segundo, terceiro)) {
+      jdbc.update("DELETE FROM escritorio WHERE id = ?::uuid", id);
+    }
   }
 
   @Test

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.Escritorio;
 import br.com.agrocontabil.model.FuncaoEscritorio;
+import br.com.agrocontabil.model.MetodoVerificacaoCnpj;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.TipoProdutor;
@@ -171,6 +172,11 @@ class ResetDemonstracaoPostgresIntegrationTest {
     // O endereco da banca volta, e a carencia do ensaio nao sobrou (#464).
     assertThat(jdbc.queryForObject("SELECT slug FROM escritorio WHERE cnpj = ?", String.class,
         CenarioDemonstracao.ESCRITORIO_CNPJ)).isEqualTo(CenarioDemonstracao.ESCRITORIO_SLUG);
+    // E servido: o seed novo nasce com o CNPJ verificado (#520), e o indice unico do CNPJ
+    // verificado nao barra (o escritorio antigo saiu no reset).
+    assertThat(escritorioRepository.findAtivoPorSlug(CenarioDemonstracao.ESCRITORIO_SLUG))
+        .hasValueSatisfying(e -> assertThat(e.getCnpjVerificacaoMetodo())
+            .isEqualTo(MetodoVerificacaoCnpj.DEMONSTRACAO));
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM escritorio_slug_anterior", Long.class))
         .isZero();
     // O leite UHT do Luiz vai ao supermercado, nao ao laticinio (#284).

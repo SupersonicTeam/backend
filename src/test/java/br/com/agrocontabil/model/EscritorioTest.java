@@ -8,6 +8,7 @@ import br.com.agrocontabil.exception.EmpresarialExigeCnpjException;
 import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.PostUpdate;
+import java.time.OffsetDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -94,5 +95,57 @@ class EscritorioTest {
     pessoal.onLoad();
     pessoal.setTipo(TipoEscritorio.EMPRESARIAL);
     assertThatThrownBy(pessoal::onUpdate).isInstanceOf(EmpresarialExigeCnpjException.class);
+  }
+
+  @Test
+  @DisplayName("verificacao do CNPJ (#520): trocar ou apagar o CNPJ a limpa; nome, telefone e tipo nao")
+  void trocarCnpjLimpaAVerificacao() {
+    OffsetDateTime quando = OffsetDateTime.parse("2026-11-11T10:00:00-03:00");
+    Escritorio escritorio = Escritorio.builder().nome("Rural Oeste")
+        .tipo(TipoEscritorio.EMPRESARIAL).cnpj("11444777000161").build();
+    escritorio.onLoad();
+    escritorio.verificarCnpj(MetodoVerificacaoCnpj.MANUAL, quando);
+    assertThat(escritorio.cnpjVerificado()).isTrue();
+
+    escritorio.setNome("Rural Oeste Ltda");
+    escritorio.setTelefone("4533330000");
+    escritorio.onUpdate();
+    escritorio.onLoad();
+    assertThat(escritorio.getCnpjVerificadoEm()).isEqualTo(quando);
+    assertThat(escritorio.getCnpjVerificacaoMetodo()).isEqualTo(MetodoVerificacaoCnpj.MANUAL);
+
+    escritorio.setCnpj("11222333000181");
+    escritorio.onUpdate();
+    escritorio.onLoad();
+    assertThat(escritorio.cnpjVerificado()).isFalse();
+    assertThat(escritorio.getCnpjVerificacaoMetodo()).isNull();
+
+    Escritorio pessoal = Escritorio.builder().nome("Joao").cnpj("11444777000161").build();
+    pessoal.onLoad();
+    pessoal.verificarCnpj(MetodoVerificacaoCnpj.MANUAL, quando);
+    pessoal.setCnpj(null);
+    pessoal.onUpdate();
+    assertThat(pessoal.cnpjVerificado()).isFalse();
+  }
+
+  @Test
+  @DisplayName("verificacao do CNPJ (#520): so com CNPJ; revogar limpa as duas colunas")
+  void verificarERevogar() {
+    OffsetDateTime quando = OffsetDateTime.parse("2026-11-11T10:00:00-03:00");
+    assertThatThrownBy(() -> Escritorio.builder().nome("Joao").build()
+        .verificarCnpj(MetodoVerificacaoCnpj.MANUAL, quando))
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(() -> Escritorio.builder().nome("Joao").cnpj(" ").build()
+        .verificarCnpj(MetodoVerificacaoCnpj.MANUAL, quando))
+        .isInstanceOf(IllegalStateException.class);
+
+    Escritorio escritorio = Escritorio.builder().nome("Rural Oeste").cnpj("11444777000161")
+        .build();
+    escritorio.verificarCnpj(MetodoVerificacaoCnpj.DEMONSTRACAO, quando);
+    assertThat(escritorio.getCnpjVerificacaoMetodo())
+        .isEqualTo(MetodoVerificacaoCnpj.DEMONSTRACAO);
+    escritorio.revogarVerificacaoCnpj();
+    assertThat(escritorio.getCnpjVerificadoEm()).isNull();
+    assertThat(escritorio.getCnpjVerificacaoMetodo()).isNull();
   }
 }

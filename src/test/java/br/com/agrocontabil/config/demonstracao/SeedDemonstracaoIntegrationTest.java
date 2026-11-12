@@ -7,6 +7,7 @@ import br.com.agrocontabil.common.FormatoSlug;
 import br.com.agrocontabil.exception.LimiteUsoAssistenteException;
 import br.com.agrocontabil.model.ApuracaoMensal;
 import br.com.agrocontabil.model.Escritorio;
+import br.com.agrocontabil.model.MetodoVerificacaoCnpj;
 import br.com.agrocontabil.model.ModeloPedido;
 import br.com.agrocontabil.model.NotaFiscal;
 import br.com.agrocontabil.model.OrigemNotaFiscal;
@@ -46,6 +47,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -89,6 +91,7 @@ class SeedDemonstracaoIntegrationTest {
   @Autowired private EscritorioRepository escritorioRepository;
   @Autowired private SlugsReservados slugsReservados;
   @Autowired private ModeloPedidoRepository modeloPedidoRepository;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
   @DisplayName("escritorio com tres funcoes, nove clientes e conta para todos")
@@ -117,6 +120,46 @@ class SeedDemonstracaoIntegrationTest {
     assertThat(escritorio.getCnpj()).isNotBlank();
     assertThat(FormatoSlug.valido(escritorio.getSlug())).isTrue();
     assertThat(slugsReservados.reservado(escritorio.getSlug())).isFalse();
+    // Servido so com o CNPJ verificado (#520): o seed ja o grava assim.
+    assertThat(escritorio.cnpjVerificado()).isTrue();
+    assertThat(escritorio.getCnpjVerificacaoMetodo()).isEqualTo(MetodoVerificacaoCnpj.DEMONSTRACAO);
+    assertThat(escritorioRepository.findAtivoPorSlug(escritorio.getSlug())).isPresent();
+  }
+
+  @Test
+  @DisplayName("CNPJ da demonstracao (#520): a subida verifica o escritorio ja semeado sem a marca, "
+      + "auditado e sem o CNPJ; com o CNPJ trocado num ensaio, nao")
+  void verificaOEscritorioJaSemeado() {
+    Escritorio escritorio = escritorioRepository.findAll().stream()
+        .filter(e -> CenarioDemonstracao.ESCRITORIO_NOME.equals(e.getNome()))
+        .findFirst().orElseThrow();
+    try {
+      assertThat(seed.verificarEscritorio()).isFalse();
+
+      // O banco da VPS, semeado antes da #520: a subida marca, pelo servico auditado.
+      jdbcTemplate.update("UPDATE escritorio SET cnpj_verificado_em = NULL,"
+          + " cnpj_verificacao_metodo = NULL WHERE id = ?", escritorio.getId());
+      assertThat(escritorioRepository.findAtivoPorSlug(escritorio.getSlug())).isEmpty();
+      assertThat(seed.verificarEscritorio()).isTrue();
+      assertThat(escritorioRepository.findAtivoPorSlug(escritorio.getSlug())).isPresent();
+      assertThat(seed.verificarEscritorio()).isFalse();
+      assertThat(jdbcTemplate.queryForList("SELECT estado_antes || '>' || estado_depois"
+              + " FROM registro_auditoria WHERE acao = 'ESCRITORIO_CNPJ_VERIFICADO'"
+              + " AND recurso_id = ? AND sucesso", String.class, escritorio.getId()))
+          .containsExactly("NAO_VERIFICADO>DEMONSTRACAO");
+
+      // Ensaio que trocou o CNPJ: a verificacao caiu e a subida nao a devolve.
+      Escritorio carregado = escritorioRepository.findById(escritorio.getId()).orElseThrow();
+      carregado.setCnpj(CenarioDemonstracao.cnpj("111222333000"));
+      escritorioRepository.saveAndFlush(carregado);
+      assertThat(seed.verificarEscritorio()).isFalse();
+      assertThat(escritorioRepository.findAtivoPorSlug(escritorio.getSlug())).isEmpty();
+    } finally {
+      // O banco e da classe inteira: volta ao escritorio do cenario, verificado.
+      jdbcTemplate.update("UPDATE escritorio SET cnpj = ?, cnpj_verificado_em = CURRENT_TIMESTAMP,"
+          + " cnpj_verificacao_metodo = 'DEMONSTRACAO' WHERE id = ?",
+          CenarioDemonstracao.ESCRITORIO_CNPJ, escritorio.getId());
+    }
   }
 
   @Test

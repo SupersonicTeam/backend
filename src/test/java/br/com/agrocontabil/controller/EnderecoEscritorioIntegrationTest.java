@@ -11,9 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.agrocontabil.dto.CadastroRequest;
 import br.com.agrocontabil.dto.CadastroResponse;
+import br.com.agrocontabil.model.MetodoVerificacaoCnpj;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
 import br.com.agrocontabil.service.EnvioConviteEquipe;
+import br.com.agrocontabil.service.VerificacaoCnpjService;
 import br.com.agrocontabil.support.EscritoriosDeTeste;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -81,6 +83,7 @@ class EnderecoEscritorioIntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private TestDatabaseCleaner cleaner;
+  @Autowired private VerificacaoCnpjService verificacaoCnpj;
 
   private CadastroResponse adminA;
   private CadastroResponse adminB;
@@ -285,6 +288,60 @@ class EnderecoEscritorioIntegrationTest {
         .andExpect(jsonPath("$.errors[0].code").value("PAPEL_NAO_AUTORIZADO"));
     remover(tokenA).andExpect(status().isForbidden());
     definir(token(EMAIL_PRODUTOR), "ruraloeste").andExpect(status().isForbidden());
+  }
+
+  /** O ask do Caddy com a chave do application-test.yml. */
+  private ResultActions ask(String dominio) throws Exception {
+    return mockMvc.perform(get("/interno/tls/permitido").param("domain", dominio)
+        .param("chave", "chave-do-ask-so-dos-testes-0123456789abcdef"));
+  }
+
+  private ResultActions loginNoSubdominio(String email, String slug) throws Exception {
+    return mockMvc.perform(post("/api/auth/login").header(HttpHeaders.HOST,
+            slug + ".agroconia.com.br").contentType(MediaType.APPLICATION_JSON)
+        .content("{\"email\":\"%s\",\"senha\":\"%s\",\"escritorio\":\"%s\"}"
+            .formatted(email, SENHA, slug)));
+  }
+
+  private ResultActions patchEscritorio(String token, String corpo) throws Exception {
+    return mockMvc.perform(patch("/api/escritorio").header(HttpHeaders.AUTHORIZATION, token)
+        .contentType(MediaType.APPLICATION_JSON).content(corpo));
+  }
+
+  @Test
+  @DisplayName("verificacao do CNPJ (#520): o endereco so e servido depois dela; o PATCH com outro CNPJ a derruba, sem 409 nem oraculo")
+  void enderecoSoServidoComCnpjVerificado() throws Exception {
+    UUID escritorioA = escritorioDe(adminA.usuarioId());
+    definir(tokenA, "ruraloeste").andExpect(status().isOk());
+    // Reservado (outro escritorio nao o grava), mas sem a verificacao nada e servido.
+    definir(tokenB, "ruraloeste").andExpect(status().isConflict());
+    ask("ruraloeste.agroconia.com.br").andExpect(status().isNotFound());
+    mockMvc.perform(get("/api/publico/escritorios/ruraloeste")).andExpect(status().isNotFound());
+    loginNoSubdominio(EMAIL_A, "ruraloeste").andExpect(status().isUnauthorized());
+
+    verificacaoCnpj.verificar(escritorioA, CNPJ_A, MetodoVerificacaoCnpj.MANUAL);
+    ask("ruraloeste.agroconia.com.br").andExpect(status().isOk());
+    loginNoSubdominio(EMAIL_A, "ruraloeste").andExpect(status().isOk());
+
+    // Trocar o nome (e so o nome) mantem a verificacao.
+    patchEscritorio(tokenA, "{\"nome\":\"Rural Oeste Ltda\"}").andExpect(status().isOk());
+    patchEscritorio(tokenA, "{\"nome\":\"Rural Oeste\",\"cnpj\":\"%s\"}".formatted(CNPJ_A))
+        .andExpect(status().isOk());
+    ask("ruraloeste.agroconia.com.br").andExpect(status().isOk());
+
+    // B grava o CNPJ verificado de A: 200, como qualquer CNPJ (sem oraculo), e B nao fica verificado.
+    patchEscritorio(tokenB, "{\"nome\":\"Campo Verde\",\"cnpj\":\"%s\"}".formatted(CNPJ_A))
+        .andExpect(status().isOk());
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM escritorio"
+        + " WHERE cnpj_verificado_em IS NOT NULL", Integer.class)).isEqualTo(1);
+
+    // A troca o proprio CNPJ: a verificacao cai na hora, e o endereco deixa de ser servido.
+    patchEscritorio(tokenA, "{\"nome\":\"Rural Oeste\",\"cnpj\":\"%s\"}".formatted(CNPJ_B))
+        .andExpect(status().isOk());
+    assertThat(jdbcTemplate.queryForList("SELECT cnpj_verificado_em FROM escritorio WHERE id = ?",
+        Object.class, escritorioA)).containsExactly((Object) null);
+    ask("ruraloeste.agroconia.com.br").andExpect(status().isNotFound());
+    loginNoSubdominio(EMAIL_A, "ruraloeste").andExpect(status().isUnauthorized());
   }
 
   @Test

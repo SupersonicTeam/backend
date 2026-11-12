@@ -50,6 +50,11 @@ import lombok.ToString;
  * <p>O {@link #slug} é o endereço próprio do escritório, {@code {slug}.agroconia.com.br} (issue
  * #464): marca e porta de entrada, nunca fronteira de autorização. Pode ser dado pessoal (o nome do
  * escritório unipessoal é o do contador): fica fora do {@code toString} e de todo log.
+ *
+ * <p><strong>CNPJ verificado (#520):</strong> o CNPJ só tem o dígito verificador conferido no
+ * cadastro e no {@code PATCH}. A titularidade é conferida fora do sistema, e o endereço próprio só
+ * é servido depois disso ({@link #cnpjVerificado}). Trocar o CNPJ limpa a verificação; trocar o
+ * nome, o telefone ou o endereço, não.
  */
 @Entity
 @Table(name = "escritorio",
@@ -102,6 +107,19 @@ public class Escritorio {
   /** Última definição, troca ou remoção do slug: a próxima gravação respeita o intervalo. */
   @Column(name = "slug_alterado_em")
   private OffsetDateTime slugAlteradoEm;
+
+  /**
+   * Quando o CNPJ foi verificado (issue #520); nulo = não verificado. Só o escritório verificado
+   * tem o endereço próprio servido. Trocar o CNPJ limpa a verificação ({@link #onUpdate}). Grave
+   * pelo {@link #verificarCnpj}, nunca pelo setter.
+   */
+  @Column(name = "cnpj_verificado_em")
+  private OffsetDateTime cnpjVerificadoEm;
+
+  /** Como o CNPJ foi verificado; nulo = não verificado (issue #520). */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "cnpj_verificacao_metodo", length = 20, columnDefinition = "VARCHAR(20)")
+  private MetodoVerificacaoCnpj cnpjVerificacaoMetodo;
 
   @Column(name = "created_at", updatable = false)
   private OffsetDateTime createdAt;
@@ -167,6 +185,37 @@ public class Escritorio {
     cnpjCarregado = cnpj;
   }
 
+  /**
+   * O CNPJ gravado foi verificado (issue #520)? Só então o endereço próprio é servido.
+   *
+   * @return {@code true} se verificado
+   */
+  public boolean cnpjVerificado() {
+    return cnpjVerificadoEm != null;
+  }
+
+  /**
+   * Marca o CNPJ atual como verificado (issue #520). Quem chama conferiu a titularidade do CNPJ
+   * gravado agora; se ele mudar depois, a verificação cai sozinha.
+   *
+   * @param metodo   como foi conferido
+   * @param instante quando
+   * @throws IllegalStateException escritório sem CNPJ
+   */
+  public void verificarCnpj(MetodoVerificacaoCnpj metodo, OffsetDateTime instante) {
+    if (cnpj == null || cnpj.isBlank()) {
+      throw new IllegalStateException("Escritorio sem CNPJ nao pode ser verificado");
+    }
+    cnpjVerificadoEm = Objects.requireNonNull(instante, "instante");
+    cnpjVerificacaoMetodo = Objects.requireNonNull(metodo, "metodo");
+  }
+
+  /** Tira a verificação do CNPJ (issue #520): o endereço próprio deixa de ser servido. */
+  public void revogarVerificacaoCnpj() {
+    cnpjVerificadoEm = null;
+    cnpjVerificacaoMetodo = null;
+  }
+
   @PrePersist
   protected void onCreate() {
     conferirCnpj();
@@ -178,6 +227,11 @@ public class Escritorio {
   protected void onUpdate() {
     if (tipo != tipoCarregado || !Objects.equals(cnpj, cnpjCarregado)) {
       conferirCnpj();
+    }
+    if (!Objects.equals(cnpj, cnpjCarregado)) {
+      // Verificado foi o CNPJ antigo (#520). Limpa no mesmo UPDATE: assim trocar o CNPJ nunca
+      // esbarra no indice unico do CNPJ verificado, e o PATCH nao vira oraculo de CNPJ alheio.
+      revogarVerificacaoCnpj();
     }
     updatedAt = OffsetDateTime.now();
   }

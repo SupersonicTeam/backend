@@ -215,6 +215,9 @@ class CadastroIntegrationTest {
     // Slug normalizado e fora do intervalo de 30 dias: o do cadastro se corrige na hora.
     assertThat(escritorio.getSlug()).isEqualTo("campoverde");
     assertThat(escritorio.getSlugAlteradoEm()).isNull();
+    // Reservado, mas nao servido: o CNPJ do cadastro publico nasce sem verificacao (#520).
+    assertThat(escritorio.cnpjVerificado()).isFalse();
+    mockMvc.perform(get("/api/publico/escritorios/campoverde")).andExpect(status().isNotFound());
     // O telefone do escritorio e cifrado em repouso, como os outros (#147).
     assertThat(jdbc.queryForObject("SELECT telefone FROM escritorio WHERE id = ?", String.class,
         escritorio.getId())).startsWith("v1:");
@@ -364,6 +367,24 @@ class CadastroIntegrationTest {
     assertThat(contadorRepository.count()).isEqualTo(1);
     assertThat(escritorioRepository.count()).isEqualTo(1);
     assertThat(credencialRepository.findByEmail("segunda@exemplo.com.br")).isEmpty();
+  }
+
+  @Test
+  @DisplayName("CNPJ repetido no cadastro empresarial (#520): 201 nos dois, sem oraculo, e nenhum endereco servido")
+  void cnpjRepetidoNaoEConflito() throws Exception {
+    assertThat(cadastrar(corpoContador(CPF, "primeira@exemplo.com.br",
+        escritorioEmpresarial("11444777000161", "campoverde"), EMPRESARIAL))
+        .getResponse().getStatus()).isEqualTo(201);
+    assertThat(cadastrar(corpoContador("11144477735", "segunda@exemplo.com.br",
+        escritorioEmpresarial("11444777000161", "campoverde-oeste"), EMPRESARIAL))
+        .getResponse().getStatus()).isEqualTo(201);
+
+    assertThat(escritorioRepository.findAll()).hasSize(2)
+        .allSatisfy(e -> assertThat(e.cnpjVerificado()).isFalse());
+    for (String slug : List.of("campoverde", "campoverde-oeste")) {
+      mockMvc.perform(get("/api/publico/escritorios/{slug}", slug))
+          .andExpect(status().isNotFound());
+    }
   }
 
   @Test
