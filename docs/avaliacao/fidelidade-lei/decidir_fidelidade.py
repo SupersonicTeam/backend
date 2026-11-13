@@ -353,7 +353,10 @@ def decidir_rodada(rodada: Path) -> dict:
     info = informacao_da_leitura(j1, j2, sorted(chave))
     comparacoes = {b: avaliar(execs, com_base_da_rodada, info, manifesto.get("interrompida"),
                               comum.BASE, b) for b in bracos[1:]}
-    return {"versaoDaRegra": comum.VERSAO_REGRA_ATUAL, "bracos": bracos,
+    versao = (manifesto.get("regra") or {}).get("versao") or comum.VERSAO_REGRA_ATUAL
+    for c in comparacoes.values():
+        c["versaoDaRegra"] = versao  # a da rodada (o manifesto), não a que estiver em vigor ao decidir
+    return {"versaoDaRegra": versao, "bracos": bracos,
             "desfechos": {b: c["desfecho"] for b, c in comparacoes.items()},
             "escolha": escolher_entre_bracos(comparacoes),
             "comparacoes": comparacoes, "leitura": info,

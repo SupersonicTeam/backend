@@ -78,12 +78,16 @@ as 3 repetições e o modelo são os mesmos) e prevê **quatro braços**: `desli
 `camada1+juiz` (juiz novo, só com veto) e `camada1+juiz+resgate`, cada um comparado ao `desligada`:
 
 ```bash
-python3 -I docs/avaliacao/fidelidade-lei/executar_fidelidade.py --conjunto v3 --jar <jar> --commit <sha>     --braco "camada1:NOME_DA_FLAG=true"     --braco "camada1+juiz:NOME_DA_FLAG=true,NOME_DA_FLAG_DO_JUIZ=true"     --braco "camada1+juiz+resgate:NOME_DA_FLAG=true,NOME_DA_FLAG_DO_JUIZ=true,NOME_DA_FLAG_DO_RESGATE=true"
+python3 -I docs/avaliacao/fidelidade-lei/executar_fidelidade.py --conjunto v3 --jar <jar> --commit <sha> \
+    --braco "camada1:NOME_DA_FLAG=true" \
+    --braco "camada1+juiz:NOME_DA_FLAG=true,NOME_DA_FLAG_DO_JUIZ=true" \
+    --braco "camada1+juiz+resgate:NOME_DA_FLAG=true,NOME_DA_FLAG_DO_JUIZ=true,NOME_DA_FLAG_DO_RESGATE=true"
 ```
 
 São 36 x 3 x 4 = 432 execuções e quatro JVMs: confira a memória. Os arquivos e os testes do v1 e do v2
 não mudaram. O teste cego vale para o v3 do mesmo jeito (quem escreve ou revisa a correção recebe só os
-ids, `F3-07`). Os testes do v3 estão em `test_conjunto_v3.py`.
+ids, `F3-07`). Os ids do v3 não são contíguos (`F3-02` a `F3-57`): as perguntas foram escolhidas entre
+candidatas mais numerosas depois do portão de proximidade. Os testes do v3 estão em `test_conjunto_v3.py`.
 
 ## Como rodar (depois do merge, com o head do PR da correção e o nome da flag)
 
