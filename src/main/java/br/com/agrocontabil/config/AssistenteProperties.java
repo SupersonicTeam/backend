@@ -948,7 +948,9 @@ public class AssistenteProperties implements InitializingBean {
    * e ficam os trechos, sem afirmar que respondem.
    *
    * <p><strong>Desligada por padrão.</strong> Com ela desligada a rota de lei é a de antes: o mesmo
-   * prompt, nenhuma conferência a mais. Ligar exige a medição no conjunto novo e o OK do Murillo.
+   * prompt, nenhuma conferência a mais. A configuração escolhida pela terceira medição (camada 1 +
+   * juiz {@code justificativa} com veto + resgate com polaridade) está no
+   * {@code docs/ceres-assistente.md}; ligar na VPS é decisão à parte.
    */
   public static class FidelidadeLei {
 

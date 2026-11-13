@@ -336,7 +336,10 @@ br.com.agrocontabil
 │                  #   regra está no caput). Reprovada = TRECHOS_SEM_CONFIRMACAO com os trechos marcados, desfecho
 │                  #   FIDELIDADE_REPROVADA (descarte na régua da avaliação); o motivo vai em
 │                  #   assistente_interacao.fidelidade_lei (changeSet 0065). Desligada = prompt e resultado da main
-│                  #   (RotaLegislacaoFidelidadeTest). Ligar exige medição no conjunto novo e OK do Murillo;
+│                  #   (RotaLegislacaoFidelidadeTest). Configuração escolhida (Murillo, 2026-11-13, terceira
+│                  #   medição, 6b5cd4ac): camada 1 + juiz justificativa com veto + resgate com polaridade
+│                  #   (docs/ceres-assistente.md, "Configuração escolhida"); tudo segue desligado no código, e
+│                  #   ligar na VPS é decisão à parte;
 │                  #   camada 2, o juiz (fidelidade/JuizFidelidadeLei; app.assistente.fidelidade-lei.juiz.enabled /
 │                  #   AI_FIDELIDADE_LEI_JUIZ_HABILITADO, DESLIGADO por padrão, só com a camada 1): uma chamada ao
 │                  #   modelo com as frases e os dispositivos citados (com o contexto de cima, lidos em sequência),

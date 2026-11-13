@@ -332,8 +332,8 @@ existe e o `ValidadorNumeros` só confere número, então nenhum dos dois pega.
 `app.assistente.fidelidade-lei.cobertura-minima` (`AI_FIDELIDADE_LEI_COBERTURA_MINIMA`, padrão
 `0.7`, maior que 0 e no máximo 1, conferida na subida). Desligada, a rota de lei é a de antes: o
 mesmo prompt (`PromptsCeres.sistemaLegislacao`) e o mesmo resultado, provados pelo
-`RotaLegislacaoFidelidadeTest` contra a rota construída sem a conferência. **Ligar** exige a medição
-no conjunto novo (escrito por outra sessão, cega ao código) e o OK do Murillo.
+`RotaLegislacaoFidelidadeTest` contra a rota construída sem a conferência. A medição já foi feita e a
+configuração escolhida está em "Configuração escolhida", abaixo; ligar na VPS é decisão à parte.
 
 **Como funciona (ligada).** Sem chamada a mais ao modelo; o modelo não julga o próprio texto.
 
@@ -574,6 +574,48 @@ resgatadas: 5 certas e a inversão acima (`atual`). **Bancada** sobre as 57 resp
 desligado: `atual` aprovou 34 e reprovou 23; `justificativa` aprovou 39, reprovou 15 e falhou em 3 (2
 cortes no teto de 512, que levaram ao de 1.024). O juiz `atual` é o mais rigoroso e o mais rápido; o
 `justificativa` veta menos e pegou a inversão em 2 de 3, ao custo de ~0,5 s e ~160 tokens de saída.
+
+**Configuração escolhida (decisão do Murillo, 2026-11-13, pela terceira medição).** O desenho que
+entra quando a fidelidade for ligada é `camada1+juiz+resgate`: a camada 1 com o piso de cobertura do
+juiz, o juiz na configuração `justificativa`, vetando as aprovadas e resgatando as reprovadas por número e
+por polaridade. **Os padrões do código não mudam: tudo segue desligado.** Ligar na VPS é decisão à parte,
+ainda não tomada; quando for, é só configuração, com estas variáveis no `.env` de lá (os booleanos em
+minúsculas; o provedor é o de sempre, `AI_CHAT_PROVIDER=anthropic`, `AI_ANTHROPIC_MODEL=claude-haiku-5-5`,
+`AI_ANTHROPIC_THINKING=disabled`):
+
+```
+AI_FIDELIDADE_LEI_HABILITADA=true
+AI_FIDELIDADE_LEI_JUIZ_HABILITADO=true
+AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO=justificativa
+AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO=true
+AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE=true
+```
+
+O veto fica no padrão (`AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO=true`) e, com ele, a cobertura exigida em
+código é a `cobertura-minima-com-juiz` (0,3). A reserva da cota por pergunta sobe de 31.744 para 44.032
+créditos (fator 1).
+
+**Terceira medição** (conjunto v3, jar do commit `a91f32ef`, 432 execuções, nenhuma falha; resultado na
+`main` em `6b5cd4ac`, pela sessão da medição, cega ao código):
+
+| Braço | Entregues | Infiéis | Fiéis | Falso descarte | Desfecho da regra |
+|---|---|---|---|---|---|
+| `desligada` | 40 | 15 | 21 | — | — |
+| `camada1` | 27 | 0 | 19 | 4 | não entra (limite de 3) |
+| `camada1+juiz+resgate` | 31 | 0 | 24 | 2 | **entra (escolhido)** |
+| `camada1+resgate` | 33 | 1 | 25 | 3 | entra |
+
+- A fidelidade tira as 15 respostas infiéis das 40 que a rota sem ela entregou: neste conjunto, 37,5% das
+  respostas de lei entregues sem a correção eram infiéis.
+- A camada 1 sozinha, que bastava nas duas medições anteriores, descartou 4 perguntas boas.
+- As 9 respostas resgatadas que chegaram ao produtor foram todas lidas como fiéis; o único infiel fora do
+  braço desligado passou direto pela camada 1, com a citação corrigida, sem resgate.
+- Chamadas ao juiz por pergunta de lei: 0,43 com o veto, 0,09 só no resgate.
+- O Murillo preferiu o braço sem nenhum infiel ao mais barato (só resgate), sabendo que a diferença é de
+  1 execução em 90.
+
+As configurações adaptativas do juiz e o modo só resgate seguem no código, desligados, para medições
+futuras.
 
 **Os braços da medição:** tudo desligado (a `main`); só a camada 1
 (`AI_FIDELIDADE_LEI_HABILITADA=true`); camada 1 e juiz, só o veto (mais `AI_FIDELIDADE_LEI_JUIZ_HABILITADO=true`);
