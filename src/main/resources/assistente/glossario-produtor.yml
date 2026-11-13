@@ -158,3 +158,76 @@ termos:
     padrao: '\bguias?\b'
     ignorarCaixa: true
     explicacao: o documento usado para pagar um imposto
+
+  # Termos da linguagem da lei que a rota de legislação usa e o produtor não tem por que conhecer
+  # (#269, item 2). Ordem = frequência esperada na resposta de lei: é também a prioridade do teto
+  # da LinhaGlossario, que explica no máximo três termos comuns por resposta.
+  # NENHUM é sigla: não entram na acomodação "sigla = nome por extenso" da conferência de
+  # fidelidade (ConferenciaFidelidadeLei.raizesDasCopias, só siglas) nem na régua de clareza
+  # (ClarezaTexto, 8 siglas fixas). São só definição ao fim da resposta.
+  - termo: alíquota
+    sigla: false
+    padrao: '\bal[íi]quotas?\b'
+    ignorarCaixa: true
+    aceitas: [porcentagem do imposto, percentual do imposto]
+    explicacao: a porcentagem do imposto que incide sobre o valor da operação
+
+  - termo: base de cálculo
+    sigla: false
+    padrao: '\bbase de c[áa]lculo\b'
+    ignorarCaixa: true
+    explicacao: o valor sobre o qual o imposto é calculado, em geral o valor da venda
+
+  - termo: fato gerador
+    sigla: false
+    padrao: '\bfatos? gerador(?:es)?\b'
+    ignorarCaixa: true
+    explicacao: o acontecimento que faz nascer o imposto, como a venda ou a entrega do produto
+
+  - termo: contribuinte
+    sigla: false
+    padrao: '\bcontribuintes?\b'
+    ignorarCaixa: true
+    explicacao: quem a lei obriga a apurar e recolher o imposto da própria atividade
+
+  - termo: crédito presumido
+    sigla: false
+    padrao: '\bcr[ée]ditos? presumidos?\b'
+    ignorarCaixa: true
+    explicacao: crédito que a lei concede ao comprador mesmo sem imposto destacado na compra
+
+  - termo: isenção
+    sigla: false
+    padrao: '\bisen[çc][õo]es\b|\bisen[çc][ãa]o\b'
+    ignorarCaixa: true
+    explicacao: dispensa do imposto concedida por lei a certa operação ou a certo produto
+
+  - termo: imunidade
+    sigla: false
+    padrao: '\bimunidades?\b'
+    ignorarCaixa: true
+    explicacao: proibição posta na Constituição de cobrar imposto sobre certa operação, como a venda para o exterior
+
+  - termo: diferimento
+    sigla: false
+    padrao: '\bdiferimentos?\b'
+    ignorarCaixa: true
+    explicacao: o imposto não é cobrado agora e passa para uma etapa seguinte da cadeia, que recolhe por essa
+
+  - termo: responsável tributário
+    sigla: false
+    padrao: '\brespons[áa]ve(?:l|is) tribut[áa]ri[oa]s?\b'
+    ignorarCaixa: true
+    explicacao: quem a lei obriga a recolher o imposto de outra pessoa, como o comprador que desconta o tributo do valor pago ao produtor
+
+  - termo: não cumulatividade
+    sigla: false
+    padrao: '\bn[ãa]o[\s-]cumulativ(?:idade|os?|as?)\b'
+    ignorarCaixa: true
+    explicacao: regra que deixa descontar o imposto pago nas compras do imposto devido nas vendas
+
+  - termo: regime regular
+    sigla: false
+    padrao: '\bregimes? regular(?:es)?\b'
+    ignorarCaixa: true
+    explicacao: a situação de quem apura e recolhe o imposto normalmente, com direito a descontar o imposto das compras
