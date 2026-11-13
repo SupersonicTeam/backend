@@ -406,6 +406,41 @@ def _edicao(erro: Erros, onde: str, edicao: object) -> None:
         erro(onde, f"'em' fora de lei.r/resposta: {edicao.get('em')!r}")
 
 
+def conteudo_revisado_sha256(conjunto: dict) -> str:
+    """sha256 do arquivo como ele foi revisado: o mesmo conjunto, com a revisão ainda pendente.
+
+    O registro da revisão fica dentro do arquivo e muda o sha256 dele. Para mostrar que a revisão
+    vale para este conteúdo, o arquivo é refeito como estava ao ser revisado (status pendente, sem
+    quem nem quando, sem este campo), no formato em que é gravado (indentação 2, UTF-8, quebra de
+    linha no fim).
+    """
+    revisao = {chave: valor for chave, valor in conjunto["revisao_lei"].items()
+               if chave != "conteudo_revisado_sha256"}
+    revisao.update(status="pendente", por=None, em=None)
+    texto = json.dumps({**conjunto, "revisao_lei": revisao}, indent=2, ensure_ascii=False) + "\n"
+    return hashlib.sha256(texto.encode("utf-8")).hexdigest()
+
+
+def _revisao(erro: Erros, onde: str, conjunto: dict) -> None:
+    revisao = conjunto.get("revisao_lei")
+    if not isinstance(revisao, dict) or revisao.get("status") not in ("pendente", "revisado"):
+        erro(onde, "'revisao_lei' precisa de status pendente ou revisado")
+        return
+    if revisao["status"] != "revisado":
+        return
+    if not revisao.get("por"):
+        erro(onde, "'revisao_lei' revisada sem 'por' (quem revisou)")
+    try:
+        dt.date.fromisoformat(str(revisao.get("em")))
+    except ValueError:
+        erro(onde, "'revisao_lei' revisada sem 'em' (a data, AAAA-MM-DD)")
+    esperado = conteudo_revisado_sha256(conjunto)
+    if revisao.get("conteudo_revisado_sha256") != esperado:
+        erro(onde, "'revisao_lei.conteudo_revisado_sha256' não bate com o conteúdo do arquivo "
+                   f"(com a revisão pendente, o arquivo teria sha256 {esperado}): a revisão foi de "
+                   "outro conteúdo")
+
+
 def validar(caminho: Path) -> tuple[dict, list[str]]:
     """Devolve o conjunto lido e a lista de erros (vazia = válido)."""
     erro = Erros()
@@ -418,10 +453,7 @@ def validar(caminho: Path) -> tuple[dict, list[str]]:
         erro(caminho.name, f"'parte' fora de dev/teste: {parte!r}")
     if conjunto.get("versao") != f"{VERSAO_BASE}-{parte}":
         erro(caminho.name, f"'versao' precisa ser {VERSAO_BASE}-{parte}: {conjunto.get('versao')!r}")
-    revisao = conjunto.get("revisao_lei")
-    if not isinstance(revisao, dict) or revisao.get("status") not in ("pendente", "revisado") or (
-            revisao.get("status") == "revisado" and not revisao.get("por")):
-        erro(caminho.name, "'revisao_lei' precisa de status pendente ou revisado (com 'por')")
+    _revisao(erro, caminho.name, conjunto)
     for i, passo in enumerate(conjunto.get("preparo", [])):
         acao = passo.get("acao")
         if acao == "pedido_do_escritorio":

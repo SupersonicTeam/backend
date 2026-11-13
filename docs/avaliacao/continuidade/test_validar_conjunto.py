@@ -53,6 +53,20 @@ class ConjuntoGravado(unittest.TestCase):
         self.assertEqual(carregar(TESTE)["versao"], "continuidade-v2-teste")
         self.assertEqual(carregar(DEV)["versao"], "continuidade-v2-dev")
 
+    def test_revisao_de_lei_registrada_sobre_o_conteudo_revisado(self):
+        # O material da revisão de 2026-11-13 saiu dos arquivos com estes sha256 (revisão pendente).
+        revisados = {TESTE: "23b1221cafb70a3a2aafc28dc9aae04e143f17a92651eaec747e831bbb6c7a6c",
+                     DEV: "fa0296594fd9a756e0b169cbbee1f5562e740055144e0a186639b6749c3e7eac"}
+        for caminho, sha in revisados.items():
+            conjunto = carregar(caminho)
+            revisao = conjunto["revisao_lei"]
+            self.assertEqual(revisao["status"], "revisado", caminho.name)
+            self.assertEqual(revisao["por"],
+                             "orientador do TCC, Murillo Weiss e Herick Eduardo Vavassori")
+            self.assertEqual(revisao["em"], "2026-11-13")
+            self.assertEqual(revisao["conteudo_revisado_sha256"], sha, caminho.name)
+            self.assertEqual(vc.conteudo_revisado_sha256(conjunto), sha, caminho.name)
+
     def test_teste_cobre_toda_categoria_obrigatoria(self):
         categorias = {c["categoria"] for c in carregar(TESTE)["conversas"]}
         self.assertEqual(vc.CATEGORIAS_OBRIGATORIAS_NO_TESTE - categorias, set())
@@ -151,6 +165,25 @@ class Invalidos(unittest.TestCase):
         conjunto = copy.deepcopy(self.base)
         conjunto["revisao_lei"] = {"status": "revisado", "por": None, "em": None}
         self.assertTrue(any("revisao_lei" in e for e in self.erros(conjunto)))
+
+    def test_revisado_sem_data(self):
+        conjunto = copy.deepcopy(self.base)
+        conjunto["revisao_lei"]["em"] = None
+        erros = self.erros(conjunto)
+        self.assertTrue(any("sem 'em'" in e for e in erros), erros)
+
+    def test_revisao_de_outro_conteudo(self):
+        # Pergunta mudada depois da revisão: o registro não vale para o conteúdo novo.
+        conjunto = copy.deepcopy(self.base)
+        turno = next(t for t in conjunto["conversas"][0]["turnos"] if t["tipo"] == "pergunta")
+        turno["texto"] += " Responda com cuidado."
+        erros = self.erros(conjunto)
+        self.assertTrue(any("conteudo_revisado_sha256" in e for e in erros), erros)
+
+    def test_revisao_pendente_dispensa_quem_e_quando(self):
+        conjunto = copy.deepcopy(self.base)
+        conjunto["revisao_lei"] = {"status": "pendente", "por": None, "em": None}
+        self.assertFalse(any("revisao_lei" in e for e in self.erros(conjunto)))
 
     def test_hash_diferente(self):
         with tempfile.TemporaryDirectory() as pasta:

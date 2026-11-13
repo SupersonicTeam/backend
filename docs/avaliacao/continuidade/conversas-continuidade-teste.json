@@ -6,10 +6,11 @@
   "produtor": "carlos.rossi@example.com",
   "regra": "docs/avaliacao/continuidade/regra-de-decisao.md",
   "revisao_lei": {
-    "status": "pendente",
-    "por": null,
-    "em": null,
-    "nota": "Os fatos de lei (campo fatos) e as trocas (campo edicoes) passam pela revisão da equipe e do orientador, sem contador, antes da rodada oficial."
+    "status": "revisado",
+    "por": "orientador do TCC, Murillo Weiss e Herick Eduardo Vavassori",
+    "em": "2026-11-13",
+    "nota": "Os fatos de lei (campo fatos) e as trocas (campo edicoes) passam pela revisão da equipe e do orientador, sem contador, antes da rodada oficial.",
+    "conteudo_revisado_sha256": "23b1221cafb70a3a2aafc28dc9aae04e143f17a92651eaec747e831bbb6c7a6c"
   },
   "preparo": [
     {

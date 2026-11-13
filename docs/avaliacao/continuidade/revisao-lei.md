@@ -2,6 +2,11 @@
 
 **Quem revisa:** a equipe e o orientador, sem contador, como a #499 exige.
 
+**Resultado (registrado em 2026-11-13):** revisado pelo orientador do TCC, por Murillo Weiss e
+por Herick Eduardo Vavassori. Todos os itens foram aceitos sem alteração. O material foi feito
+sobre o teste com sha256 `23b1221c…` e o dev com `fa029659…`. Com o registro, os arquivos
+passaram a `b0a7cf3e…` e `0f82e816…` (`README.md`, seção "Versões").
+
 **Como marcar:** em cada item, marque **ok** ou escreva a correção.
 
 **Depois da revisão:** a sessão de medição registra em `revisao_lei` quem revisou e quando. O
