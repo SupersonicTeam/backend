@@ -133,7 +133,8 @@ O dev tem uma conversa de cada uma destas categorias:
 ```json
 {
   "versao": "continuidade-v2-teste", "parte": "teste", "produtor": "carlos.rossi@example.com",
-  "revisao_lei": {"status": "pendente", "por": null, "em": null},
+  "revisao_lei": {"status": "revisado", "por": "...", "em": "AAAA-MM-DD", "nota": "...",
+                  "conteudo_revisado_sha256": "<sha256 do arquivo com a revisão pendente>"},
   "preparo": [ ... ],
   "conversas": [ {"id": "t-...", "categoria": "...", "turnos": [ ... ]} ]
 }

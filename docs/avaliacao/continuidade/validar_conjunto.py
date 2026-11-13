@@ -430,9 +430,14 @@ def _revisao(erro: Erros, onde: str, conjunto: dict) -> None:
         return
     if not revisao.get("por"):
         erro(onde, "'revisao_lei' revisada sem 'por' (quem revisou)")
+    em = revisao.get("em")
     try:
-        dt.date.fromisoformat(str(revisao.get("em")))
+        # fromisoformat sozinho aceita também "20261113" e a semana ISO.
+        data_valida = (isinstance(em, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", em) is not None
+                       and dt.date.fromisoformat(em) is not None)
     except ValueError:
+        data_valida = False
+    if not data_valida:
         erro(onde, "'revisao_lei' revisada sem 'em' (a data, AAAA-MM-DD)")
     esperado = conteudo_revisado_sha256(conjunto)
     if revisao.get("conteudo_revisado_sha256") != esperado:

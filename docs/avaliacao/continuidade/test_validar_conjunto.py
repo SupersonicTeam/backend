@@ -167,10 +167,11 @@ class Invalidos(unittest.TestCase):
         self.assertTrue(any("revisao_lei" in e for e in self.erros(conjunto)))
 
     def test_revisado_sem_data(self):
-        conjunto = copy.deepcopy(self.base)
-        conjunto["revisao_lei"]["em"] = None
-        erros = self.erros(conjunto)
-        self.assertTrue(any("sem 'em'" in e for e in erros), erros)
+        for em in (None, "20261113", 20261113, "2026-W46-5", "2026-02-30", "13/11/2026"):
+            conjunto = copy.deepcopy(self.base)
+            conjunto["revisao_lei"]["em"] = em
+            erros = self.erros(conjunto)
+            self.assertTrue(any("sem 'em'" in e for e in erros), (em, erros))
 
     def test_revisao_de_outro_conteudo(self):
         # Pergunta mudada depois da revisão: o registro não vale para o conteúdo novo.
