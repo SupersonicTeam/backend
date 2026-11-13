@@ -1,0 +1,156 @@
+{
+  "juiz": "J1",
+  "lote": "lote-04",
+  "itens": [
+    {
+      "id": "R037",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Cada obra de construção civil é apurada separadamente, pois é considerada um centro de custo distinto", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "No caso de apuração por obra, o documento fiscal deve indicar o número do cadastro da obra nas aquisições", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1"],
+      "observacao": "Não menciona a apuração por empreendimento vinculada a CNPJ ou CPF específico."
+    },
+    {
+      "id": "R038",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Contribuintes no regime regular que tomam operações de crédito podem apropriar créditos do IBS e da CBS sobre as despesas", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "O crédito é calculado sobre as despesas financeiras pagas, deduzindo-se da parcela o valor do principal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso I", "fato": "F2", "nota": ""},
+        {"n": 3, "texto": "Também é deduzido da parcela o montante correspondente à aplicação da taxa Selic sobre o principal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso II", "fato": "F2", "nota": ""},
+        {"n": 4, "texto": "A base de cálculo do IBS e da CBS inclui o valor dos juros e das variações monetárias, em função da taxa de câmbio", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 255, § 1º, inciso I", "fato": null, "nota": ""},
+        {"n": 5, "texto": "Se o valor da operação estiver expresso em moeda estrangeira, ele é convertido em moeda nacional por taxa de câmbio", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 12, § 5º", "fato": null, "nota": "Sugere que dívida em dólar gera crédito normalmente; omite a vedação do art. 197, II"}
+      ],
+      "omiteEssencial": ["F3", "F4"],
+      "observacao": "Não responde sobre dívida em moeda estrangeira (vedação) nem sobre tarifas e comissões."
+    },
+    {
+      "id": "R039",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, em tese você pode ser cobrado.", "rotulo": "SUPORTADA", "dispositivoCitado": null, "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Quando o adquirente compra diretamente de contribuinte previsto no art. 176, ele fica solidariamente responsável", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 177, § 2º", "fato": "F1", "nota": "Conteúdo é do caput, presente no texto do trecho citado"},
+        {"n": 3, "texto": "Isso se aplica ao etanol anidro combustível (EAC), tratado no mesmo capítulo", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 177, § 2º", "fato": null, "nota": "Trecho só traz o título da seção do EAC; não diz que a regra se aplica a ele"},
+        {"n": 4, "texto": "Sobre o pagamento eletrônico: os trechos disponíveis não tratam do recolhimento feito por meio de liquidação eletrônica", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite"},
+        {"n": 5, "texto": "Não tenho base nos trechos para afirmar que isso muda a sua situação.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite"},
+        {"n": 6, "texto": "Os trechos também não tratam especificamente da compra de etanol para abastecer máquinas agrícolas", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite"},
+        {"n": 7, "texto": "Recomendo confirmar com seu contador ou com a própria usina", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugere o contador"}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": ""
+    },
+    {
+      "id": "R040",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Posso ajudar a estruturar a pergunta, mas os trechos de lei que tenho disponíveis tratam de importação de bens", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite"},
+        {"n": 2, "texto": "Não tenho nenhum trecho sobre consulta formal ao fisco nem sobre o procedimento para fazê-la", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite"},
+        {"n": 3, "texto": "Para a pergunta em si, o que costuma ajudar é descrever com clareza: o que você vende, origem, comprador, dúvida exata", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugestão prática, sem afirmar requisito legal"},
+        {"n": 4, "texto": "Se você importa bens, o IBS e a CBS devem ser pagos até a entrega dos bens para despacho, mas você pode optar por antecipar", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 76, § 1º", "fato": null, "nota": ""},
+        {"n": 5, "texto": "A incidência sobre importação de bens ou serviços do exterior vale para qualquer pessoa física ou jurídica", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 63", "fato": null, "nota": ""},
+        {"n": 6, "texto": "Na venda de máquinas, veículos e equipamentos usados adquiridos até 31 de dezembro de 2032, a partir de 1º de janeiro de 2027", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 406, § 2º, inciso II", "fato": null, "nota": ""},
+        {"n": 7, "texto": "Se a sua dúvida envolver a venda de máquinas ou equipamentos usados, essas informações são as que mais importam.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Conectivo"},
+        {"n": 8, "texto": "Para a resposta oficial e o procedimento formal de consulta, recomendo verificar com um contador", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugere o contador"}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não encontrou o direito de consulta; afirma regras de outros assuntos, fiéis aos trechos."
+    },
+    {
+      "id": "R041",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, nas hipóteses em que o PIS/Pasep e a Cofins são exigidos à medida", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º; art. 408, § 3º, inciso II", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Nessa mesma situação, não será exigida a CBS sobre o recebimento da receita decorrente da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso III", "fato": "F3", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Omite a ressalva do § 2º (regimes opcionais), pouco relevante para o caso."
+    },
+    {
+      "id": "R042",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Na intermediação de serviços turísticos feita por agência de turismo, a base de cálculo do IBS e da CBS é o valor da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Os serviços de agências de turismo ficam sujeitos a regime específico de incidência do IBS e da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 288", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Não responde se a comissão paga pelo hotel integra a base."
+    },
+    {
+      "id": "R043",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Com base apenas nos trechos disponíveis:", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Conectivo"},
+        {"n": 2, "texto": "se a questão de direito discutida no processo administrativo também estiver no processo judicial, o efeito vinculante", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 81, § 2º", "fato": null, "nota": "Trecho trata de uniformização, nada liga o efeito vinculante à ação judicial"},
+        {"n": 3, "texto": "Isso indica que o seu caso pode ser afetado pela decisão de uniformização, mas os trechos não dizem expressamente", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": null, "fato": null, "nota": "Conclusão sem base no trecho sobre o efeito da ação judicial"},
+        {"n": 4, "texto": "Se a ação tratar de outro ponto: os trechos não tratam dessa hipótese específica.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite"},
+        {"n": 5, "texto": "Não encontrei fundamento nos trechos para afirmar se a discussão judicial sobre outro aspecto prejudica ou não", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite"},
+        {"n": 6, "texto": "o contencioso administrativo do IBS é decidido pelo CGIBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 88, § 2º", "fato": null, "nota": "Conteúdo é do caput, presente no texto do trecho citado"},
+        {"n": 7, "texto": "a primeira instância julga a impugnação de lançamentos feitos pelas administrações tributárias estaduais", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 91, inciso I", "fato": null, "nota": ""},
+        {"n": 8, "texto": "Recomendo confirmar com um advogado tributarista a situação concreta do seu processo", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugere profissional"}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": ""
+    },
+    {
+      "id": "R044",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Os trechos disponíveis tratam de multas por descumprimento de obrigações acessórias, não de multa por tributo não declarado", "rotulo": "NAO_JURIDICA", "dispositivoCitado": "art. 341-G, incisos XIX, IX e III", "fato": null, "nota": "Reconhece limite"},
+        {"n": 2, "texto": "Fraude com documento fiscal: falsificar, adulterar, extraviar ou inutilizar documento fiscal tem multa de 100%", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIV", "fato": null, "nota": ""},
+        {"n": 3, "texto": "Reincidência específica: as penalidades desse artigo são majoradas em 50% nesse caso.", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, § 1º", "fato": null, "nota": ""},
+        {"n": 4, "texto": "Não há menção, nos trechos, a uma diferença entre fraude e omissão simples nesse ponto, então não posso afirmar", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite"},
+        {"n": 5, "texto": "Para confirmar qual penalidade se aplica ao seu caso, vale consultar um contador ou advogado tributarista", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugere profissional"}
+      ],
+      "omiteEssencial": ["F1", "F3", "F4", "F5"],
+      "observacao": "Não encontrou a multa de ofício do art. 341-F; o que afirma é fiel aos trechos de obrigação acessória."
+    },
+    {
+      "id": "R045",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Contribuintes no regime regular que tomam operações de crédito podem apropriar créditos do IBS e da CBS, pela mesma alíquota", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "O crédito é calculado sobre as despesas financeiras pagas, deduzindo de cada parcela o valor do principal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso I", "fato": "F2", "nota": ""},
+        {"n": 3, "texto": "Na dedução também entra o montante correspondente à aplicação da taxa Selic sobre o principal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso II", "fato": "F2", "nota": ""},
+        {"n": 4, "texto": "A base de cálculo do IBS e da CBS inclui o valor dos juros e das variações monetárias, em função da taxa de câmbio", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 255, § 1º, inciso I", "fato": null, "nota": ""},
+        {"n": 5, "texto": "Quando o valor da operação está expresso em moeda estrangeira, ele é convertido em moeda nacional pela taxa de câmbio", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 12, § 5º", "fato": null, "nota": "Sugere que dívida em dólar gera crédito normalmente; omite a vedação do art. 197, II"}
+      ],
+      "omiteEssencial": ["F3", "F4"],
+      "observacao": "Não responde sobre dívida em moeda estrangeira (vedação) nem sobre tarifas e comissões."
+    },
+    {
+      "id": "R046",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, serão exigidas a Contribuição para o PIS/Pasep e a Cofins no momento", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": "Omite a condição do regime de caixa, generalizando a regra do trecho"},
+        {"n": 2, "texto": "Para situações que configurem fato gerador até 31 de dezembro de 2026, serão exigidas a Cofins e a Contribuição para o PIS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 1º, inciso II, alíneas a e b", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não responde se o IBS e a CBS de 2026 precisam ser pagos (dispensa do art. 348)."
+    },
+    {
+      "id": "R047",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A revenda de bens adquiridos a partir de 1º de janeiro de 2027 com redução a zero de alíquotas tem a alíquota da CBS reduzida", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 407, § 4º, inciso I, alínea a", "fato": null, "nota": "Generaliza para bens em geral; trecho restrito a máquinas, veículos e equipamentos usados"},
+        {"n": 2, "texto": "Na mesma revenda, a alíquota do IBS também fica reduzida a zero para a parcela da base de cálculo do IBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 407, § 4º, inciso II, alínea a", "fato": null, "nota": ""},
+        {"n": 3, "texto": "A parcela da base de cálculo da CBS que exceder o valor de que trata a alínea a será tributada à alíquota prevista", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 407, § 4º, inciso I, alínea b", "fato": null, "nota": ""},
+        {"n": 4, "texto": "Na revenda de bens usados adquiridos até 31 de dezembro de 2026 que não permitiram apropriação de créditos do PIS/Pasep", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 407, § 2º, inciso I", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1", "F2", "F3"],
+      "observacao": "Resposta não trata da ordem de aplicação dos benefícios nem da cumulação de reduções."
+    },
+    {
+      "id": "R048",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Pelos trechos disponíveis, para operações ocorridas até 31 de dezembro de 2026 e exigidas pelo regime de caixa, o PIS/Pasep", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Já a CBS não incide sobre esse recebimento, salvo na hipótese em que as contribuições antigas são exigidas", "rotulo": "CONTRARIO", "dispositivoCitado": "art. 408, § 3º, inciso III", "fato": "F3", "nota": "Troca a exceção do § 2º por hipótese inexistente e contraditória"},
+        {"n": 3, "texto": "Ou seja, a venda feita em 2026 e recebida em 2027 continua submetida ao PIS e à Cofins no recebimento, e não à CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, incisos II e III", "fato": "F2", "nota": ""},
+        {"n": 4, "texto": "Em síntese: no recebimento em 2027, a exigência é de PIS/Pasep e Cofins, e não de CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, incisos II e III", "fato": "F3", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    }
+  ]
+}

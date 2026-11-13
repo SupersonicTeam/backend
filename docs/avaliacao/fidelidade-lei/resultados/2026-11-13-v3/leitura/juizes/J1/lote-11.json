@@ -1,0 +1,141 @@
+{
+  "juiz": "J1",
+  "lote": "lote-11",
+  "itens": [
+    {
+      "id": "R121",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Pelos trechos disponíveis, a multa por falsificar, adulterar, extraviar ou inutilizar documento fiscal é de 100%", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIV", "fato": null, "nota": ""},
+        {"n": 2, "texto": "Essas penalidades serão majoradas em 50% no caso de reincidência específica", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 341-G, § 1º", "fato": null, "nota": "Vale para multas acessórias do 341-G; leitor entende reincidência na multa de ofício (150%, 341-F)."}
+      ],
+      "omiteEssencial": ["F1", "F3", "F4", "F5"],
+      "observacao": "Responde com multas de obrigação acessória (341-G) e não com a multa de ofício do art. 341-F."
+    },
+    {
+      "id": "R122",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Cada obra de construção civil é apurada separadamente, como um centro de custo distinto", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Nas aquisições de bens e serviços usados em cada obra, o documento fiscal deve indicar o número do cadastro da obra", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R123",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "para operações de 2026 em regime de caixa, o PIS/Pasep e a Cofins são exigidos no momento do recebimento da receita", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Por isso, no recebimento em 2027, a CBS não é exigida sobre essa receita, e sim o PIS/Pasep e a Cofins.", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso III", "fato": "F3", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Não menciona a ressalva dos regimes opcionais (§ 2º)."
+    },
+    {
+      "id": "R124",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Os trechos disponíveis não respondem diretamente a essa pergunta sobre a relação entre o processo administrativo e a ação", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite."},
+        {"n": 2, "texto": "o contencioso administrativo do IBS é decidido pelo CGIBS", "rotulo": "CITACAO_ERRADA", "dispositivoCitado": "art. 88, § 2º", "fato": null, "nota": "Conteúdo está no caput do art. 88; § 2º trata de intimação da pauta."},
+        {"n": 3, "texto": "em primeira instância, com a competência para julgar o lançamento regularmente impugnado pelo sujeito passivo", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 91, inciso I", "fato": null, "nota": ""},
+        {"n": 4, "texto": "além de pedidos de retificação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 91, inciso II", "fato": null, "nota": ""},
+        {"n": 5, "texto": "Também há previsão de efeito vinculante em incidente de uniformização, que alcança impugnações e recursos pendentes ou futuros", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 81, § 2º", "fato": null, "nota": ""},
+        {"n": 6, "texto": "se a discussão administrativa e a judicial versarem sobre a mesma questão de direito, o efeito vinculante do incidente pode alcançar as duas", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 81, § 2º", "fato": null, "nota": "Trecho fala só de impugnações e recursos administrativos, não de ação judicial."},
+        {"n": 7, "texto": "Se a ação judicial tratar de outro ponto, esse trecho não se aplica a ela.", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": null, "fato": null, "nota": "Conclusão sobre ação judicial sem base nos trechos."},
+        {"n": 8, "texto": "Recomendo levar o caso a um advogado tributarista", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugestão de profissional."}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não traz a desistência tácita (art. 72); afirma efeito sobre a via judicial sem trecho."
+    },
+    {
+      "id": "R125",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Na intermediação de serviços turísticos feita por agência de turismo, a base de cálculo do IBS e da CBS é o valor da operação, deduz", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Os serviços de agências de turismo ficam sujeitos a regime específico de incidência do IBS e da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 288", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Não responde se a comissão do hotel integra a base (§ 2º)."
+    },
+    {
+      "id": "R126",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Não. O crédito do IBS e da CBS é apropriado e compensado ou ressarcido pelo valor nominal, sendo vedadas correção ou atualização", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "se o crédito for um crédito presumido, ele só pode ser usado para compensar IBS e CBS devidos, sem compensação com outros tributos", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 452, parágrafo único; art. 468, parágrafo único", "fato": null, "nota": "Generaliza a todo crédito presumido regra restrita a artigos específicos; conteúdo está no caput."},
+        {"n": 3, "texto": "Esse direito se extingue após 5 anos, contados do primeiro dia do mês seguinte ao da apropriação", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 452, parágrafo único; art. 468, parágrafo único", "fato": null, "nota": "Prazo vale só para presumidos dos artigos listados, não para qualquer presumido."}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R127",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O contribuinte do IBS e da CBS sujeito ao regime regular que adquira títulos de capitalização poderá apropriar créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 225, § 5º", "fato": "F1", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Frase cobre F1 e F2."
+    },
+    {
+      "id": "R128",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Na intermediação de serviços turísticos feita por agência de turismo, a base de cálculo do IBS e da CBS é o valor da operação, do qu", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Os serviços de agências de turismo ficam sujeitos a regime específico de incidência do IBS e da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 288", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Não responde se a comissão do hotel integra a base (§ 2º)."
+    },
+    {
+      "id": "R129",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A gorjeta cobrada no fornecimento de alimentação fica excluída da base de cálculo do IBS e da CBS, desde que seja repassada integral", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea a", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Para a gorjeta ficar fora da base de cálculo, o seu valor não pode exceder 15% do valor total do fornecimento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea b", "fato": "F3", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R130",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, existe a possibilidade, mas ela depende de condições específicas.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Introdução."},
+        {"n": 2, "texto": "Pela hipótese do inciso I, o crédito vale para bens em estoque sobre os quais não houve apuração de créditos de PIS/Cofins", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso I", "fato": "F1", "nota": ""},
+        {"n": 3, "texto": "o direito não se aplica a produtos cuja aquisição teve alíquota zero, isenção, suspensão ou não sofreu incidência", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, § 1º, inciso II", "fato": null, "nota": ""},
+        {"n": 4, "texto": "Ou seja, insumos adquiridos com alíquota zero ou suspensão, comuns no agronegócio, ficam fora desse crédito.", "rotulo": "SUPORTADA", "dispositivoCitado": null, "fato": null, "nota": ""},
+        {"n": 5, "texto": "Também há hipóteses ligadas a bens sujeitos à substituição tributária ou à incidência monofásica", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso II, alíneas a e b", "fato": null, "nota": ""},
+        {"n": 6, "texto": "Os trechos que tenho não informam percentual, prazo para apropriação nem a forma de utilização do crédito.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite."},
+        {"n": 7, "texto": "Recomendo confirmar esses pontos com seu contador antes de contar com o valor.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugere contador."}
+      ],
+      "omiteEssencial": ["F2", "F3", "F4", "F5"],
+      "observacao": ""
+    },
+    {
+      "id": "R131",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, em princípio o adquirente pode responder solidariamente.", "rotulo": "CITACAO_ERRADA", "dispositivoCitado": "art. 177, § 2º", "fato": "F1", "nota": "Conteúdo no caput do art. 177; § 2º trata da ordem cronológica."},
+        {"n": 2, "texto": "Nas operações feitas diretamente com os contribuintes do art. 176, o adquirente fica solidariamente responsável pelo IBS e CBS", "rotulo": "CITACAO_ERRADA", "dispositivoCitado": "art. 177, § 2º", "fato": "F1", "nota": "Conteúdo no caput do art. 177, não no § 2º."},
+        {"n": 3, "texto": "Isso se aplica ao Etanol Anidro Combustível (EAC), que está em seção específica da lei", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 177, § 2º", "fato": null, "nota": "Trecho só traz o título da seção seguinte; não diz que a regra se aplica ao EAC."},
+        {"n": 4, "texto": "Sobre o pagamento eletrônico: os trechos disponíveis tratam do recolhimento de IBS e CBS nas operações com energia elétrica", "rotulo": "NAO_JURIDICA", "dispositivoCitado": "art. 28, § 1º", "fato": null, "nota": "Descreve os trechos."},
+        {"n": 5, "texto": "Por isso não consigo afirmar, com base no que tenho aqui, se a liquidação eletrônica afasta a responsabilidade solidária", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite."},
+        {"n": 6, "texto": "Recomendo confirmar com seu contador ou com a usina.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugere contador."}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": ""
+    },
+    {
+      "id": "R132",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Os créditos do IBS e da CBS são apropriados e compensados ou ressarcidos pelo seu valor nominal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "A lei veda correção ou atualização monetária sobre esses créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    }
+  ]
+}

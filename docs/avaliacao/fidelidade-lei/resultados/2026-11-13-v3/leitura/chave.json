@@ -1,0 +1,667 @@
+{
+  "R001": {
+    "id": "F3-21",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 1
+  },
+  "R002": {
+    "id": "F3-51",
+    "braco": "camada1",
+    "repeticao": 1
+  },
+  "R003": {
+    "id": "F3-21",
+    "braco": "camada1",
+    "repeticao": 2
+  },
+  "R004": {
+    "id": "F3-28",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 2
+  },
+  "R005": {
+    "id": "F3-06",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R006": {
+    "id": "F3-51",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 1
+  },
+  "R007": {
+    "id": "F3-21",
+    "braco": "camada1+resgate",
+    "repeticao": 2
+  },
+  "R008": {
+    "id": "F3-27",
+    "braco": "camada1+resgate",
+    "repeticao": 2
+  },
+  "R009": {
+    "id": "F3-14",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R010": {
+    "id": "F3-08",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R011": {
+    "id": "F3-22",
+    "braco": "camada1",
+    "repeticao": 3
+  },
+  "R012": {
+    "id": "F3-13",
+    "braco": "camada1",
+    "repeticao": 2
+  },
+  "R013": {
+    "id": "F3-26",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 3
+  },
+  "R014": {
+    "id": "F3-27",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 3
+  },
+  "R015": {
+    "id": "F3-22",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R016": {
+    "id": "F3-22",
+    "braco": "camada1+resgate",
+    "repeticao": 1
+  },
+  "R017": {
+    "id": "F3-51",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R018": {
+    "id": "F3-06",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R019": {
+    "id": "F3-28",
+    "braco": "camada1",
+    "repeticao": 1
+  },
+  "R020": {
+    "id": "F3-06",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 3
+  },
+  "R021": {
+    "id": "F3-28",
+    "braco": "camada1+resgate",
+    "repeticao": 3
+  },
+  "R022": {
+    "id": "F3-44",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R023": {
+    "id": "F3-17",
+    "braco": "camada1+resgate",
+    "repeticao": 3
+  },
+  "R024": {
+    "id": "F3-14",
+    "braco": "camada1",
+    "repeticao": 2
+  },
+  "R025": {
+    "id": "F3-08",
+    "braco": "camada1+resgate",
+    "repeticao": 1
+  },
+  "R026": {
+    "id": "F3-22",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 2
+  },
+  "R027": {
+    "id": "F3-13",
+    "braco": "camada1+resgate",
+    "repeticao": 1
+  },
+  "R028": {
+    "id": "F3-27",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R029": {
+    "id": "F3-19",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R030": {
+    "id": "F3-03",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R031": {
+    "id": "F3-44",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R032": {
+    "id": "F3-28",
+    "braco": "camada1",
+    "repeticao": 3
+  },
+  "R033": {
+    "id": "F3-21",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 2
+  },
+  "R034": {
+    "id": "F3-14",
+    "braco": "camada1",
+    "repeticao": 3
+  },
+  "R035": {
+    "id": "F3-51",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R036": {
+    "id": "F3-22",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 3
+  },
+  "R037": {
+    "id": "F3-08",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 3
+  },
+  "R038": {
+    "id": "F3-26",
+    "braco": "camada1+resgate",
+    "repeticao": 3
+  },
+  "R039": {
+    "id": "F3-17",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R040": {
+    "id": "F3-02",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R041": {
+    "id": "F3-14",
+    "braco": "camada1+resgate",
+    "repeticao": 3
+  },
+  "R042": {
+    "id": "F3-13",
+    "braco": "camada1+resgate",
+    "repeticao": 3
+  },
+  "R043": {
+    "id": "F3-19",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R044": {
+    "id": "F3-28",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R045": {
+    "id": "F3-26",
+    "braco": "camada1",
+    "repeticao": 2
+  },
+  "R046": {
+    "id": "F3-22",
+    "braco": "camada1+resgate",
+    "repeticao": 3
+  },
+  "R047": {
+    "id": "F3-29",
+    "braco": "camada1",
+    "repeticao": 2
+  },
+  "R048": {
+    "id": "F3-14",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R049": {
+    "id": "F3-54",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R050": {
+    "id": "F3-14",
+    "braco": "camada1+resgate",
+    "repeticao": 1
+  },
+  "R051": {
+    "id": "F3-27",
+    "braco": "camada1",
+    "repeticao": 1
+  },
+  "R052": {
+    "id": "F3-26",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 2
+  },
+  "R053": {
+    "id": "F3-21",
+    "braco": "camada1+resgate",
+    "repeticao": 1
+  },
+  "R054": {
+    "id": "F3-51",
+    "braco": "camada1+resgate",
+    "repeticao": 3
+  },
+  "R055": {
+    "id": "F3-28",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R056": {
+    "id": "F3-51",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 3
+  },
+  "R057": {
+    "id": "F3-03",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 2
+  },
+  "R058": {
+    "id": "F3-26",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R059": {
+    "id": "F3-27",
+    "braco": "camada1",
+    "repeticao": 3
+  },
+  "R060": {
+    "id": "F3-54",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 1
+  },
+  "R061": {
+    "id": "F3-08",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 1
+  },
+  "R062": {
+    "id": "F3-17",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R063": {
+    "id": "F3-28",
+    "braco": "camada1+resgate",
+    "repeticao": 2
+  },
+  "R064": {
+    "id": "F3-08",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 2
+  },
+  "R065": {
+    "id": "F3-19",
+    "braco": "camada1+resgate",
+    "repeticao": 3
+  },
+  "R066": {
+    "id": "F3-03",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 3
+  },
+  "R067": {
+    "id": "F3-22",
+    "braco": "camada1",
+    "repeticao": 1
+  },
+  "R068": {
+    "id": "F3-21",
+    "braco": "camada1",
+    "repeticao": 1
+  },
+  "R069": {
+    "id": "F3-51",
+    "braco": "camada1+resgate",
+    "repeticao": 2
+  },
+  "R070": {
+    "id": "F3-13",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 2
+  },
+  "R071": {
+    "id": "F3-21",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R072": {
+    "id": "F3-28",
+    "braco": "camada1+resgate",
+    "repeticao": 1
+  },
+  "R073": {
+    "id": "F3-02",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R074": {
+    "id": "F3-08",
+    "braco": "camada1",
+    "repeticao": 3
+  },
+  "R075": {
+    "id": "F3-13",
+    "braco": "camada1",
+    "repeticao": 3
+  },
+  "R076": {
+    "id": "F3-13",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R077": {
+    "id": "F3-51",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 2
+  },
+  "R078": {
+    "id": "F3-13",
+    "braco": "camada1+resgate",
+    "repeticao": 2
+  },
+  "R079": {
+    "id": "F3-27",
+    "braco": "camada1",
+    "repeticao": 2
+  },
+  "R080": {
+    "id": "F3-22",
+    "braco": "camada1+resgate",
+    "repeticao": 2
+  },
+  "R081": {
+    "id": "F3-28",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 3
+  },
+  "R082": {
+    "id": "F3-06",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 1
+  },
+  "R083": {
+    "id": "F3-22",
+    "braco": "camada1",
+    "repeticao": 2
+  },
+  "R084": {
+    "id": "F3-08",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R085": {
+    "id": "F3-03",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R086": {
+    "id": "F3-54",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 2
+  },
+  "R087": {
+    "id": "F3-08",
+    "braco": "camada1+resgate",
+    "repeticao": 2
+  },
+  "R088": {
+    "id": "F3-13",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R089": {
+    "id": "F3-26",
+    "braco": "camada1+resgate",
+    "repeticao": 1
+  },
+  "R090": {
+    "id": "F3-22",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R091": {
+    "id": "F3-27",
+    "braco": "camada1+resgate",
+    "repeticao": 1
+  },
+  "R092": {
+    "id": "F3-27",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 1
+  },
+  "R093": {
+    "id": "F3-03",
+    "braco": "camada1+resgate",
+    "repeticao": 2
+  },
+  "R094": {
+    "id": "F3-13",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R095": {
+    "id": "F3-17",
+    "braco": "camada1",
+    "repeticao": 2
+  },
+  "R096": {
+    "id": "F3-54",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R097": {
+    "id": "F3-08",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R098": {
+    "id": "F3-14",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 2
+  },
+  "R099": {
+    "id": "F3-22",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R100": {
+    "id": "F3-06",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R101": {
+    "id": "F3-03",
+    "braco": "camada1",
+    "repeticao": 1
+  },
+  "R102": {
+    "id": "F3-51",
+    "braco": "camada1+resgate",
+    "repeticao": 1
+  },
+  "R103": {
+    "id": "F3-27",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 2
+  },
+  "R104": {
+    "id": "F3-14",
+    "braco": "camada1+resgate",
+    "repeticao": 2
+  },
+  "R105": {
+    "id": "F3-08",
+    "braco": "camada1",
+    "repeticao": 2
+  },
+  "R106": {
+    "id": "F3-26",
+    "braco": "camada1+resgate",
+    "repeticao": 2
+  },
+  "R107": {
+    "id": "F3-54",
+    "braco": "camada1",
+    "repeticao": 3
+  },
+  "R108": {
+    "id": "F3-26",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R109": {
+    "id": "F3-21",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R110": {
+    "id": "F3-06",
+    "braco": "camada1+resgate",
+    "repeticao": 3
+  },
+  "R111": {
+    "id": "F3-14",
+    "braco": "camada1",
+    "repeticao": 1
+  },
+  "R112": {
+    "id": "F3-21",
+    "braco": "camada1+resgate",
+    "repeticao": 3
+  },
+  "R113": {
+    "id": "F3-03",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 1
+  },
+  "R114": {
+    "id": "F3-51",
+    "braco": "camada1",
+    "repeticao": 3
+  },
+  "R115": {
+    "id": "F3-51",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R116": {
+    "id": "F3-54",
+    "braco": "camada1+resgate",
+    "repeticao": 1
+  },
+  "R117": {
+    "id": "F3-54",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 3
+  },
+  "R118": {
+    "id": "F3-13",
+    "braco": "camada1",
+    "repeticao": 1
+  },
+  "R119": {
+    "id": "F3-21",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R120": {
+    "id": "F3-21",
+    "braco": "camada1",
+    "repeticao": 3
+  },
+  "R121": {
+    "id": "F3-28",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 1
+  },
+  "R122": {
+    "id": "F3-08",
+    "braco": "camada1+resgate",
+    "repeticao": 3
+  },
+  "R123": {
+    "id": "F3-14",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R124": {
+    "id": "F3-19",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R125": {
+    "id": "F3-13",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 3
+  },
+  "R126": {
+    "id": "F3-54",
+    "braco": "desligada",
+    "repeticao": 2
+  },
+  "R127": {
+    "id": "F3-51",
+    "braco": "camada1",
+    "repeticao": 2
+  },
+  "R128": {
+    "id": "F3-13",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 1
+  },
+  "R129": {
+    "id": "F3-21",
+    "braco": "camada1+juiz+resgate",
+    "repeticao": 3
+  },
+  "R130": {
+    "id": "F3-27",
+    "braco": "desligada",
+    "repeticao": 1
+  },
+  "R131": {
+    "id": "F3-17",
+    "braco": "desligada",
+    "repeticao": 3
+  },
+  "R132": {
+    "id": "F3-54",
+    "braco": "camada1+resgate",
+    "repeticao": 3
+  },
+  "R133": {
+    "id": "F3-18",
+    "braco": "camada1+resgate",
+    "repeticao": 1
+  }
+}
