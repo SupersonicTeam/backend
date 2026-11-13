@@ -107,6 +107,12 @@ class TetoDaCotaCobreChamadasTest {
     propriedades.getFidelidadeLei().getJuiz()
         .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ADAPTATIVO_ALTO);
     assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(52_224);
+    // Sem veto e sem resgate o juiz nunca roda: a reserva volta a de sem juiz.
+    propriedades.getFidelidadeLei().getJuiz().setVeto(false);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(31_744);
+    // So resgate: o juiz pode rodar, a parcela volta.
+    propriedades.getFidelidadeLei().getJuiz().getResgate().setEnabled(true);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(52_224);
   }
 
   @Test

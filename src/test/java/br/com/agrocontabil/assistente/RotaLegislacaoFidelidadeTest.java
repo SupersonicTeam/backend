@@ -704,4 +704,23 @@ class RotaLegislacaoFidelidadeTest {
     assertThat(chatModel.promptsRecebidos()).hasSize(1);
     assertThat(contexto.juizLei()).isNull();
   }
+  @Test
+  @DisplayName("só resgate com resgate.cobertura: a faixa entre 0,3 e 0,7 vai ao juiz, não passa direto")
+  void soResgateResgataCobertura() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    // 4 de 6 palavras de conteudo (0,67): abaixo de 0,7, acima de 0,3.
+    String parafrase = "{\"frases\": [{\"frase\": \"Fertilizantes e defensivos sao insumos "
+        + "agropecuarios com aliquotas reduzidas.\", \"evidencias\": [{\"trecho\": \"T1\", "
+        + "\"copia\": \"Ficam reduzidas em 60% as aliquotas do IBS e da CBS incidentes sobre os "
+        + "insumos agropecuarios\"}]}]}";
+    chatModel.responderEmSequencia(ChatModelSimulado.texto(parafrase),
+        ChatModelSimulado.texto("{\"vereditos\": [\"NAO_SUSTENTA\"]}"));
+
+    ResultadoRota r = rota(true, 0.7, true, false, true, false, true)
+        .responder("Insumos?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+    assertThat(chatModel.promptsRecebidos()).hasSize(2);
+  }
 }

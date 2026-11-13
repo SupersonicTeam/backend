@@ -203,7 +203,16 @@ public class AssistenteProperties implements InitializingBean {
    */
   public long tetoDaPergunta(double fator) {
     long teto = cota.tetoDaPergunta(tetos, fator);
-    return juizDaLeiAtivo() ? teto + cota.tetoDoJuiz(tetoSaidaDoJuiz(), fator) : teto;
+    return juizDaLeiPodeRodar() ? teto + cota.tetoDoJuiz(tetoSaidaDoJuiz(), fator) : teto;
+  }
+
+  /**
+   * {@code true} se o juiz da lei pode ser chamado numa pergunta (#269): ativo e com o veto ou o
+   * resgate ligado. Com os dois desligados ele nunca roda, e a reserva não inclui a parcela dele.
+   */
+  public boolean juizDaLeiPodeRodar() {
+    return juizDaLeiAtivo()
+        && (fidelidadeLei.getJuiz().isVeto() || fidelidadeLei.getJuiz().getResgate().isEnabled());
   }
 
   /** Teto de saída do juiz da lei (#269) na configuração dele. */
@@ -953,7 +962,9 @@ public class AssistenteProperties implements InitializingBean {
     private double coberturaMinima = 0.7;
 
     /**
-     * A mesma fração com o juiz ativo ({@code AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ}): um
+     * A mesma fração com o juiz ativo e o veto ligado
+     * ({@code AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ}; sem o veto, no modo só resgate, vale a
+     * {@link #coberturaMinima}): um
      * piso baixo, para a paráfrase em linguagem simples passar; quem decide o sentido passa a ser o
      * juiz. Literalidade, número e polaridade seguem eliminatórios em código.
      */
