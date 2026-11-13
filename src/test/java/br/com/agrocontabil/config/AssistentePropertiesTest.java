@@ -240,4 +240,20 @@ class AssistentePropertiesTest {
         .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA);
     assertThat(p.tetoSaidaDoJuiz()).isEqualTo(1024);
   }
+  @Test
+  void configuracoesAdaptativas() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome("adaptativo-baixo")
+        .esforco()).isEqualTo("low");
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome("adaptativo-medio")
+        .esforco()).isEqualTo("medium");
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome("adaptativo-alto")
+        .esforco()).isEqualTo("high");
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ATUAL.raciocina()).isFalse();
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA.raciocina())
+        .isFalse();
+    assertThat(p.getTetos().getJuizComRaciocinio()).isEqualTo(3072);
+    assertThat(p.tetoSaidaDoJuiz(AssistenteProperties.FidelidadeLei.Juiz.Configuracao
+        .ADAPTATIVO_MEDIO)).isEqualTo(3072);
+  }
 }

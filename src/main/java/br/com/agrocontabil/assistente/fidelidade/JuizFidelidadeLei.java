@@ -5,6 +5,7 @@ import br.com.agrocontabil.assistente.DataSanitizer;
 import br.com.agrocontabil.assistente.PerguntaInterrompidaException;
 import br.com.agrocontabil.assistente.PromptsCeres;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
+import br.com.agrocontabil.assistente.llm.RaciocinioPorChamada;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -20,6 +21,7 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Component;
 
@@ -52,10 +54,22 @@ public class JuizFidelidadeLei {
   private final ModeloLinguagem modelo;
   private final AssistenteProperties propriedades;
 
-  /** Constrói o juiz sobre a porta do modelo; o teto de saída vem da configuração. */
+  /**
+   * Constrói o juiz sobre a porta do modelo; o teto de saída vem da configuração.
+   *
+   * @throws IllegalStateException com o juiz ativo numa configuração adaptativa e o provedor fora da
+   *         API da Anthropic: a subida falha, em vez de cada resposta de lei falhar no juiz
+   */
   public JuizFidelidadeLei(ModeloLinguagem modelo, AssistenteProperties propriedades) {
     this.modelo = modelo;
     this.propriedades = propriedades;
+    AssistenteProperties.FidelidadeLei.Juiz.Configuracao configuracao =
+        propriedades.getFidelidadeLei().getJuiz().getConfiguracao();
+    if (propriedades.juizDaLeiAtivo() && configuracao.raciocina()
+        && !modelo.aceitaRaciocinioPorChamada()) {
+      throw new IllegalStateException("app.assistente.fidelidade-lei.juiz.configuracao="
+          + configuracao.nome() + " exige AI_CHAT_PROVIDER=anthropic");
+    }
   }
 
   /** Veredito de uma frase. */
@@ -133,11 +147,17 @@ public class JuizFidelidadeLei {
     int saidaAntes = valor(contexto.tokensSaida());
     boolean chamou = false;
     boolean registrar = true;
+    Integer raciocinio = null;
     try {
+      if (configuracao.raciocina()) {
+        RaciocinioPorChamada.limpar();
+      }
       ChatResponse resposta = chamar(frases, contexto, configuracao, tetoSaida);
       chamou = true;
-      String texto = resposta == null || resposta.getResult() == null
-          ? null : resposta.getResult().getOutput().getText();
+      if (configuracao.raciocina()) {
+        raciocinio = RaciocinioPorChamada.consumir();
+      }
+      String texto = textoDaResposta(resposta);
       if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida)) {
         log.warn("Ceres: juiz da fidelidade da lei cortado pelo teto de {} tokens", tetoSaida);
         return new Julgamento(DesfechoFidelidadeLei.REPROVADA_JUIZ_FALHA,
@@ -162,7 +182,7 @@ public class JuizFidelidadeLei {
         long latencia = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicio);
         contexto.registrarJuizLei(latencia,
             chamou ? valor(contexto.tokensEntrada()) - entradaAntes : 0,
-            chamou ? valor(contexto.tokensSaida()) - saidaAntes : 0);
+            chamou ? valor(contexto.tokensSaida()) - saidaAntes : 0, raciocinio);
       }
     }
   }
@@ -181,8 +201,29 @@ public class JuizFidelidadeLei {
             ? PromptsCeres.JUIZ_FIDELIDADE_COM_JUSTIFICATIVA
             : PromptsCeres.JUIZ_FIDELIDADE),
         new UserMessage(PromptsCeres.mensagemJuiz(conteudo))),
-        ModeloLinguagem.comTeto(tetoSaida));
+        configuracao.raciocina()
+            ? modelo.comRaciocinio(tetoSaida, configuracao.esforco())
+            : ModeloLinguagem.comTeto(tetoSaida));
     return contexto.chamar(modelo, prompt);
+  }
+
+  /**
+   * O texto da resposta: a última geração com texto. Com o raciocínio do provedor, o Spring AI
+   * entrega cada bloco {@code thinking} como uma geração à parte, antes da do texto e com o texto
+   * vazio (a API omite o raciocínio por padrão); ler só a primeira daria o vazio.
+   */
+  static String textoDaResposta(ChatResponse resposta) {
+    if (resposta == null || resposta.getResults() == null) {
+      return null;
+    }
+    String texto = null;
+    for (Generation geracao : resposta.getResults()) {
+      String deste = geracao.getOutput() == null ? null : geracao.getOutput().getText();
+      if (deste != null && !deste.isBlank()) {
+        texto = deste;
+      }
+    }
+    return texto;
   }
 
   /**

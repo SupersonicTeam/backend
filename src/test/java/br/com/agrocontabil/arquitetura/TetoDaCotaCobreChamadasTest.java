@@ -103,6 +103,10 @@ class TetoDaCotaCobreChamadasTest {
     propriedades.getFidelidadeLei().getJuiz()
         .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA);
     assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(44_032);
+    // Adaptativas: o teto cobre raciocinio e vereditos (3.072): 8.192 + 3.072 x 4 = 20.480.
+    propriedades.getFidelidadeLei().getJuiz()
+        .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ADAPTATIVO_ALTO);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(52_224);
   }
 
   @Test

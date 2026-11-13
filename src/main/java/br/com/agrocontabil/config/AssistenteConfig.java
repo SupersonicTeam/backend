@@ -1,6 +1,7 @@
 package br.com.agrocontabil.config;
 
 import br.com.agrocontabil.assistente.GlossarioProdutor;
+import br.com.agrocontabil.assistente.llm.InterceptorRaciocinioAnthropic;
 import br.com.agrocontabil.assistente.llm.PoliticaRetryModelo;
 import br.com.agrocontabil.assistente.llm.ThinkOptionConverter;
 import br.com.agrocontabil.assistente.llm.TratadorErroProvedor;
@@ -8,7 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.retry.autoconfigure.SpringAiRetryAutoConfiguration;
 import org.springframework.ai.retry.autoconfigure.SpringAiRetryProperties;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationPropertiesBinding;
+import org.springframework.boot.web.client.RestClientCustomizer;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,6 +43,18 @@ public class AssistenteConfig {
   @ConfigurationPropertiesBinding
   static ThinkOptionConverter thinkOptionConverter() {
     return new ThinkOptionConverter();
+  }
+
+  /**
+   * Raciocínio do provedor numa chamada só (#269, juiz da fidelidade da lei, opção A): o
+   * {@link InterceptorRaciocinioAnthropic} entra no {@code RestClient.Builder} do Boot, que o Spring
+   * AI da Anthropic usa. Ele só age na requisição marcada pelo juiz e ao host da API da Anthropic;
+   * as outras passam intactas.
+   */
+  @Bean
+  RestClientCustomizer interceptorRaciocinioAnthropic(
+      @Value("${spring.ai.anthropic.base-url:https://api.anthropic.com}") String urlBase) {
+    return builder -> builder.requestInterceptor(new InterceptorRaciocinioAnthropic(urlBase));
   }
 
   /**

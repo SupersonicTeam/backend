@@ -212,4 +212,39 @@ class JuizFidelidadeLeiTest {
     assertThat(comJustificativa.julgar(DUAS, contexto))
         .isEqualTo(DesfechoFidelidadeLei.REPROVADA_JUIZ_FALHA);
   }
+  @Test
+  @DisplayName("texto da resposta: a geração de texto, não o bloco de raciocínio vazio da frente")
+  void textoIgnoraORaciocinio() {
+    ChatResponse comRaciocinio = new ChatResponse(List.of(
+        new Generation(new AssistantMessage("")),
+        new Generation(new AssistantMessage("{\"vereditos\": [\"SUSTENTA\"]}"))));
+    assertThat(JuizFidelidadeLei.textoDaResposta(comRaciocinio)).contains("SUSTENTA");
+    assertThat(JuizFidelidadeLei.textoDaResposta(new ChatResponse(List.of(
+        new Generation(new AssistantMessage("")))))).isNull();
+    assertThat(JuizFidelidadeLei.textoDaResposta(null)).isNull();
+  }
+
+  @Test
+  @DisplayName("adaptativa com o juiz ativo fora da API da Anthropic: a subida falha")
+  void adaptativaExigeAnthropic() {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    propriedades.getFidelidadeLei().setEnabled(true);
+    propriedades.getFidelidadeLei().getJuiz().setEnabled(true);
+    propriedades.getFidelidadeLei().getJuiz()
+        .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ADAPTATIVO_BAIXO);
+    StaticListableBeanFactory beans = new StaticListableBeanFactory();
+    beans.addBean("chatModel", chatModel);
+    ModeloLinguagem ollama = new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama",
+        new DisponibilidadeModelo(Duration.ofSeconds(30), System::nanoTime));
+    assertThatThrownBy(() -> new JuizFidelidadeLei(ollama, propriedades))
+        .isInstanceOf(IllegalStateException.class).hasMessageContaining("adaptativo-baixo");
+    assertThatThrownBy(() -> ollama.comRaciocinio(3072, "low"))
+        .isInstanceOf(IllegalStateException.class);
+    // Na bancada, com outro provedor: falha fecha, sem chamar o modelo.
+    JuizFidelidadeLei atual = new JuizFidelidadeLei(ollama, new AssistenteProperties());
+    assertThat(atual.avaliar(DUAS, contexto,
+        AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ADAPTATIVO_ALTO).falha())
+        .isEqualTo(JuizFidelidadeLei.Falha.ERRO_MODELO);
+    assertThat(chatModel.promptsRecebidos()).isEmpty();
+  }
 }

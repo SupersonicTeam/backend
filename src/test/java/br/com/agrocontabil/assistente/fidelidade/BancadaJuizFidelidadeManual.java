@@ -47,9 +47,9 @@ import org.springframework.test.context.ActiveProfiles;
  * <p><strong>Configurações</strong> ({@code bancada.configuracoes}, separadas por vírgula; padrão
  * {@code atual}): os nomes de {@code AssistenteProperties.FidelidadeLei.Juiz.Configuracao}, os
  * mesmos de {@code AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO}: {@code atual} = o juiz de hoje,
- * configuração (a); {@code justificativa} = configuração (d). As de raciocínio do provedor, (b) e
- * (c), entram no enum quando existirem (o Spring AI 1.1.8 não liga raciocínio nem esforço por
- * chamada), sem mudar o formato da bancada.
+ * configuração (a); {@code justificativa} = configuração (d); {@code adaptativo-baixo},
+ * {@code adaptativo-medio} e {@code adaptativo-alto} = raciocínio do provedor com esforço
+ * {@code low}/{@code medium}/{@code high}, só com {@code AI_CHAT_PROVIDER=anthropic}.
  *
  * <p><strong>Saída</strong> ({@code bancada.saida}, JSONL): uma linha por resposta, configuração e
  * repetição, com {@code id}, {@code configuracao}, {@code repeticao}, {@code veredito}
@@ -57,8 +57,9 @@ import org.springframework.test.context.ActiveProfiles;
  * {@code REPROVADA_JUIZ_NAO_SUSTENTA}, {@code REPROVADA_JUIZ_CONTRADIZ}, a falha do juiz —
  * {@code CORTADA_PELO_TETO}, {@code FORMATO}, {@code CONTAGEM_DIFERENTE}, {@code ERRO_MODELO} — ou
  * {@code SEM_FRASE}, sem chamada), {@code latencia_ms}, {@code tokens_entrada},
- * {@code tokens_saida}, {@code tokens_raciocinio} (sempre nulo: o Spring AI só traz a saída total, e
- * nenhuma configuração daqui raciocina), {@code cortada_pelo_teto}, {@code frases},
+ * {@code tokens_saida} (raciocínio incluído), {@code tokens_raciocinio} (a parte de raciocínio, que a
+ * API informa em {@code usage.output_tokens_details.thinking_tokens}; nulo sem raciocínio ou sem a
+ * informação), {@code cortada_pelo_teto}, {@code frases},
  * {@code frases_sem_citacao}, {@code dispositivos_ausentes}, {@code vereditos} (um por frase) e
  * {@code cru} (o texto do juiz, só lei e vereditos).
  *
@@ -197,7 +198,8 @@ class BancadaJuizFidelidadeManual {
     o.put("latencia_ms", metricas == null ? null : metricas.latenciaMs());
     o.put("tokens_entrada", metricas == null ? null : metricas.tokensEntrada());
     o.put("tokens_saida", metricas == null ? null : metricas.tokensSaida());
-    o.putNull("tokens_raciocinio");
+    Integer raciocinio = metricas == null ? null : metricas.tokensRaciocinio();
+    o.put("tokens_raciocinio", raciocinio);
     o.put("cortada_pelo_teto", j.cortadaPeloTeto());
     ArrayNode vereditos = o.putArray("vereditos");
     j.vereditos().forEach(v -> vereditos.add(v.name()));

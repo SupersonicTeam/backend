@@ -213,9 +213,13 @@ public class AssistenteProperties implements InitializingBean {
 
   /**
    * Teto de saída do juiz da lei (#269) numa configuração: {@code tetos.juiz} na {@code atual},
-   * {@code tetos.juiz-com-justificativa} na {@code justificativa}.
+   * {@code tetos.juiz-com-justificativa} na {@code justificativa} e
+   * {@code tetos.juiz-com-raciocinio} nas adaptativas.
    */
   public int tetoSaidaDoJuiz(FidelidadeLei.Juiz.Configuracao configuracao) {
+    if (configuracao.raciocina()) {
+      return tetos.getJuizComRaciocinio();
+    }
     return configuracao == FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA
         ? tetos.getJuizComJustificativa()
         : tetos.getJuiz();
@@ -728,6 +732,13 @@ public class AssistenteProperties implements InitializingBean {
     private int juizComJustificativa = 1024;
 
     /**
+     * Juiz nas configurações adaptativas (#269): o raciocínio do provedor é cobrado como saída e
+     * entra no {@code max_tokens}, então o teto cobre raciocínio e vereditos. Cortado, falha fecha.
+     * Substitui o {@link #juiz} nelas, também na reserva da pergunta; o gasto real é o da saída.
+     */
+    private int juizComRaciocinio = 3072;
+
+    /**
      * Janela de contexto do modelo (o {@code num-ctx} do Ollama, lido da mesma propriedade). Só
      * para a validação: nenhum teto pode comer mais da metade dela, que é do prompt.
      */
@@ -744,6 +755,7 @@ public class AssistenteProperties implements InitializingBean {
       exigirTeto("legislacao", legislacao);
       exigirTeto("juiz", juiz);
       exigirTeto("juiz-com-justificativa", juizComJustificativa);
+      exigirTeto("juiz-com-raciocinio", juizComRaciocinio);
     }
 
     private void exigirTeto(String nome, int valor) {
@@ -783,6 +795,14 @@ public class AssistenteProperties implements InitializingBean {
 
     public int getJuiz() {
       return juiz;
+    }
+
+    public int getJuizComRaciocinio() {
+      return juizComRaciocinio;
+    }
+
+    public void setJuizComRaciocinio(int juizComRaciocinio) {
+      this.juizComRaciocinio = juizComRaciocinio;
     }
 
     public int getJuizComJustificativa() {
@@ -963,18 +983,41 @@ public class AssistenteProperties implements InitializingBean {
       private Configuracao configuracao = Configuracao.ATUAL;
 
       /**
-       * Configurações do juiz (#269), pelo nome. O raciocínio do provedor (as adaptativas) ainda não
-       * existe: o Spring AI 1.1.8 não o liga por chamada, e o caminho está em decisão. Quando
-       * entrar, entra aqui como mais um valor, sem mudar o formato da bancada.
+       * Configurações do juiz (#269), pelo nome. As adaptativas ligam o raciocínio do provedor só
+       * na chamada do juiz (o Spring AI 1.1.8 não o faz pelas opções: a marca por cabeçalho e o
+       * {@code InterceptorRaciocinioAnthropic}), só na API da Anthropic, com a instrução da
+       * {@code atual} e o teto {@code tetos.juiz-com-raciocinio}, que cobre raciocínio e resposta.
        */
       public enum Configuracao {
         /** Só o veredito de cada frase ({@code tetos.juiz}): o juiz da camada 2 original. */
-        ATUAL,
+        ATUAL(null),
         /**
          * Uma justificativa curta antes de cada veredito, sem raciocínio do provedor
          * ({@code tetos.juiz-com-justificativa}).
          */
-        JUSTIFICATIVA;
+        JUSTIFICATIVA(null),
+        /** Raciocínio adaptativo com esforço {@code low}. */
+        ADAPTATIVO_BAIXO("low"),
+        /** Raciocínio adaptativo com esforço {@code medium}. */
+        ADAPTATIVO_MEDIO("medium"),
+        /** Raciocínio adaptativo com esforço {@code high}. */
+        ADAPTATIVO_ALTO("high");
+
+        private final String esforco;
+
+        Configuracao(String esforco) {
+          this.esforco = esforco;
+        }
+
+        /** O esforço ({@code output_config.effort}) da configuração adaptativa; nulo nas outras. */
+        public String esforco() {
+          return esforco;
+        }
+
+        /** {@code true} se a configuração liga o raciocínio do provedor. */
+        public boolean raciocina() {
+          return esforco != null;
+        }
 
         /** O nome usado na propriedade e na bancada: minúsculas, com hífen. */
         public String nome() {

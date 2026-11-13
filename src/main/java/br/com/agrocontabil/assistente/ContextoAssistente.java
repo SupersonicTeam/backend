@@ -176,13 +176,30 @@ public final class ContextoAssistente {
    *
    * @param latenciaMs    duração da chamada
    * @param tokensEntrada tokens de entrada da chamada (0 se ela não terminou)
-   * @param tokensSaida   tokens de saída da chamada (0 se ela não terminou)
+   * @param tokensSaida   tokens de saída da chamada, raciocínio do provedor incluído (0 se ela não
+   *                      terminou)
+   * @param tokensRaciocinio parte de {@code tokensSaida} que foi raciocínio, quando o provedor a
+   *                      informa ({@code usage.output_tokens_details.thinking_tokens}); nulo sem
+   *                      raciocínio ou sem a informação. Só detalhe: não vai à auditoria nem soma
    */
-  public record JuizLei(long latenciaMs, int tokensEntrada, int tokensSaida) {}
+  public record JuizLei(long latenciaMs, int tokensEntrada, int tokensSaida,
+      Integer tokensRaciocinio) {
+
+    /** Sem o detalhe do raciocínio. */
+    public JuizLei(long latenciaMs, int tokensEntrada, int tokensSaida) {
+      this(latenciaMs, tokensEntrada, tokensSaida, null);
+    }
+  }
 
   /** Registra o tempo e os tokens do juiz (#269); uma vez por pergunta, a última vale. */
   public void registrarJuizLei(long latenciaMs, int tokensEntrada, int tokensSaida) {
-    juizLei.set(new JuizLei(latenciaMs, tokensEntrada, tokensSaida));
+    registrarJuizLei(latenciaMs, tokensEntrada, tokensSaida, null);
+  }
+
+  /** Registra o tempo, os tokens e os de raciocínio do juiz (#269). */
+  public void registrarJuizLei(long latenciaMs, int tokensEntrada, int tokensSaida,
+      Integer tokensRaciocinio) {
+    juizLei.set(new JuizLei(latenciaMs, tokensEntrada, tokensSaida, tokensRaciocinio));
   }
 
   /** Tempo e tokens do juiz; nulo se ele não rodou. */
