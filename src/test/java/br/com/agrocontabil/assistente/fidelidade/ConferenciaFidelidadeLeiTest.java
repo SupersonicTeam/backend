@@ -172,6 +172,27 @@ class ConferenciaFidelidadeLeiTest {
   }
 
   @Test
+  @DisplayName("cópia cortada logo depois do 'não' do dispositivo não sustenta a frase invertida")
+  void copiaCortadaDepoisDoNaoReprova() {
+    TrechoRecuperado t = trecho("T1", "id", "art. 26", "Art. 26. Não incide o IBS sobre as "
+        + "exportações de bens.");
+    assertThat(conferir(json("O IBS incide sobre as exportações de bens.", "T1",
+        "incide o IBS sobre as exportações de bens"), t).desfecho())
+        .isEqualTo(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+  }
+
+  @Test
+  @DisplayName("'sem' em outro ponto da frase não esconde a inversão da condição negada")
+  void semNaoEscondeInversao() {
+    assertThat(conferir(json("Sem prejuízo das regras, se o elemento temporal tiver se "
+            + "aperfeiçoado até 31 de dezembro de 2032, será devido só o IBS.", "T1",
+        "caso não tenha se aperfeiçoado, até 31 de dezembro de 2032, o elemento temporal da "
+            + "hipótese de incidência do ICMS ou do ISS: b) será devido exclusivamente o IBS na "
+            + "operação"), alineaB("T1")).desfecho())
+        .isEqualTo(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+  }
+
+  @Test
   @DisplayName("frase com negação que a evidência não tem reprova")
   void negacaoQueAEvidenciaNaoTemReprova() {
     ConferenciaFidelidadeLei.Resultado r = conferir(json(

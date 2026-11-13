@@ -51,6 +51,15 @@ final class TextoLei {
       "desoneracao"));
 
   /**
+   * O que conta como a frase negar ao conferir a inversão: a negação ampla menos "sem" e "fora",
+   * comuns fora de negação ("sem prejuízo", "fora isso"). Com elas, uma frase invertida que tivesse
+   * "sem" em outro ponto escaparia do teste.
+   */
+  static final Set<String> NEGACAO_NA_FRASE = NEGACAO_AMPLA.stream()
+      .filter(p -> !p.equals("sem") && !p.equals("fora"))
+      .collect(java.util.stream.Collectors.toUnmodifiableSet());
+
+  /**
    * Negação estrita seguida do que ela nega, até a próxima pontuação (no texto já normalizado):
    * "caso nao tenha se aperfeicoado, ..." nega "tenha se aperfeicoado".
    */

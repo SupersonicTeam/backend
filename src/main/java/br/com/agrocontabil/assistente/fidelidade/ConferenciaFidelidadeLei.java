@@ -147,6 +147,7 @@ public class ConferenciaFidelidadeLei {
       }
       Set<String> marcasDaFrase = new LinkedHashSet<>();
       StringBuilder copias = new StringBuilder();
+      StringBuilder copiasComNegacao = new StringBuilder();
       StringBuilder proprios = new StringBuilder();
       StringBuilder contextos = new StringBuilder();
       Set<String> passagensDaFrase = new LinkedHashSet<>();
@@ -162,6 +163,10 @@ public class ConferenciaFidelidadeLei {
         }
         marcasDaFrase.add(citada.marca());
         copias.append(evidencia.copia()).append(' ');
+        // A negacao logo antes da copia ("Nao | incide o IBS ...") conta como dela: senao a copia
+        // cortada depois do "nao" sustentaria a frase invertida.
+        copiasComNegacao.append(citada.negacaoAntes()).append(' ').append(evidencia.copia())
+            .append(". ");
         proprios.append(citada.proprio()).append(' ');
         contextos.append(citada.contexto()).append(' ');
         passagensDaFrase.add(citada.contexto());
@@ -169,7 +174,8 @@ public class ConferenciaFidelidadeLei {
       String textoFrase = MARCAS.matcher(frase.texto()).replaceAll(" ").replaceAll("\\s+", " ")
           .strip();
       DesfechoFidelidadeLei motivo = conferirSentido(textoFrase, copias.toString(),
-          proprios.toString(), contextos.toString(), coberturaMinima);
+          copiasComNegacao.toString(), proprios.toString(), contextos.toString(),
+          coberturaMinima);
       if (motivo != null) {
         return reprovada(motivo, trechos, marcasCitadas);
       }
@@ -205,8 +211,8 @@ public class ConferenciaFidelidadeLei {
    *       condição "caso não tenha se aperfeiçoado" e não a inverte.</li>
    * </ul>
    */
-  private DesfechoFidelidadeLei conferirSentido(String frase, String copias, String proprios,
-      String contextos, double coberturaMinima) {
+  private DesfechoFidelidadeLei conferirSentido(String frase, String copias,
+      String copiasComNegacao, String proprios, String contextos, double coberturaMinima) {
     String evidencia = copias + " " + contextos;
     List<String> palavrasFrase = TextoLei.formas(frase);
     List<String> palavrasEvidencia = TextoLei.formas(evidencia);
@@ -217,12 +223,12 @@ public class ConferenciaFidelidadeLei {
         return DesfechoFidelidadeLei.REPROVADA_NUMERO;
       }
     }
-    boolean fraseNega = algum(palavrasFrase, TextoLei.NEGACAO_AMPLA);
+    boolean fraseNega = algum(palavrasFrase, TextoLei.NEGACAO_NA_FRASE);
     Set<String> raizesDaFrase = new HashSet<>();
     palavrasFrase.stream().filter(TextoLei::conteudo).forEach(p -> raizesDaFrase.add(
         TextoLei.raiz(p)));
     boolean inverte = !fraseNega
-        && TextoLei.negados(copias).stream().anyMatch(raizesDaFrase::contains);
+        && TextoLei.negados(copiasComNegacao).stream().anyMatch(raizesDaFrase::contains);
     if (algum(palavrasFrase, TextoLei.NEGACAO)
         && !algum(palavrasProprias, TextoLei.NEGACAO_AMPLA)
         || inverte
@@ -328,13 +334,14 @@ public class ConferenciaFidelidadeLei {
   }
 
   /**
-   * Posições, no texto do trecho, da primeira e da última palavra da cópia; nulo se a cópia não
-   * está escrita nele. Fragmentos separados por reticências têm de estar, cada um, escritos e na
-   * ordem.
+   * Posições, no texto do trecho, da primeira e da última palavra da cópia, e o índice da primeira
+   * palavra na lista; nulo se a cópia não está escrita nele. Fragmentos separados por reticências
+   * têm de estar, cada um, escritos e na ordem.
    */
   static int[] posicaoDaCopia(String copia, List<TextoLei.Palavra> texto) {
     int cursor = 0;
     int primeira = -1;
+    int primeiroIndice = -1;
     int ultima = -1;
     boolean algum = false;
     for (String fragmento : RETICENCIAS.split(copia)) {
@@ -348,12 +355,13 @@ public class ConferenciaFidelidadeLei {
       }
       if (!algum) {
         primeira = texto.get(achado).inicio();
+        primeiroIndice = achado;
       }
       algum = true;
       cursor = achado + palavras.size();
       ultima = texto.get(cursor - 1).inicio();
     }
-    return algum ? new int[] {primeira, ultima} : null;
+    return algum ? new int[] {primeira, ultima, primeiroIndice} : null;
   }
 
   /**
@@ -363,8 +371,10 @@ public class ConferenciaFidelidadeLei {
    * @param proprio  texto próprio dos níveis que a cópia toca (o trecho inteiro quando o rótulo não
    *                 tem a forma simples)
    * @param contexto texto do caput até o fim do nível em que a cópia termina (idem)
+   * @param negacaoAntes a negação estrita logo antes da primeira palavra da cópia no trecho ("nao"
+   *                 em "Não incide…" com a cópia "incide…"), ou vazio
    */
-  private record Citada(String marca, String proprio, String contexto) {}
+  private record Citada(String marca, String proprio, String contexto, String negacaoAntes) {}
 
   private static int procurar(List<TextoLei.Palavra> texto, List<String> palavras, int desde) {
     for (int i = desde; i + palavras.size() <= texto.size(); i++) {
@@ -438,15 +448,18 @@ public class ConferenciaFidelidadeLei {
           ? trecho.texto()
           : nivel.textoDosNiveis(posicao[0], posicao[1]);
       String contexto = nivel == null ? trecho.texto() : nivel.textoAte(posicao[1]);
+      List<TextoLei.Palavra> palavrasTrecho = palavrasDe(indice);
+      String antes = posicao[2] > 0 ? palavrasTrecho.get(posicao[2] - 1).forma() : "";
+      String negacaoAntes = TextoLei.NEGACAO.contains(antes) ? antes : "";
       NivelDispositivo.Ancestral ancestral = nivel == null ? null : nivel.ancestralDe(posicao[1]);
       if (ancestral == null) {
-        return new Citada(trecho.marca(), proprio, contexto);
+        return new Citada(trecho.marca(), proprio, contexto, negacaoAntes);
       }
       corrigiu = true;
       String chave = chave(trecho.norma(), ancestral.dispositivo());
       String existente = marcaPorDispositivo.get(chave);
       if (existente != null) {
-        return new Citada(existente, proprio, contexto);
+        return new Citada(existente, proprio, contexto, negacaoAntes);
       }
       String marca = "T" + (lista.size() + 1);
       // Sem o trecho do ancestral na busca, o id e o do trecho em que a copia foi achada: a
@@ -454,7 +467,7 @@ public class ConferenciaFidelidadeLei {
       lista.add(new TrechoRecuperado(marca, trecho.id(), trecho.norma(), ancestral.dispositivo(),
           trecho.url(), ancestral.texto(), trecho.similaridade()));
       marcaPorDispositivo.put(chave, marca);
-      return new Citada(marca, proprio, contexto);
+      return new Citada(marca, proprio, contexto, negacaoAntes);
     }
 
     private static String chave(String norma, String dispositivo) {

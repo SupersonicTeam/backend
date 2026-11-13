@@ -418,10 +418,15 @@ saída (peso 4). O tempo extra é só o da saída maior.
 padrão `false`; decisão do Murillo de 12/11, "Sim, incluir o juiz"). Só tem efeito com a camada 1
 ligada. Depois que a camada 1 aprova e depois de todas as conferências em código (`ValidadorCitacao`,
 `ValidadorNumeros`, `GuardaRegimeEspecifico`, dados do produtor no MISTO), o `fidelidade/JuizFidelidadeLei`
-faz **uma** chamada ao modelo com as frases entregues e as cópias de cada uma (instrução fixa
-`PromptsCeres.JUIZ_FIDELIDADE` no sistema; `Frase N:` e `Passagem:` na mensagem do usuário, pelo
-`DataSanitizer`; sem os trechos inteiros nem a pergunta). O modelo responde
-`{"vereditos": ["SUSTENTA" | "NAO_SUSTENTA" | "CONTRADIZ", ...]}`, um por frase, na ordem.
+faz **uma** chamada ao modelo com as frases entregues e, para cada uma, o **dispositivo citado**
+com o contexto dos níveis de cima (o caput até o fim do nível da cópia: a mesma passagem contra a
+qual a camada 1 conferiu número e cobertura; só a cópia, o juiz reprovava a frase que resumia o
+dispositivo que a cópia cortava). Instrução fixa `PromptsCeres.JUIZ_FIDELIDADE` no sistema;
+`Frase N:` e `Passagem:` na mensagem do usuário, pelo `DataSanitizer`; sem a pergunta. As frases
+são lidas em sequência (uma frase pode retomar a anterior: "também", "esse", "nesse caso"), e resumir
+ou deixar partes de fora não reprova: reprova afirmar o que a passagem não diz, com alcance maior
+inclusive. O modelo responde `{"vereditos": ["SUSTENTA" | "NAO_SUSTENTA" | "CONTRADIZ", ...]}`, um por
+frase, na ordem.
 
 - **Só reprova, nunca reescreve:** qualquer `NAO_SUSTENTA` ou `CONTRADIZ` reprova a resposta inteira pelo
   caminho da camada 1 (`TRECHOS_SEM_CONFIRMACAO` com os trechos marcados, `FIDELIDADE_REPROVADA`). Tirar
@@ -443,9 +448,12 @@ faz **uma** chamada ao modelo com as frases entregues e as cópias de cada uma (
 - **Auditoria:** `latencia_juiz_ms`, `tokens_entrada_juiz` e `tokens_saida_juiz` (changeSet 0065), nulas
   sem o juiz. Com ele, `latencia_ms`, `tokens_entrada` e `tokens_saida` da pergunta são **sem** o juiz
   (`AuditoriaAssistente`), e a soma das colunas é o total, como na explicação.
-- **Custo e tempo (estimativa, não medida):** uma chamada a mais por resposta aprovada pela camada 1;
-  entrada de ~450 a ~1.000 tokens (instrução de ~800 caracteres + frases e cópias), saída de ~10 a ~40;
-  com o Haiku, cerca de 0,5 a 1,5 s a mais. Cabe no `timeout-pergunta`: roda dentro da pergunta.
+- **Custo e tempo:** uma chamada a mais por resposta aprovada pela camada 1. Entrada estimada de
+  ~700 a ~2.500 tokens (instrução de ~1.100 caracteres + frases + os dispositivos com o contexto de cima,
+  maiores que as cópias; não medida em tokens), saída de ~10 a ~40. No diagnóstico de 2026-11-13 com o
+  Haiku (12 perguntas próprias × 2), a rota de lei com o juiz teve p50 de 3,2 s contra 2,2 s só com a
+  camada 1 e 1,7 s com tudo desligado (rede de casa, não a VPS). Cabe no `timeout-pergunta`: roda dentro
+  da pergunta.
 
 **Os três braços da medição:** tudo desligado (a `main`); só a camada 1
 (`AI_FIDELIDADE_LEI_HABILITADA=true`); camada 1 e juiz (mais `AI_FIDELIDADE_LEI_JUIZ_HABILITADO=true`).
@@ -455,9 +463,22 @@ rota é a da `main` (`RotaLegislacaoFidelidadeTest`).
 **Limites conhecidos.** A régua é lexical: paráfrase com sinônimo fora da cópia reprova (falso
 descarte; a raiz casa "redução" com "reduzidas", mas não "isenção" com "não incide" fora da
 polaridade nem "IBS" com "imposto" sozinho; e a cópia com "salvo", "exceto" ou "não" exige negação
-na frase, mesmo quando a frase só resume a parte afirmativa), e frase que reordena as palavras
-da cópia com outro sentido, sem negação nem número, passa. A segunda chamada ao modelo para julgar a
-frase (no molde da #268) fica como etapa seguinte, se a medição mostrar infiel que passa por aqui.
+na frase quando a frase fala do que foi negado), e frase que reordena as palavras da cópia com
+outro sentido, sem negação nem número, passa. **O número do nível de cima vale como contexto** (o
+período do parágrafo para a alínea): uma frase que leva esse número da condição para a conclusão ("até
+2032 será devido só o IBS", citando a alínea b do art. 408, § 4º, II) passa na camada 1; é o preço do
+falso descarte que essa regra corrigiu, e é o tipo de frase que o juiz reprova. A negação logo antes da
+cópia ("Não | incide o IBS…", com a cópia começando depois do "não") conta como da cópia.
+
+**Diagnóstico com o Haiku (2026-11-12 e 13, 12 perguntas próprias, inventadas, sobre a reforma no
+agro; nenhuma do gabarito nem do conjunto de medição; banco de diagnóstico à parte, só leitura da
+base de lei):** respondidas em 24 execuções por braço: tudo desligado 21; camada 1 antes do ajuste 13
+(6 `CITACAO_INVALIDA`, todas `NAO_ENCONTREI`); camada 1 depois do ajuste 19 (2 `NAO_ENCONTREI`, na
+mesma pergunta em que o braço desligado também responde `NAO_ENCONTREI`, e 3 reprovações, duas delas
+inversões ou inferências de verdade); camada 1 + juiz 16 (5 `NAO_ENCONTREI` e 3 reprovações do juiz,
+duas certas: dedução do inverso da regra e generalização do anexo). O `CITACAO_INVALIDA` com
+`fidelidade_lei` nulo é o `NAO_ENCONTREI` do modelo: o prompt com evidência o levava a desistir quando
+os trechos respondiam só em parte.
 
 ## Orquestração, streaming e isolamento de recursos (issue #157)
 
