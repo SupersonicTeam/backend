@@ -134,7 +134,7 @@ class EscolhaDoConjuntoTest(unittest.TestCase):
         self.assertIn(f"conjunto {comum.VERSAO_REGRA} ok; 36 perguntas", saida.getvalue())
 
     def test_valor_desconhecido_e_recusado_com_mensagem_clara(self):
-        for valor in ("V2", "v3", "nao-existe.json"):
+        for valor in ("V2", "v9", "nao-existe.json"):
             with self.assertRaises(comum.ErroDeConjunto, msg=valor):
                 comum.resolver_conjunto(valor)
 

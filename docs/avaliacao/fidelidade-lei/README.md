@@ -18,13 +18,15 @@ com o Haiku 5.5 pela API da Anthropic, 3 repetições por braço.
 | `perguntas-fidelidade-lei.json` + `.sha256` | As 36 perguntas, com o gabarito de fidelidade (fatos com o dispositivo certo, armadilhas, permitidos). Congelado pelo sha256 |
 | `regra-de-decisao.md` | A regra de decisão (`ENTRA` / `NAO_ENTRA` / `INCONCLUSIVA`), escrita antes de qualquer rodada |
 | `perguntas-fidelidade-lei-v2.json` + `.sha256` | O **conjunto v2** (36 perguntas, ids `F2-`), da segunda medição, escrito depois do ajuste da correção (regra, seção 9). Mesma forma e mesma regra do v1 |
+| `perguntas-fidelidade-lei-v3.json` + `.sha256` | O **conjunto v3** (36 perguntas, ids `F3-`), da terceira medição, escrito depois do ajuste do juiz da correção (regra, seção 10). Mesma forma e mesmas margens; a regra passa a prever o quarto braço, `camada1+juiz+resgate` |
+| `conferencia-do-gabarito-v3.md` | A conferência independente do gabarito do v3 contra o texto da lei e como cada divergência foi resolvida |
 | `conferencia-do-gabarito.md` | A conferência independente do gabarito contra o texto da lei, as divergências e como foram resolvidas |
 | `prompts/juiz.md` | O papel dos juízes (os três usam o mesmo texto) |
 | `executar_fidelidade.py` | Sobe uma instância por braço (dois ou mais), roda o conjunto em todos e grava as respostas brutas e a auditoria |
 | `leitura_fidelidade.py` | Cega e embaralha as respostas aceitas em lotes, valida o que os juízes entregaram, monta o lote do J3 |
 | `decidir_fidelidade.py` | Aplica a regra e grava `resultado.json` e `resultado.md` |
 | `fidelidade_comum.py` | Constantes da regra (as margens), classificação das execuções, kappa, percentil |
-| `test_*.py` | Testes (só biblioteca padrão), rodam na CI (`test_conjunto_v2.py`: o v2 e a escolha do conjunto) |
+| `test_*.py` | Testes (só biblioteca padrão), rodam na CI (`test_conjunto_v2.py` e `test_conjunto_v3.py`: o v2, o v3, a escolha do conjunto e o quarto braço) |
 
 ## O conjunto (36 perguntas, 6 por classe)
 
@@ -65,6 +67,23 @@ O manifesto da rodada (`execucao.json`) grava `conjunto.arquivo` e `leitura_fide
 cego vale para o v2 do mesmo jeito: quem escreve ou revisa a correção não lê o v2 e recebe só os ids
 (`F2-07`). Os testes do v2 (`test_conjunto_v2.py`) e o `ConjuntoFidelidadeLeiTest` conferem hash, forma e
 a separação do treino e do prompt para os dois conjuntos.
+
+## Conjunto v3 e o quarto braço (terceira medição)
+
+O juiz da correção foi ajustado depois da segunda rodada, olhando os números do v1 e do v2, e os dois
+deixaram de ser teste cego para esse ajuste. A terceira medição usa o **v3**
+(`perguntas-fidelidade-lei-v3.json`, versão `2026-11-13.v3`), escrito por uma sessão que nunca viu o v1,
+o v2, os conjuntos antigos nem a correção. A regra passou à versão `2026-11-13.5` (as margens, os juízes,
+as 3 repetições e o modelo são os mesmos) e prevê **quatro braços**: `desligada`, `camada1`,
+`camada1+juiz` (juiz novo, só com veto) e `camada1+juiz+resgate`, cada um comparado ao `desligada`:
+
+```bash
+python3 -I docs/avaliacao/fidelidade-lei/executar_fidelidade.py --conjunto v3 --jar <jar> --commit <sha>     --braco "camada1:NOME_DA_FLAG=true"     --braco "camada1+juiz:NOME_DA_FLAG=true,NOME_DA_FLAG_DO_JUIZ=true"     --braco "camada1+juiz+resgate:NOME_DA_FLAG=true,NOME_DA_FLAG_DO_JUIZ=true,NOME_DA_FLAG_DO_RESGATE=true"
+```
+
+São 36 x 3 x 4 = 432 execuções e quatro JVMs: confira a memória. Os arquivos e os testes do v1 e do v2
+não mudaram. O teste cego vale para o v3 do mesmo jeito (quem escreve ou revisa a correção recebe só os
+ids, `F3-07`). Os testes do v3 estão em `test_conjunto_v3.py`.
 
 ## Como rodar (depois do merge, com o head do PR da correção e o nome da flag)
 

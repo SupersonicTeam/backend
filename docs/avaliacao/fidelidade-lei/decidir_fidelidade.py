@@ -294,7 +294,7 @@ def avaliar(execs: list, com_base: dict, info_leitura: dict, interrompida=None,
                   + "; ".join(t["teste"] for t in melhora if not t["ok"]))
 
     return {
-        "desfecho": desfecho, "motivo": motivo, "versaoDaRegra": comum.VERSAO_REGRA,
+        "desfecho": desfecho, "motivo": motivo, "versaoDaRegra": comum.VERSAO_REGRA_ATUAL,
         "base": base, "comparado": comparado,
         "braco": {base: off, comparado: on},
         "m1": {"defeitosBase": defeitos_off, "defeitosComparado": defeitos_on,
@@ -353,7 +353,7 @@ def decidir_rodada(rodada: Path) -> dict:
     info = informacao_da_leitura(j1, j2, sorted(chave))
     comparacoes = {b: avaliar(execs, com_base_da_rodada, info, manifesto.get("interrompida"),
                               comum.BASE, b) for b in bracos[1:]}
-    return {"versaoDaRegra": comum.VERSAO_REGRA, "bracos": bracos,
+    return {"versaoDaRegra": comum.VERSAO_REGRA_ATUAL, "bracos": bracos,
             "desfechos": {b: c["desfecho"] for b, c in comparacoes.items()},
             "escolha": escolher_entre_bracos(comparacoes),
             "comparacoes": comparacoes, "leitura": info,

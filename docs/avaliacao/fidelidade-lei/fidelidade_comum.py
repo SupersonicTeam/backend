@@ -17,8 +17,17 @@ CONJUNTO = DIR / "perguntas-fidelidade-lei.json"
 #: os scripts são os mesmos; o conjunto tem versão e sha256 próprios (regra, seção 9).
 CONJUNTO_V2 = DIR / "perguntas-fidelidade-lei-v2.json"
 VERSAO_CONJUNTO_V2 = "2026-11-13.v2"
-CONJUNTOS = {"v1": CONJUNTO, "v2": CONJUNTO_V2}
+#: Terceiro conjunto (v3): escrito depois da segunda rodada, porque o juiz da correção foi ajustado
+#: olhando os números do v1 e do v2. Mesmas medidas e margens; só entra o quarto braço (regra, seção 10).
+CONJUNTO_V3 = DIR / "perguntas-fidelidade-lei-v3.json"
+VERSAO_CONJUNTO_V3 = "2026-11-13.v3"
+CONJUNTOS = {"v1": CONJUNTO, "v2": CONJUNTO_V2, "v3": CONJUNTO_V3}
+#: Versão da regra do v1 e do v2 (rodadas já feitas): os conjuntos deles e os testes deles a guardam.
 VERSAO_REGRA = "2026-11-12.4"
+#: Versão da regra em vigor para as rodadas novas (v3): as margens são as mesmas; sobe só porque a
+#: regra passa a prever o quarto braço e o conjunto v3 (regra, seção 10). Mudar uma margem em `REGRA`
+#: ou o texto da regra sem subir esta versão invalida a rodada.
+VERSAO_REGRA_ATUAL = "2026-11-13.5"
 
 #: O braço de referência: todo braço comparado é medido contra ele (regra, seção 1).
 BASE = "desligada"
@@ -113,7 +122,7 @@ def carregar_conjunto(caminho: Path = CONJUNTO, verificar_hash: bool = True) -> 
 
 
 def resolver_conjunto(valor) -> Path:
-    """Caminho do conjunto pedido: `v1`, `v2`, o nome de um arquivo da pasta ou um caminho.
+    """Caminho do conjunto pedido: `v1`, `v2`, `v3`, o nome de um arquivo da pasta ou um caminho.
     Sem valor, o v1 (o comportamento de antes do v2)."""
     if not valor:
         return CONJUNTO
@@ -123,7 +132,7 @@ def resolver_conjunto(valor) -> Path:
     if not caminho.is_absolute() and (DIR / valor).exists():
         caminho = DIR / valor  # nome de um arquivo da pasta, qualquer que seja o diretório atual
     if not caminho.exists():
-        raise ErroDeConjunto(f"conjunto {valor!r} não encontrado: use v1, v2, o nome de um arquivo "
+        raise ErroDeConjunto(f"conjunto {valor!r} não encontrado: use v1, v2, v3, o nome de um arquivo "
                              f"da pasta {DIR.name} ou o caminho de um arquivo")
     return caminho
 

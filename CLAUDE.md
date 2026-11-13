@@ -193,8 +193,13 @@ guardam o hash, o treino e o prompt; a regra (`regra-de-decisao.md`) e as margen
 `fidelidade_comum.py` são uma coisa só: mudou uma, mude a outra e a versão. **Conjunto v2:** a correção
 foi ajustada depois da primeira rodada, olhando os números do v1; a segunda medição usa o
 `perguntas-fidelidade-lei-v2.json` (versão própria e sha256 ao lado, ids `F2-07`), escrito por uma
-sessão que não viu o v1 nem a correção, com a mesma regra e os mesmos scripts (`--conjunto v1|v2`; a
-regra, seção 9). A regra do teste cego vale para o v2 do mesmo jeito.
+sessão que não viu o v1 nem a correção, com a mesma regra e os mesmos scripts (`--conjunto v1|v2|v3`; a
+regra, seção 9). A regra do teste cego vale para o v2 do mesmo jeito. **Conjunto v3:** o juiz da correção foi
+ajustado depois da segunda rodada, também olhando o v1 e o v2; a terceira medição usa o
+`perguntas-fidelidade-lei-v3.json` (versão `2026-11-13.v3`, ids `F3-07`), escrito por sessão que não viu
+v1, v2, conjuntos antigos nem a correção. Regra `2026-11-13.5` (`VERSAO_REGRA_ATUAL`; a `2026-11-12.4` segue
+como a do v1 e do v2): mesmas margens, quatro braços (`desligada`, `camada1`, `camada1+juiz`,
+`camada1+juiz+resgate`), regra seção 10; teste cego igual.
 
 ## Arquitetura — regras inegociáveis
 

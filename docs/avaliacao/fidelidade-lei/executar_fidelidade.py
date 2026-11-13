@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Executor da medição de fidelidade da rota de lei da Ceres (#269).
 
-Roda as 36 perguntas do conjunto escolhido (`--conjunto v1|v2`; padrão `v1`,
+Roda as 36 perguntas do conjunto escolhido (`--conjunto v1|v2|v3`; padrão `v1`,
 `perguntas-fidelidade-lei.json`; o `v2`, `perguntas-fidelidade-lei-v2.json`, é o da segunda
-medição) em dois ou mais braços, no MESMO jar (o head
+medição e o `v3`, `perguntas-fidelidade-lei-v3.json`, o da terceira) em dois ou mais braços, no MESMO jar (o head
 do PR da correção): `desligada` (flag da correção desligada, igual à `main`, o braço de referência) e
 `ligada`, mais os braços extras que a correção tiver (`--braco`). Sobe uma instância por braço em
 portas diferentes, contra um banco novo e só dele (com a base de lei copiada do banco de origem), e
@@ -446,7 +446,7 @@ def gravar_manifesto(args, conjunto, saida: Path, plano: list, registros: list, 
     for (_, braco, _), r in ultimas.items():
         contagem[braco][r["classe"]] = contagem[braco].get(r["classe"], 0) + 1
     manifesto = {
-        "regra": {"versao": comum.VERSAO_REGRA, "parametros": comum.REGRA},
+        "regra": {"versao": comum.VERSAO_REGRA_ATUAL, "parametros": comum.REGRA},
         "conjunto": {"versao": conjunto["versao"],
                      "arquivo": nome_do_conjunto(args.arquivo_conjunto),
                      "sha256": comum.sha256_arquivo(args.arquivo_conjunto),
@@ -477,8 +477,9 @@ def montar_parser() -> argparse.ArgumentParser:
                    help="braço extra, comparado ao desligada (repetível)")
     p.add_argument("--repeticoes", type=int, default=3)
     p.add_argument("--semente", type=int, default=20261112)
-    p.add_argument("--conjunto", default="v1", metavar="v1|v2|ARQUIVO",
-                   help="conjunto de perguntas (padrão: v1; o v2 é o conjunto da segunda medição)")
+    p.add_argument("--conjunto", default="v1", metavar="v1|v2|v3|ARQUIVO",
+                   help="conjunto de perguntas (padrão: v1; o v2 e o v3 são os da segunda e da terceira "
+                        "medição)")
     p.add_argument("--perguntas", default="", help="ids separados por vírgula (padrão: todos)")
     p.add_argument("--saida", type=Path, default=comum.DIR / "rodadas")
     p.add_argument("--banco", default="fidelidade_lei", help="banco novo da rodada (recriado)")
