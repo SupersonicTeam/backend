@@ -510,6 +510,27 @@ cópia; aqui, a resposta final dividida pela pontuação). Comando:
 ./mvnw test -Dtest=BancadaJuizFidelidadeManual -Dsurefire.failIfNoSpecifiedTests=false -Dspring.docker.compose.enabled=false -Dbancada.entrada=respostas.jsonl -Dbancada.saida=vereditos.jsonl -Dbancada.configuracoes=atual,justificativa
 ```
 
+**Diagnóstico do juiz e do resgate (2026-11-13, Haiku, 40 perguntas próprias e inventadas × 2; 10
+delas pedem percentual, prazo ou valor, ou têm uma exceção ou vedação como resposta; banco à parte, rede
+de casa; antes da troca da polaridade para opcional e do teto de 1.024).** Só a rota de lei, tokens
+somados de todas as chamadas dela:
+
+| Braço | Respondidas (de 80) | Vetos do juiz | Resgatadas | `NAO_ENCONTREI` | p50 / p95 | Tokens médios |
+|---|---|---|---|---|---|---|
+| Tudo desligado | 59 | – | – | 16 | 1,6 s / 2,4 s | 1.368 |
+| Camada 1 | 53 | – | – | 21 | 1,8 s / 2,8 s | 1.766 |
+| Juiz `atual` | 39 | 12 | – | 22 | 2,4 s / 4,2 s | 2.452 |
+| Juiz `atual` + resgate | 42 | 13 | 3 | 21 | 2,4 s / 4,0 s | 2.496 |
+| Juiz `justificativa` | 44 | 8 | – | 21 | 2,6 s / 4,8 s | 2.671 |
+| Juiz `justificativa` + resgate | 44 | 10 | 3 | 22 | 3,1 s / 4,9 s | 2.743 |
+
+A chamada do juiz: `atual` com p50 de 0,9 s, ~1.050 tokens de entrada e ~32 de saída;
+`justificativa` com p50 de 1,35 s, ~1.200 de entrada e ~195 de saída (máximo de 390). As 6
+resgatadas: 5 certas e a inversão acima (`atual`). **Bancada** sobre as 57 respostas aceitas do braço
+desligado: `atual` aprovou 34 e reprovou 23; `justificativa` aprovou 39, reprovou 15 e falhou em 3 (2
+cortes no teto de 512, que levaram ao de 1.024). O juiz `atual` é o mais rigoroso e o mais rápido; o
+`justificativa` veta menos e pegou a inversão em 2 de 3, ao custo de ~0,5 s e ~160 tokens de saída.
+
 **Os braços da medição:** tudo desligado (a `main`); só a camada 1
 (`AI_FIDELIDADE_LEI_HABILITADA=true`); camada 1 e juiz, só o veto (mais `AI_FIDELIDADE_LEI_JUIZ_HABILITADO=true`);
 camada 1, juiz e resgate (mais `AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO=true`). Nos dois últimos, o modo
