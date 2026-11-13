@@ -218,6 +218,23 @@ class RotaLegislacaoTest {
   }
 
   @Test
+  @DisplayName("#269: o prompt de lei pede linguagem de produtor e nao deixa completar o trecho; "
+      + "a parte fixa vem antes dos trechos")
+  void promptPedeLinguagemSimples() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(TRECHO));
+    chatModel.responderTexto("A reducao e de 60% [T1].");
+
+    rota.responder("Qual a reducao para insumos?", contexto);
+
+    String sistema = chatModel.promptsRecebidos().get(0).getSystemMessage().getText();
+    assertThat(sistema).contains("frases curtas, palavras do dia a dia",
+        "escreva o nome por extenso ao lado", "Diga so o que o trecho diz");
+    // Parte fixa (regras) antes da data e dos trechos: o cache do prefixo (#270) continua valendo.
+    assertThat(sistema.indexOf("frases curtas")).isLessThan(sistema.indexOf("Hoje e"));
+    assertThat(sistema.indexOf("Hoje e")).isLessThan(sistema.indexOf("[T1] Ficam"));
+  }
+
+  @Test
   @DisplayName("#269: sigla do glossario sem explicacao ganha a linha 'O que isso quer dizer', do "
       + "backend, sem numero nem artigo")
   void siglaSemExplicacaoGanhaLinhaDoGlossario() {

@@ -265,6 +265,10 @@ public final class PromptsCeres {
         Regras:
         - Responda em portugues do Brasil, de forma curta e direta, usando SOMENTE os trechos de \
         lei abaixo. Nao use conhecimento proprio.
+        - Escreva para quem planta e vende, nao para advogado: frases curtas, palavras do dia a \
+        dia, uma ideia por frase. Troque o juridiques pelo que a regra significa na pratica. \
+        Na primeira vez que usar uma sigla, escreva o nome por extenso ao lado. Diga so o que o \
+        trecho diz; nao complete com exemplo nem com o que parece razoavel.
         - Termine cada afirmacao com a marca do trecho que a fundamenta, exatamente como aparece: \
         [T1], [T2]... Pode combinar: [T1, T3].
         - Nao escreva numero de artigo, paragrafo, inciso nem nome de lei: a referencia e montada \

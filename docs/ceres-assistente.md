@@ -741,6 +741,16 @@ Sigla que o modelo já explicou no texto não entra; sem sigla solta, não há l
 sigla. Os itens 3 e 4 da #269 (descarte com trechos e lei do MISTO) já estavam entregues pela #258,
 #260 e #343, acima. A medição de clareza segue na régua de 8 siglas (`ClarezaTexto`).
 
+**Diretriz de linguagem no prompt de lei (#269, item 1).** `PromptsCeres.sistemaLegislacao` (e a
+variante do MISTO) pede frases curtas, palavras do dia a dia, sigla com o nome por extenso na
+primeira vez e "diga só o que o trecho diz; não complete com exemplo". Fica na parte fixa das
+regras, antes da data e dos trechos (o prefixo do cache da #270 não muda de forma). A versão com "dê
+um exemplo do campo" foi medida e descartada: o 4B inventou exemplos (trator usado, venda de milho)
+que não estavam nos trechos, e o `ValidadorNumeros` não pega isso, só número. As respostas antes e
+depois, no modelo real, estão no PR. Linguagem mais simples também deixa o modelo mais afirmativo
+sobre o que o trecho não diz: o ganho de leitura e o risco de paráfrase infiel andam juntos, e a
+conferência de fidelidade é da #268.
+
 **Percentual por extenso (#269, achado do diagnóstico).** A Lei 9.528, art. 6º, escreve a contribuição
 ao SENAR "de zero vírgula dois por cento"; a resposta certa "0,2%" caía como número sem fonte
 (`NUMERO_SEM_FONTE`, 3 de 3 repetições). O `ValidadorNumeros` agora lê o percentual por extenso
