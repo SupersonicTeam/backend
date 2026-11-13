@@ -185,6 +185,14 @@ public class AssistenteProperties implements InitializingBean {
   }
 
   /**
+   * {@code true} se o resgate da fidelidade da lei (#269) roda: a chave dele, a do juiz e a da
+   * camada 1. Sem o juiz o resgate não tem efeito.
+   */
+  public boolean resgateDaLeiAtivo() {
+    return juizDaLeiAtivo() && fidelidadeLei.getJuiz().getResgate().isEnabled();
+  }
+
+  /**
    * Custo máximo de uma pergunta (#166): as chamadas da fórmula ({@link Cota#tetoDaPergunta}) e,
    * com o juiz da lei ativo (#269), a chamada dele como parcela própria
    * ({@link Cota#tetoDoJuiz}). O juiz roda no meio da pergunta e os tokens dele entram nos da
@@ -912,12 +920,58 @@ public class AssistenteProperties implements InitializingBean {
       /** Liga o juiz ({@code AI_FIDELIDADE_LEI_JUIZ_HABILITADO}). */
       private boolean enabled;
 
+      /** O resgate pelo juiz. */
+      private Resgate resgate = new Resgate();
+
       public boolean isEnabled() {
         return enabled;
       }
 
       public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+      }
+
+      public Resgate getResgate() {
+        return resgate;
+      }
+
+      public void setResgate(Resgate resgate) {
+        this.resgate = resgate;
+      }
+
+      /**
+       * Resgate (#269): a frase que a camada 1 reprovaria por número ou polaridade (e, com
+       * {@code cobertura}, por cobertura) vai ao juiz na mesma chamada do veto, com o dispositivo
+       * citado inteiro; só o {@code SUSTENTA} de todas as frases aceita a resposta. Formato,
+       * evidência ausente e cópia não literal não têm resgate. Desligado por padrão, e sem efeito
+       * sem o juiz.
+       */
+      public static class Resgate {
+
+        /** Liga o resgate ({@code AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO}). */
+        private boolean enabled;
+
+        /**
+         * Inclui a reprovação por cobertura no resgate
+         * ({@code AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA}). Desligado: só número e polaridade.
+         */
+        private boolean cobertura;
+
+        public boolean isEnabled() {
+          return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+          this.enabled = enabled;
+        }
+
+        public boolean isCobertura() {
+          return cobertura;
+        }
+
+        public void setCobertura(boolean cobertura) {
+          this.cobertura = cobertura;
+        }
       }
     }
 

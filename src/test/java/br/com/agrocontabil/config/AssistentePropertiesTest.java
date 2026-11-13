@@ -204,4 +204,21 @@ class AssistentePropertiesTest {
     assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("app.assistente.tetos.juiz");
   }
+  @Test
+  void resgateDaFidelidadeLei() {
+    AssistenteProperties p = new AssistenteProperties();
+    AssistenteProperties.FidelidadeLei.Juiz.Resgate resgate =
+        p.getFidelidadeLei().getJuiz().getResgate();
+    assertThat(resgate.isEnabled()).isFalse();
+    assertThat(resgate.isCobertura()).isFalse();
+    resgate.setEnabled(true);
+    // O resgate so roda com o juiz, que so roda com a camada 1.
+    assertThat(p.resgateDaLeiAtivo()).isFalse();
+    p.getFidelidadeLei().getJuiz().setEnabled(true);
+    assertThat(p.resgateDaLeiAtivo()).isFalse();
+    p.getFidelidadeLei().setEnabled(true);
+    assertThat(p.resgateDaLeiAtivo()).isTrue();
+    resgate.setEnabled(false);
+    assertThat(p.resgateDaLeiAtivo()).isFalse();
+  }
 }

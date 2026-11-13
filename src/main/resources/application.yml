@@ -626,6 +626,12 @@ app:
       cobertura-minima-com-juiz: ${AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ:0.3}
       juiz:
         enabled: ${AI_FIDELIDADE_LEI_JUIZ_HABILITADO:false}
+        # Resgate: a frase reprovada em codigo por numero ou polaridade (e, com cobertura, por
+        # cobertura) vai ao juiz na mesma chamada; so o SUSTENTA de todas as frases aceita. Sem
+        # efeito sem o juiz.
+        resgate:
+          enabled: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO:false}
+          cobertura: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA:false}
     # Isolamento de recursos (issue #157). Tempo total de uma pergunta (tambem o timeout do SSE) e
     # de cada consulta de funcao ao banco (vira timeout de transacao, resolucao de segundos).
     timeout-pergunta: ${AI_TIMEOUT_PERGUNTA:5m}

@@ -41,5 +41,12 @@ public enum DesfechoFidelidadeLei {
    * cortada pelo teto ou número de vereditos diferente do de frases). Falha fecha: a resposta
    * reprova.
    */
-  REPROVADA_JUIZ_FALHA
+  REPROVADA_JUIZ_FALHA,
+  /**
+   * Resgate (#269, {@code app.assistente.fidelidade-lei.juiz.resgate.enabled}): a camada 1 reprovou
+   * ao menos uma frase por um sinal em código (número, polaridade ou, se ligado, cobertura), e o
+   * juiz respondeu {@code SUSTENTA} para todas as frases. A resposta chega ao produtor. Se o juiz não
+   * sustenta tudo, falha ou é cortado, fica o motivo da camada 1.
+   */
+  APROVADA_RESGATE_JUIZ
 }
