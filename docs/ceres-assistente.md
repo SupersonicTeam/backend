@@ -907,6 +907,35 @@ Sigla que o modelo já explicou no texto não entra; sem sigla solta, não há l
 sigla. Os itens 3 e 4 da #269 (descarte com trechos e lei do MISTO) já estavam entregues pela #258,
 #260 e #343, acima. A medição de clareza segue na régua de 8 siglas (`ClarezaTexto`).
 
+**Termos da linguagem da lei no glossário (#269, item 2).** O glossário ganhou os termos jurídicos
+que a rota de lei usa e o produtor não tem por que conhecer: **alíquota, base de cálculo, fato
+gerador, contribuinte, crédito presumido, isenção, imunidade, diferimento, responsável tributário,
+não cumulatividade e regime regular**, nessa ordem — a ordem é a frequência esperada na resposta de
+lei e é também a prioridade do teto, abaixo. Com eles, a resposta de lei termina explicando o termo
+da lei em vez de trocá-lo por uma palavra comum: o texto conferido não muda **uma palavra**, porque a
+linha é montada depois de todas as conferências. É o caminho que entrou no lugar da diretriz de
+linguagem no prompt, que a medição de 10/11 no Haiku reprovou (PR #425, 0 fiéis de 16 contra 3 de 16
+na `main`); o prompt de lei não mudou.
+
+Nenhum deles é **sigla**, de propósito: assim ficam fora da acomodação "sigla = nome por extenso" da
+conferência de fidelidade (`ConferenciaFidelidadeLei.raizesDasCopias` só lê siglas) e da régua de
+clareza (`ClarezaTexto`, 8 siglas fixas). Também entram com `emLinha: false`, então a composição das
+respostas de **dados** não muda. Efeito nulo na cobertura, no número, na polaridade e no juiz da
+fidelidade.
+
+**Teto da linha (`LinhaGlossario.MAXIMO_COMUNS` = 3).** A linha explica **no máximo três termos
+comuns** por resposta, na ordem em que o `aExplicar` os devolve (os que o produtor leu no texto
+primeiro, na ordem curada do glossário; os que só aparecem nas definições, depois). **A sigla não
+entra no teto:** ela já era toda explicada antes dele, e cortá-la seria regressão na régua de clareza
+e no `RotaLegislacaoTest`. Por isso a linha ainda pode passar de três itens quando a resposta traz
+muitas siglas ou quando a definição de uma puxa outras (a do IBS cita o ICMS e o ISS).
+
+A seção "O QUE QUER DIZER" do **atalho da reforma tributária** (#347) monta a lista pelo mesmo
+`aExplicar`, sem o teto (é texto de referência, não uma linha ao fim de uma resposta): ela passou de
+13 para 18 itens, de ~1,2 mil para 1.685 caracteres, num texto de 5.073. Se o crescimento não for
+desejado ali, o teto também pode valer para ela — decisão à parte, porque o atalho é um dos três
+textos que a tela mostra.
+
 **Percentual por extenso (#269, achado do diagnóstico).** A Lei 9.528, art. 6º, escreve a contribuição
 ao SENAR "de zero vírgula dois por cento"; a resposta certa "0,2%" caía como número sem fonte
 (`NUMERO_SEM_FONTE`, 3 de 3 repetições). O `ValidadorNumeros` agora lê o percentual por extenso
