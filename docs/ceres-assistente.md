@@ -473,8 +473,8 @@ adaptativo do provedor com esforço `low`, `medium` e `high`, só na chamada do 
 `AI_CHAT_PROVIDER=anthropic`; com o juiz ativo noutro provedor a subida falha). O Spring AI 1.1.8 não o
 liga pelas opções: só conhece `thinking` `enabled` (com `budget_tokens`, que o Haiku 5.5 recusa) e
 `disabled`, não tem `output_config`, e o 1.1.8 é a última 1.1.x (a 2.x exige o Boot 4). Por isso, a
-opção A (escolha da orquestração em 13/11, trocável pela B, cliente próprio com o SDK oficial, se o
-Murillo preferir): o juiz marca a chamada com o cabeçalho `X-AgroConIA-Raciocinio` (o esforço), pelas
+opção A (escolha da orquestração em 13/11, confirmada pelo Murillo; a B, cliente próprio com o SDK
+oficial, foi descartada: abriria um segundo caminho até a API, fora do disjuntor): o juiz marca a chamada com o cabeçalho `X-AgroConIA-Raciocinio` (o esforço), pelas
 `httpHeaders` por chamada das opções da Anthropic (`ModeloLinguagem.comRaciocinio`), e o
 `llm/InterceptorRaciocinioAnthropic`, posto no `RestClient.Builder` do Boot que o Spring AI usa
 (`AssistenteConfig`), age **só** na requisição marcada e ao host da API da Anthropic: tira o cabeçalho,
