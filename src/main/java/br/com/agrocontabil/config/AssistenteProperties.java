@@ -203,7 +203,22 @@ public class AssistenteProperties implements InitializingBean {
    */
   public long tetoDaPergunta(double fator) {
     long teto = cota.tetoDaPergunta(tetos, fator);
-    return juizDaLeiAtivo() ? teto + cota.tetoDoJuiz(tetos, fator) : teto;
+    return juizDaLeiAtivo() ? teto + cota.tetoDoJuiz(tetoSaidaDoJuiz(), fator) : teto;
+  }
+
+  /** Teto de saída do juiz da lei (#269) no modo configurado. */
+  public int tetoSaidaDoJuiz() {
+    return tetoSaidaDoJuiz(fidelidadeLei.getJuiz().getModo());
+  }
+
+  /**
+   * Teto de saída do juiz da lei (#269) num modo: {@code tetos.juiz} no {@code VEREDITO},
+   * {@code tetos.juiz-com-justificativa} no {@code JUSTIFICATIVA}.
+   */
+  public int tetoSaidaDoJuiz(FidelidadeLei.Juiz.Modo modo) {
+    return modo == FidelidadeLei.Juiz.Modo.JUSTIFICATIVA
+        ? tetos.getJuizComJustificativa()
+        : tetos.getJuiz();
   }
 
   public FidelidadeLei getFidelidadeLei() {
@@ -498,8 +513,8 @@ public class AssistenteProperties implements InitializingBean {
      * e o teto de saída próprio ({@code app.assistente.tetos.juiz}). Entra na reserva da pergunta
      * só com o juiz ativo ({@code AssistenteProperties.tetoDaPergunta}).
      */
-    public long tetoDoJuiz(Tetos tetos, double fator) {
-      return creditos(tetoTokensEntradaPorChamada, tetos.getJuiz(), fator);
+    public long tetoDoJuiz(int tetoSaida, double fator) {
+      return creditos(tetoTokensEntradaPorChamada, tetoSaida, fator);
     }
 
     /**
@@ -705,6 +720,13 @@ public class AssistenteProperties implements InitializingBean {
     private int juiz = 128;
 
     /**
+     * Juiz no modo {@code JUSTIFICATIVA} (#269, configuração (d)): uma justificativa de até ~20
+     * palavras antes de cada veredito, cerca de 40 tokens por frase; 512 cabe ~10 frases. Substitui
+     * o {@link #juiz} nesse modo, também na reserva da pergunta.
+     */
+    private int juizComJustificativa = 512;
+
+    /**
      * Janela de contexto do modelo (o {@code num-ctx} do Ollama, lido da mesma propriedade). Só
      * para a validação: nenhum teto pode comer mais da metade dela, que é do prompt.
      */
@@ -720,6 +742,7 @@ public class AssistenteProperties implements InitializingBean {
       exigirTeto("classificacao", classificacao);
       exigirTeto("legislacao", legislacao);
       exigirTeto("juiz", juiz);
+      exigirTeto("juiz-com-justificativa", juizComJustificativa);
     }
 
     private void exigirTeto(String nome, int valor) {
@@ -759,6 +782,14 @@ public class AssistenteProperties implements InitializingBean {
 
     public int getJuiz() {
       return juiz;
+    }
+
+    public int getJuizComJustificativa() {
+      return juizComJustificativa;
+    }
+
+    public void setJuizComJustificativa(int juizComJustificativa) {
+      this.juizComJustificativa = juizComJustificativa;
     }
 
     public void setJuiz(int juiz) {
@@ -922,6 +953,31 @@ public class AssistenteProperties implements InitializingBean {
 
       /** O resgate pelo juiz. */
       private Resgate resgate = new Resgate();
+
+      /** Como o juiz responde ({@code AI_FIDELIDADE_LEI_JUIZ_MODO}); o padrão é o de antes. */
+      private Modo modo = Modo.VEREDITO;
+
+      /**
+       * Formato da resposta do juiz (#269). O raciocínio do provedor (configurações (b) e (c)) não
+       * está aqui: o Spring AI 1.1.8 não o liga por chamada.
+       */
+      public enum Modo {
+        /** Só o veredito de cada frase ({@code tetos.juiz}): o juiz da camada 2 original. */
+        VEREDITO,
+        /**
+         * Uma justificativa curta antes de cada veredito, sem raciocínio do provedor
+         * ({@code tetos.juiz-com-justificativa}).
+         */
+        JUSTIFICATIVA
+      }
+
+      public Modo getModo() {
+        return modo;
+      }
+
+      public void setModo(Modo modo) {
+        this.modo = modo;
+      }
 
       public boolean isEnabled() {
         return enabled;

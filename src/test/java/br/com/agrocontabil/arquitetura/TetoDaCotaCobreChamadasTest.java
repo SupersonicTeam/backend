@@ -97,8 +97,12 @@ class TetoDaCotaCobreChamadasTest {
     assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(31_744);
     propriedades.getFidelidadeLei().getJuiz().setEnabled(true);
     assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(40_448);
-    assertThat(propriedades.getCota().tetoDoJuiz(propriedades.getTetos(), 2.0))
+    assertThat(propriedades.getCota().tetoDoJuiz(propriedades.getTetos().getJuiz(), 2.0))
         .isEqualTo(17_408);
+    // Modo JUSTIFICATIVA: a parcela do juiz usa o teto dele (512): 8.192 + 512 x 4 = 10.240.
+    propriedades.getFidelidadeLei().getJuiz()
+        .setModo(AssistenteProperties.FidelidadeLei.Juiz.Modo.JUSTIFICATIVA);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(41_984);
   }
 
   @Test

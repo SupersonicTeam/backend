@@ -151,4 +151,65 @@ class JuizFidelidadeLeiTest {
     assertThat(chatModel.promptsRecebidos().get(0).getUserMessage().getText())
         .doesNotContain("123.456.789-09");
   }
+  @Test
+  @DisplayName("julgamento detalhado: o motivo da falha separa formato, contagem, corte e erro")
+  void julgamentoDetalhado() {
+    AssistenteProperties.FidelidadeLei.Juiz.Modo veredito =
+        AssistenteProperties.FidelidadeLei.Juiz.Modo.VEREDITO;
+    chatModel.responderTexto("{\"vereditos\": [\"SUSTENTA\", \"CONTRADIZ\"]}");
+    JuizFidelidadeLei.Julgamento j = juiz.avaliar(DUAS, contexto, veredito);
+    assertThat(j.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_JUIZ_CONTRADIZ);
+    assertThat(j.falha()).isNull();
+    assertThat(j.vereditos()).containsExactly(JuizFidelidadeLei.Veredito.SUSTENTA,
+        JuizFidelidadeLei.Veredito.CONTRADIZ);
+    assertThat(j.cru()).contains("CONTRADIZ");
+
+    chatModel.responderTexto("sem json");
+    assertThat(juiz.avaliar(DUAS, contexto, veredito).falha())
+        .isEqualTo(JuizFidelidadeLei.Falha.FORMATO);
+    chatModel.responderTexto("{\"vereditos\": [\"SUSTENTA\"]}");
+    assertThat(juiz.avaliar(DUAS, contexto, veredito).falha())
+        .isEqualTo(JuizFidelidadeLei.Falha.CONTAGEM_DIFERENTE);
+    chatModel.responderEmSequencia(new ChatResponse(List.of(new Generation(
+        new AssistantMessage("{\"vereditos\": [\"SUSTENTA\", \"SUSTENTA\"]}"),
+        ChatGenerationMetadata.builder().finishReason("length").build()))));
+    JuizFidelidadeLei.Julgamento cortada = juiz.avaliar(DUAS, contexto, veredito);
+    assertThat(cortada.cortadaPeloTeto()).isTrue();
+    assertThat(cortada.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_JUIZ_FALHA);
+    chatModel.falharCom(new IllegalStateException("fora do ar"));
+    assertThat(juiz.avaliar(DUAS, contexto, veredito).falha())
+        .isEqualTo(JuizFidelidadeLei.Falha.ERRO_MODELO);
+  }
+
+  @Test
+  @DisplayName("modo JUSTIFICATIVA: outra instrução, teto próprio e o veredito lido do objeto")
+  void modoJustificativa() {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    propriedades.getFidelidadeLei().getJuiz()
+        .setModo(AssistenteProperties.FidelidadeLei.Juiz.Modo.JUSTIFICATIVA);
+    StaticListableBeanFactory beans = new StaticListableBeanFactory();
+    beans.addBean("chatModel", chatModel);
+    JuizFidelidadeLei comJustificativa = new JuizFidelidadeLei(
+        new ModeloLinguagem(beans.getBeanProvider(ChatModel.class), "ollama",
+            new DisponibilidadeModelo(Duration.ofSeconds(30), System::nanoTime)), propriedades);
+    chatModel.responderTexto("{\"vereditos\": [{\"justificativa\": \"o caput reduz em 60%\", "
+        + "\"veredito\": \"SUSTENTA\"}, {\"justificativa\": \"o § 1º cita fertilizantes\", "
+        + "\"veredito\": \"Sustenta\"}]}");
+
+    assertThat(comJustificativa.julgar(DUAS, contexto)).isNull();
+
+    Prompt prompt = chatModel.promptsRecebidos().get(0);
+    assertThat(prompt.getSystemMessage().getText())
+        .isEqualTo(PromptsCeres.JUIZ_FIDELIDADE_COM_JUSTIFICATIVA)
+        .contains("justificativa");
+    assertThat(prompt.getOptions().getMaxTokens()).isEqualTo(512);
+    // Os criterios sao os mesmos nos dois modos; so o formato da resposta muda.
+    assertThat(PromptsCeres.JUIZ_FIDELIDADE_COM_JUSTIFICATIVA).startsWith(PromptsCeres
+        .JUIZ_FIDELIDADE.substring(0, PromptsCeres.JUIZ_FIDELIDADE.indexOf("Responda somente")));
+
+    chatModel.responderTexto("{\"vereditos\": [{\"justificativa\": \"ok\"}, "
+        + "{\"veredito\": \"SUSTENTA\"}]}");
+    assertThat(comJustificativa.julgar(DUAS, contexto))
+        .isEqualTo(DesfechoFidelidadeLei.REPROVADA_JUIZ_FALHA);
+  }
 }
