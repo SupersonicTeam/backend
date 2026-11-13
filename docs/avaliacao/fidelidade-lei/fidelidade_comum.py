@@ -24,10 +24,13 @@ VERSAO_CONJUNTO_V3 = "2026-11-13.v3"
 CONJUNTOS = {"v1": CONJUNTO, "v2": CONJUNTO_V2, "v3": CONJUNTO_V3}
 #: Versão da regra do v1 e do v2 (rodadas já feitas): os conjuntos deles e os testes deles a guardam.
 VERSAO_REGRA = "2026-11-12.4"
-#: Versão da regra em vigor para as rodadas novas (v3): as margens são as mesmas; sobe só porque a
-#: regra passa a prever o quarto braço e o conjunto v3 (regra, seção 10). Mudar uma margem em `REGRA`
-#: ou o texto da regra sem subir esta versão invalida a rodada.
-VERSAO_REGRA_ATUAL = "2026-11-13.5"
+#: Versão da regra com que o conjunto v3 foi escrito e congelado (campo `regra` do arquivo dele). A regra
+#: subiu depois, sem mudar o conjunto (regra, seção 10).
+VERSAO_REGRA_DO_V3 = "2026-11-13.5"
+#: Versão da regra em vigor para as rodadas novas (v3): as margens são as mesmas; sobe só porque os
+#: braços da terceira medição mudaram (regra, seção 10). Mudar uma margem em `REGRA` ou o texto da
+#: regra sem subir esta versão invalida a rodada.
+VERSAO_REGRA_ATUAL = "2026-11-13.6"
 
 #: O braço de referência: todo braço comparado é medido contra ele (regra, seção 1).
 BASE = "desligada"
