@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
  * do {@link FundamentoRetencao} (RN009) e as do {@link TextosDoBackend} (#283). Um lugar só para a
  * busca, o registro na auditoria e a junção sem repetir referência.
  */
-final class CitacoesFixas {
+public final class CitacoesFixas {
 
   private static final Logger log = LoggerFactory.getLogger(CitacoesFixas.class);
 
@@ -33,7 +33,8 @@ final class CitacoesFixas {
    * @param assunto      para o log
    * @return citações na ordem pedida (o que falta na base é omitido)
    */
-  static List<CitacaoLegal> buscar(BuscaTextualLegislacaoService busca, List<String> dispositivos,
+  public static List<CitacaoLegal> buscar(BuscaTextualLegislacaoService busca,
+      List<String> dispositivos,
       ContextoAssistente contexto, String assunto) {
     if (dispositivos.isEmpty()) {
       return List.of();
@@ -54,7 +55,7 @@ final class CitacoesFixas {
   }
 
   /** Citações da rota primeiro, sem repetir a mesma referência. */
-  static List<CitacaoLegal> juntar(List<CitacaoLegal> daRota, List<CitacaoLegal> fixas) {
+  public static List<CitacaoLegal> juntar(List<CitacaoLegal> daRota, List<CitacaoLegal> fixas) {
     Map<String, CitacaoLegal> porReferencia = new LinkedHashMap<>();
     daRota.forEach(c -> porReferencia.putIfAbsent(c.referencia(), c));
     fixas.forEach(c -> porReferencia.putIfAbsent(c.referencia(), c));

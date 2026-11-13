@@ -11,7 +11,7 @@ import java.util.List;
  * nunca pelo modelo: a definição vem do glossário revisado por humano, sem número nem artigo, então
  * a linha não vira fonte de número nem muda a lista de citações. Função pura, sem Spring.
  */
-final class LinhaGlossario {
+public final class LinhaGlossario {
 
   /** Título da linha. */
   static final String TITULO = "O que isso quer dizer:";
@@ -50,7 +50,7 @@ final class LinhaGlossario {
   }
 
   /** O texto seguido da linha, em outro parágrafo; o próprio texto se não há o que explicar. */
-  static String acrescentadaA(String texto) {
+  public static String acrescentadaA(String texto) {
     String linha = para(texto);
     return linha.isEmpty() ? texto : texto + "\n\n" + linha;
   }

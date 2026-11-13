@@ -29,17 +29,21 @@ import java.util.stream.Collectors;
  * algoritmo está especificado no Javadoc do {@link String}, então a mesma mensagem dá o mesmo
  * texto em qualquer JVM, sem {@code Random} nem relógio.
  *
- * <p><strong>Histórico.</strong> Quando a continuidade da conversa entrar, o SEGUIMENTO e as
- * saudações ambíguas ("e aí", "como está", "está aí", "tá aí", "tudo bem") só valem sem histórico
- * válido: com histórico, elas dependem da mensagem anterior.
+ * <p><strong>Histórico (#499).</strong> Com a continuidade, o SEGUIMENTO e as saudações ambíguas
+ * ("e aí", "como está", "está aí", "tá aí", "tudo bem") só valem sem histórico válido
+ * ({@link #dependeDoHistorico}): com histórico, elas dependem da mensagem anterior. O SEGUIMENTO
+ * reconhece a mesma lista de confirmação da continuidade ("você tem certeza disso?", "confere
+ * isso", "repete isso"...) e, com a continuidade ligada, usa o texto
+ * {@link #SEGUIMENTO_CONTINUIDADE}, porque o atual ("eu não leio as mensagens anteriores") ficaria
+ * falso.
  */
 public final class ConversaLeve {
 
   /** O que a mensagem pede, na ordem de precedência quando ela mistura tipos (o primeiro vence). */
-  enum Tipo { DESPEDIDA, AGRADECIMENTO, SEGUIMENTO, APRESENTACAO, SAUDACAO, RECONHECIMENTO }
+  public enum Tipo { DESPEDIDA, AGRADECIMENTO, SEGUIMENTO, APRESENTACAO, SAUDACAO, RECONHECIMENTO }
 
   /** Uma mensagem reconhecida: o tipo que vence e o texto da resposta. */
-  record Resposta(Tipo tipo, String texto) {}
+  public record Resposta(Tipo tipo, String texto) {}
 
   static final int MAXIMO_PALAVRAS = 12;
 
@@ -80,10 +84,12 @@ public final class ConversaLeve {
       "preciso de ajuda", "tenho uma duvida", "tenho uma pergunta", "uma duvida",
       "posso fazer uma pergunta", "posso perguntar");
 
-  private static final List<String> SEGUIMENTOS = List.of("tem certeza", "certeza", "serio",
-      "e serio", "por que", "porque", "como assim", "explica melhor", "explica de novo",
-      "explique melhor", "repete", "repita", "de novo", "confere de novo", "confira de novo",
-      "confirma", "e entao", "e agora", "nao entendi");
+  private static final List<String> SEGUIMENTOS = seguimentos();
+
+  /** Saudações ambíguas: com histórico, dependem da mensagem anterior (#499). */
+  private static final Set<String> AMBIGUAS = normalizadas(List.of("e ai", "eai", "como esta",
+      "como voce esta", "como vc esta", "esta ai", "ta ai", "voce esta ai", "vc esta ai",
+      "tudo bem"));
 
   /** Reconhecimento que, com "?", pede confirmação da resposta anterior: seguimento. */
   private static final Set<String> CONFIRMACAO_COM_INTERROGACAO =
@@ -131,6 +137,15 @@ public final class ConversaLeve {
   static final String SEGUIMENTO = "Por enquanto eu não leio as mensagens anteriores da"
       + " conversa, então não sei a que você se refere. Escreva a pergunta completa que eu confiro"
       + " de novo. Por exemplo:\n- Tenho nota rejeitada?\n- Ficou alguma guia sem pagar?";
+
+  /**
+   * SEGUIMENTO com a continuidade ligada (#499): sem uma resposta anterior que dê para conferir
+   * (sem histórico válido, vencido ou a última mensagem sem {@code turno}).
+   */
+  public static final String SEGUIMENTO_CONTINUIDADE = "Não consegui ligar esta mensagem a uma"
+      + " resposta anterior que eu possa conferir. A conversa vale por 30 minutos depois de cada"
+      + " pergunta. Escreva a pergunta completa que eu confiro de novo. Por exemplo:\n- Tenho nota"
+      + " rejeitada?\n- Ficou alguma guia sem pagar?";
 
   static final String BOA_NOITE_SOZINHO = "Boa noite! Se precisar de algo, é só perguntar.";
 
@@ -183,7 +198,48 @@ public final class ConversaLeve {
    * @param pergunta mensagem do usuário
    * @return o tipo e o texto, ou vazio (a mensagem segue o fluxo normal)
    */
-  static Optional<Resposta> reconhecer(String pergunta) {
+  public static Optional<Resposta> reconhecer(String pergunta) {
+    return reconhecer(pergunta, false);
+  }
+
+  /**
+   * A resposta da conversa leve; com a continuidade ligada, o SEGUIMENTO usa o
+   * {@link #SEGUIMENTO_CONTINUIDADE} (#499).
+   *
+   * @param pergunta     mensagem do usuário
+   * @param continuidade continuidade ligada
+   * @return o tipo e o texto, ou vazio
+   */
+  public static Optional<Resposta> reconhecer(String pergunta, boolean continuidade) {
+    Optional<Resposta> resposta = reconhecerSemHistorico(pergunta);
+    if (continuidade && resposta.isPresent() && resposta.get().tipo() == Tipo.SEGUIMENTO) {
+      String texto = resposta.get().texto().replace(SEGUIMENTO, SEGUIMENTO_CONTINUIDADE);
+      return Optional.of(new Resposta(Tipo.SEGUIMENTO, texto));
+    }
+    return resposta;
+  }
+
+  /**
+   * {@code true} se a conversa leve depende da mensagem anterior (#499): SEGUIMENTO ou saudação
+   * ambígua. Com histórico válido, ela segue a continuidade em vez da resposta fixa.
+   *
+   * @param pergunta mensagem do usuário
+   * @return se a mensagem é conversa leve que depende do histórico
+   */
+  public static boolean dependeDoHistorico(String pergunta) {
+    Optional<Resposta> resposta = reconhecerSemHistorico(pergunta);
+    if (resposta.isEmpty()) {
+      return false;
+    }
+    if (resposta.get().tipo() == Tipo.SEGUIMENTO) {
+      return true;
+    }
+    String chave = VOCATIVO.matcher(juntarRepetidas(RegrasClassificacao.normalizar(pergunta)))
+        .replaceAll(" ").replaceAll("\\s+", " ").strip();
+    return AMBIGUAS.contains(chave);
+  }
+
+  private static Optional<Resposta> reconhecerSemHistorico(String pergunta) {
     if (pergunta == null || pergunta.isBlank()) {
       return Optional.empty();
     }
@@ -296,7 +352,7 @@ public final class ConversaLeve {
    * O texto termina em "?", ignorando o que vem depois que não é letra nem dígito ("obrigado?!",
    * "tchau? 😊").
    */
-  static boolean terminaEmInterrogacao(String pergunta) {
+  public static boolean terminaEmInterrogacao(String pergunta) {
     for (int i = pergunta.length(); i > 0; ) {
       int c = pergunta.codePointBefore(i);
       if (c == '?') {
@@ -386,6 +442,30 @@ public final class ConversaLeve {
       return "Boa noite!";
     }
     return "Olá!";
+  }
+
+  /**
+   * As expressões do SEGUIMENTO: as de sempre e a lista de confirmação da continuidade (#499),
+   * inclusive todas as formas de {@code (voce |vc )?(tem|tens) (certeza|ctz)( disso| mesmo|
+   * absoluta)?}.
+   */
+  private static List<String> seguimentos() {
+    List<String> lista = new ArrayList<>(List.of("certeza", "certeza mesmo", "serio", "e serio",
+        "por que", "porque", "como assim", "explica melhor", "explica de novo",
+        "explique melhor", "repete", "repita", "repete isso", "de novo", "confere",
+        "confere isso", "confere de novo", "confira de novo", "verifica de novo",
+        "verifique de novo", "confirma", "confirme", "confirma isso", "ta certo isso",
+        "e entao", "e agora", "nao entendi"));
+    for (String sujeito : List.of("", "voce ", "vc ")) {
+      for (String verbo : List.of("tem", "tens")) {
+        for (String certeza : List.of("certeza", "ctz")) {
+          for (String reforco : List.of("", " disso", " mesmo", " absoluta")) {
+            lista.add(sujeito + verbo + " " + certeza + reforco);
+          }
+        }
+      }
+    }
+    return List.copyOf(lista);
   }
 
   private static Map<String, Tipo> expressoes() {

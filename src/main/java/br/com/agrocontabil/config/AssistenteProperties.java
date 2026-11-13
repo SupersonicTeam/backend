@@ -84,6 +84,9 @@ public class AssistenteProperties implements InitializingBean {
   /** Teto de tokens gerados por tipo de chamada ao modelo (#270). */
   private Tetos tetos = new Tetos();
 
+  /** Continuidade da conversa (#499), atrás da flag. */
+  private Continuidade continuidade = new Continuidade();
+
   /**
    * Recusa valores fora de faixa na subida, em vez de descobrir o problema no primeiro health.
    *
@@ -146,7 +149,9 @@ public class AssistenteProperties implements InitializingBean {
           + cota.getTetoTokensEntradaPorChamada() + ") deve ser >= app.assistente.tetos.contexto ("
           + tetos.getContexto() + ")");
     }
-    long teto = tetoDaPergunta(cota.maiorFator());
+    // O caminho mais caro (com reescrita, #499), com ou sem a continuidade ligada, e o juiz da
+    // lei (#269) quando ele pode rodar.
+    long teto = tetoDaPergunta(cota.maiorFator(), CaminhoCota.REESCRITA);
     long menorPlano = Math.min(
         cota.getCreditosPorSemanaProdutor(), cota.getCreditosPorSemanaEscritorio());
     if (cota.isHabilitada() && teto > menorPlano) {
@@ -202,8 +207,23 @@ public class AssistenteProperties implements InitializingBean {
    * @return créditos
    */
   public long tetoDaPergunta(double fator) {
-    long teto = cota.tetoDaPergunta(tetos, fator);
-    return juizDaLeiPodeRodar() ? teto + cota.tetoDoJuiz(tetoSaidaDoJuiz(), fator) : teto;
+    return tetoDaPergunta(fator, CaminhoCota.NORMAL);
+  }
+
+  /**
+   * Custo máximo de uma pergunta pelo caminho dela (#499), com a parcela do juiz da lei (#269)
+   * quando ele pode rodar. Todo caminho que chama o modelo pode passar uma vez pela rota de lei (a
+   * pergunta comum, a concordância da reconferência, o caminho depois da reescrita), e é nela que
+   * o juiz roda; o caminho sem modelo não reserva teto (paga a leitura, #511).
+   *
+   * @param fator   fator de custo do modelo
+   * @param caminho caminho da pergunta
+   * @return créditos
+   */
+  public long tetoDaPergunta(double fator, CaminhoCota caminho) {
+    long teto = cota.tetoDaPergunta(tetos, fator, caminho);
+    return juizDaLeiPodeRodar() && caminho != CaminhoCota.SEM_MODELO
+        ? teto + cota.tetoDoJuiz(tetoSaidaDoJuiz(), fator) : teto;
   }
 
   /**
@@ -248,6 +268,33 @@ public class AssistenteProperties implements InitializingBean {
 
   public void setExplicacao(Explicacao explicacao) {
     this.explicacao = explicacao;
+  }
+
+  public Continuidade getContinuidade() {
+    return continuidade;
+  }
+
+  public void setContinuidade(Continuidade continuidade) {
+    this.continuidade = continuidade;
+  }
+
+  /**
+   * Continuidade da conversa (#499): o histórico assinado das últimas trocas serve à reescrita, à
+   * autocorreção dos dados e à reconferência da lei. Desligada (padrão), o servidor ignora o
+   * {@code historico} e não emite {@code turno}: prompts e JSON de antes.
+   */
+  public static class Continuidade {
+
+    /** Liga a continuidade para todos os produtores ({@code AI_CONTINUIDADE_HABILITADA}). */
+    private boolean habilitada;
+
+    public boolean isHabilitada() {
+      return habilitada;
+    }
+
+    public void setHabilitada(boolean habilitada) {
+      this.habilitada = habilitada;
+    }
   }
 
   public Tetos getTetos() {
@@ -517,8 +564,21 @@ public class AssistenteProperties implements InitializingBean {
      * dele.
      */
     public long tetoDaPergunta(Tetos tetos, double fator) {
-      long saida = (long) tetos.getClassificacao() + tetos.getFuncoes() + tetos.getLegislacao();
-      return creditos(CHAMADAS_POR_PERGUNTA * tetoTokensEntradaPorChamada, saida, fator);
+      return tetoDaPergunta(tetos, fator, CaminhoCota.NORMAL);
+    }
+
+    /**
+     * Custo máximo de uma pergunta por caminho (#499): as chamadas do caminho, cada uma com o teto
+     * de entrada, e a soma dos tetos de saída delas ({@link CaminhoCota#saida}).
+     *
+     * @param tetos   tetos por tipo de chamada
+     * @param fator   fator do modelo
+     * @param caminho caminho da pergunta
+     * @return créditos reservados
+     */
+    public long tetoDaPergunta(Tetos tetos, double fator, CaminhoCota caminho) {
+      return creditos((long) caminho.chamadas() * tetoTokensEntradaPorChamada,
+          caminho.saida(tetos), fator);
     }
 
     /**
@@ -727,6 +787,17 @@ public class AssistenteProperties implements InitializingBean {
     private int legislacao = 1024;
 
     /**
+     * Reescrita da continuidade (#499): JSON com a pergunta completa, até 300 caracteres.
+     */
+    private int reescrita = 192;
+
+    /**
+     * Reconferência de lei da continuidade (#499): JSON com o veredito e até 3 fundamentos ou 2
+     * correções, cada um com uma citação de até 40 palavras.
+     */
+    private int reconferencia = 1024;
+
+    /**
      * Juiz da fidelidade da lei (#269, camada 2): um veredito curto por frase em JSON. Entra na
      * reserva da pergunta só com o juiz ativo ({@link Cota#tetoDoJuiz}).
      */
@@ -762,6 +833,8 @@ public class AssistenteProperties implements InitializingBean {
       exigirTeto("explicacao", explicacao);
       exigirTeto("classificacao", classificacao);
       exigirTeto("legislacao", legislacao);
+      exigirTeto("reescrita", reescrita);
+      exigirTeto("reconferencia", reconferencia);
       exigirTeto("juiz", juiz);
       exigirTeto("juiz-com-justificativa", juizComJustificativa);
       exigirTeto("juiz-com-raciocinio", juizComRaciocinio);
@@ -828,6 +901,22 @@ public class AssistenteProperties implements InitializingBean {
 
     public void setLegislacao(int legislacao) {
       this.legislacao = legislacao;
+    }
+
+    public int getReescrita() {
+      return reescrita;
+    }
+
+    public void setReescrita(int reescrita) {
+      this.reescrita = reescrita;
+    }
+
+    public int getReconferencia() {
+      return reconferencia;
+    }
+
+    public void setReconferencia(int reconferencia) {
+      this.reconferencia = reconferencia;
     }
 
     public int getContexto() {

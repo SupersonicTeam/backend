@@ -1,6 +1,8 @@
 package br.com.agrocontabil.config.demonstracao;
 
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
+import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.config.CaminhoCota;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.TipoTitularCota;
 import br.com.agrocontabil.model.UsoSemanalAssistente;
@@ -60,11 +62,14 @@ public class CotaDemonstracaoCeres {
   private final CotaUsoAssistenteService cotaService;
   private final ModeloLinguagem modelo;
   private final Clock clock;
+  private final boolean continuidade;
 
   /** Construído pelo Spring. */
   public CotaDemonstracaoCeres(ProdutorRepository produtorRepository,
       UsoSemanalAssistenteRepository usoRepository, PlanoUsoProvider planoProvider,
-      CotaUsoAssistenteService cotaService, ModeloLinguagem modelo, Clock clock) {
+      CotaUsoAssistenteService cotaService, ModeloLinguagem modelo, Clock clock,
+      AssistenteProperties propriedades) {
+    this.continuidade = propriedades.getContinuidade().isHabilitada();
     this.produtorRepository = produtorRepository;
     this.usoRepository = usoRepository;
     this.planoProvider = planoProvider;
@@ -97,14 +102,28 @@ public class CotaDemonstracaoCeres {
         .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
     long limite = planoProvider.planoDe(TipoTitularCota.PRODUTOR, produtor.get().getId())
         .creditosPorSemana();
-    long teto = cotaService.tetoDaPergunta(modelo.identificacao());
+    // Com a continuidade ligada (#499), o teto e o da pergunta com reescrita, o mais caro: sem
+    // isso, a conta "cota no fim" receberia 429 na primeira reescrita.
+    long tetoComum = cotaService.tetoDaPergunta(modelo.identificacao());
+    long teto = continuidade
+        ? cotaService.tetoDaPergunta(modelo.identificacao(), CaminhoCota.REESCRITA) : tetoComum;
     long alvo = Math.max(0, limite - teto - FOLGA_LEITURAS);
+    long alvoAntigo = Math.max(0, limite - tetoComum - FOLGA_LEITURAS);
 
     UsoSemanalAssistenteId id =
         new UsoSemanalAssistenteId(TipoTitularCota.PRODUTOR, produtor.get().getId(), semana);
     UsoSemanalAssistente uso = usoRepository.findById(id).orElseGet(() -> UsoSemanalAssistente
         .builder().id(id).build());
-    if (uso.getCreditosConsumidos() < alvo) {
+    long consumidos = uso.getCreditosConsumidos();
+    if (continuidade && alvo < alvoAntigo && consumidos <= alvoAntigo
+        && consumidos >= alvoAntigo - FOLGA_LEITURAS) {
+      // Semana preparada com o teto de antes da continuidade: passa ao alvo novo. So o valor que
+      // o proprio cenario gravou desce (ou o de antes da #511, convertido x 1000 pelo changeSet
+      // 0060, que cai nessa faixa); consumo real nunca e devolvido.
+      uso.setCreditosConsumidos(alvo);
+      uso.setAtualizadoEm(agora);
+      usoRepository.save(uso);
+    } else if (uso.getCreditosConsumidos() < alvo) {
       uso.setCreditosConsumidos(alvo);
       // Perguntas e tokens de uma semana movimentada: a tela de uso mostra o histórico coerente.
       uso.setPerguntas(Math.max(uso.getPerguntas(), 27));

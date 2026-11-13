@@ -298,6 +298,49 @@ export async function perguntarEmStream(
 
 ---
 
+## 4a. Continuidade da conversa (#499)
+
+Atrás da flag `AI_CONTINUIDADE_HABILITADA` do backend, **desligada por padrão**. Desligada, nada
+muda: o `historico` é ignorado e a resposta não traz os campos novos. Ligada, vale para todo
+produtor.
+
+**Resposta** (`POST /chat` e evento `resposta` do SSE), dois campos novos, **fora do JSON quando
+nulos**:
+
+- `perguntaInterpretada`: a pergunta que a Ceres considerou, quando a continuidade a mudou ("e
+  algum crédito?" → "tenho algum crédito?"; "tem certeza?" → a pergunta anterior).
+- `turno`: `{pergunta, resposta, assinatura}`. Guarde **exatamente como veio** e devolva no
+  `historico` da próxima pergunta. Não há `turno` em conversa leve, recusa, fora de escopo,
+  fallback, erro, pergunta cancelada e falha da reexecução. Nos textos fixos de lei o `turno` é o
+  da resposta de origem (os mesmos bytes): o frontend junta os repetidos.
+
+**Requisição:**
+
+```json
+{
+  "pergunta": "tem certeza?",
+  "historico": [ { "pergunta": "...", "resposta": "...", "assinatura": "v1...." } ],
+  "ultimaRespostaSemTurno": false
+}
+```
+
+- `historico`: opcional, **até 3 itens**, do mais antigo para o mais recente, cada um igual ao
+  `turno` recebido. Mais de 3 → 400 de corpo ilegível; item nulo ou vazio → 400
+  `VALIDATION_ERROR` com `field` `historico[i]` (ou `.pergunta`, `.resposta`, `.assinatura`), sem
+  `rejectedValue`. Tamanhos: pergunta até 1000, resposta até 6000, assinatura até 2048.
+- `ultimaRespostaSemTurno` (padrão `false`): mande `true` quando a **última mensagem da Ceres na
+  tela não trouxe `turno`**. Aí "tem certeza?" e "por quê?" recebem o texto fixo do seguimento, em
+  vez de reconferir uma resposta antiga.
+- Par adulterado, de outra conta ou vencido (a validade é de **30 minutos** depois de cada
+  pergunta) é ignorado em silêncio: nunca 400. Limpe o histórico ao sair da tela ou trocar de conta.
+- O limite de corpo da Ceres passou a **80 KB** (o maior corpo legítimo tem 75 544 bytes).
+
+**Aviso na tela:** `GET /api/assistente/uso` ganhou `conversaVaiAoProvedor` (boolean). Com `true`,
+mostre uma linha fixa de aviso: as trocas anteriores vão ao provedor do modelo, fora do Brasil.
+
+**SSE:** nenhum evento novo. Os comentários `:ceres` (linhas que começam com `:`) seguem
+ignorados.
+
 ## 5. Erros
 
 Todo erro usa o envelope padrão da API:
@@ -337,7 +380,8 @@ envelope.
 
 ```json
 { "plano": "padrao", "habilitada": true, "creditosSemana": 1000000, "consumidos": 120000,
-  "restantes": 880000, "renovaEm": "2026-10-19T00:00:00-03:00", "percentualUsado": 12 }
+  "restantes": 880000, "renovaEm": "2026-10-19T00:00:00-03:00", "percentualUsado": 12,
+  "conversaVaiAoProvedor": false }
 ```
 
 - **Mostre só o `percentualUsado` (#511)**, um inteiro de 0 a 100, como o Claude e outras IAs

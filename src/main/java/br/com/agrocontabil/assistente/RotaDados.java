@@ -1,5 +1,7 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.assistente.continuidade.Autocorrecao;
+import br.com.agrocontabil.assistente.continuidade.ChamadaAssinada;
 import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.ferramentas.ProcessadorErroFerramenta;
@@ -141,6 +143,20 @@ public class RotaDados {
    * @throws br.com.agrocontabil.exception.AssistenteIndisponivelException se o modelo falhar
    */
   public ResultadoRota responder(String pergunta, ContextoAssistente contexto) {
+    return responder(pergunta, contexto, FontePergunta.DA_PERGUNTA);
+  }
+
+  /**
+   * Responde com uma fonte de número escolhida pela continuidade (#499): a mensagem nova (com
+   * reescrita), a pergunta do par sem reescrita ou o JSON dos argumentos executados agora.
+   *
+   * @param pergunta pergunta que a rota entende (vai ao modelo, mascarada)
+   * @param contexto contexto da pergunta
+   * @param fonte    o que vale como fonte de número da pergunta
+   * @return texto final e se ele foi aceito
+   */
+  public ResultadoRota responder(String pergunta, ContextoAssistente contexto,
+      FontePergunta fonte) {
     // A pergunta vai ao provedor do modelo: CPF, CNPJ, e-mail, telefone... saem mascarados (#144).
     String perguntaAoModelo = DataSanitizer.mascarar(pergunta);
     ToolCallingChatOptions opcoes = ToolCallingChatOptions.builder()
@@ -192,11 +208,88 @@ public class RotaDados {
     }
     contexto.verificarAtiva();
     ChatResponse escolhida = periodo.map(p -> comPeriodo(resposta, p)).orElse(resposta);
+    // A consulta executada vai a carga do turno da continuidade (#499).
+    List<ChamadaAssinada> executadas = chamadasDe(escolhida);
+    contexto.registroTurno().registrarConsulta(executadas);
     ToolExecutionResult execucao = toolCallingManager.executeToolCalls(prompt, escolhida);
     List<String> resultados = new ArrayList<>();
     coletarResultados(execucao.conversationHistory(), resultados);
     contexto.verificarAtiva();
-    return redigir(pergunta, perguntaAoModelo, resultados, contexto);
+    String fontePergunta = fonte.resolver(pergunta);
+    return redigir(pergunta, fontePergunta == null ? argumentosComoFonte(executadas)
+        : DataSanitizer.mascarar(fontePergunta), resultados, contexto);
+  }
+
+  /**
+   * Refaz uma consulta assinada (#499, caminho da confirmação): cada função com os argumentos da
+   * carga, pela lista fechada, como o {@link #responderAtalho}, sem período da pergunta nem
+   * modelo, e com o mesmo template e os mesmos validadores. A fonte da pergunta no
+   * {@link ValidadorNumeros} é o JSON dos argumentos. Falha ou argumento recusado: texto fixo, sem
+   * {@code turno} (nunca o fluxo com o modelo, que não tem reserva).
+   *
+   * @param consulta consulta assinada (funções já conferidas na lista fechada)
+   * @param pergunta pergunta do par (atalhos de tela, nada mais)
+   * @param contexto contexto da pergunta
+   * @return o texto do template, ou o texto fixo da falha
+   */
+  public ResultadoRota reexecutar(List<ChamadaAssinada> consulta, String pergunta,
+      ContextoAssistente contexto) {
+    contexto.verificarAtiva();
+    contexto.registrarChamadasDeFuncao(consulta.size());
+    List<String> resultados = new ArrayList<>();
+    for (ChamadaAssinada chamada : consulta) {
+      Optional<ToolCallback> callback = ferramentas.stream()
+          .filter(f -> f.getToolDefinition().name().equals(chamada.funcao()))
+          .findFirst();
+      if (callback.isEmpty()) {
+        return falhaDaReexecucao(contexto);
+      }
+      try {
+        resultados.add(callback.get().call(chamada.argumentos(),
+            new ToolContext(contexto.comoToolContext())));
+      } catch (ToolExecutionException e) {
+        if (e.getCause() instanceof ContextoAssistenteAusenteException ausente) {
+          throw ausente;
+        }
+        contexto.verificarAtiva();
+        log.warn("Ceres: falha na reexecucao da funcao {}: {}", chamada.funcao(),
+            e.getCause() == null ? "?" : e.getCause().getClass().getName());
+        return falhaDaReexecucao(contexto);
+      }
+      contexto.verificarAtiva();
+    }
+    contexto.registroTurno().registrarConsulta(consulta);
+    ResultadoRota resultado = redigir(pergunta, argumentosComoFonte(consulta), resultados,
+        contexto);
+    return resultado.desfecho() == DesfechoInteracao.SEM_RESPOSTA
+        ? falhaDaReexecucao(contexto) : resultado;
+  }
+
+  private static ResultadoRota falhaDaReexecucao(ContextoAssistente contexto) {
+    contexto.registroTurno().semTurno();
+    contexto.registroTurno().descartarConsulta();
+    return ResultadoRota.descartada(Autocorrecao.FALHA_REEXECUCAO,
+        DesfechoInteracao.SEM_RESPOSTA);
+  }
+
+  /** Os nomes das funções de dados (a lista fechada), para a conferência do histórico. */
+  public Set<String> funcoesPermitidas() {
+    return nomesPermitidos;
+  }
+
+  /** As chamadas de uma resposta do modelo como vão à carga (argumento ilegível fica de fora). */
+  static List<ChamadaAssinada> chamadasDe(ChatResponse resposta) {
+    return resposta.getResults().stream()
+        .flatMap(g -> g.getOutput().getToolCalls().stream())
+        .map(c -> ChamadaAssinada.de(c.name(), c.arguments()))
+        .flatMap(Optional::stream)
+        .toList();
+  }
+
+  /** O JSON dos argumentos executados, como fonte de número da pergunta (#499). */
+  static String argumentosComoFonte(List<ChamadaAssinada> chamadas) {
+    return chamadas.stream().map(ChamadaAssinada::argumentos)
+        .collect(Collectors.joining(" "));
   }
 
   /**
@@ -220,6 +313,7 @@ public class RotaDados {
     contexto.verificarAtiva();
     // Uma chamada de funcao, como no tool calling: a auditoria conta o que rodou nos dados.
     contexto.registrarChamadasDeFuncao(1);
+    contexto.registroTurno().registrarConsulta(List.of(new ChamadaAssinada(funcao, "{}")));
     String resultado;
     try {
       resultado = callback.call("{}", new ToolContext(contexto.comoToolContext()));
@@ -246,6 +340,12 @@ public class RotaDados {
       ContextoAssistente contexto) {
     List<SecaoResposta> secoes = contexto.secoes();
     String texto = ComposicaoRespostaDados.compor(secoes);
+    // Textos livres de terceiro (titulo do pedido, motivo da devolucao...): as faixas vao a carga
+    // do turno (#499), para a reescrita nao copiar deles. O texto inteiro da secao nao conta.
+    contexto.registroTurno().registrarLivres(secoes.stream()
+        .flatMap(s -> s.textosLivres().stream()
+            .filter(l -> !l.equals(s.texto()) && l.chars().anyMatch(Character::isLetter)))
+        .toList());
     if (texto.isBlank() && !contexto.textosDoBackend().isEmpty()) {
       // So o tratamento do produto (#283): o texto e as citacoes vem do TextosDoBackend.
       return ResultadoRota.aceita("");
@@ -303,7 +403,8 @@ public class RotaDados {
    * chamada só, com o período inteiro: o total sai certo e nenhuma fatia se perde. Com outros
    * parâmetros diferentes ("soja e milho"), as chamadas ficam como o modelo escolheu.
    */
-  static ChatResponse comPeriodo(ChatResponse resposta, PeriodoDaPergunta.Periodo periodo) {
+  public static ChatResponse comPeriodo(
+      ChatResponse resposta, PeriodoDaPergunta.Periodo periodo) {
     Map<String, Long> vezes = resposta.getResults().stream()
         .flatMap(g -> g.getOutput().getToolCalls().stream())
         .collect(Collectors.groupingBy(AssistantMessage.ToolCall::name, Collectors.counting()));

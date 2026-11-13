@@ -70,15 +70,16 @@ o documento, pode se cadastrar de novo.
 ## Provedor externo do modelo da Ceres
 
 Com o modelo local (Ollama, o padrão), nada do que a Ceres processa sai do servidor. Com um
-provedor por API (`AI_CHAT_PROVIDER=anthropic` ou `openai`), **cada pergunta e o resultado de cada
-função de dados são enviados ao provedor**, que é operador (LGPD, art. 5º, VII) e fica fora do
-país (transferência internacional, art. 33). O que vai:
+provedor por API (`AI_CHAT_PROVIDER=anthropic` ou `openai`), **cada pergunta é enviada ao
+provedor**, que é operador (LGPD, art. 5º, VII) e fica fora do país (transferência internacional,
+art. 33). O que vai, sem a continuidade:
 
-- a pergunta e os resultados das funções **depois do `DataSanitizer`**: sem CPF, CNPJ, e-mail nem
-  telefone;
-- dados de negócio do produtor que a resposta exige: valores, datas, números de nota, categorias
-  de produto e NCM;
-- trechos de lei, que são públicos.
+- a pergunta **depois do `DataSanitizer`**: sem CPF, CNPJ, chave de acesso, e-mail, telefone nem
+  CEP;
+- os trechos de lei, que são públicos, e no MISTO os itens de anexo das compras;
+- **não** vai o resultado das funções de dados: desde a #266 o texto da resposta de dados é do
+  template do backend, e o modelo só escolhe as funções (o registro antigo, "o resultado de cada
+  função", deixou de valer ali).
 
 Com a explicação depois da resposta de dados ligada (#268, `AI_EXPLICACAO_HABILITADA`, desligada
 por padrão), vai também o texto da resposta de dados já montado pelo backend, depois do
@@ -89,6 +90,33 @@ O que não vai: nome, documento, contato e endereço do produtor, e o XML das no
 pública (`GET /api/politica-dados`) declara o compartilhamento em "Provedor do modelo da Ceres,
 quando configurado por API". A retenção e o uso dos dados pelo provedor seguem o contrato dele;
 conferir os termos da conta antes de ligar para produtores reais.
+
+### Continuidade da conversa (#499)
+
+Atrás da flag `AI_CONTINUIDADE_HABILITADA` (desligada por padrão), para **todos os produtores**
+quando ligada (decisão do Murillo, 2026-11-10). Com ela ligada e o provedor por API, vão também ao
+provedor, fora do país:
+
+- na **reescrita** ("e algum crédito?" vira a pergunta completa): as até 3 perguntas e **respostas
+  inteiras** das trocas anteriores, com os valores, percentuais, datas, números de nota, situação,
+  produtos, NCM, referências de lei e os **textos livres** que mostram: o título de um pedido e o
+  motivo de uma devolução, escritos por membros do escritório, e a descrição de alerta e de item;
+- na **reconferência de lei** ("tem certeza?" depois de lei): a pergunta e a parte de lei da
+  última resposta;
+- pela pergunta considerada, pedaços disso nas demais chamadas.
+
+O `DataSanitizer` tira CPF, CNPJ, chave de acesso, e-mail, telefone e CEP de cada texto, mas não um
+nome escrito num texto livre. O invariante "texto livre nunca vai ao modelo" deixa de valer para o
+histórico, por decisão do Murillo, para qualquer conta, inclusive as do cadastro público da VPS.
+**Nada é gravado no servidor** (o histórico volta do cliente, assinado), e a exclusão de dados
+(#148) **não alcança o que já foi enviado** ao provedor.
+
+É item do relatório de impacto (art. 38). Ligar a flag na VPS exige antes: a política nova no ar
+(`app.lgpd.versao-politica` 2026-11-11, que já descreve o fluxo), o aviso na tela da Ceres
+(`GET /api/assistente/uso` devolve `conversaVaiAoProvedor`), o **prazo de retenção no provedor
+escrito aqui e na política** (pendente: o Murillo confere os termos da organização no Console e
+pede retenção zero, se houver) e o art. 33 e o contrato da #498. A subida registra um `WARN` com a
+flag ligada e o provedor por API fora de `dev`/`test` (`config/AvisoContinuidadeConfig`).
 
 ## Limites conhecidos
 

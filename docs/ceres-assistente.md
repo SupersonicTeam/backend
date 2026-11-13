@@ -1289,6 +1289,23 @@ mudou ali.
 - **Subida:** com a cota ligada, o teto (com o maior fator) acima do menor plano impede a subida — a
   mesma fórmula do `reservar`, então "sobe" quer dizer "toda pergunta cabe num plano vazio".
 
+### Reserva por caminho com a continuidade (#499)
+
+A reserva é por caminho (`config/CaminhoCota`), decidido na thread da requisição antes de
+reservar (`continuidade/DecisaoContinuidade`), com os padrões, em créditos da #511 (1 por token):
+**31.744** (pergunta comum e confirmação de dados com consulta que não bate), **24.576**
+(reconferência de lei: reconferência + concordância), **34.816** (reconferência no MISTO com
+consulta que não bate) e **43.776** (com reescrita: a reescrita e o caminho mais caro depois dela).
+A subida confere o de 43.776. Com o juiz da fidelidade da lei (#269) podendo rodar, todo caminho
+com modelo ganha a parcela dele (8.192 + 128 × 4 = 8.704 com os padrões): a rota de lei, onde ele
+roda, cabe uma vez em cada caminho (a pergunta comum, a concordância da reconferência, o caminho
+depois da reescrita); a regra é única, `AssistenteProperties.tetoDaPergunta(fator, caminho)`. O
+caminho sem modelo (atalho, conversa leve, confirmação de dados
+cuja consulta assinada bate, a reexecução, e os textos fixos de lei) não reserva teto: paga só a
+leitura da mensagem (`CotaUsoPorta.reservarLeitura`, #511) e recebe 429 só sem saldo para ela;
+o contexto fica marcado sem reserva para o modelo, e o `ContextoAssistente.chamar` recusa qualquer
+chamada nele.
+
 ### Crédito por token e custo de leitura (#511)
 
 Decisão do Murillo (2026-11-11): "toda pergunta deve ter um custo ao cliente", "um olá vai custar
@@ -1316,6 +1333,49 @@ menos que um 'quanto imposto devo'" e "1 crédito por token, tudo em números in
 - **Demonstração:** o `CotaDemonstracaoCeres` deixa o Rogério com o teto de uma pergunta de modelo
   mais 1.000 créditos de folga (`FOLGA_LEITURAS`), para saudações e atalhos não tirarem a primeira
   pergunta; a segunda continua recebendo 429.
+
+## Continuidade da conversa (#499)
+
+Atrás de `app.assistente.continuidade.habilitada` (`AI_CONTINUIDADE_HABILITADA`, desligada). O
+Angular devolve até 3 trocas, cada uma igual ao `turno` que o servidor emitiu: pergunta
+considerada, resposta entregue (cortada só acima de 6000 caracteres) e a assinatura
+`v1.<carga>.<mac>` (`security/AssinaturaHistoricoConversa`, chave derivada da `CRIPTO_CHAVE`). A
+carga (`continuidade/CargaTurno`, `CodecCarga`) diz até quando o par vale (30 min), a rota, se a
+pergunta veio de reescrita, a consulta executada, o hash do resultado de dados, onde estão os
+textos livres de terceiro (`t`) e o texto de lei aceito (`lei.r`). A conferência
+(`ConferenciaHistorico`) é silenciosa: par adulterado, alheio ou com função fora da lista ignora o
+histórico inteiro; par vencido cai sozinho.
+
+- **Recusa antes da continuidade (#497):** a mensagem com forma de injeção (`FiltroInjecao`) ou
+  com recusa firme inequívoca (`SinalRecusaFirme.inequivoco`) nunca vai à confirmação nem à
+  reescrita: `DecisaoContinuidade` a manda à pergunta de sempre, que recusa sem o modelo, com a
+  reserva só da leitura (#511). A pergunta reescrita passa de novo pelo filtro e pela recusa firme
+  na classificação, como a pergunta original. Sem histórico, a decisão é sem modelo exatamente
+  quando `OrquestradorService.respondeSemModelo` é verdadeiro (testado).
+- **Com a explicação (#268) ligada junto:** cada uma tem a sua reserva. A pergunta reserva o teto
+  do caminho (`CaminhoCota`) e acerta no fim; a explicação, só numa resposta de dados que chamou
+  o modelo, reserva o próprio teto (`tetoDaExplicacao`, 9.216 créditos com os padrões) depois
+  desse acerto, sem 429. No caminho sem modelo (reexecução, textos fixos, atalho, conversa leve,
+  recusa) não há explicação (`ContextoAssistente.reservouParaOModelo`). O `turno` assina a
+  `resposta`, nunca a explicação. Testado nas duas combinações (`AssistenteServiceTest`).
+- **Confirmação** ("tem certeza?", contestação pura, reafirmação; `MensagemContinuidade`): segue a
+  rota do par, sem classificar. Dados com consulta que bate (`ConferenciaConsulta`, 5 regras):
+  **reexecução sem modelo** (`RotaDados.reexecutar`) e a abertura da autocorreção
+  (`Autocorrecao`): "Repeti a mesma consulta (D) e o resultado é o mesmo." ou "mudou desde"; sem
+  bater, o modelo escolhe de novo e só "corrijo" quando a nova bate e o resultado mudou.
+- **Reconferência de lei** (`ReconferenciaLei`): a mensagem do produtor não vai ao modelo; ele
+  confere a resposta anterior com os trechos (CONFIRMO, CORRIJO ou NAO_SUSTENTA), e só sai o que
+  passa na âncora, na citação literal, nos números, nos dados, no regime, na diferença conferível,
+  no apoio literal e na concordância da rota de lei normal. O resto é o texto de apoio, sem recuar;
+  nenhum caminho devolve `TRECHOS_SEM_CONFIRMACAO` nem "sem fundamento".
+- **Reescrita** (`GatilhoReescrita`, `ReescritaContinuidade`): "e algum crédito?", "e a segunda?",
+  "por quê?" e a contestação com conteúdo novo viram pergunta completa, com as respostas inteiras
+  no prompt (decisão do Murillo, 2026-11-10) e as guardas de formato, injeção, terceiro, número,
+  período, conteúdo e âncora; qualquer falha faz valer a mensagem.
+- **Fonte de número** (`FontePergunta`): número de resposta antiga nunca é fonte. Com reescrita, a
+  fonte da pergunta é só a mensagem nova; na lei de uma contestação, só os trechos.
+- **Logs:** só enums (`DesfechoContinuidade`); nada do histórico, da reescrita nem da
+  reconferência. LGPD em `docs/lgpd.md`, "Continuidade da conversa".
 
 ### Cancelamento pelo cliente cobra o que foi gasto (#499)
 

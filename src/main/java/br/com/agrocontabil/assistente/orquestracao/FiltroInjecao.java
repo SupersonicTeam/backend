@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
  *
  * <p>A lista é curta de propósito: só formas que uma pergunta fiscal legítima não usa.
  */
-final class FiltroInjecao {
+public final class FiltroInjecao {
 
   private static final Pattern INJECAO = Pattern.compile(String.join("|",
       // "ignore as instrucoes anteriores", mas nao "se eu ignorar as regras do split payment"
@@ -41,7 +41,7 @@ final class FiltroInjecao {
    * @param pergunta pergunta do usuário
    * @return {@code true} se a pergunta tem forma de prompt injection
    */
-  static boolean pareceInjecao(String pergunta) {
+  public static boolean pareceInjecao(String pergunta) {
     if (pergunta == null) {
       return false;
     }

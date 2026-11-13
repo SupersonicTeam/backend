@@ -91,12 +91,11 @@ public class ModeloLinguagem {
       if (abreDisjuntor(e)) {
         disponibilidade.registrarFalha();
       }
-      // So o tipo da falha em WARN: a mensagem de erro de um provedor por API pode ecoar a
-      // requisicao, que carrega dados do produtor. O stack trace fica em DEBUG — com o Ollama fora
-      // do ar isto acontece a cada pergunta, e em ERROR inundaria o log.
+      // So o tipo da falha: a mensagem e o stack trace de um provedor por API podem ecoar a
+      // requisicao, que carrega dados do produtor e, com a continuidade (#499), as trocas
+      // anteriores inteiras. Nem em DEBUG.
       log.warn("Falha ao chamar o modelo de linguagem: provedor={} falha={}",
           provedor, e.getClass().getName());
-      log.debug("Detalhe da falha do modelo de linguagem", e);
       throw new AssistenteIndisponivelException(
           "Falha ao chamar o modelo " + provedor + ": " + e.getClass().getSimpleName(), e);
     }
@@ -214,6 +213,17 @@ public class ModeloLinguagem {
       atual = atual.getCause() == atual ? null : atual.getCause();
     }
     return false;
+  }
+
+  /**
+   * {@code true} com o modelo por API ({@code spring.ai.model.chat} {@code anthropic} ou
+   * {@code openai}): o que vai ao modelo sai do servidor e do país (#499, aviso da continuidade).
+   *
+   * @return se o provedor é por API
+   */
+  public boolean porApi() {
+    String nome = provedor == null ? "" : provedor.strip().toLowerCase(Locale.ROOT);
+    return nome.equals("anthropic") || nome.equals("openai");
   }
 
   /**

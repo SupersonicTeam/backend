@@ -15,6 +15,8 @@ import java.time.OffsetDateTime;
  * @param restantes      créditos ainda disponíveis (descontadas as perguntas em andamento)
  * @param renovaEm       próxima segunda-feira 00:00, horário de Brasília
  * @param percentualUsado percentual da semana usado, inteiro de 0 a 100
+ * @param conversaVaiAoProvedor {@code true} com a continuidade ligada e o modelo por API (#499):
+ *                       as trocas anteriores vão inteiras ao provedor, e a tela mostra o aviso
  */
 @Schema(description = "Uso semanal da Ceres: a tela mostra so o percentualUsado")
 public record AssistenteUsoResponse(
@@ -27,4 +29,6 @@ public record AssistenteUsoResponse(
     @Schema(description = "Percentual da semana ja usado, o unico numero de uso que a tela "
         + "mostra: teto(consumidos / creditosSemana x 100), no maximo 99 enquanto houver saldo, "
         + "100 so sem saldo e 0 so sem uso nenhum", minimum = "0", maximum = "100",
-        example = "12") int percentualUsado) {}
+        example = "12") int percentualUsado,
+    @Schema(description = "As trocas anteriores vao ao provedor do modelo, fora do Brasil")
+    boolean conversaVaiAoProvedor) {}

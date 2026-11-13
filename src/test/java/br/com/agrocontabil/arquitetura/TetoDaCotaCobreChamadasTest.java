@@ -5,11 +5,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.assistente.RotaLegislacao;
+import br.com.agrocontabil.assistente.continuidade.ReconferenciaLei;
+import br.com.agrocontabil.assistente.continuidade.ReescritaContinuidade;
 import br.com.agrocontabil.assistente.explicacao.ExplicadorResposta;
 import br.com.agrocontabil.assistente.fidelidade.JuizFidelidadeLei;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.orquestracao.LlmClassificadorIntencao;
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.config.CaminhoCota;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -57,8 +60,9 @@ class TetoDaCotaCobreChamadasTest {
   }
 
   @Test
-  @DisplayName("#166/#270/#499/#268: as 3 chamadas da formula e a da explicacao, uma por classe")
-  void soAsTresChamadasDaFormulaEADaExplicacao() {
+  @DisplayName("#166/#270/#499/#268/#269: os 5 pontos dos caminhos, o da explicacao e o do juiz "
+      + "da lei, um por classe")
+  void soOsPontosDosCaminhosDaExplicacaoEDoJuiz() {
     List<JavaMethodCall> chamadas = producao.stream()
         .flatMap(c -> c.getMethodCallsFromSelf().stream())
         .filter(c -> c.getTargetOwner().isEquivalentTo(ContextoAssistente.class)
@@ -68,18 +72,68 @@ class TetoDaCotaCobreChamadasTest {
     Map<String, Long> porClasse = chamadas.stream().collect(Collectors.groupingBy(
         c -> c.getOriginOwner().getName(), Collectors.counting()));
 
+    // As 3 da pergunta comum (CHAMADAS_POR_PERGUNTA) e as 2 da continuidade (#499): a reescrita
+    // e a reconferencia de lei. Cada caminho do CaminhoCota soma as que pode fazer; o com
+    // reescrita e o mais caro e e o que a subida confere. A da explicacao (#268) fica fora dos
+    // caminhos: tem reserva propria, feita depois do acerto da pergunta. A do juiz da lei (#269)
+    // e parcela propria da reserva de todo caminho com modelo, so com ele ativo (a rota de lei,
+    // onde ele roda, cabe uma vez em cada caminho).
     assertThat(porClasse).containsOnly(
         Map.entry(LlmClassificadorIntencao.class.getName(), 1L),
         Map.entry(RotaDados.class.getName(), 1L),
         Map.entry(RotaLegislacao.class.getName(), 1L),
+        Map.entry(ReescritaContinuidade.class.getName(), 1L),
+        Map.entry(ReconferenciaLei.class.getName(), 1L),
         Map.entry(ExplicadorResposta.class.getName(), 1L),
         Map.entry(JuizFidelidadeLei.class.getName(), 1L));
-    // A da explicacao (#268) tem reserva propria e a do juiz (#269) e parcela propria da reserva
-    // da pergunta, so com ele ativo: as outras sao as da formula.
-    assertThat(chamadas.stream()
-        .filter(c -> !c.getOriginOwner().isEquivalentTo(ExplicadorResposta.class)
-            && !c.getOriginOwner().isEquivalentTo(JuizFidelidadeLei.class)))
-        .hasSize(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA);
+    assertThat(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA)
+        .isEqualTo(CaminhoCota.NORMAL.chamadas());
+    assertThat(CaminhoCota.REESCRITA.chamadas()).isEqualTo(4);
+  }
+
+  @Test
+  @DisplayName("#499/#511: reservas por caminho com os padroes, 1 credito por token: 31.744, "
+      + "24.576, 34.816 e 43.776; o caminho sem modelo nao tem teto (paga a leitura)")
+  void reservasPorCaminho() {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    AssistenteProperties.Cota cota = propriedades.getCota();
+    AssistenteProperties.Tetos tetos = propriedades.getTetos();
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.SEM_MODELO)).isZero();
+    // 3 x 8.192 + (256 + 512 + 1.024) x 4.
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.NORMAL)).isEqualTo(31_744);
+    assertThat(cota.tetoDaPergunta(tetos, 1.0)).isEqualTo(31_744);
+    // 2 x 8.192 + (1.024 + 1.024) x 4.
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.RECONFERENCIA)).isEqualTo(24_576);
+    // 3 x 8.192 + (512 + 1.024 + 1.024) x 4.
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.RECONFERENCIA_MISTO))
+        .isEqualTo(34_816);
+    // 4 x 8.192 + (192 + 2.560) x 4.
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.REESCRITA)).isEqualTo(43_776);
+  }
+
+  @Test
+  @DisplayName("#499/#269: com o juiz da lei podendo rodar, todo caminho com modelo ganha a "
+      + "parcela dele (8.192 + 128 x 4 = 8.704); o sem modelo, nao; desligado, nada muda")
+  void reservasPorCaminhoComOJuizDaLei() {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    for (CaminhoCota caminho : CaminhoCota.values()) {
+      assertThat(propriedades.tetoDaPergunta(1.0, caminho)).as(caminho.name())
+          .isEqualTo(propriedades.getCota().tetoDaPergunta(propriedades.getTetos(), 1.0,
+              caminho));
+    }
+    propriedades.getFidelidadeLei().setEnabled(true);
+    propriedades.getFidelidadeLei().getJuiz().setEnabled(true);
+    assertThat(propriedades.juizDaLeiPodeRodar()).isTrue();
+
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.SEM_MODELO)).isZero();
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.NORMAL)).isEqualTo(31_744 + 8_704)
+        .isEqualTo(propriedades.tetoDaPergunta(1.0));
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.RECONFERENCIA))
+        .isEqualTo(24_576 + 8_704);
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.RECONFERENCIA_MISTO))
+        .isEqualTo(34_816 + 8_704);
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.REESCRITA))
+        .isEqualTo(43_776 + 8_704);
   }
 
   @Test

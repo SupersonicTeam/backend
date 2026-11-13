@@ -307,6 +307,31 @@ class CotaUsoAssistenteServiceIntegrationTest {
   }
 
   @Test
+  @DisplayName("#499/#269: a reserva por caminho inclui o juiz da lei quando ele pode rodar")
+  void reservaPorCaminhoComOJuiz() {
+    propriedades.getFidelidadeLei().setEnabled(true);
+    propriedades.getFidelidadeLei().getJuiz().setEnabled(true);
+    CotaUsoAssistenteService service = service(QUARTA);
+
+    service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3",
+        br.com.agrocontabil.config.CaminhoCota.REESCRITA);
+
+    // 43.776 do caminho com reescrita + 8.192 + 128 x 4 do juiz.
+    assertThat(uso().getCreditosReservados()).isEqualTo(43_776 + 8_704);
+  }
+
+  @Test
+  @DisplayName("#499/#511: o caminho sem modelo nunca reserva teto: ele paga a leitura")
+  void caminhoSemModeloNaoReservaTeto() {
+    CotaUsoAssistenteService service = service(QUARTA);
+
+    assertThatThrownBy(() -> service.reservar(TipoTitularCota.PRODUTOR, produtor, "ollama/qwen3",
+        br.com.agrocontabil.config.CaminhoCota.SEM_MODELO))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(repository.count()).isZero();
+  }
+
+  @Test
   @DisplayName("#511: sem saldo para a leitura, 429 também; com saldo só para ela, passa")
   void leituraSemSaldo() {
     repository.save(UsoSemanalAssistente.builder()
