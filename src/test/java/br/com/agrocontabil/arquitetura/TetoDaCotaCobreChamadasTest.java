@@ -6,6 +6,7 @@ import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.assistente.RotaLegislacao;
 import br.com.agrocontabil.assistente.explicacao.ExplicadorResposta;
+import br.com.agrocontabil.assistente.fidelidade.JuizFidelidadeLei;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.orquestracao.LlmClassificadorIntencao;
 import br.com.agrocontabil.config.AssistenteProperties;
@@ -39,6 +40,10 @@ import org.springframework.ai.chat.model.ChatModel;
  * ({@link ExplicadorResposta}), que fica <strong>fora</strong> da fórmula da pergunta: ela tem
  * reserva própria, feita só quando a explicação vai acontecer
  * ({@link AssistenteProperties.Cota#tetoDaExplicacao}, uma chamada).
+ *
+ * <p>Desde a #269 há um quinto, o juiz da fidelidade da lei ({@link JuizFidelidadeLei}), que roda
+ * no meio da pergunta e entra na reserva dela como parcela própria, só com ele ativo
+ * ({@link AssistenteProperties#tetoDaPergunta}, {@link AssistenteProperties.Cota#tetoDoJuiz}).
  */
 class TetoDaCotaCobreChamadasTest {
 
@@ -67,11 +72,33 @@ class TetoDaCotaCobreChamadasTest {
         Map.entry(LlmClassificadorIntencao.class.getName(), 1L),
         Map.entry(RotaDados.class.getName(), 1L),
         Map.entry(RotaLegislacao.class.getName(), 1L),
-        Map.entry(ExplicadorResposta.class.getName(), 1L));
-    // A da explicacao (#268) tem reserva propria: as outras sao as da formula da pergunta.
+        Map.entry(ExplicadorResposta.class.getName(), 1L),
+        Map.entry(JuizFidelidadeLei.class.getName(), 1L));
+    // A da explicacao (#268) tem reserva propria e a do juiz (#269) e parcela propria da reserva
+    // da pergunta, so com ele ativo: as outras sao as da formula.
     assertThat(chamadas.stream()
-        .filter(c -> !c.getOriginOwner().isEquivalentTo(ExplicadorResposta.class)))
+        .filter(c -> !c.getOriginOwner().isEquivalentTo(ExplicadorResposta.class)
+            && !c.getOriginOwner().isEquivalentTo(JuizFidelidadeLei.class)))
         .hasSize(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA);
+  }
+
+  @Test
+  @DisplayName("#269: com o juiz da lei ativo, a reserva da pergunta ganha a chamada dele: "
+      + "31.744 + 8.192 + 128 x 4 = 40.448 com os padroes; desligado, nada muda")
+  void reservaComOJuizDaLei() {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(31_744);
+    // So o juiz, sem a camada 1: ele nao roda e a reserva nao muda.
+    propriedades.getFidelidadeLei().getJuiz().setEnabled(true);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(31_744);
+    // Camada 1 sem o juiz: tambem nao muda (a camada 1 nao chama o modelo a mais).
+    propriedades.getFidelidadeLei().getJuiz().setEnabled(false);
+    propriedades.getFidelidadeLei().setEnabled(true);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(31_744);
+    propriedades.getFidelidadeLei().getJuiz().setEnabled(true);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(40_448);
+    assertThat(propriedades.getCota().tetoDoJuiz(propriedades.getTetos(), 2.0))
+        .isEqualTo(17_408);
   }
 
   @Test

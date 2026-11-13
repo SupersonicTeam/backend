@@ -134,3 +134,5 @@ databaseChangeLog:
       file: db/changelog/changes/0063-escritorio-cnpj-verificado.xml
   - include:
       file: db/changelog/changes/0064-assistente-interacao-explicacao.xml
+  - include:
+      file: db/changelog/changes/0065-assistente-interacao-fidelidade-lei.xml

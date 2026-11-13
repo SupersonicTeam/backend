@@ -163,4 +163,45 @@ class AssistentePropertiesTest {
     assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("app.assistente.tetos.contexto");
   }
+
+  @Test
+  @DisplayName("#269: conferencia de fidelidade da lei desligada por padrao, cobertura entre 0 e 1")
+  void fidelidadeLei() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(p.getFidelidadeLei().isEnabled()).isFalse();
+    assertThat(p.getFidelidadeLei().getCoberturaMinima()).isEqualTo(0.7);
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+
+    p.getFidelidadeLei().setCoberturaMinima(1.0);
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+    for (double invalida : new double[] {0.0, -0.1, 1.01, Double.NaN}) {
+      p.getFidelidadeLei().setCoberturaMinima(invalida);
+      assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("app.assistente.fidelidade-lei.cobertura-minima");
+    }
+  }
+
+  @Test
+  @DisplayName("#269: juiz desligado por padrao, cobertura com juiz 0,3, teto do juiz 128")
+  void juizDaFidelidadeLei() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(p.getFidelidadeLei().getJuiz().isEnabled()).isFalse();
+    assertThat(p.juizDaLeiAtivo()).isFalse();
+    assertThat(p.getFidelidadeLei().getCoberturaMinimaComJuiz()).isEqualTo(0.3);
+    assertThat(p.getTetos().getJuiz()).isEqualTo(128);
+    p.getFidelidadeLei().getJuiz().setEnabled(true);
+    // O juiz so roda com a camada 1.
+    assertThat(p.juizDaLeiAtivo()).isFalse();
+    p.getFidelidadeLei().setEnabled(true);
+    assertThat(p.juizDaLeiAtivo()).isTrue();
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+
+    p.getFidelidadeLei().setCoberturaMinimaComJuiz(0);
+    assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("cobertura-minima-com-juiz");
+    p.getFidelidadeLei().setCoberturaMinimaComJuiz(0.3);
+    p.getTetos().setJuiz(AssistenteProperties.Tetos.MINIMO - 1);
+    assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("app.assistente.tetos.juiz");
+  }
 }

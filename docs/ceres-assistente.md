@@ -320,6 +320,166 @@ dar zero.
 4. `ValidadorNumeros`: percentuais, prazos e números de artigo da resposta têm de estar nos
    trechos — "redução de 70%" que a lei não diz não passa.
 
+### Fidelidade da resposta de lei (#269, desligada por padrão)
+
+**Por quê.** Na leitura cega de 10/11 com o Haiku (comentário no PR #425), das 16 respostas de lei
+que os validadores aceitaram na `main`, 3 saíram fiéis, 12 com ressalva e 1 infiel. Os dois
+defeitos: frase que afirma mais do que o trecho, ou o contrário dele, com a citação válida; e a
+citação no parágrafo quando a regra está no caput. O `ValidadorCitacao` só confere que a marca
+existe e o `ValidadorNumeros` só confere número, então nenhum dos dois pega.
+
+**Flag.** `app.assistente.fidelidade-lei.enabled` (`AI_FIDELIDADE_LEI_HABILITADA`, padrão `false`) e
+`app.assistente.fidelidade-lei.cobertura-minima` (`AI_FIDELIDADE_LEI_COBERTURA_MINIMA`, padrão
+`0.7`, maior que 0 e no máximo 1, conferida na subida). Desligada, a rota de lei é a de antes: o
+mesmo prompt (`PromptsCeres.sistemaLegislacao`) e o mesmo resultado, provados pelo
+`RotaLegislacaoFidelidadeTest` contra a rota construída sem a conferência. **Ligar** exige a medição
+no conjunto novo (escrito por outra sessão, cega ao código) e o OK do Murillo.
+
+**Como funciona (ligada).** Sem chamada a mais ao modelo; o modelo não julga o próprio texto.
+
+1. O prompt passa a ser o `PromptsCeres.sistemaLegislacaoComEvidencia` (e a variante do MISTO): a
+   resposta vem em JSON, cada frase com uma ou mais passagens copiadas, palavra por palavra, do
+   trecho que a sustenta: `{"frases": [{"frase": "...", "evidencias": [{"trecho": "T1", "copia":
+   "..."}]}]}`. `NAO_ENCONTREI` segue igual. Parte fixa antes da data e dos trechos (#270).
+2. O `fidelidade/ConferenciaFidelidadeLei` confere, frase a frase (a primeira falha reprova a
+   resposta inteira):
+   - **evidência**: ao menos uma, com marca existente e cópia não vazia (`REPROVADA_SEM_EVIDENCIA`;
+     JSON ilegível ou sem frase = `REPROVADA_FORMATO`);
+   - **literalidade**: a cópia está escrita no trecho marcado, comparada por palavras sem acento,
+     caixa nem pontuação; fragmentos separados por reticências valem se cada um for literal e na
+     ordem. Escrita só em outro trecho, a marca vai para ele; em nenhum, ou em vários que dariam
+     citações diferentes, `REPROVADA_EVIDENCIA_NAO_LITERAL`;
+   - **número**: todo número da frase está nas cópias dela ou no **contexto** do dispositivo
+     citado, o texto do caput até o fim do nível em que a cópia termina (`REPROVADA_NUMERO`); o
+     ordinal ("1º", "1°") conta como o número;
+   - **polaridade**: negação ("não", "nem", "vedado", "exceto", "salvo"...) ou restrição ("só",
+     "somente", "apenas", "exclusivamente") da frase precisa estar nas cópias ou no texto **próprio**
+     do dispositivo (sem os níveis de cima: o "não" de uma condição do inciso não sustenta "não é
+     devido" citando a alínea). A negação das cópias exige negação na frase só quando a frase fala do
+     que foi negado (`TextoLei.negados`: as palavras depois do "não" até a pontuação); "nesse caso,
+     será devido só o IBS" não retoma "caso não tenha se aperfeiçoado" e passa. Isenção, imunidade,
+     alíquota zero, suspensão, ausência, "livre" e "desonerado" contam como negação do outro lado
+     (`REPROVADA_POLARIDADE`). É o sinal de sentido invertido;
+   - **cobertura**: a fração das palavras de conteúdo da frase (sem as vazias da `fidelidade/TextoLei`,
+     comparadas pelos 5 primeiros caracteres, com "z" lido como "c"; sigla do glossário vale pelo nome
+     por extenso e vice-versa) que aparece nas cópias ou no contexto do dispositivo atinge a
+     `cobertura-minima` (`REPROVADA_COBERTURA`). É o sinal de afirmação além do trecho.
+   - frase sem nenhuma palavra de conteúdo ("Sim.", "Isso vale.") passa pelo número e pela
+     polaridade, mas **sai do texto**: não há o que a cópia sustente. A frase `NAO_ENCONTREI` ao lado
+     de outras (a parte que os trechos não respondem) também sai, sem conferência; só
+     `NAO_ENCONTREI`, sem outra frase, segue o caminho de sempre (`CITACAO_INVALIDA`, trechos mais
+     próximos). Sem nenhuma frase com conteúdo, `REPROVADA_COBERTURA`.
+
+   **Ajuste depois da primeira medição (2026-11-12, #269):** o falso descarte por pergunta passou da
+   margem (8 na camada 1, 6 com o juiz). O diagnóstico com o Haiku em perguntas próprias mostrou
+   três causas: o prompt com evidência levava o modelo a responder `NAO_ENCONTREI` quando os trechos
+   respondiam só em parte (o `CITACAO_INVALIDA` com `fidelidade_lei` nulo); a cópia era um pedaço do
+   dispositivo e a frase o resumia inteiro (número e cobertura); e a regra da negação lia como
+   inversão a frase que só deixava de fora uma condição negada. O prompt passou a pedir a parte que
+   os trechos sustentam (`NAO_ENCONTREI` só sem nenhum trecho sobre o assunto) e a exigir o JSON também
+   na resposta parcial; as regras ficaram como acima.
+
+   A marca da evidência aceita `T1`, `[T1]`, `t1` e o número sozinho; numa lista (`T1, T3`), vale a
+   primeira, e a cópia achada em outro trecho troca a marca.
+3. **Citação no nível certo.** O texto de cada trecho é o caput, o parágrafo, o inciso e a alínea
+   concatenados (`FatiadorDispositivos`). O `fidelidade/NivelDispositivo` acha onde cada nível começa
+   e a citação vai para o nível mais fundo que a cópia toca: cópia só no caput cita o `art. N`, com o
+   texto do caput (o começo do texto do trecho); se o trecho do caput veio na busca, usa ele. A
+   citação só sobe dentro do mesmo artigo. Rótulo fora da forma simples (redação dada por emenda,
+   item de anexo, `[2]`) fica como está. O ancestral que a busca não trouxe entra depois dos trechos
+   recebidos, com a marca seguinte, e na auditoria fica o id do trecho em que a cópia foi achada.
+4. **Aprovada** (`APROVADA` ou `APROVADA_CITACAO_CORRIGIDA`): o texto são as frases com as marcas, sem
+   as cópias, e segue o caminho de sempre: `ValidadorCitacao`, `ValidadorNumeros`,
+   `GuardaRegimeEspecifico`, o Sim/Não do MISTO, o `VerificadorAfirmacaoDados` e a `LinhaGlossario`.
+5. **Reprovada**: o texto do modelo sai inteiro; fica o `TRECHOS_SEM_CONFIRMACAO` com os trechos que
+   ele marcou nas evidências, o caminho do `NUMERO_SEM_FONTE` (#258), também no MISTO com a pergunta
+   inteira. Sem nenhuma marca existente (formato inválido), o caminho do `NAO_ENCONTREI`: os três mais
+   próximos da busca (#343), e no MISTO sem parte legal separada, nada da lei (#260). Desfecho
+   `FIDELIDADE_REPROVADA`, contado como descarte e recusa pela régua da avaliação
+   (`AvaliadorResposta`). Nunca entra texto novo do modelo.
+
+**Auditoria.** `assistente_interacao.fidelidade_lei` (changeSet 0065): o `DesfechoFidelidadeLei`, só o
+enum. Nula com a flag desligada e quando a conferência não roda (sem trecho, `NAO_ENCONTREI`,
+resposta cortada pelo teto). Para a medição:
+
+```sql
+SELECT fidelidade_lei, desfecho, count(*) FROM assistente_interacao
+WHERE rota IN ('LEGISLACAO', 'MISTO') AND criado_em >= :inicio
+GROUP BY 1, 2 ORDER BY 3 DESC;
+```
+
+**Custo.** Nenhuma chamada a mais. As regras do prompt crescem de ~680 para ~1.170 caracteres (~120 a
+~160 tokens de entrada a mais). A saída cresce com as cópias (estimativa: 1,5 a 3 vezes a resposta de
+hoje, **não medida**), com o mesmo teto (`tetos.legislacao`, 1.024); o corte cai no
+`RESPOSTA_CORTADA` de sempre. A reserva da cota não muda (é pelo teto); o consumo real sobe com a
+saída (peso 4). O tempo extra é só o da saída maior.
+
+**Camada 2: o juiz** (`app.assistente.fidelidade-lei.juiz.enabled`, `AI_FIDELIDADE_LEI_JUIZ_HABILITADO`,
+padrão `false`; decisão do Murillo de 12/11, "Sim, incluir o juiz"). Só tem efeito com a camada 1
+ligada. Depois que a camada 1 aprova e depois de todas as conferências em código (`ValidadorCitacao`,
+`ValidadorNumeros`, `GuardaRegimeEspecifico`, dados do produtor no MISTO), o `fidelidade/JuizFidelidadeLei`
+faz **uma** chamada ao modelo com as frases entregues e, para cada uma, o **dispositivo citado**
+com o contexto dos níveis de cima (o caput até o fim do nível da cópia: a mesma passagem contra a
+qual a camada 1 conferiu número e cobertura; só a cópia, o juiz reprovava a frase que resumia o
+dispositivo que a cópia cortava). Instrução fixa `PromptsCeres.JUIZ_FIDELIDADE` no sistema;
+`Frase N:` e `Passagem:` na mensagem do usuário, pelo `DataSanitizer`; sem a pergunta. As frases
+são lidas em sequência (uma frase pode retomar a anterior: "também", "esse", "nesse caso"), e resumir
+ou deixar partes de fora não reprova: reprova afirmar o que a passagem não diz, com alcance maior
+inclusive. O modelo responde `{"vereditos": ["SUSTENTA" | "NAO_SUSTENTA" | "CONTRADIZ", ...]}`, um por
+frase, na ordem.
+
+- **Só reprova, nunca reescreve:** qualquer `NAO_SUSTENTA` ou `CONTRADIZ` reprova a resposta inteira pelo
+  caminho da camada 1 (`TRECHOS_SEM_CONFIRMACAO` com os trechos marcados, `FIDELIDADE_REPROVADA`). Tirar
+  só a frase reprovada pode mudar o sentido do resto (uma exceção que some).
+- **Falha fecha:** modelo indisponível, JSON ilegível, veredito desconhecido, resposta cortada pelo teto
+  ou número de vereditos diferente do de frases reprovam (`REPROVADA_JUIZ_FALHA`). Pergunta interrompida
+  continua sendo interrupção.
+- **Cobertura com o juiz:** a exigida em código cai para `cobertura-minima-com-juiz`
+  (`AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ`, padrão `0.3`), para a paráfrase em linguagem simples
+  passar; literalidade, número e polaridade seguem eliminatórios.
+- **Desfechos** na mesma coluna `fidelidade_lei`: `REPROVADA_JUIZ_NAO_SUSTENTA`, `REPROVADA_JUIZ_CONTRADIZ`,
+  `REPROVADA_JUIZ_FALHA`. Aprovada pelo juiz, fica o desfecho da camada 1.
+- **Cota:** a chamada do juiz entra na **reserva da pergunta** como parcela própria
+  (`Cota.tetoDoJuiz`: o teto de entrada + `tetos.juiz`, `AI_TETO_JUIZ`, 128), só com o juiz ativo
+  (`AssistenteProperties.tetoDaPergunta`). Não é uma reserva à parte como a da explicação: o juiz roda no
+  meio da pergunta e o `ContextoAssistente.chamar` soma os tokens dele aos dela, então uma reserva à parte
+  cobraria duas vezes, e o cancelamento pelo cliente o cobraria pela reserva da pergunta. Com os padrões e
+  fator 1: 31.744 → 40.448 créditos por pergunta (`TetoDaCotaCobreChamadasTest`).
+- **Auditoria:** `latencia_juiz_ms`, `tokens_entrada_juiz` e `tokens_saida_juiz` (changeSet 0065), nulas
+  sem o juiz. Com ele, `latencia_ms`, `tokens_entrada` e `tokens_saida` da pergunta são **sem** o juiz
+  (`AuditoriaAssistente`), e a soma das colunas é o total, como na explicação.
+- **Custo e tempo:** uma chamada a mais por resposta aprovada pela camada 1. Entrada estimada de
+  ~700 a ~2.500 tokens (instrução de ~1.100 caracteres + frases + os dispositivos com o contexto de cima,
+  maiores que as cópias; não medida em tokens), saída de ~10 a ~40. No diagnóstico de 2026-11-13 com o
+  Haiku (12 perguntas próprias × 2), a rota de lei com o juiz teve p50 de 3,2 s contra 2,2 s só com a
+  camada 1 e 1,7 s com tudo desligado (rede de casa, não a VPS). Cabe no `timeout-pergunta`: roda dentro
+  da pergunta.
+
+**Os três braços da medição:** tudo desligado (a `main`); só a camada 1
+(`AI_FIDELIDADE_LEI_HABILITADA=true`); camada 1 e juiz (mais `AI_FIDELIDADE_LEI_JUIZ_HABILITADO=true`).
+Com o juiz desligado, a camada 1 é a de antes dele (uma chamada, cobertura 0,7); com tudo desligado, a
+rota é a da `main` (`RotaLegislacaoFidelidadeTest`).
+
+**Limites conhecidos.** A régua é lexical: paráfrase com sinônimo fora da cópia reprova (falso
+descarte; a raiz casa "redução" com "reduzidas", mas não "isenção" com "não incide" fora da
+polaridade nem "IBS" com "imposto" sozinho; e a cópia com "salvo", "exceto" ou "não" exige negação
+na frase quando a frase fala do que foi negado), e frase que reordena as palavras da cópia com
+outro sentido, sem negação nem número, passa. **O número do nível de cima vale como contexto** (o
+período do parágrafo para a alínea): uma frase que leva esse número da condição para a conclusão ("até
+2032 será devido só o IBS", citando a alínea b do art. 408, § 4º, II) passa na camada 1; é o preço do
+falso descarte que essa regra corrigiu, e é o tipo de frase que o juiz reprova. A negação logo antes da
+cópia ("Não | incide o IBS…", com a cópia começando depois do "não") conta como da cópia.
+
+**Diagnóstico com o Haiku (2026-11-12 e 13, 12 perguntas próprias, inventadas, sobre a reforma no
+agro; nenhuma do gabarito nem do conjunto de medição; banco de diagnóstico à parte, só leitura da
+base de lei):** respondidas em 24 execuções por braço: tudo desligado 21; camada 1 antes do ajuste 13
+(6 `CITACAO_INVALIDA`, todas `NAO_ENCONTREI`); camada 1 depois do ajuste 19 (2 `NAO_ENCONTREI`, na
+mesma pergunta em que o braço desligado também responde `NAO_ENCONTREI`, e 3 reprovações, duas delas
+inversões ou inferências de verdade); camada 1 + juiz 16 (5 `NAO_ENCONTREI` e 3 reprovações do juiz,
+duas certas: dedução do inverso da regra e generalização do anexo). O `CITACAO_INVALIDA` com
+`fidelidade_lei` nulo é o `NAO_ENCONTREI` do modelo: o prompt com evidência o levava a desistir quando
+os trechos respondiam só em parte.
+
 ## Orquestração, streaming e isolamento de recursos (issue #157)
 
 ### Rotas
@@ -835,7 +995,8 @@ perto de ÷ 3, então leia como faixa), não medição pelo tokenizador do Qwen.
 |---|---|---|---|---|---|---|
 | Classificação | `LlmClassificadorIntencao` | só no desempate das camadas e na `perguntaLei` do MISTO (#265); nunca nos atalhos (#343) | `CLASSIFICACAO` (1.128) | pergunta (até 1.000) | nenhuma | `tetos.classificacao` (256) |
 | Escolha das funções de dados | `RotaDados` | DADOS e a parte de dados do MISTO | `SISTEMA_DADOS` (884) + 13 definições de função (11.870, ordenadas pelo nome) | data de hoje + pergunta (até ~1.030) | as 13 de dados | `tetos.funcoes` (512) |
-| Lei | `RotaLegislacao` | LEGISLACAO e a parte de lei do MISTO, só com trecho recuperado | regras (712; 1.035 na variante só regra geral do MISTO) | data de hoje + trechos (top-k 5 + complementares do MISTO, sem teto de tamanho) + pergunta | nenhuma | `tetos.legislacao` (1.024) |
+| Lei | `RotaLegislacao` | LEGISLACAO e a parte de lei do MISTO, só com trecho recuperado | regras (712; 1.035 na variante só regra geral do MISTO; ~1.170 com a conferência de fidelidade ligada, #269) | data de hoje + trechos (top-k 5 + complementares do MISTO, sem teto de tamanho) + pergunta | nenhuma | `tetos.legislacao` (1.024) |
+| Juiz da fidelidade da lei (#269, camada 2) | `JuizFidelidadeLei` | só com a camada 1 e o juiz ligados, depois que a resposta de lei passa por todas as conferências em código | `JUIZ_FIDELIDADE` (~800, todo o sistema) | frases e cópias, na mensagem do usuário | nenhuma | `tetos.juiz` (128) |
 
 Estimativa do maior prompt de cada uma (sem o template do modelo, ~300 caracteres a mais):
 classificação ~2.100 caracteres (~530 a ~710 tokens); dados ~13.800 (~3.450 a ~4.600 tokens);

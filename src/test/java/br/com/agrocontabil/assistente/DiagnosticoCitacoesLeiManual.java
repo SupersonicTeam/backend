@@ -108,8 +108,9 @@ class DiagnosticoCitacoesLeiManual {
         crus.clear();
         long inicio = System.nanoTime();
         ResultadoRota r;
+        ContextoAssistente contexto = new ContextoAssistente(UUID.randomUUID(), hoje);
         try {
-          r = rota.responder(pergunta, new ContextoAssistente(UUID.randomUUID(), hoje));
+          r = rota.responder(pergunta, contexto);
         } catch (RuntimeException e) {
           // Falha do modelo (timeout etc.): registra e segue, sem derrubar a rodada.
           ObjectNode erro = rodadas.addObject();
@@ -121,9 +122,15 @@ class DiagnosticoCitacoesLeiManual {
           continue;
         }
         ObjectNode o = rodadas.addObject();
-        o.put("cru", crus.isEmpty() ? "" : crus.get(crus.size() - 1));
+        o.put("cru", crus.isEmpty() ? "" : crus.get(0));
+        // Com o juiz da fidelidade (#269) ha uma segunda chamada: o veredito dele.
+        ArrayNode todas = o.putArray("crus");
+        crus.forEach(todas::add);
         o.put("ms", (System.nanoTime() - inicio) / 1_000_000);
         o.put("desfecho", r.desfecho().name());
+        // Conferencia de fidelidade (#269): o desfecho dela, quando rodou.
+        o.put("fidelidade", contexto.fidelidadeLei() == null ? null
+            : contexto.fidelidadeLei().name());
         o.put("texto", r.texto());
         ArrayNode citacoes = o.putArray("citacoes");
         for (CitacaoLegal c : r.citacoes()) {

@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import br.com.agrocontabil.config.SchedulingConfig;
+import br.com.agrocontabil.model.AssistenteInteracao;
 import br.com.agrocontabil.model.DesfechoExplicacao;
+import br.com.agrocontabil.model.DesfechoFidelidadeLei;
+import br.com.agrocontabil.model.DesfechoInteracao;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EscritorioSlugAnteriorRepository;
 import br.com.agrocontabil.service.AssistenteInteracaoService;
@@ -617,6 +620,51 @@ class LiquibaseChangelogIntegrationTest {
     assertThat(colunas).extracting(c -> c.get("data_type"), c -> c.get("is_nullable"),
         c -> ((Number) c.get("character_maximum_length")).intValue())
         .containsExactly(tuple("character varying", "YES", 20));
+  }
+
+  @Test
+  @DisplayName("changeSet 0065: desfecho da conferencia de fidelidade da lei, nulo sem ela, so o "
+      + "enum (#269)")
+  void changeSet0065FidelidadeLei() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'assistente_interacao'"
+            + " AND column_name = 'fidelidade_lei'");
+    assertThat(colunas).extracting(c -> c.get("data_type"), c -> c.get("is_nullable"),
+        c -> ((Number) c.get("character_maximum_length")).intValue())
+        .containsExactly(tuple("character varying", "YES", 40));
+    // O maior desfecho cabe na coluna, e o novo desfecho da pergunta cabe na coluna desfecho.
+    assertThat(java.util.Arrays.stream(DesfechoFidelidadeLei.values())
+        .mapToInt(d -> d.name().length()).max().orElseThrow()).isLessThanOrEqualTo(40);
+    assertThat(DesfechoInteracao.FIDELIDADE_REPROVADA.name().length()).isLessThanOrEqualTo(40);
+
+    String produtor = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor 0065')",
+        produtor);
+    UUID semConferencia = interacaoService.registrar(AssistenteInteracao.builder()
+        .produtorId(UUID.fromString(produtor)).rota("DADOS")
+        .desfecho(DesfechoInteracao.RESPONDIDA).chamadasFuncao(1).latenciaMs(10)
+        .tamanhoPergunta(20).criadoEm(java.time.OffsetDateTime.now()).build());
+    UUID reprovada = interacaoService.registrar(AssistenteInteracao.builder()
+        .produtorId(UUID.fromString(produtor)).rota("LEGISLACAO")
+        .desfecho(DesfechoInteracao.FIDELIDADE_REPROVADA)
+        .fidelidadeLei(DesfechoFidelidadeLei.REPROVADA_JUIZ_CONTRADIZ).latenciaMs(10)
+        .latenciaJuizMs(900L).tokensEntradaJuiz(700).tokensSaidaJuiz(12)
+        .tamanhoPergunta(20).criadoEm(java.time.OffsetDateTime.now()).build());
+
+    assertThat(jdbc.queryForMap("SELECT fidelidade_lei, latencia_juiz_ms, tokens_entrada_juiz,"
+        + " tokens_saida_juiz FROM assistente_interacao WHERE id = ?", semConferencia))
+        .containsEntry("fidelidade_lei", null).containsEntry("latencia_juiz_ms", null)
+        .containsEntry("tokens_entrada_juiz", null).containsEntry("tokens_saida_juiz", null);
+    assertThat(jdbc.queryForMap("SELECT desfecho, fidelidade_lei, latencia_juiz_ms,"
+        + " tokens_entrada_juiz, tokens_saida_juiz FROM assistente_interacao WHERE id = ?",
+        reprovada))
+        .containsEntry("desfecho", "FIDELIDADE_REPROVADA")
+        .containsEntry("fidelidade_lei", "REPROVADA_JUIZ_CONTRADIZ")
+        .containsEntry("latencia_juiz_ms", 900L)
+        .containsEntry("tokens_entrada_juiz", 700)
+        .containsEntry("tokens_saida_juiz", 12);
   }
 
   @Test
@@ -1440,14 +1488,16 @@ class LiquibaseChangelogIntegrationTest {
             + " WHERE table_name = 'assistente_interacao' ORDER BY column_name",
         String.class);
 
-    // As colunas da explicacao (#268, changeSet 0064) tambem sao so desfecho e metricas.
+    // As colunas da explicacao (#268, changeSet 0064) e da fidelidade da lei (#269, changeSet
+    // 0065) tambem sao so desfecho e metricas.
     assertThat(colunas).containsExactly(
         "camada_classificacao", "chamadas_funcao", "criado_em", "desfecho", "desfecho_dados",
-        "desfecho_explicacao", "desfecho_legislacao",
-        "funcoes", "id", "latencia_explicacao_ms", "latencia_ms", "modelo",
+        "desfecho_explicacao", "desfecho_legislacao", "fidelidade_lei",
+        "funcoes", "id", "latencia_explicacao_ms", "latencia_juiz_ms", "latencia_ms", "modelo",
         "pergunta_lei_reescrita", "produtor_id", "rota",
-        "tamanho_pergunta", "tokens_entrada", "tokens_entrada_explicacao", "tokens_estimados",
-        "tokens_saida", "tokens_saida_explicacao", "trechos_citados");
+        "tamanho_pergunta", "tokens_entrada", "tokens_entrada_explicacao", "tokens_entrada_juiz",
+        "tokens_estimados", "tokens_saida", "tokens_saida_explicacao", "tokens_saida_juiz",
+        "trechos_citados");
     // A auditoria registra o que o sistema fez, nunca o que o usuario disse.
     assertThat(colunas).noneMatch(c -> c.contains("resposta") || c.equals("pergunta")
         || c.equals("texto"));

@@ -1,6 +1,8 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.assistente.fidelidade.ConferenciaFidelidadeLei;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -139,12 +141,114 @@ public final class PromptsCeres {
    * {@link VerificadorAfirmacaoDados}.
    */
   public static String sistemaLegislacaoRegraGeral(LocalDate hoje, String trechos) {
-    return sistemaLegislacao(hoje, trechos, """
-        - Explique SOMENTE a regra geral da lei, em terceira pessoa (ex.: "os insumos do Anexo IX \
-        tem reducao de aliquota"). Voce NAO conhece as compras, vendas, notas nem a situacao do \
-        usuario: outra parte do sistema responde sobre isso. Nunca escreva "voce", "seu", "sua" \
-        nem diga o que o usuario comprou, vendeu ou tem direito.
-        """);
+    return sistemaLegislacao(hoje, trechos, REGRA_GERAL);
+  }
+
+  /** Regra a mais da parte de lei do MISTO (#170): só a regra geral, sem os dados do produtor. */
+  private static final String REGRA_GERAL = """
+      - Explique SOMENTE a regra geral da lei, em terceira pessoa (ex.: "os insumos do Anexo IX \
+      tem reducao de aliquota"). Voce NAO conhece as compras, vendas, notas nem a situacao do \
+      usuario: outra parte do sistema responde sobre isso. Nunca escreva "voce", "seu", "sua" \
+      nem diga o que o usuario comprou, vendeu ou tem direito.
+      """;
+
+  /**
+   * Instrução do juiz da fidelidade da lei (#269, camada 2, {@code
+   * app.assistente.fidelidade-lei.juiz.enabled}): toda fixa, igual byte a byte entre perguntas
+   * (cache de prefixo, #270); as frases e as cópias vão na mensagem do usuário
+   * ({@link #mensagemJuiz}). O juiz só reprova: o veredito nunca vira texto ao produtor.
+   */
+  public static final String JUIZ_FIDELIDADE = """
+      Voce confere se cada frase e sustentada pelas passagens de lei listadas logo abaixo dela.
+
+      Para cada frase, responda:
+      - SUSTENTA: tudo o que a frase afirma esta dito nas passagens, com o mesmo sentido, mesmo \
+      que em palavras mais simples. Resumir e deixar de fora partes das passagens nao e problema.
+      - NAO_SUSTENTA: a frase afirma algo que as passagens nao dizem: uma condicao, uma \
+      consequencia ou um exemplo que nao esta nelas, ou um alcance maior (dizer que vale sempre, \
+      ou para todos, quando as passagens limitam a um caso ou a um grupo).
+      - CONTRADIZ: a frase diz o contrario das passagens.
+
+      As frases sao de uma mesma resposta, na ordem: uma frase pode retomar as anteriores \
+      ("tambem", "esse", "ele", "nesse caso"). Leia o que ela retoma nas frases e passagens \
+      anteriores, e julgue o que ela afirma.
+      Use so as passagens. Nao use conhecimento proprio.
+      Responda somente com JSON, sem nada antes ou depois: uma lista "vereditos" com exatamente \
+      um veredito por frase, na ordem das frases, escrito como acima (SUSTENTA, NAO_SUSTENTA ou \
+      CONTRADIZ). Exemplo para duas frases: {"vereditos": ["SUSTENTA", "NAO_SUSTENTA"]}
+      """;
+
+  /**
+   * Mensagem do juiz (#269): cada frase numerada, seguida das passagens copiadas dela. Quem chama
+   * passa o texto pelo {@code DataSanitizer}.
+   *
+   * @param frases frases, na ordem, cada uma com as cópias
+   * @return mensagem do usuário
+   */
+  public static String mensagemJuiz(List<ConferenciaFidelidadeLei.FraseConferida> frases) {
+    StringBuilder sb = new StringBuilder();
+    int n = 0;
+    for (ConferenciaFidelidadeLei.FraseConferida frase : frases) {
+      sb.append("Frase ").append(++n).append(": ").append(frase.texto()).append('\n');
+      for (String copia : frase.copias()) {
+        sb.append("Passagem: ").append(copia).append('\n');
+      }
+      sb.append('\n');
+    }
+    return sb.toString().strip();
+  }
+
+  /**
+   * Prompt de lei com evidência por frase (#269), usado só com a flag
+   * {@code app.assistente.fidelidade-lei.enabled}: a resposta vem em JSON, cada frase com a passagem
+   * copiada do trecho que a sustenta, e o {@code ConferenciaFidelidadeLei} confere em código. A
+   * parte fixa (regras e formato) vem antes da data e dos trechos, como no prompt de sempre (#270).
+   *
+   * @param hoje    data de referência
+   * @param trechos trechos já formatados com as marcas
+   * @return instrução de sistema
+   */
+  public static String sistemaLegislacaoComEvidencia(LocalDate hoje, String trechos) {
+    return sistemaLegislacaoComEvidencia(hoje, trechos, "");
+  }
+
+  /** A variante com evidência da parte de lei do MISTO (#269, #170). */
+  public static String sistemaLegislacaoRegraGeralComEvidencia(LocalDate hoje, String trechos) {
+    return sistemaLegislacaoComEvidencia(hoje, trechos, REGRA_GERAL);
+  }
+
+  private static String sistemaLegislacaoComEvidencia(LocalDate hoje, String trechos,
+      String regraExtra) {
+    return """
+        Voce e a Ceres, assistente fiscal do AgroConIA. Explica a reforma tributaria do \
+        agronegocio (IBS e CBS) ao produtor rural.
+
+        Regras:
+        - Responda em portugues do Brasil, de forma curta e direta, usando SOMENTE os trechos de \
+        lei abaixo. Nao use conhecimento proprio.
+        - Cada frase afirma so o que o trecho diz: nao acrescente condicao, consequencia, \
+        exemplo nem excecao que nao esteja escrita nele, e nao inverta o sentido.
+        - Para cada frase, copie do trecho, palavra por palavra, a passagem que a sustenta: a \
+        menor que baste, sem resumir nem trocar palavras. Pode usar mais de uma passagem.
+        - Copie a passagem de onde a regra esta escrita. Se ela esta no comeco do trecho (o caput \
+        do artigo), copie do comeco, nao do paragrafo ou inciso que vem depois.
+        - Nao escreva numero de artigo, paragrafo, inciso nem nome de lei.
+        - Nao calcule valores. Percentuais e prazos so se estiverem escritos nos trechos.
+        - Responda somente com JSON, sem nada antes ou depois, neste formato:
+        {"frases": [{"frase": "texto da frase", "evidencias": [{"trecho": "T1", "copia": \
+        "passagem copiada do T1"}]}]}
+        - Se os trechos responderem so a uma parte da pergunta, responda essa parte com as frases \
+        que eles sustentam.
+        - So se nenhum trecho tratar do assunto da pergunta, responda apenas: %s
+        - Fora isso, a resposta inteira, completa ou parcial, e somente o JSON acima: nada de texto \
+        corrido nem marca [T1] fora dele.
+        """.formatted(NAO_ENCONTREI) + regraExtra + """
+
+        Hoje e %s.
+
+        Trechos de lei:
+        %s
+        """.formatted(hoje, trechos);
   }
 
   /**

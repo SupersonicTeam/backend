@@ -1,6 +1,7 @@
 package br.com.agrocontabil.assistente.porta;
 
 import br.com.agrocontabil.model.DesfechoExplicacao;
+import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -54,6 +55,13 @@ public interface AuditoriaPorta {
    *                         por caracteres (issue #166)
    * @param tamanhoPergunta  tamanho da pergunta em caracteres (métrica, não conteúdo)
    * @param criadoEm         instante do registro
+   * @param fidelidadeLei    desfecho da conferência de fidelidade da resposta de lei (#269); nulo
+   *                         quando ela não rodou (flag desligada, outra rota, sem trecho...)
+   * @param latenciaJuizMs   duração da chamada do juiz da fidelidade (#269, camada 2); nula se ele
+   *                         não rodou. {@code latenciaMs} é a da pergunta sem ela
+   * @param tokensEntradaJuiz tokens de entrada do juiz; nulo se ele não rodou. {@code tokensEntrada}
+   *                         é o da pergunta sem ele
+   * @param tokensSaidaJuiz  tokens de saída do juiz; nulo se ele não rodou
    */
   record RegistroInteracao(
       UUID produtorId, String rota, DesfechoInteracao desfecho,
@@ -61,7 +69,23 @@ public interface AuditoriaPorta {
       Boolean perguntaLeiReescrita, String camadaClassificacao, String funcoesJson,
       int chamadasFuncao, String trechosCitadosJson, String modelo, long latenciaMs,
       Integer tokensEntrada, Integer tokensSaida, boolean tokensEstimados, int tamanhoPergunta,
-      OffsetDateTime criadoEm) {}
+      OffsetDateTime criadoEm, DesfechoFidelidadeLei fidelidadeLei, Long latenciaJuizMs,
+      Integer tokensEntradaJuiz, Integer tokensSaidaJuiz) {
+
+    /** Registro sem a conferência de fidelidade (#269): a forma de antes da flag. */
+    public RegistroInteracao(
+        UUID produtorId, String rota, DesfechoInteracao desfecho,
+        DesfechoInteracao desfechoDados, DesfechoInteracao desfechoLegislacao,
+        Boolean perguntaLeiReescrita, String camadaClassificacao, String funcoesJson,
+        int chamadasFuncao, String trechosCitadosJson, String modelo, long latenciaMs,
+        Integer tokensEntrada, Integer tokensSaida, boolean tokensEstimados, int tamanhoPergunta,
+        OffsetDateTime criadoEm) {
+      this(produtorId, rota, desfecho, desfechoDados, desfechoLegislacao, perguntaLeiReescrita,
+          camadaClassificacao, funcoesJson, chamadasFuncao, trechosCitadosJson, modelo, latenciaMs,
+          tokensEntrada, tokensSaida, tokensEstimados, tamanhoPergunta, criadoEm, null, null, null,
+          null);
+    }
+  }
 
   /**
    * Desfecho da explicação de uma pergunta (#268), sem o texto dela.

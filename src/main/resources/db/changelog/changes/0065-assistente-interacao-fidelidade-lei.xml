@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0065-assistente-interacao-fidelidade-lei.xml
+         Ceres, issue #269 (item 1 do escopo remodelado em 2026-11-12) -
+         conferencia de fidelidade da rota de lei, atras da flag
+         app.assistente.fidelidade-lei.enabled (desligada por padrao).
+
+         - fidelidade_lei: APROVADA, APROVADA_CITACAO_CORRIGIDA ou
+           REPROVADA_<motivo> (DesfechoFidelidadeLei). Nula quando a
+           conferencia nao roda (flag desligada, outra rota, sem trecho,
+           NAO_ENCONTREI, resposta cortada) e nas perguntas gravadas antes
+           desta mudanca.
+         - latencia_juiz_ms, tokens_entrada_juiz e tokens_saida_juiz: tempo e
+           tokens do juiz (camada 2, app.assistente.fidelidade-lei.juiz.enabled).
+           Nulos quando ele nao roda. Com ele, latencia_ms, tokens_entrada e
+           tokens_saida da pergunta sao sem o juiz: a soma das colunas e o total.
+         So o enum e as metricas: o texto da resposta, as passagens copiadas
+         e o veredito por frase nunca sao gravados (#144).
+         ================================================================ -->
+
+    <changeSet id="0065-add-fidelidade-lei-assistente-interacao" author="supersonic-team">
+        <comment>Fidelidade da rota de lei da Ceres e metricas do juiz (#269).</comment>
+        <addColumn tableName="assistente_interacao">
+            <column name="fidelidade_lei" type="VARCHAR(40)"/>
+            <column name="latencia_juiz_ms" type="BIGINT"/>
+            <column name="tokens_entrada_juiz" type="INTEGER"/>
+            <column name="tokens_saida_juiz" type="INTEGER"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>
