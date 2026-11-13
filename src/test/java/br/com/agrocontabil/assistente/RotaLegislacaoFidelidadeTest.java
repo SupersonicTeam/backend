@@ -69,10 +69,29 @@ class RotaLegislacaoFidelidadeTest {
   }
 
   private RotaLegislacao rota(boolean ligada, double cobertura, boolean juiz) {
+    return rota(ligada, cobertura, juiz, false, false);
+  }
+
+  private RotaLegislacao rota(boolean ligada, double cobertura, boolean juiz, boolean resgate,
+      boolean resgateCobertura) {
+    return rota(ligada, cobertura, juiz, resgate, true, resgateCobertura);
+  }
+
+  private RotaLegislacao rota(boolean ligada, double cobertura, boolean juiz, boolean resgate,
+      boolean resgatePolaridade, boolean resgateCobertura) {
+    return rota(ligada, cobertura, juiz, true, resgate, resgatePolaridade, resgateCobertura);
+  }
+
+  private RotaLegislacao rota(boolean ligada, double cobertura, boolean juiz, boolean veto,
+      boolean resgate, boolean resgatePolaridade, boolean resgateCobertura) {
     AssistenteProperties propriedades = new AssistenteProperties();
     propriedades.getFidelidadeLei().setEnabled(ligada);
     propriedades.getFidelidadeLei().setCoberturaMinima(cobertura);
     propriedades.getFidelidadeLei().getJuiz().setEnabled(juiz);
+    propriedades.getFidelidadeLei().getJuiz().getResgate().setEnabled(resgate);
+    propriedades.getFidelidadeLei().getJuiz().setVeto(veto);
+    propriedades.getFidelidadeLei().getJuiz().getResgate().setPolaridade(resgatePolaridade);
+    propriedades.getFidelidadeLei().getJuiz().getResgate().setCobertura(resgateCobertura);
     return new RotaLegislacao(modelo, busca, new ValidadorCitacao(), new ValidadorNumeros(),
         new VerificadorAfirmacaoDados(), propriedades,
         new ConferenciaFidelidadeLei(GlossarioProdutor.padrao()),
@@ -463,5 +482,245 @@ class RotaLegislacaoFidelidadeTest {
     assertThat(comJuiz().responder("Qual a base de calculo do IBS?", outro).desfecho())
         .isEqualTo(DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
     assertThat(outro.juizLei()).isNull();
+  }
+  /** O número 2032 está na pergunta (o ValidadorNumeros aceita), mas fora do dispositivo. */
+  private static final String NUMERO_FORA_DA_COPIA = json(
+      "A reducao de 60% das aliquotas dos insumos agropecuarios vale ate 2032.", "T1",
+      "Ficam reduzidas em 60% as aliquotas do IBS e da CBS incidentes sobre os insumos "
+          + "agropecuarios");
+  private static final String NEGA_SEM_A_COPIA = json("Os insumos agropecuarios nao tem reducao.",
+      "T1", "Ficam reduzidas em 60% as aliquotas do IBS e da CBS incidentes sobre os insumos "
+          + "agropecuarios");
+
+  private RotaLegislacao comResgate() {
+    return rota(true, 0.7, true, true, false);
+  }
+
+  @Test
+  @DisplayName("resgate: número fora da cópia e juiz SUSTENTA, a resposta sai (APROVADA_RESGATE_JUIZ)")
+  void resgateAceito() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    chatModel.responderEmSequencia(ChatModelSimulado.texto(NUMERO_FORA_DA_COPIA),
+        ChatModelSimulado.texto("{\"vereditos\": [\"SUSTENTA\"]}"));
+
+    ResultadoRota r = comResgate().responder("A reducao dos insumos vale ate 2032?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(r.texto()).startsWith("A reducao de 60% das aliquotas dos insumos agropecuarios vale "
+        + "ate 2032 (LC 214/2025, art. 138).");
+    // Uma chamada do juiz so, com o dispositivo inteiro.
+    assertThat(chatModel.promptsRecebidos()).hasSize(2);
+    assertThat(chatModel.promptsRecebidos().get(1).getUserMessage().getText())
+        .contains("Passagem: " + CAPUT);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.APROVADA_RESGATE_JUIZ);
+    assertThat(contexto.juizLei()).isNotNull();
+    assertThat(contexto.trechosCitados()).containsExactly("id-1");
+  }
+
+  @Test
+  @DisplayName("resgate: veto, contradição, falha ou corte do juiz mantêm o motivo da camada 1")
+  void resgateNegado() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    for (String juiz : List.of("{\"vereditos\": [\"NAO_SUSTENTA\"]}",
+        "{\"vereditos\": [\"CONTRADIZ\"]}", "{\"vereditos\": []}", "sem json")) {
+      chatModel.responderEmSequencia(ChatModelSimulado.texto(NUMERO_FORA_DA_COPIA),
+          ChatModelSimulado.texto(juiz));
+      ContextoAssistente c = new ContextoAssistente(UUID.randomUUID(), HOJE);
+
+      ResultadoRota r = comResgate().responder("A reducao vale ate 2032?", c);
+
+      assertThat(r.desfecho()).as(juiz).isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+      assertThat(r.texto()).isEqualTo(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
+      assertThat(c.fidelidadeLei()).as(juiz).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+      assertThat(c.trechosCitados()).containsExactly("id-1");
+      assertThat(c.juizLei()).isNotNull();
+    }
+  }
+
+  @Test
+  @DisplayName("resgate: polaridade vai ao juiz, numa chamada só, e o veto mantém o motivo")
+  void resgateDePolaridade() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    chatModel.responderEmSequencia(ChatModelSimulado.texto(NEGA_SEM_A_COPIA),
+        ChatModelSimulado.texto("{\"vereditos\": [\"CONTRADIZ\"]}"));
+
+    ResultadoRota r = comResgate().responder("Qual a reducao dos insumos?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+    assertThat(chatModel.promptsRecebidos()).hasSize(2);
+  }
+
+  @Test
+  @DisplayName("resgate sem o juiz não tem efeito; com o juiz e sem resgate, a camada 1 decide")
+  void resgateSoComJuiz() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    chatModel.responderTexto(NUMERO_FORA_DA_COPIA);
+    assertThat(rota(true, 0.7, false, true, true).responder("Vale ate 2032?", contexto).desfecho())
+        .isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(chatModel.promptsRecebidos()).hasSize(1);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+
+    chatModel.responderTexto(NUMERO_FORA_DA_COPIA);
+    ContextoAssistente outro = new ContextoAssistente(UUID.randomUUID(), HOJE);
+    assertThat(comJuiz().responder("Vale ate 2032?", outro).desfecho())
+        .isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(outro.juizLei()).isNull();
+  }
+
+  @Test
+  @DisplayName("resgate: cobertura só com resgate.cobertura; formato nunca vai ao juiz")
+  void resgateDeCoberturaEEstruturais() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    // Uma palavra de conteudo coberta em seis: abaixo do piso de 0,3 com o juiz.
+    String poucaCobertura = json("Fertilizantes, defensivos, sementes, mudas e corretivos sao "
+        + "insumos.", "T1", "Ficam reduzidas em 60% as aliquotas do IBS e da CBS incidentes sobre "
+        + "os insumos agropecuarios");
+    chatModel.responderTexto(poucaCobertura);
+    assertThat(comResgate().responder("Insumos?", contexto).desfecho())
+        .isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+    assertThat(contexto.juizLei()).isNull();
+
+    chatModel.responderEmSequencia(ChatModelSimulado.texto(poucaCobertura),
+        ChatModelSimulado.texto("{\"vereditos\": [\"SUSTENTA\"]}"));
+    ContextoAssistente outro = new ContextoAssistente(UUID.randomUUID(), HOJE);
+    assertThat(rota(true, 0.7, true, true, true).responder("Insumos?", outro).desfecho())
+        .isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(outro.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.APROVADA_RESGATE_JUIZ);
+
+    chatModel.responderTexto("texto fora do formato");
+    ContextoAssistente formato = new ContextoAssistente(UUID.randomUUID(), HOJE);
+    assertThat(rota(true, 0.7, true, true, true).responder("Insumos?", formato).desfecho())
+        .isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(formato.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_FORMATO);
+    assertThat(formato.juizLei()).isNull();
+  }
+  @Test
+  @DisplayName("resgate: descartada por outra conferência em código antes do juiz, sem chamá-lo")
+  void resgateDescartadoAntesDoJuiz() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    // 2032 nao esta no trecho nem na pergunta: a camada 1 manda resgatar, o ValidadorNumeros
+    // descarta antes do juiz.
+    chatModel.responderTexto(NUMERO_FORA_DA_COPIA);
+
+    ResultadoRota r = comResgate().responder("Ate quando vale a reducao?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.NUMERO_SEM_FONTE);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    assertThat(chatModel.promptsRecebidos()).hasSize(1);
+    assertThat(contexto.juizLei()).isNull();
+  }
+  @Test
+  @DisplayName("resgate padrão: polaridade fica de fora, reprova na camada 1 sem chamar o juiz")
+  void resgatePadraoSemPolaridade() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    chatModel.responderTexto(NEGA_SEM_A_COPIA);
+
+    ResultadoRota r = rota(true, 0.7, true, true, false, false)
+        .responder("Qual a reducao dos insumos?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+    assertThat(chatModel.promptsRecebidos()).hasSize(1);
+    assertThat(contexto.juizLei()).isNull();
+  }
+  /** Só resgate: juiz ligado, sem veto, resgate por número (e polaridade, se pedido). */
+  private RotaLegislacao soResgate(boolean polaridade) {
+    return rota(true, 0.7, true, false, true, polaridade, false);
+  }
+
+  @Test
+  @DisplayName("só resgate: a resposta aprovada pela camada 1 sai sem chamar o juiz")
+  void soResgateAprovadaSemJuiz() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    chatModel.responderTexto(SUSTENTADA);
+
+    ResultadoRota r = soResgate(false).responder("Qual a reducao dos insumos?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
+    assertThat(chatModel.promptsRecebidos()).hasSize(1);
+    assertThat(contexto.juizLei()).isNull();
+  }
+
+  @Test
+  @DisplayName("só resgate: a resposta a resgatar chama o juiz; SUSTENTA aceita, veto mantém o motivo")
+  void soResgateChamaOJuizNoResgate() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    chatModel.responderEmSequencia(ChatModelSimulado.texto(NUMERO_FORA_DA_COPIA),
+        ChatModelSimulado.texto("{\"vereditos\": [\"SUSTENTA\"]}"));
+
+    ResultadoRota r = soResgate(false).responder("A reducao vale ate 2032?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.APROVADA_RESGATE_JUIZ);
+    assertThat(chatModel.promptsRecebidos()).hasSize(2);
+
+    chatModel.responderEmSequencia(ChatModelSimulado.texto(NEGA_SEM_A_COPIA),
+        ChatModelSimulado.texto("{\"vereditos\": [\"CONTRADIZ\"]}"));
+    ContextoAssistente outro = new ContextoAssistente(UUID.randomUUID(), HOJE);
+    assertThat(soResgate(true).responder("Qual a reducao?", outro).desfecho())
+        .isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(outro.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+    assertThat(outro.juizLei()).isNotNull();
+  }
+
+  @Test
+  @DisplayName("só resgate: a cobertura volta a 0,7, como na camada 1 sozinha; com veto, 0,3")
+  void soResgateCoberturaDaCamada1() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    // "fertilizantes" e "defensivos" fora da copia: 4 de 6 palavras de conteudo (0,67).
+    String parafrase = "{\"frases\": [{\"frase\": \"Fertilizantes e defensivos sao insumos "
+        + "agropecuarios com aliquotas reduzidas.\", \"evidencias\": [{\"trecho\": \"T1\", "
+        + "\"copia\": \"Ficam reduzidas em 60% as aliquotas do IBS e da CBS incidentes sobre os "
+        + "insumos agropecuarios\"}]}]}";
+    chatModel.responderTexto(parafrase);
+
+    ResultadoRota r = soResgate(true).responder("Insumos?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+    assertThat(chatModel.promptsRecebidos()).hasSize(1);
+    assertThat(contexto.juizLei()).isNull();
+
+    // Com o veto (o padrao), a mesma parafrase passa da camada 1 e vai ao juiz.
+    chatModel.responderEmSequencia(ChatModelSimulado.texto(parafrase),
+        ChatModelSimulado.texto("{\"vereditos\": [\"SUSTENTA\"]}"));
+    ContextoAssistente comVeto = new ContextoAssistente(UUID.randomUUID(), HOJE);
+    assertThat(comJuiz().responder("Insumos?", comVeto).desfecho())
+        .isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(comVeto.juizLei()).isNotNull();
+  }
+
+  @Test
+  @DisplayName("sem veto e sem resgate: o juiz nunca roda (igual à camada 1 sozinha, cobertura 0,7)")
+  void semVetoSemResgateEhACamada1() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    chatModel.responderTexto(SUSTENTADA);
+    assertThat(rota(true, 0.7, true, false, false, false, false)
+        .responder("Qual a reducao dos insumos?", contexto).desfecho())
+        .isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(chatModel.promptsRecebidos()).hasSize(1);
+    assertThat(contexto.juizLei()).isNull();
+  }
+  @Test
+  @DisplayName("só resgate com resgate.cobertura: a faixa entre 0,3 e 0,7 vai ao juiz, não passa direto")
+  void soResgateResgataCobertura() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    // 4 de 6 palavras de conteudo (0,67): abaixo de 0,7, acima de 0,3.
+    String parafrase = "{\"frases\": [{\"frase\": \"Fertilizantes e defensivos sao insumos "
+        + "agropecuarios com aliquotas reduzidas.\", \"evidencias\": [{\"trecho\": \"T1\", "
+        + "\"copia\": \"Ficam reduzidas em 60% as aliquotas do IBS e da CBS incidentes sobre os "
+        + "insumos agropecuarios\"}]}]}";
+    chatModel.responderEmSequencia(ChatModelSimulado.texto(parafrase),
+        ChatModelSimulado.texto("{\"vereditos\": [\"NAO_SUSTENTA\"]}"));
+
+    ResultadoRota r = rota(true, 0.7, true, false, true, false, true)
+        .responder("Insumos?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+    assertThat(chatModel.promptsRecebidos()).hasSize(2);
   }
 }

@@ -97,8 +97,22 @@ class TetoDaCotaCobreChamadasTest {
     assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(31_744);
     propriedades.getFidelidadeLei().getJuiz().setEnabled(true);
     assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(40_448);
-    assertThat(propriedades.getCota().tetoDoJuiz(propriedades.getTetos(), 2.0))
+    assertThat(propriedades.getCota().tetoDoJuiz(propriedades.getTetos().getJuiz(), 2.0))
         .isEqualTo(17_408);
+    // Configuracao justificativa: a parcela do juiz usa o teto dele (1024): 8.192 + 1.024 x 4.
+    propriedades.getFidelidadeLei().getJuiz()
+        .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(44_032);
+    // Adaptativas: o teto cobre raciocinio e vereditos (3.072): 8.192 + 3.072 x 4 = 20.480.
+    propriedades.getFidelidadeLei().getJuiz()
+        .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ADAPTATIVO_ALTO);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(52_224);
+    // Sem veto e sem resgate o juiz nunca roda: a reserva volta a de sem juiz.
+    propriedades.getFidelidadeLei().getJuiz().setVeto(false);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(31_744);
+    // So resgate: o juiz pode rodar, a parcela volta.
+    propriedades.getFidelidadeLei().getJuiz().getResgate().setEnabled(true);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(52_224);
   }
 
   @Test

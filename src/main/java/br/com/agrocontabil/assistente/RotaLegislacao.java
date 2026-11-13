@@ -10,10 +10,12 @@ import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +57,17 @@ import org.springframework.stereotype.Component;
  * por padrão, só com a camada 1 ligada):</strong> depois de todas as conferências em código, uma
  * chamada ao modelo ({@link JuizFidelidadeLei}) julga se as cópias sustentam cada frase. Qualquer
  * frase sem {@code SUSTENTA}, ou a falha do juiz, reprova a resposta pelo mesmo caminho da camada 1.
+ *
+ * <p><strong>Resgate (#269, {@code app.assistente.fidelidade-lei.juiz.resgate.enabled}, desligado
+ * por padrão, só com o juiz):</strong> a frase que a camada 1 reprovaria por número (e, com
+ * {@code resgate.polaridade} e {@code resgate.cobertura}, por polaridade e por cobertura) segue
+ * para as conferências seguintes e para o juiz, na mesma chamada do veto. Só o {@code SUSTENTA} de todas as frases a aceita
+ * ({@code APROVADA_RESGATE_JUIZ}); veto, falha ou corte do juiz mantêm o descarte com o motivo da
+ * camada 1. Formato, evidência ausente e cópia não literal não têm resgate.
+ *
+ * <p><strong>Só resgate (#269, {@code app.assistente.fidelidade-lei.juiz.veto=false}; padrão
+ * {@code true}):</strong> o juiz não veta a resposta que a camada 1 aprovou, que sai sem ele; só a
+ * resposta a resgatar o chama. A cobertura exigida volta à {@code cobertura-minima}.
  */
 @Component
 public class RotaLegislacao {
@@ -111,6 +124,10 @@ public class RotaLegislacao {
   /** Nulo = juiz desligado (chave, camada 1 desligada ou construtor sem ele). */
   private final JuizFidelidadeLei juiz;
   private final double coberturaMinima;
+  /** O juiz veta as respostas aprovadas pela camada 1; falso = só resgate (#269). */
+  private final boolean vetoDoJuiz;
+  /** Motivos da camada 1 que vão ao juiz em vez de reprovar (#269); vazio = sem resgate. */
+  private final Set<DesfechoFidelidadeLei> resgataveis;
 
   /**
    * Constrói a rota sem a conferência de fidelidade (#269): a rota de lei de antes da flag. O teto de
@@ -142,9 +159,27 @@ public class RotaLegislacao {
     AssistenteProperties.FidelidadeLei fidelidade = propriedades.getFidelidadeLei();
     this.conferencia = fidelidade.isEnabled() ? conferencia : null;
     this.juiz = this.conferencia != null && propriedades.juizDaLeiAtivo() ? juiz : null;
-    this.coberturaMinima = this.juiz != null
+    this.vetoDoJuiz = this.juiz != null && fidelidade.getJuiz().isVeto();
+    // O piso baixo da cobertura so vale com o veto: sem ele, a aprovada sai sem o juiz e a
+    // parafrase solta tem de ser barrada em codigo, como na camada 1 sozinha.
+    this.coberturaMinima = this.vetoDoJuiz
         ? fidelidade.getCoberturaMinimaComJuiz()
         : fidelidade.getCoberturaMinima();
+    this.resgataveis = this.juiz != null && propriedades.resgateDaLeiAtivo()
+        ? resgataveis(fidelidade.getJuiz().getResgate())
+        : Set.of();
+  }
+
+  private static Set<DesfechoFidelidadeLei> resgataveis(
+      AssistenteProperties.FidelidadeLei.Juiz.Resgate resgate) {
+    Set<DesfechoFidelidadeLei> motivos = EnumSet.of(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    if (resgate.isPolaridade()) {
+      motivos.add(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+    }
+    if (resgate.isCobertura()) {
+      motivos.add(DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+    }
+    return Set.copyOf(motivos);
   }
 
   /**
@@ -248,10 +283,15 @@ public class RotaLegislacao {
     ConferenciaFidelidadeLei.Resultado conferida = null;
     if (conferencia != null) {
       ConferenciaFidelidadeLei.Resultado fidelidade =
-          conferencia.conferir(texto, trechos, coberturaMinima);
+          conferencia.conferir(texto, trechos, coberturaMinima, resgataveis);
       conferida = fidelidade;
       contexto.registrarFidelidadeLei(fidelidade.desfecho());
-      if (!fidelidade.aprovada()) {
+      if (fidelidade.resgatavel()) {
+        // Resgate (#269): a frase reprovada em codigo segue, e so o juiz a aceita. Se outra
+        // conferencia em codigo a descartar antes dele, vale o desfecho dela.
+        log.info("Ceres: resposta de legislacao com frase a resgatar pelo juiz ({})",
+            fidelidade.desfecho());
+      } else if (!fidelidade.aprovada()) {
         log.info("Ceres: resposta de legislacao reprovada na conferencia de fidelidade ({})",
             fidelidade.desfecho());
         return fidelidadeReprovada(fidelidade, trechos, contexto, soRegraGeral, perguntaSeparada);
@@ -311,12 +351,22 @@ public class RotaLegislacao {
       return new ResultadoRota(
           SO_TRECHOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, citacao.citacoes());
     }
-    if (juiz != null && conferida != null) {
+    if (juiz != null && conferida != null && (vetoDoJuiz || conferida.resgatavel())) {
       // Camada 2 (#269): depois de todas as conferencias em codigo, para nao gastar a chamada numa
       // resposta que elas ja descartariam. So reprova, nunca reescreve. Os trechos citados sao
-      // registrados depois dele: reprovada, ficam so os que o modelo marcou.
+      // registrados depois dele: reprovada, ficam so os que o modelo marcou. Sem o veto (so
+      // resgate), so a resposta a resgatar chega aqui.
       DesfechoFidelidadeLei veredito = juiz.julgar(conferida.frases(), contexto);
-      if (veredito != null) {
+      if (conferida.resgatavel()) {
+        // Resgate (#269): so o SUSTENTA de todas as frases aceita; senao (veto, falha, corte)
+        // fica o motivo da camada 1, ja registrado.
+        if (veredito != null) {
+          log.info("Ceres: resgate negado pelo juiz da fidelidade ({}); fica {}", veredito,
+              conferida.desfecho());
+          return fidelidadeReprovada(conferida, trechos, contexto, soRegraGeral, perguntaSeparada);
+        }
+        contexto.registrarFidelidadeLei(DesfechoFidelidadeLei.APROVADA_RESGATE_JUIZ);
+      } else if (veredito != null) {
         log.info("Ceres: resposta de legislacao reprovada pelo juiz da fidelidade ({})", veredito);
         contexto.registrarFidelidadeLei(veredito);
         return fidelidadeReprovada(conferida, trechos, contexto, soRegraGeral, perguntaSeparada);

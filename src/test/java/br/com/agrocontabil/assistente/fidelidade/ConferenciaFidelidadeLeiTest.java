@@ -6,6 +6,7 @@ import br.com.agrocontabil.assistente.GlossarioProdutor;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
 import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -531,5 +532,127 @@ class ConferenciaFidelidadeLeiTest {
 
     assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
     assertThat(r.trechos()).hasSize(2);
+  }
+  private static final Set<DesfechoFidelidadeLei> NUMERO_E_POLARIDADE = Set.of(
+      DesfechoFidelidadeLei.REPROVADA_NUMERO, DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+
+  private static TrechoRecuperado cbs() {
+    return trecho("T1", "id-cbs", "art. 9º", "Art. 9º Em relação aos fatos geradores ocorridos de "
+        + "1º de janeiro a 31 de dezembro de 2026, a CBS será cobrada mediante aplicação da alíquota "
+        + "de 0,9% (nove décimos por cento).");
+  }
+
+  @Test
+  @DisplayName("resgate: a frase reprovada por número segue, com o texto, para o juiz decidir")
+  void resgateDeNumero() {
+    String resposta = "{\"frases\": [{\"frase\": \"Em 2027, a CBS será cobrada com alíquota de "
+        + "0,9%.\", \"evidencias\": [{\"trecho\": \"T1\", \"copia\": \"a CBS será cobrada mediante "
+        + "aplicação da alíquota de 0,9%\"}]}, {\"frase\": \"A CBS é cobrada pela alíquota de 0,9%."
+        + "\", \"evidencias\": [{\"trecho\": \"T1\", \"copia\": \"a CBS será cobrada mediante "
+        + "aplicação da alíquota de 0,9%\"}]}]}";
+
+    ConferenciaFidelidadeLei.Resultado r =
+        conferencia.conferir(resposta, List.of(cbs()), COBERTURA, NUMERO_E_POLARIDADE);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    assertThat(r.aprovada()).isFalse();
+    assertThat(r.resgatavel()).isTrue();
+    assertThat(r.texto()).isEqualTo("Em 2027, a CBS será cobrada com alíquota de 0,9% [T1]. "
+        + "A CBS é cobrada pela alíquota de 0,9% [T1].");
+    // O juiz recebe as duas frases, com o dispositivo inteiro.
+    assertThat(r.frases()).hasSize(2);
+    assertThat(r.frases().get(0).copias()).singleElement().asString().startsWith("Art. 9º");
+    // Sem a lista, o comportamento de antes.
+    ConferenciaFidelidadeLei.Resultado sem = conferencia.conferir(resposta, List.of(cbs()),
+        COBERTURA);
+    assertThat(sem.resgatavel()).isFalse();
+    assertThat(sem.texto()).isNull();
+    assertThat(sem.frases()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("resgate: polaridade resgatável; o desfecho é o primeiro motivo da camada 1")
+  void resgateDePolaridade() {
+    ConferenciaFidelidadeLei.Resultado r = conferencia.conferir(json(
+        "Só o IBS é devido se o elemento temporal do ICMS ou do ISS tiver se aperfeiçoado até 31 "
+            + "de dezembro de 2032.", "T1",
+        "caso não tenha se aperfeiçoado, até 31 de dezembro de 2032, o elemento temporal da "
+            + "hipótese de incidência do ICMS ou do ISS: b) será devido exclusivamente o IBS na "
+            + "operação"), List.of(alineaB("T1")), COBERTURA, NUMERO_E_POLARIDADE);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+    assertThat(r.resgatavel()).isTrue();
+    assertThat(r.frases()).hasSize(1);
+  }
+
+  @Test
+  @DisplayName("resgate: cobertura só entra se estiver na lista")
+  void resgateDeCoberturaSoNaLista() {
+    TrechoRecuperado lista = trecho("T1", "id-lista", "art. 138, § 4º", "Art. 138. Ficam reduzidas "
+        + "em 60% as alíquotas dos insumos agropecuários do Anexo IX. § 4º A lista do Anexo IX "
+        + "será revisada a cada 120 dias.");
+    String resposta = json("A lista do Anexo IX é revisada a cada 120 dias por ato conjunto do "
+        + "ministro da fazenda com estados e municípios.", "T1",
+        "A lista do Anexo IX será revisada a cada 120 dias");
+
+    assertThat(conferencia.conferir(resposta, List.of(lista), COBERTURA, NUMERO_E_POLARIDADE)
+        .resgatavel()).isFalse();
+    ConferenciaFidelidadeLei.Resultado r = conferencia.conferir(resposta, List.of(lista), COBERTURA,
+        Set.of(DesfechoFidelidadeLei.REPROVADA_COBERTURA));
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+    assertThat(r.resgatavel()).isTrue();
+  }
+
+  @Test
+  @DisplayName("resgate: formato, evidência ausente e cópia não literal seguem eliminatórios")
+  void resgateNaoAlcancaOsEstruturais() {
+    Set<DesfechoFidelidadeLei> todos = Set.of(DesfechoFidelidadeLei.values());
+    assertThat(conferencia.conferir("texto fora do formato", List.of(cbs()), COBERTURA, todos)
+        .desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_FORMATO);
+    ConferenciaFidelidadeLei.Resultado naoLiteral = conferencia.conferir(json(
+        "A CBS é cobrada pela alíquota de 0,9%.", "T1", "a CBS será cobrada pela alíquota de 1%"),
+        List.of(cbs()), COBERTURA, todos);
+    assertThat(naoLiteral.desfecho())
+        .isEqualTo(DesfechoFidelidadeLei.REPROVADA_EVIDENCIA_NAO_LITERAL);
+    assertThat(naoLiteral.resgatavel()).isFalse();
+
+    // Uma frase a resgatar antes de uma estrutural: reprova sem texto, com o primeiro motivo.
+    String resposta = "{\"frases\": [{\"frase\": \"Em 2027, a CBS será cobrada com alíquota de "
+        + "0,9%.\", \"evidencias\": [{\"trecho\": \"T1\", \"copia\": \"a CBS será cobrada mediante "
+        + "aplicação da alíquota de 0,9%\"}]}, {\"frase\": \"A CBS é cobrada.\", \"evidencias\": []}]}";
+    ConferenciaFidelidadeLei.Resultado r =
+        conferencia.conferir(resposta, List.of(cbs()), COBERTURA, todos);
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    assertThat(r.resgatavel()).isFalse();
+    assertThat(r.texto()).isNull();
+  }
+
+  @Test
+  @DisplayName("resgate: frase sem palavra de conteúdo reprovada não tem o que o juiz julgar")
+  void resgateSemConteudoReprova() {
+    ConferenciaFidelidadeLei.Resultado r = conferencia.conferir(json("Não.", "T1",
+        "a CBS será cobrada mediante aplicação da alíquota de 0,9%"), List.of(cbs()), COBERTURA,
+        NUMERO_E_POLARIDADE);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+    assertThat(r.resgatavel()).isFalse();
+  }
+  @Test
+  @DisplayName("resgate: reprovação posterior sem resgate grava o primeiro motivo, como a camada 1")
+  void resgateMantemOPrimeiroMotivo() {
+    // Frase 1 reprova por numero (resgatavel); frase 2 por copia nao literal (sem resgate).
+    String resposta = "{\"frases\": [{\"frase\": \"Em 2027, a CBS será cobrada com alíquota de "
+        + "0,9%.\", \"evidencias\": [{\"trecho\": \"T1\", \"copia\": \"a CBS será cobrada mediante "
+        + "aplicação da alíquota de 0,9%\"}]}, {\"frase\": \"A CBS é cobrada.\", \"evidencias\": "
+        + "[{\"trecho\": \"T1\", \"copia\": \"a CBS será cobrada pela alíquota de 1%\"}]}]}";
+
+    ConferenciaFidelidadeLei.Resultado comResgate =
+        conferencia.conferir(resposta, List.of(cbs()), COBERTURA, NUMERO_E_POLARIDADE);
+    ConferenciaFidelidadeLei.Resultado semResgate =
+        conferencia.conferir(resposta, List.of(cbs()), COBERTURA);
+
+    assertThat(semResgate.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    assertThat(comResgate.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    assertThat(comResgate.resgatavel()).isFalse();
   }
 }

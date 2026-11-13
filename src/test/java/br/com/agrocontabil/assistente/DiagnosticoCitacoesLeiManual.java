@@ -136,6 +136,23 @@ class DiagnosticoCitacoesLeiManual {
         for (CitacaoLegal c : r.citacoes()) {
           citacoes.add(c.norma() + " " + c.dispositivo());
         }
+        // As citacoes como o chat as devolve: a entrada da BancadaJuizFidelidadeManual (#269).
+        ArrayNode doChat = o.putArray("citacoes_chat");
+        for (CitacaoLegal c : r.citacoes()) {
+          ObjectNode cc = doChat.addObject();
+          cc.put("norma", c.norma());
+          cc.put("dispositivo", c.dispositivo());
+          cc.put("url", c.url());
+          cc.put("trecho", c.trecho());
+        }
+        // Tokens da pergunta inteira, com o juiz (#269); e os do juiz, a parte.
+        o.put("tokens_entrada", contexto.tokensEntrada());
+        o.put("tokens_saida", contexto.tokensSaida());
+        if (contexto.juizLei() != null) {
+          o.put("juiz_ms", contexto.juizLei().latenciaMs());
+          o.put("juiz_tokens_entrada", contexto.juizLei().tokensEntrada());
+          o.put("juiz_tokens_saida", contexto.juizLei().tokensSaida());
+        }
       }
       resultado.add(item);
       Files.writeString(saida, json.writerWithDefaultPrettyPrinter().writeValueAsString(resultado));

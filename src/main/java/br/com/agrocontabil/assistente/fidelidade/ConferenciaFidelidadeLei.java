@@ -44,6 +44,13 @@ import org.springframework.stereotype.Component;
  * passa pelas conferências de número e polaridade, mas sai do texto (não é afirmação conferida). Sem
  * nenhuma frase com conteúdo, a resposta reprova pela cobertura.
  *
+ * <p><strong>Resgate (#269, só com o juiz):</strong> quem chama pode dar os motivos resgatáveis
+ * (número, polaridade e, opcionalmente, cobertura). A frase reprovada por um deles não reprova na
+ * hora: segue no texto e vai ao juiz, e as outras frases continuam sendo conferidas. Formato,
+ * evidência ausente e cópia não literal seguem eliminatórios, sem resgate. O resultado traz o
+ * primeiro motivo da camada 1 como desfecho e o texto preenchido ({@link Resultado#resgatavel()}):
+ * só o juiz, com todas as frases {@code SUSTENTA}, aceita a resposta.
+ *
  * <p>Aprovada, cada cópia é situada no nível do dispositivo em que está escrita
  * ({@link NivelDispositivo}): cópia só no caput passa a citar o artigo, só no parágrafo, o
  * parágrafo. O texto devolvido são as frases com as marcas, sem as cópias, para seguir pelos
@@ -61,6 +68,11 @@ public class ConferenciaFidelidadeLei {
   private static final Pattern MARCA = Pattern.compile(
       "^\\s*\\[?\\s*(?:T\\s*)?(\\d{1,4})\\s*(?:[,;].*)?\\]?\\s*$", Pattern.CASE_INSENSITIVE);
 
+  /** Os únicos motivos que o resgate alcança: os sinais em código, nunca os estruturais. */
+  private static final Set<DesfechoFidelidadeLei> RESGATAVEIS = Set.of(
+      DesfechoFidelidadeLei.REPROVADA_NUMERO, DesfechoFidelidadeLei.REPROVADA_POLARIDADE,
+      DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+
   private final GlossarioProdutor glossario;
 
   /** Constrói a conferência sobre o glossário do produtor (sigla = nome por extenso). */
@@ -71,15 +83,17 @@ public class ConferenciaFidelidadeLei {
   /**
    * Resultado da conferência.
    *
-   * @param desfecho      aprovada (com ou sem citação corrigida) ou o motivo da reprovação
-   * @param texto         aprovada: as frases com as marcas, prontas para o {@code ValidadorCitacao};
-   *                      reprovada: nulo
+   * @param desfecho      aprovada (com ou sem citação corrigida) ou o motivo da reprovação (no
+   *                      resgatável, o da primeira frase reprovada)
+   * @param texto         aprovada ou resgatável: as frases com as marcas, prontas para o
+   *                      {@code ValidadorCitacao}; reprovada: nulo
    * @param trechos       aprovada: os trechos recebidos mais os ancestrais citados (caput,
    *                      parágrafo), com as marcas na ordem da lista; reprovada: os recebidos
    * @param marcasCitadas marcas existentes que o modelo usou nas evidências, na ordem da primeira
    *                      menção (os trechos mostrados quando a resposta reprova)
    * @param frases        aprovada: as frases entregues (sem marcas), cada uma com as cópias que a
-   *                      sustentam, na ordem do texto, para o juiz (camada 2); reprovada: vazia
+   *                      sustentam, na ordem do texto, para o juiz (camada 2); o mesmo no
+   *                      resgatável, com as frases a resgatar; reprovada: vazia
    */
   public record Resultado(DesfechoFidelidadeLei desfecho, String texto,
       List<TrechoRecuperado> trechos, List<String> marcasCitadas, List<FraseConferida> frases) {
@@ -95,6 +109,14 @@ public class ConferenciaFidelidadeLei {
     public boolean aprovada() {
       return desfecho == DesfechoFidelidadeLei.APROVADA
           || desfecho == DesfechoFidelidadeLei.APROVADA_CITACAO_CORRIGIDA;
+    }
+
+    /**
+     * {@code true} se a camada 1 reprovou só por motivos resgatáveis: o texto vem preenchido e o
+     * juiz decide. Nunca com a lista de resgatáveis vazia.
+     */
+    public boolean resgatavel() {
+      return !aprovada() && texto != null;
     }
   }
 
@@ -127,7 +149,26 @@ public class ConferenciaFidelidadeLei {
    */
   public Resultado conferir(String resposta, List<TrechoRecuperado> trechos,
       double coberturaMinima) {
+    return conferir(resposta, trechos, coberturaMinima, Set.of());
+  }
+
+  /**
+   * Confere a resposta do modelo contra os trechos, com resgate (#269).
+   *
+   * @param resposta        texto do modelo, no formato de {@link RespostaComEvidencia}
+   * @param trechos         trechos recuperados, na ordem das marcas ({@code T1} = primeiro)
+   * @param coberturaMinima fração mínima (0 a 1) das palavras de conteúdo de cada frase que têm de
+   *                        estar nas cópias dela
+   * @param resgataveis     motivos que não reprovam a frase na hora (só {@code REPROVADA_NUMERO},
+   *                        {@code REPROVADA_POLARIDADE} e {@code REPROVADA_COBERTURA} têm efeito);
+   *                        vazio = sem resgate, o comportamento de {@link #conferir(String, List,
+   *                        double)}
+   * @return o resultado; nunca nulo
+   */
+  public Resultado conferir(String resposta, List<TrechoRecuperado> trechos,
+      double coberturaMinima, Set<DesfechoFidelidadeLei> resgataveis) {
     Objects.requireNonNull(trechos, "trechos");
+    Objects.requireNonNull(resgataveis, "resgataveis");
     RespostaComEvidencia lida = RespostaComEvidencia.ler(resposta).orElse(null);
     if (lida == null) {
       return reprovada(DesfechoFidelidadeLei.REPROVADA_FORMATO, trechos, List.of());
@@ -136,6 +177,7 @@ public class ConferenciaFidelidadeLei {
     Citacoes citacoes = new Citacoes(trechos);
     List<String> frases = new ArrayList<>();
     List<FraseConferida> conferidas = new ArrayList<>();
+    DesfechoFidelidadeLei aResgatar = null;
     for (RespostaComEvidencia.Frase frase : lida.frases()) {
       if (naoEncontrei(frase)) {
         // A parte que os trechos nao respondem (#269): sai do texto, sem conferencia; as outras
@@ -143,7 +185,8 @@ public class ConferenciaFidelidadeLei {
         continue;
       }
       if (frase.evidencias().isEmpty()) {
-        return reprovada(DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA, trechos, marcasCitadas);
+        return reprovada(primeiro(aResgatar, DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA),
+            trechos, marcasCitadas);
       }
       Set<String> marcasDaFrase = new LinkedHashSet<>();
       StringBuilder copias = new StringBuilder();
@@ -154,12 +197,13 @@ public class ConferenciaFidelidadeLei {
       for (RespostaComEvidencia.Evidencia evidencia : frase.evidencias()) {
         int indice = indice(evidencia.marca(), trechos.size());
         if (indice < 0 || evidencia.copia() == null || evidencia.copia().isBlank()) {
-          return reprovada(DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA, trechos, marcasCitadas);
+          return reprovada(primeiro(aResgatar, DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA),
+            trechos, marcasCitadas);
         }
         Citada citada = citacoes.citar(indice, evidencia.copia());
         if (citada == null) {
-          return reprovada(
-              DesfechoFidelidadeLei.REPROVADA_EVIDENCIA_NAO_LITERAL, trechos, marcasCitadas);
+          return reprovada(primeiro(aResgatar,
+              DesfechoFidelidadeLei.REPROVADA_EVIDENCIA_NAO_LITERAL), trechos, marcasCitadas);
         }
         marcasDaFrase.add(citada.marca());
         copias.append(evidencia.copia()).append(' ');
@@ -176,10 +220,15 @@ public class ConferenciaFidelidadeLei {
       DesfechoFidelidadeLei motivo = conferirSentido(textoFrase, copias.toString(),
           copiasComNegacao.toString(), proprios.toString(), contextos.toString(),
           coberturaMinima);
+      boolean temConteudo = TextoLei.formas(textoFrase).stream().anyMatch(TextoLei::conteudo);
       if (motivo != null) {
-        return reprovada(motivo, trechos, marcasCitadas);
+        if (!temConteudo || !RESGATAVEIS.contains(motivo) || !resgataveis.contains(motivo)) {
+          return reprovada(primeiro(aResgatar, motivo), trechos, marcasCitadas);
+        }
+        // Resgate (#269): a frase segue para o juiz; o primeiro motivo fica como desfecho.
+        aResgatar = aResgatar == null ? motivo : aResgatar;
       }
-      if (TextoLei.formas(textoFrase).stream().anyMatch(TextoLei::conteudo)) {
+      if (temConteudo) {
         frases.add(comMarcas(textoFrase, marcasDaFrase));
         conferidas.add(new FraseConferida(textoFrase, List.copyOf(passagensDaFrase)));
       }
@@ -187,9 +236,10 @@ public class ConferenciaFidelidadeLei {
     if (frases.isEmpty()) {
       return reprovada(DesfechoFidelidadeLei.REPROVADA_COBERTURA, trechos, marcasCitadas);
     }
-    DesfechoFidelidadeLei desfecho = citacoes.corrigiu
-        ? DesfechoFidelidadeLei.APROVADA_CITACAO_CORRIGIDA
-        : DesfechoFidelidadeLei.APROVADA;
+    DesfechoFidelidadeLei desfecho = aResgatar != null ? aResgatar
+        : citacoes.corrigiu
+            ? DesfechoFidelidadeLei.APROVADA_CITACAO_CORRIGIDA
+            : DesfechoFidelidadeLei.APROVADA;
     return new Resultado(desfecho, String.join(" ", frases), citacoes.lista, marcasCitadas,
         conferidas);
   }
@@ -326,6 +376,15 @@ public class ConferenciaFidelidadeLei {
     }
     int numero = Integer.parseInt(m.group(1));
     return numero >= 1 && numero <= quantidade ? numero - 1 : -1;
+  }
+
+  /**
+   * O primeiro motivo da resposta: com uma frase a resgatar antes, o dela. Assim a reprovação de uma
+   * frase posterior, sem resgate, grava o mesmo motivo que a camada 1 sozinha gravaria.
+   */
+  private static DesfechoFidelidadeLei primeiro(DesfechoFidelidadeLei aResgatar,
+      DesfechoFidelidadeLei motivo) {
+    return aResgatar != null ? aResgatar : motivo;
   }
 
   private static Resultado reprovada(DesfechoFidelidadeLei motivo, List<TrechoRecuperado> trechos,

@@ -158,7 +158,30 @@ public final class PromptsCeres {
    * (cache de prefixo, #270); as frases e as cópias vão na mensagem do usuário
    * ({@link #mensagemJuiz}). O juiz só reprova: o veredito nunca vira texto ao produtor.
    */
-  public static final String JUIZ_FIDELIDADE = """
+  public static final String JUIZ_FIDELIDADE = PromptsCeres.CRITERIOS_JUIZ + """
+      Responda somente com JSON, sem nada antes ou depois: uma lista "vereditos" com exatamente \
+      um veredito por frase, na ordem das frases, escrito como acima (SUSTENTA, NAO_SUSTENTA ou \
+      CONTRADIZ). Exemplo para duas frases: {"vereditos": ["SUSTENTA", "NAO_SUSTENTA"]}
+      """;
+
+  /**
+   * Juiz com justificativa (#269, modo {@code JUSTIFICATIVA} do juiz, configuração (d)): os mesmos
+   * critérios do {@link #JUIZ_FIDELIDADE}, mas cada veredito vem depois de uma justificativa curta,
+   * sem raciocínio do provedor. Saída maior: teto próprio ({@code tetos.juiz-com-justificativa}).
+   */
+  public static final String JUIZ_FIDELIDADE_COM_JUSTIFICATIVA = PromptsCeres.CRITERIOS_JUIZ
+      + """
+      Responda somente com JSON, sem nada antes ou depois: uma lista "vereditos" com exatamente \
+      um item por frase, na ordem das frases. Cada item tem primeiro "justificativa" (uma frase \
+      curta, de ate 20 palavras, dizendo o que nas passagens sustenta ou nao a frase) e depois \
+      "veredito" (SUSTENTA, NAO_SUSTENTA ou CONTRADIZ, escrito como acima). Escreva a \
+      justificativa antes do veredito. Exemplo para duas frases: {"vereditos": [{"justificativa": \
+      "o art. 138 reduz em 60%", "veredito": "SUSTENTA"}, {"justificativa": "as passagens nao \
+      falam de sementes", "veredito": "NAO_SUSTENTA"}]}
+      """;
+
+  /** Critérios do juiz, comuns aos dois modos (#269). */
+  private static final String CRITERIOS_JUIZ = """
       Voce confere se cada frase e sustentada pelas passagens de lei listadas logo abaixo dela.
 
       Para cada frase, responda:
@@ -173,9 +196,6 @@ public final class PromptsCeres {
       ("tambem", "esse", "ele", "nesse caso"). Leia o que ela retoma nas frases e passagens \
       anteriores, e julgue o que ela afirma.
       Use so as passagens. Nao use conhecimento proprio.
-      Responda somente com JSON, sem nada antes ou depois: uma lista "vereditos" com exatamente \
-      um veredito por frase, na ordem das frases, escrito como acima (SUSTENTA, NAO_SUSTENTA ou \
-      CONTRADIZ). Exemplo para duas frases: {"vereditos": ["SUSTENTA", "NAO_SUSTENTA"]}
       """;
 
   /**

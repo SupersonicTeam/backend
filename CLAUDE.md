@@ -336,14 +336,32 @@ br.com.agrocontabil
 │                  #   regra está no caput). Reprovada = TRECHOS_SEM_CONFIRMACAO com os trechos marcados, desfecho
 │                  #   FIDELIDADE_REPROVADA (descarte na régua da avaliação); o motivo vai em
 │                  #   assistente_interacao.fidelidade_lei (changeSet 0065). Desligada = prompt e resultado da main
-│                  #   (RotaLegislacaoFidelidadeTest). Ligar exige medição no conjunto novo e OK do Murillo;
+│                  #   (RotaLegislacaoFidelidadeTest). Configuração escolhida (Murillo, 2026-11-13, terceira
+│                  #   medição, 6b5cd4ac): camada 1 + juiz justificativa com veto + resgate com polaridade
+│                  #   (docs/ceres-assistente.md, "Configuração escolhida"); tudo segue desligado no código, e
+│                  #   ligar na VPS é decisão à parte;
 │                  #   camada 2, o juiz (fidelidade/JuizFidelidadeLei; app.assistente.fidelidade-lei.juiz.enabled /
 │                  #   AI_FIDELIDADE_LEI_JUIZ_HABILITADO, DESLIGADO por padrão, só com a camada 1): uma chamada ao
 │                  #   modelo com as frases e os dispositivos citados (com o contexto de cima, lidos em sequência),
 │                  #   veredito SUSTENTA/NAO_SUSTENTA/CONTRADIZ por frase; só
 │                  #   reprova, falha fecha (REPROVADA_JUIZ_*); cobertura cai para cobertura-minima-com-juiz (0,3);
 │                  #   teto tetos.juiz (128) como parcela da reserva da pergunta (AssistenteProperties.tetoDaPergunta);
-│                  #   tempo e tokens em latencia_juiz_ms/tokens_*_juiz, fora dos da pergunta;
+│                  #   tempo e tokens em latencia_juiz_ms/tokens_*_juiz, fora dos da pergunta; configuração
+│                  #   do juiz, pelo nome (AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO: atual, o padrão, ou justificativa, justificativa curta
+│                  #   antes de cada veredito, teto tetos.juiz-com-justificativa 1024); resgate
+│                  #   (app.assistente.fidelidade-lei.juiz.resgate.enabled / AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO,
+│                  #   DESLIGADO, só com o juiz): a frase reprovada em código por número (e, com resgate.polaridade
+│                  #   e resgate.cobertura, desligadas, por polaridade e cobertura) vai ao juiz na mesma chamada; só o SUSTENTA de todas aceita
+│                  #   (APROVADA_RESGATE_JUIZ), senão fica o motivo da camada 1. Só resgate (juiz.veto=false /
+│                  #   AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO, padrão true): o juiz só roda na resposta a resgatar,
+│                  #   a aprovada sai sem ele e a cobertura volta a cobertura-minima (0,7). Raciocínio do provedor no juiz
+│                  #   (adaptativo-baixo/-medio/-alto, só AI_CHAT_PROVIDER=anthropic, teto tetos.juiz-com-raciocinio
+│                  #   3072): o Spring AI 1.1.8 não o liga por chamada, então o juiz marca a chamada com o cabeçalho
+│                  #   X-AgroConIA-Raciocinio e o llm/InterceptorRaciocinioAnthropic (no RestClient do Boot) troca o
+│                  #   thinking por adaptive e põe output_config.effort só nela; o juiz lê a geração de texto (o bloco
+│                  #   thinking vem antes, vazio); as outras chamadas seguem com thinking disabled e lendo a primeira
+│                  #   geração (llm/CorpoDoJuizNoFioTest trava os corpos). Bancada manual do juiz:
+│                  #   fidelidade/BancadaJuizFidelidadeManual (src/test, fora do ./mvnw test);
 │                  # orquestracao/AtalhosFixos (#343: as 3 perguntas da tela, texto exato, sem
 │                  #   modelo, pagando só a leitura da mensagem (#511); dados → RotaDados.responderAtalho, lei →
 │                  #   AtalhoReformaTributaria: texto explicado do TextoReformaTributaria, #347,

@@ -5,6 +5,7 @@ import br.com.agrocontabil.assistente.DataSanitizer;
 import br.com.agrocontabil.assistente.PerguntaInterrompidaException;
 import br.com.agrocontabil.assistente.PromptsCeres;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
+import br.com.agrocontabil.assistente.llm.RaciocinioPorChamada;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -20,6 +21,7 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Component;
 
@@ -36,8 +38,10 @@ import org.springframework.stereotype.Component;
  *
  * <p>O juiz não vê os trechos inteiros nem a pergunta: decide se as cópias sustentam a frase, não
  * se a frase responde à pergunta. Instrução fixa ({@link PromptsCeres#JUIZ_FIDELIDADE}), conteúdo
- * na mensagem do usuário, tudo pelo {@link DataSanitizer}. O teto de saída é
- * {@code app.assistente.tetos.juiz}, e o custo entra na reserva da pergunta como parcela própria
+ * na mensagem do usuário, tudo pelo {@link DataSanitizer}. Na configuração {@code justificativa}
+ * ({@code app.assistente.fidelidade-lei.juiz.configuracao}) cada veredito vem depois de uma justificativa
+ * curta ({@link PromptsCeres#JUIZ_FIDELIDADE_COM_JUSTIFICATIVA}); a decisão é a mesma. O teto de
+ * saída é o da configuração ({@code AssistenteProperties.tetoSaidaDoJuiz}), e o custo entra na reserva da pergunta como parcela própria
  * quando o juiz está ativo ({@code AssistenteProperties.tetoDaPergunta}). O tempo, os tokens e a
  * latência da chamada vão ao {@link ContextoAssistente#registrarJuizLei}, e daí à auditoria.
  */
@@ -48,17 +52,63 @@ public class JuizFidelidadeLei {
   private static final ObjectMapper JSON = new ObjectMapper();
 
   private final ModeloLinguagem modelo;
-  private final int tetoSaida;
+  private final AssistenteProperties propriedades;
 
-  /** Constrói o juiz sobre a porta do modelo; o teto de saída vem de {@code tetos.juiz}. */
+  /**
+   * Constrói o juiz sobre a porta do modelo; o teto de saída vem da configuração.
+   *
+   * @throws IllegalStateException com o juiz ativo numa configuração adaptativa e o provedor fora da
+   *         API da Anthropic: a subida falha, em vez de cada resposta de lei falhar no juiz
+   */
   public JuizFidelidadeLei(ModeloLinguagem modelo, AssistenteProperties propriedades) {
     this.modelo = modelo;
-    this.tetoSaida = propriedades.getTetos().getJuiz();
+    this.propriedades = propriedades;
+    AssistenteProperties.FidelidadeLei.Juiz.Configuracao configuracao =
+        propriedades.getFidelidadeLei().getJuiz().getConfiguracao();
+    if (propriedades.juizDaLeiAtivo() && configuracao.raciocina()
+        && !modelo.aceitaRaciocinioPorChamada()) {
+      throw new IllegalStateException("app.assistente.fidelidade-lei.juiz.configuracao="
+          + configuracao.nome() + " exige AI_CHAT_PROVIDER=anthropic");
+    }
   }
 
   /** Veredito de uma frase. */
-  enum Veredito {
+  public enum Veredito {
     SUSTENTA, NAO_SUSTENTA, CONTRADIZ
+  }
+
+  /** Por que o juiz falhou (todas reprovam: falha fecha). */
+  public enum Falha {
+    /** A saída chegou ao teto da configuração. */
+    CORTADA_PELO_TETO,
+    /** Sem JSON legível, sem a lista ou com veredito desconhecido. */
+    FORMATO,
+    /** Número de vereditos diferente do de frases. */
+    CONTAGEM_DIFERENTE,
+    /** Exceção na chamada (modelo indisponível, tempo, provedor). */
+    ERRO_MODELO
+  }
+
+  /**
+   * O julgamento inteiro, para a bancada do juiz e o log; a rota só usa o {@code desfecho}.
+   *
+   * @param desfecho  nulo se todas as frases são {@code SUSTENTA}; senão o motivo da reprovação
+   * @param falha     o motivo da falha, se o desfecho é {@code REPROVADA_JUIZ_FALHA}; senão nulo
+   * @param vereditos os vereditos lidos, na ordem (vazio se ilegíveis ou sem chamada)
+   * @param cru       o texto do modelo (nulo sem resposta)
+   */
+  public record Julgamento(DesfechoFidelidadeLei desfecho, Falha falha, List<Veredito> vereditos,
+      String cru) {
+
+    /** Cópia defensiva. */
+    public Julgamento {
+      vereditos = vereditos == null ? List.of() : List.copyOf(vereditos);
+    }
+
+    /** {@code true} se a saída foi cortada pelo teto. */
+    public boolean cortadaPeloTeto() {
+      return falha == Falha.CORTADA_PELO_TETO;
+    }
   }
 
   /**
@@ -71,21 +121,50 @@ public class JuizFidelidadeLei {
    */
   public DesfechoFidelidadeLei julgar(List<ConferenciaFidelidadeLei.FraseConferida> frases,
       ContextoAssistente contexto) {
+    return avaliar(frases, contexto, propriedades.getFidelidadeLei().getJuiz().getConfiguracao())
+        .desfecho();
+  }
+
+  /**
+   * Julga as frases numa configuração dada. Só a bancada do juiz escolhe a configuração; a rota usa
+   * a das propriedades, que é a que a reserva da pergunta cobre ({@code tetoSaidaDoJuiz}): outra
+   * configuração aqui, numa pergunta de verdade, gastaria além do reservado.
+   * Mesmo efeito do {@link #julgar} sobre o contexto: a chamada pelo {@link ContextoAssistente} e
+   * as métricas do juiz.
+   *
+   * @param frases   as frases entregues, com as passagens de cada uma (não vazia)
+   * @param contexto contexto da pergunta
+   * @param configuracao a configuração do juiz
+   * @return o julgamento; nunca nulo
+   * @throws PerguntaInterrompidaException se a pergunta foi interrompida
+   */
+  public Julgamento avaliar(List<ConferenciaFidelidadeLei.FraseConferida> frases,
+      ContextoAssistente contexto,
+      AssistenteProperties.FidelidadeLei.Juiz.Configuracao configuracao) {
+    int tetoSaida = propriedades.tetoSaidaDoJuiz(configuracao);
     long inicio = System.nanoTime();
     int entradaAntes = valor(contexto.tokensEntrada());
     int saidaAntes = valor(contexto.tokensSaida());
     boolean chamou = false;
     boolean registrar = true;
+    Integer raciocinio = null;
     try {
-      ChatResponse resposta = chamar(frases, contexto);
+      if (configuracao.raciocina()) {
+        RaciocinioPorChamada.limpar();
+      }
+      ChatResponse resposta = chamar(frases, contexto, configuracao, tetoSaida);
       chamou = true;
+      String texto = textoDaResposta(resposta);
       if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida)) {
         log.warn("Ceres: juiz da fidelidade da lei cortado pelo teto de {} tokens", tetoSaida);
-        return DesfechoFidelidadeLei.REPROVADA_JUIZ_FALHA;
+        return new Julgamento(DesfechoFidelidadeLei.REPROVADA_JUIZ_FALHA,
+            Falha.CORTADA_PELO_TETO, List.of(), texto);
       }
-      String texto = resposta == null || resposta.getResult() == null
-          ? null : resposta.getResult().getOutput().getText();
-      return decidir(vereditos(texto), frases.size());
+      List<Veredito> lidos = vereditos(texto);
+      DesfechoFidelidadeLei desfecho = decidir(lidos, frases.size());
+      Falha falha = lidos == null ? Falha.FORMATO
+          : lidos.size() != frases.size() ? Falha.CONTAGEM_DIFERENTE : null;
+      return new Julgamento(desfecho, falha, lidos, texto);
     } catch (PerguntaInterrompidaException e) {
       // Interrompida: a pergunta e que terminou, nao o juiz; as colunas dele ficam nulas.
       registrar = false;
@@ -93,19 +172,25 @@ public class JuizFidelidadeLei {
     } catch (RuntimeException e) {
       // Falha fecha: sem o veredito, a resposta nao chega ao produtor.
       log.warn("Ceres: juiz da fidelidade da lei falhou: {}", e.getClass().getName());
-      return DesfechoFidelidadeLei.REPROVADA_JUIZ_FALHA;
+      return new Julgamento(DesfechoFidelidadeLei.REPROVADA_JUIZ_FALHA, Falha.ERRO_MODELO,
+          List.of(), null);
     } finally {
+      // Consumido sempre, inclusive na falha: o valor da thread local nao passa para outra pergunta.
+      if (configuracao.raciocina()) {
+        raciocinio = RaciocinioPorChamada.consumir();
+      }
       if (registrar) {
         long latencia = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicio);
         contexto.registrarJuizLei(latencia,
             chamou ? valor(contexto.tokensEntrada()) - entradaAntes : 0,
-            chamou ? valor(contexto.tokensSaida()) - saidaAntes : 0);
+            chamou ? valor(contexto.tokensSaida()) - saidaAntes : 0, raciocinio);
       }
     }
   }
 
   private ChatResponse chamar(List<ConferenciaFidelidadeLei.FraseConferida> frases,
-      ContextoAssistente contexto) {
+      ContextoAssistente contexto,
+      AssistenteProperties.FidelidadeLei.Juiz.Configuracao configuracao, int tetoSaida) {
     List<ConferenciaFidelidadeLei.FraseConferida> conteudo = new ArrayList<>();
     for (ConferenciaFidelidadeLei.FraseConferida frase : frases) {
       conteudo.add(new ConferenciaFidelidadeLei.FraseConferida(
@@ -113,13 +198,39 @@ public class JuizFidelidadeLei {
           frase.copias().stream().map(DataSanitizer::mascarar).toList()));
     }
     Prompt prompt = new Prompt(List.<Message>of(
-        new SystemMessage(PromptsCeres.JUIZ_FIDELIDADE),
+        new SystemMessage(configuracao == AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA
+            ? PromptsCeres.JUIZ_FIDELIDADE_COM_JUSTIFICATIVA
+            : PromptsCeres.JUIZ_FIDELIDADE),
         new UserMessage(PromptsCeres.mensagemJuiz(conteudo))),
-        ModeloLinguagem.comTeto(tetoSaida));
+        configuracao.raciocina()
+            ? modelo.comRaciocinio(tetoSaida, configuracao.esforco())
+            : ModeloLinguagem.comTeto(tetoSaida));
     return contexto.chamar(modelo, prompt);
   }
 
-  /** Os vereditos lidos; nulo se o JSON não vem no formato ou traz veredito desconhecido. */
+  /**
+   * O texto da resposta: a última geração com texto. Com o raciocínio do provedor, o Spring AI
+   * entrega cada bloco {@code thinking} como uma geração à parte, antes da do texto e com o texto
+   * vazio (a API omite o raciocínio por padrão); ler só a primeira daria o vazio.
+   */
+  static String textoDaResposta(ChatResponse resposta) {
+    if (resposta == null || resposta.getResults() == null) {
+      return null;
+    }
+    String texto = null;
+    for (Generation geracao : resposta.getResults()) {
+      String deste = geracao.getOutput() == null ? null : geracao.getOutput().getText();
+      if (deste != null && !deste.isBlank()) {
+        texto = deste;
+      }
+    }
+    return texto;
+  }
+
+  /**
+   * Os vereditos lidos; nulo se o JSON não vem no formato ou traz veredito desconhecido. Cada item é
+   * o veredito em texto ou, na configuração {@code justificativa}, um objeto com {@code veredito}.
+   */
   static List<Veredito> vereditos(String texto) {
     if (texto == null) {
       return null;
@@ -141,11 +252,12 @@ public class JuizFidelidadeLei {
     }
     List<Veredito> lidos = new ArrayList<>();
     for (JsonNode item : lista) {
-      if (!item.isTextual()) {
+      JsonNode veredito = item.isObject() ? item.get("veredito") : item;
+      if (veredito == null || !veredito.isTextual()) {
         return null;
       }
       try {
-        lidos.add(Veredito.valueOf(normalizar(item.asText())));
+        lidos.add(Veredito.valueOf(normalizar(veredito.asText())));
       } catch (IllegalArgumentException e) {
         return null;
       }

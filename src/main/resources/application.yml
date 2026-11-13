@@ -592,6 +592,10 @@ app:
       legislacao: ${AI_TETO_LEGISLACAO:1024}
       # Juiz da fidelidade da lei (#269, camada 2): um veredito por frase; so com o juiz ativo.
       juiz: ${AI_TETO_JUIZ:128}
+      # O juiz na configuracao justificativa: uma justificativa curta antes de cada veredito.
+      juiz-com-justificativa: ${AI_TETO_JUIZ_JUSTIFICATIVA:1024}
+      # Nas configuracoes adaptativas do juiz: raciocinio do provedor + vereditos.
+      juiz-com-raciocinio: ${AI_TETO_JUIZ_RACIOCINIO:3072}
       # A janela do Ollama (mesma propriedade do num-ctx), so para validar os tetos.
       contexto: ${spring.ai.ollama.chat.options.num-ctx:8192}
     # Modo fallback (issue #146): com o modelo fora, trechos de lei por busca textual (tsvector) e
@@ -626,6 +630,22 @@ app:
       cobertura-minima-com-juiz: ${AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ:0.3}
       juiz:
         enabled: ${AI_FIDELIDADE_LEI_JUIZ_HABILITADO:false}
+        # Configuracao do juiz, pelo nome: atual (padrao: so o veredito por frase, teto
+        # tetos.juiz), justificativa (uma justificativa curta antes de cada veredito, teto
+        # tetos.juiz-com-justificativa) ou adaptativo-baixo/-medio/-alto (raciocinio do provedor so
+        # na chamada do juiz, so com AI_CHAT_PROVIDER=anthropic, teto tetos.juiz-com-raciocinio).
+        configuracao: ${AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO:atual}
+        # Veto: o juiz confere as respostas aprovadas pela camada 1 (padrao). Desligado, "so
+        # resgate": o juiz so roda nas respostas a resgatar, e a cobertura volta a cobertura-minima.
+        veto: ${AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO:true}
+        # Resgate: a frase reprovada em codigo por numero (e, com polaridade e cobertura, por
+        # polaridade e por cobertura) vai ao juiz na mesma chamada; so o SUSTENTA de todas as
+        # frases aceita. Sem efeito sem o juiz. Polaridade desligada: o juiz aprovou uma inversao
+        # real no diagnostico de 2026-11-13.
+        resgate:
+          enabled: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO:false}
+          polaridade: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE:false}
+          cobertura: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA:false}
     # Isolamento de recursos (issue #157). Tempo total de uma pergunta (tambem o timeout do SSE) e
     # de cada consulta de funcao ao banco (vira timeout de transacao, resolucao de segundos).
     timeout-pergunta: ${AI_TIMEOUT_PERGUNTA:5m}

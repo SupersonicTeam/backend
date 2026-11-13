@@ -2,9 +2,11 @@ package br.com.agrocontabil.assistente.llm;
 
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
@@ -118,6 +120,35 @@ public class ModeloLinguagem {
    */
   public static ChatOptions comTeto(int maxTokens) {
     return ChatOptions.builder().maxTokens(maxTokens).build();
+  }
+
+  /**
+   * {@code true} se o provedor ativo aceita o raciocínio por chamada ({@link #comRaciocinio}): só a
+   * API da Anthropic (#269).
+   */
+  public boolean aceitaRaciocinioPorChamada() {
+    return "anthropic".equals(provedor);
+  }
+
+  /**
+   * Opções de uma chamada com o raciocínio adaptativo do provedor ligado (#269, juiz da fidelidade
+   * da lei): o teto, como no {@link #comTeto}, e a marca {@link RaciocinioPorChamada#CABECALHO} com
+   * o esforço, que o {@link InterceptorRaciocinioAnthropic} troca no corpo por
+   * {@code thinking: {"type": "adaptive"}} e {@code output_config.effort}. O teto cobre o raciocínio
+   * e a resposta: o raciocínio é cobrado como saída e entra no {@code max_tokens}.
+   *
+   * @param maxTokens teto de tokens gerados, raciocínio incluído
+   * @param esforco   {@code low}, {@code medium} ou {@code high}
+   * @return opções da chamada
+   * @throws IllegalStateException se o provedor não é a API da Anthropic
+   */
+  public ChatOptions comRaciocinio(int maxTokens, String esforco) {
+    if (!aceitaRaciocinioPorChamada()) {
+      throw new IllegalStateException("Raciocínio por chamada só na API da Anthropic; provedor: "
+          + provedor);
+    }
+    return AnthropicChatOptions.builder().maxTokens(maxTokens)
+        .httpHeaders(Map.of(RaciocinioPorChamada.CABECALHO, esforco)).build();
   }
 
   /**
