@@ -212,6 +212,8 @@ class AssistentePropertiesTest {
     assertThat(resgate.isEnabled()).isFalse();
     assertThat(resgate.isCobertura()).isFalse();
     assertThat(resgate.isPolaridade()).isFalse();
+    // O veto vem ligado: o comportamento de antes do modo so resgate.
+    assertThat(p.getFidelidadeLei().getJuiz().isVeto()).isTrue();
     resgate.setEnabled(true);
     // O resgate so roda com o juiz, que so roda com a camada 1.
     assertThat(p.resgateDaLeiAtivo()).isFalse();

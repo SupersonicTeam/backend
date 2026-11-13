@@ -64,6 +64,10 @@ import org.springframework.stereotype.Component;
  * para as conferências seguintes e para o juiz, na mesma chamada do veto. Só o {@code SUSTENTA} de todas as frases a aceita
  * ({@code APROVADA_RESGATE_JUIZ}); veto, falha ou corte do juiz mantêm o descarte com o motivo da
  * camada 1. Formato, evidência ausente e cópia não literal não têm resgate.
+ *
+ * <p><strong>Só resgate (#269, {@code app.assistente.fidelidade-lei.juiz.veto=false}; padrão
+ * {@code true}):</strong> o juiz não veta a resposta que a camada 1 aprovou, que sai sem ele; só a
+ * resposta a resgatar o chama. A cobertura exigida volta à {@code cobertura-minima}.
  */
 @Component
 public class RotaLegislacao {
@@ -120,6 +124,8 @@ public class RotaLegislacao {
   /** Nulo = juiz desligado (chave, camada 1 desligada ou construtor sem ele). */
   private final JuizFidelidadeLei juiz;
   private final double coberturaMinima;
+  /** O juiz veta as respostas aprovadas pela camada 1; falso = só resgate (#269). */
+  private final boolean vetoDoJuiz;
   /** Motivos da camada 1 que vão ao juiz em vez de reprovar (#269); vazio = sem resgate. */
   private final Set<DesfechoFidelidadeLei> resgataveis;
 
@@ -153,7 +159,10 @@ public class RotaLegislacao {
     AssistenteProperties.FidelidadeLei fidelidade = propriedades.getFidelidadeLei();
     this.conferencia = fidelidade.isEnabled() ? conferencia : null;
     this.juiz = this.conferencia != null && propriedades.juizDaLeiAtivo() ? juiz : null;
-    this.coberturaMinima = this.juiz != null
+    this.vetoDoJuiz = this.juiz != null && fidelidade.getJuiz().isVeto();
+    // O piso baixo da cobertura so vale com o veto: sem ele, a aprovada sai sem o juiz e a
+    // parafrase solta tem de ser barrada em codigo, como na camada 1 sozinha.
+    this.coberturaMinima = this.vetoDoJuiz
         ? fidelidade.getCoberturaMinimaComJuiz()
         : fidelidade.getCoberturaMinima();
     this.resgataveis = this.juiz != null && propriedades.resgateDaLeiAtivo()
@@ -342,10 +351,11 @@ public class RotaLegislacao {
       return new ResultadoRota(
           SO_TRECHOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, citacao.citacoes());
     }
-    if (juiz != null && conferida != null) {
+    if (juiz != null && conferida != null && (vetoDoJuiz || conferida.resgatavel())) {
       // Camada 2 (#269): depois de todas as conferencias em codigo, para nao gastar a chamada numa
       // resposta que elas ja descartariam. So reprova, nunca reescreve. Os trechos citados sao
-      // registrados depois dele: reprovada, ficam so os que o modelo marcou.
+      // registrados depois dele: reprovada, ficam so os que o modelo marcou. Sem o veto (so
+      // resgate), so a resposta a resgatar chega aqui.
       DesfechoFidelidadeLei veredito = juiz.julgar(conferida.frases(), contexto);
       if (conferida.resgatavel()) {
         // Resgate (#269): so o SUSTENTA de todas as frases aceita; senao (veto, falha, corte)

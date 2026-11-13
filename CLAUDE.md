@@ -349,7 +349,9 @@ br.com.agrocontabil
 │                  #   (app.assistente.fidelidade-lei.juiz.resgate.enabled / AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO,
 │                  #   DESLIGADO, só com o juiz): a frase reprovada em código por número (e, com resgate.polaridade
 │                  #   e resgate.cobertura, desligadas, por polaridade e cobertura) vai ao juiz na mesma chamada; só o SUSTENTA de todas aceita
-│                  #   (APROVADA_RESGATE_JUIZ), senão fica o motivo da camada 1. Raciocínio do provedor no juiz
+│                  #   (APROVADA_RESGATE_JUIZ), senão fica o motivo da camada 1. Só resgate (juiz.veto=false /
+│                  #   AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO, padrão true): o juiz só roda na resposta a resgatar,
+│                  #   a aprovada sai sem ele e a cobertura volta a cobertura-minima (0,7). Raciocínio do provedor no juiz
 │                  #   (adaptativo-baixo/-medio/-alto, só AI_CHAT_PROVIDER=anthropic, teto tetos.juiz-com-raciocinio
 │                  #   3072): o Spring AI 1.1.8 não o liga por chamada, então o juiz marca a chamada com o cabeçalho
 │                  #   X-AgroConIA-Raciocinio e o llm/InterceptorRaciocinioAnthropic (no RestClient do Boot) troca o

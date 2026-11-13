@@ -530,6 +530,15 @@ resgatadas do diagnóstico estavam certas ("somente se aplica aos registrados" v
 não registrados"; condição escrita como "somente se"). Resgatar a polaridade troca falso descarte por
 risco de inversão, o erro mais grave: só com medição.
 
+**Só resgate** (`app.assistente.fidelidade-lei.juiz.veto`, `AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO`, padrão
+`true`, o comportamento acima). Com `false`, o juiz não veta a resposta que a camada 1 aprovou, que sai
+sem ele: só a resposta a resgatar o chama, e a chamada é a mesma (todas as frases). A cobertura exigida
+volta à `cobertura-minima` (0,7), porque, sem o veto, ninguém confere a paráfrase solta que o piso de
+0,3 deixaria passar; com veto e sem resgate o juiz nunca roda, e a rota é a camada 1 sozinha (a reserva
+da cota segue com a parcela do juiz, que pode ser chamado). Decisão da orquestração em 13/11, depois de
+a segunda passada da bancada mostrar que o veto não pega o que escapa da camada 1 e derruba respostas
+fiéis. O juiz roda em ~0,65 chamada por pergunta de lei com o veto e em ~0,05 a 0,10 só no resgate.
+
 **Bancada do juiz** (`fidelidade/BancadaJuizFidelidadeManual`, fora do `./mvnw test`, profile `dev`):
 compara as configurações do juiz sobre respostas já prontas, sem a rota. Entrada em JSONL,
 `{"id", "pergunta", "resposta", "citacoes"}`, com `resposta` e `citacoes` como o `POST /api/assistente/chat`
@@ -568,7 +577,8 @@ cortes no teto de 512, que levaram ao de 1.024). O juiz `atual` é o mais rigoro
 
 **Os braços da medição:** tudo desligado (a `main`); só a camada 1
 (`AI_FIDELIDADE_LEI_HABILITADA=true`); camada 1 e juiz, só o veto (mais `AI_FIDELIDADE_LEI_JUIZ_HABILITADO=true`);
-camada 1, juiz e resgate (mais `AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO=true`). Nos dois últimos, o modo
+camada 1, juiz e resgate (mais `AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO=true`); só resgate (mais
+`AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO=false`). Nos dois últimos, o modo
 do juiz vai em `AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO`. Com o juiz desligado, a camada 1 é a de antes dele (uma
 chamada, cobertura 0,7); com tudo desligado, a rota é a da `main` (`RotaLegislacaoFidelidadeTest`).
 

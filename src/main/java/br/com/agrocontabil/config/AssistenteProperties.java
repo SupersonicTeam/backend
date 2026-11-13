@@ -972,6 +972,22 @@ public class AssistenteProperties implements InitializingBean {
       /** Liga o juiz ({@code AI_FIDELIDADE_LEI_JUIZ_HABILITADO}). */
       private boolean enabled;
 
+      /**
+       * O juiz veta as respostas que a camada 1 aprovou ({@code AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO},
+       * padrão {@code true}, o comportamento de antes). Desligado, é o modo "só resgate": o juiz só
+       * roda nas respostas que a camada 1 mandou resgatar, a aprovada sai sem ele e a cobertura
+       * exigida volta à {@code cobertura-minima} (0,7), porque ninguém confere a paráfrase solta.
+       */
+      private boolean veto = true;
+
+      public boolean isVeto() {
+        return veto;
+      }
+
+      public void setVeto(boolean veto) {
+        this.veto = veto;
+      }
+
       /** O resgate pelo juiz. */
       private Resgate resgate = new Resgate();
 
