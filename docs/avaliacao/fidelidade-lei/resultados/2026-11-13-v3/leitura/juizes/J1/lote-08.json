@@ -1,0 +1,148 @@
+{
+  "juiz": "J1",
+  "lote": "lote-08",
+  "itens": [
+    {
+      "id": "R085",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Os trechos de lei disponíveis não tratam de um rito mais rápido ou simplificado para contestar cobranças pequenas de IBS", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhece limite"},
+        {"n": 2, "texto": "Por isso não consigo responder com segurança a essa parte.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhece limite"},
+        {"n": 3, "texto": "O que os trechos tratam é de impugnação de penalidade, e não de cobrança de tributo.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "descreve os trechos"},
+        {"n": 4, "texto": "Quem recebe a notificação de infração, na condição de prestador de serviço de pagamento ou operadora do sistema de pagamento, pode impugnar", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F, § 1º; art. 471-F", "fato": null},
+        {"n": 5, "texto": "Da decisão, cabe recurso hierárquico uma única vez, em 10 dias úteis, à autoridade superior, que decide de forma definitiva", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F, § 1º", "fato": null},
+        {"n": 6, "texto": "Se a sua cobrança foi de fato uma penalidade e você se enquadra nessa condição, esse é o caminho descrito nos trechos.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "condicional sobre os trechos"},
+        {"n": 7, "texto": "Se não for o seu caso, ou se a cobrança for de outra natureza, recomendo confirmar o tipo de notificação recebida e buscar orientação", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "sugere contador"}
+      ],
+      "omiteEssencial": ["F1", "F2", "F3"],
+      "observacao": "Trechos citados tratam de outro assunto (impugnação de penalidade de prestador de pagamento); não respondem o rito sumário."
+    },
+    {
+      "id": "R086",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Os créditos de IBS e CBS são apropriados e compensados ou ressarcidos pelo valor nominal, sendo vedadas correção ou atualização", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R087",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "No caso de obras de construção civil, o IBS e a CBS são apurados para cada empreendimento, e não juntos numa conta só", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270", "fato": "F1"},
+        {"n": 2, "texto": "Cada obra de construção civil é considerada um centro de custo distinto", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270", "fato": "F2"},
+        {"n": 3, "texto": "Nas aquisições de bens e serviços usados numa obra, o documento fiscal deve indicar o número do cadastro da obra", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único", "fato": null}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R088",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Pela regra da intermediação feita por agência de turismo, a base de cálculo do IBS e da CBS é o valor da operação, mas deduzidos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1"},
+        {"n": 2, "texto": "Ou seja, a base não é o pacote inteiro: os valores que você repassa à fazenda e aos prestadores de passeio saem da conta", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1"},
+        {"n": 3, "texto": "Esse regime específico para agências de turismo está previsto na mesma seção", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 288", "fato": null},
+        {"n": 4, "texto": "Sobre a comissão paga pelo hotel: os trechos que tenho não tratam diretamente desse caso, então não consigo afirmar", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhece limite; não afirma armadilha"},
+        {"n": 5, "texto": "Também não posso calcular valores, porque os percentuais não estão nos trechos.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhece limite"},
+        {"n": 6, "texto": "Para esse ponto específico, vale confirmar com seu contador ou com a legislação regulamentar.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "sugere contador"},
+        {"n": 7, "texto": "se a hospedagem for prestada diretamente pela fazenda, aplica-se a regra de hotelaria, em que a base é o valor da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 280", "fato": null},
+        {"n": 8, "texto": "Se a sua agência apenas intermedeia, vale a regra de agenciamento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1"}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": ""
+    },
+    {
+      "id": "R089",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Contribuintes no regime regular que tomam operação de crédito podem apropriar créditos do IBS e da CBS sobre as despesas financeiras", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194", "fato": "F1"},
+        {"n": 2, "texto": "O crédito é calculado sobre as despesas financeiras pagas, deduzindo-se do valor de cada parcela o montante referente ao principal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso I", "fato": "F2"},
+        {"n": 3, "texto": "Também é deduzido o montante correspondente à aplicação da taxa Selic sobre o principal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso II", "fato": "F2"},
+        {"n": 4, "texto": "A base de cálculo do IBS e da CBS inclui o valor dos juros e das variações monetárias, em função da taxa de câmbio", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 255, § 1º, inciso I", "fato": null, "nota": "literal, mas sugere que dívida em dólar gera crédito; omite vedação do art. 197, II"},
+        {"n": 5, "texto": "Se o valor da operação estiver expresso em moeda estrangeira, ele será convertido em moeda nacional por taxa de câmbio", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 12, § 5º", "fato": null, "nota": "induz a crer que crédito vale em dólar; omite vedação F3"}
+      ],
+      "omiteEssencial": ["F3", "F4"],
+      "observacao": "Não responde sobre tarifas; resposta sobre dólar induz à armadilha sem afirmá-la."
+    },
+    {
+      "id": "R090",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Os trechos disponíveis não respondem diretamente se, em 2026, você deve pagar IBS e CBS destacados nas suas notas.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhece limite"},
+        {"n": 2, "texto": "para situações que configuram fato gerador de PIS/Pasep e Cofins até 31 de dezembro de 2026, são exigidas essas contribuições, e não a CBS", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 408, § 1º, inciso II, alíneas a, b, c", "fato": null, "nota": "\"CBS passa a valer em 2027\" generaliza a hipótese do trecho e omite F1"},
+        {"n": 3, "texto": "Ou seja, o PIS e a Cofins continuam sendo exigidos para operações ocorridas até essa data", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 1º, inciso II, alíneas a, b", "fato": null},
+        {"n": 4, "texto": "para operações até 31 de dezembro de 2026, o PIS/Pasep e a Cofins são exigidos no momento do recebimento da receita", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null},
+        {"n": 5, "texto": "Sobre o IBS e a CBS destacados nas notas de 2026, os trechos não dizem se há cobrança. Para essa dúvida, consulte seu contador", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhece limite"}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não cita o art. 348; a dispensa de 2026 condicionada às obrigações acessórias não aparece."
+    },
+    {
+      "id": "R091",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Se a empresa estava no regime cumulativo de PIS/Pasep e COFINS em 31 de dezembro de 2026, e passa ao regime regular da CBS, pode", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso I", "fato": "F1"},
+        {"n": 2, "texto": "Esse crédito presumido não se aplica aos produtos cuja aquisição teve alíquota zero, isenção, suspensão", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, § 1º, inciso II", "fato": null}
+      ],
+      "omiteEssencial": ["F2", "F3", "F4", "F5"],
+      "observacao": "Não responde quanto, até quando nem como usar."
+    },
+    {
+      "id": "R092",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Se a empresa estava no regime cumulativo de PIS/Pasep e Cofins em 31 de dezembro de 2026, pode apropriar crédito presumido", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso I", "fato": "F1"},
+        {"n": 2, "texto": "O direito ao crédito presumido não se aplica aos produtos cuja aquisição foi contemplada por alíquota zero, isenção, suspensão", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, § 1º, inciso II", "fato": null},
+        {"n": 3, "texto": "Também há crédito presumido para bens em estoque sujeitos, na aquisição, à substituição tributária ou à incidência monofásica", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso II, alíneas a, b", "fato": null}
+      ],
+      "omiteEssencial": ["F2", "F3", "F4", "F5"],
+      "observacao": "Não responde quanto, até quando nem como usar."
+    },
+    {
+      "id": "R093",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O prestador de serviço de pagamento ou a instituição operadora do sistema de pagamento pode impugnar a penalidade aplicada", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F", "fato": null},
+        {"n": 2, "texto": "Da decisão do órgão revisor cabe recurso hierárquico uma única vez, no prazo de 10 dias úteis", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F, § 1º", "fato": null}
+      ],
+      "omiteEssencial": ["F1", "F2", "F3"],
+      "observacao": "Fiel aos trechos, mas responde outro assunto; não trata do rito sumário."
+    },
+    {
+      "id": "R094",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "na intermediação feita por agência de turismo a base de cálculo do IBS e da CBS é o valor da operação, mas deduzidos os valores", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1"},
+        {"n": 2, "texto": "Ou seja, a base não é o pacote inteiro, e sim o que sobra depois de descontado o que foi repassado ao hotel e aos demais fornecedores", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1"},
+        {"n": 3, "texto": "Esse regime específico para agências de turismo está previsto nos trechos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 288", "fato": null},
+        {"n": 4, "texto": "Sobre a comissão paga pelo hotel: os trechos não dizem expressamente se ela entra como receita da agência", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhece limite"},
+        {"n": 5, "texto": "Já a hospedagem em si, quando prestada pela fazenda, tem regra própria: a base de cálculo é o valor da operação com serviços de hotelaria", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 280", "fato": null},
+        {"n": 6, "texto": "Se a fazenda oferecer alimentação e bebidas, essas operações seguem o regime específico de bares e restaurantes", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 280, parágrafo único", "fato": null},
+        {"n": 7, "texto": "Para a parte da comissão e para definir como o valor do pacote será dividido entre agência e fornecedores, vale confirmar", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "sugere contador"}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": ""
+    },
+    {
+      "id": "R095",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Nas operações feitas diretamente com os contribuintes do art. 176, o adquirente fica solidariamente responsável pelo pagamento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 177", "fato": "F1"}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Não responde a parte do pagamento eletrônico (split payment)."
+    },
+    {
+      "id": "R096",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Não. Os créditos de IBS e CBS são apropriados e compensados ou ressarcidos pelo valor nominal, sendo vedadas correção", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1"},
+        {"n": 2, "texto": "se o crédito for um crédito presumido, ele só pode ser usado para compensação com o IBS e a CBS devidos, sem compensação com outros", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 452, parágrafo único; art. 468, parágrafo único", "fato": null, "nota": "generaliza a todo crédito presumido; trechos valem só para os arts. listados"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Frase 1 cobre também F2."
+    }
+  ]
+}
