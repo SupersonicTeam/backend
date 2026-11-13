@@ -22,6 +22,10 @@ resultado:**
 - **O que não mudou:** o conjunto (v2, sha256 do teste `23b1221c…`), as outras métricas e os
   limiares.
 
+**Revisão de lei registrada (2026-11-13):** a regra não mudou. O registro fica dentro dos arquivos
+do conjunto e mudou o sha256 deles. O teste que roda passou a `b0a7cf3e…`, e o conteúdo revisado
+continua o `23b1221c…` (`README.md`, seção "Versões").
+
 ## O que se mede
 
 - **Decide só o teste:** `conversas-continuidade-teste.json` (versão `continuidade-v2-teste`,
