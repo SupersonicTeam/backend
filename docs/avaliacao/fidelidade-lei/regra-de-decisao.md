@@ -6,8 +6,9 @@ uma rodada invalida a rodada: muda-se a regra, sobe-se a versão do conjunto/da 
 novo. Quem escreveu esta regra e o conjunto nunca viu os conjuntos anteriores da Ceres nem o código
 da correção.
 
-Versão da regra: `2026-11-13.5`. A versão `2026-11-12.4` é a das duas primeiras medições (conjuntos v1
-e v2); o que mudou para a terceira está na seção 10.
+Versão da regra: `2026-11-13.6`. A versão `2026-11-12.4` é a das duas primeiras medições (conjuntos v1
+e v2); a `2026-11-13.5` é a com que o conjunto v3 foi escrito; o que mudou para a terceira medição e por
+quê está na seção 10.
 
 ## 1. O que se compara
 
@@ -21,8 +22,8 @@ o mesmo modelo. O desenho padrão tem dois:
 
 A rodada pode trazer **outros braços**. O desenho das duas primeiras medições tinha três:
 `desligada`, `camada1` (conferência em código) e `camada1+juiz` (a conferência mais uma segunda
-chamada ao modelo que só reprova). O da terceira (seção 10) tem **quatro**, com
-`camada1+juiz+resgate`. **Cada braço extra é
+chamada ao modelo que só reprova). O da terceira (seção 10) tem **quatro**, com o juiz nos papéis de
+resgate e de veto. **Cada braço extra é
 comparado ao `desligada`, um a um, com a mesma regra** (seções 5 a 7); não se comparam braços entre si
 e cada comparação tem o seu desfecho. A leitura dos juízes é uma só (as respostas aceitas de todos os
 braços, embaralhadas), e a concordância entre os juízes vale para todas as comparações. O `desligada`
@@ -266,35 +267,61 @@ conjuntos anteriores nem o código da correção.
 - **Teste cego do v2:** vale a mesma regra do v1. Quem escreve ou revisa a correção não lê o v2, não o
   usa em exemplo, treino ou teste e recebe só os ids (`F2-07`).
 
-## 10. Conjunto v3 e o quarto braço (terceira medição)
+## 10. Conjunto v3 e os braços da terceira medição
 
-O juiz da correção foi ajustado depois da segunda rodada (o Haiku passa a raciocinar e entra um papel
-de resgate), olhando os números do v1 e do v2. Por isso nenhum dos dois é mais teste cego para esse
-ajuste. A terceira medição usa o **conjunto v3**, `perguntas-fidelidade-lei-v3.json` (versão
-`2026-11-13.v3`, sha256 em `perguntas-fidelidade-lei-v3.json.sha256`), escrito por uma sessão que
-nunca viu o v1, o v2, os conjuntos antigos da Ceres nem o código da correção.
+O juiz da correção foi ajustado depois da segunda rodada, olhando os números do v1 e do v2. Por isso
+nenhum dos dois é mais teste cego para esse ajuste. A terceira medição usa o **conjunto v3**,
+`perguntas-fidelidade-lei-v3.json` (versão `2026-11-13.v3`, sha256 em
+`perguntas-fidelidade-lei-v3.json.sha256`), escrito por uma sessão que nunca viu o v1, o v2, os
+conjuntos antigos da Ceres nem o código da correção.
 
-- **Versão da regra `2026-11-13.5`.** A regra passa a prever o conjunto v3 e o quarto braço. Só isso:
-  **as mesmas medidas, as mesmas margens e limiares (seção 7.1), os mesmos juízes (J1 `opus`, J2
-  `sonnet`, J3 `opus`), 3 repetições e o mesmo modelo.** Nenhuma margem, limiar ou prompt de juiz
-  muda. A versão `2026-11-12.4` fica registrada como a do v1 e do v2 (seção 9); os arquivos e os testes
-  deles continuam como estão.
+- **Versões da regra.** A `2026-11-13.5` é a com que o v3 foi escrito (o campo `regra` do arquivo dele
+  fica nela, e o conjunto **não mudou**: mesmas 36 perguntas, mesmo sha256). A `2026-11-13.6`, em vigor,
+  muda só os braços (abaixo), **antes de qualquer execução**, como esta seção já previa. **As mesmas
+  medidas, as mesmas margens e limiares (seção 7.1), os mesmos juízes (J1 `opus`, J2 `sonnet`, J3
+  `opus`), 3 repetições e o mesmo modelo.** Nenhuma margem, limiar ou prompt de juiz muda. A
+  `2026-11-12.4` fica registrada como a do v1 e do v2 (seção 9); os arquivos e os testes deles continuam
+  como estão.
 - **Mesma forma do v1 e do v2:** 36 perguntas, 6 por classe (`CAPUT`, `PARAGRAFO`, `EXCECAO`, `AMPLA`,
   `AUSENTE`, `SIMPLES`), ids com prefixo `F3-`, gabarito de fidelidade tirado do texto de
   `legislacao_trecho` e conferido por subagentes independentes. A escolha do conjunto é por parâmetro
   (`--conjunto v1|v2|v3`; padrão `v1`); o manifesto da rodada guarda `conjunto.arquivo`, e a leitura e a
   decisão usam o conjunto do manifesto.
-- **Quatro braços** no mesmo commit (o head da correção): `desligada` (referência), `camada1`,
-  `camada1+juiz` (agora com o juiz novo, só com veto) e `camada1+juiz+resgate` (o juiz mais o papel de
-  resgate). O `camada1+juiz+resgate` é julgado **pelos mesmos critérios dos outros braços ligados**,
-  contra o `desligada` (seções 5 a 7), e entra na escolha entre braços aprovados (seção 7.4) pela
-  **mesma ordem de desempate**: menos `INFIEL`, depois menos falsos descartes, depois menos tokens, por
-  fim o nome. As chamadas novas do juiz e do resgate entram na medida M6 se gravarem os tokens em
-  colunas `tokens_entrada*`/`tokens_saida*` da auditoria. Desfecho novo que o juiz ou o resgate
-  criarem vale como **descartada** (seção 3), salvo decisão registrada antes da rodada, e então a
-  versão da regra sobe.
-- **Se o resgate não for entregue,** a rodada volta a três braços (`desligada`, `camada1`,
-  `camada1+juiz`) e esta seção é ajustada **antes de qualquer execução**.
+- **Por que os braços mudaram.** Duas medições e duas bancadas mostraram que o juiz **no papel de veto**
+  (reprovar o que a conferência em código aprovou) não acrescenta fidelidade: não pega as respostas
+  infiéis que escapam da camada 1 e derruba respostas boas. Ele pode servir no papel oposto, de
+  **resgate**: rever o que a camada 1 reprovaria, e só então a resposta é salva. A correção ganhou uma
+  chave que separa os dois papéis, e a decisão (do Murillo) é medir os dois lado a lado.
+- **Quatro braços** no mesmo commit (o head da correção), cada um comparado ao `desligada` pelos mesmos
+  critérios (seções 5 a 7):
+
+  | Braço | O que é |
+  |-------|---------|
+  | `desligada` | referência, como a `main` |
+  | `camada1` | conferência em código, sem juiz |
+  | `camada1+juiz+resgate` | conferência, juiz vetando e juiz resgatando |
+  | `camada1+resgate` | conferência e juiz **só** resgatando, sem vetar |
+
+  O braço `camada1+juiz` (só veto) **sai** da rodada: já foi medido duas vezes e não se sustentou. A
+  comparação entre os dois braços de resgate isola o veto, e os dois usam a **mesma configuração de
+  juiz**, para não misturar duas variáveis. A comparação entre braços é leitura humana, sobre os números
+  de cada um contra o `desligada`, e não decide (seção 1).
+- **Escolha entre braços** (seção 7.4): vale a mesma ordem de desempate para os **três** braços
+  comparados, entre os que derem `ENTRA`: menos `INFIEL`, depois menos falsos descartes, depois menos
+  tokens, por fim o nome.
+- **Limiar interno da camada 1 (para a leitura do resultado).** Com o juiz ligado, a camada 1 afrouxa um
+  limiar interno porque conta com o juiz para barrar certa paráfrase. No braço `camada1+resgate` esse
+  limiar volta ao valor cheio, senão o braço sairia mais permissivo que a `camada1` sozinha. Por isso a
+  diferença entre `camada1+resgate` e `camada1` é efeito do resgate, e a entre `camada1+juiz+resgate` e
+  `camada1+resgate` soma o efeito do veto e o do afrouxamento desse limiar.
+- **Auditoria e tokens.** A resposta resgatada sai com desfecho de resposta aceita (`RESPONDIDA`) e
+  conta como **aceita** (seção 3); a marca do resgate fica só na coluna `fidelidade_lei` da auditoria.
+  Os tokens de raciocínio do juiz entram em `tokens_saida_juiz`, que a medida M6 soma por prefixo
+  (`tokens_entrada*` e `tokens_saida*`). Desfecho que a regra não conhece (seção 3: vale como
+  **descartada**, salvo decisão registrada antes da rodada, com a versão da regra subida) faz a rodada
+  **parar antes da leitura dos juízes**, para decisão do Murillo.
+- Se uma das chaves da correção não for entregue como combinada, a seção é ajustada **antes de qualquer
+  execução**.
 - Mudar uma pergunta, um fato ou o gabarito do v3 depois do congelamento muda o sha256: suba a versão
   do conjunto (`VERSAO_CONJUNTO_V3` em `fidelidade_comum.py`), grave o novo hash e rode de novo.
 - **Teste cego do v3:** vale a mesma regra do v1 e do v2. Quem escreve ou revisa a correção não lê o

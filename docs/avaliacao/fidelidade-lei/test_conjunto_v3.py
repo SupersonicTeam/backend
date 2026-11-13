@@ -1,7 +1,8 @@
-"""O conjunto v3 (terceira medição): forma, sha256, classes, a escolha do conjunto e o quarto braço.
+"""O conjunto v3 (terceira medição): forma, sha256, classes, a escolha do conjunto e os quatro braços.
 
 O v1, o v2 e os testes deles seguem como estão (`test_conjunto.py`, `test_conjunto_v2.py`). Aqui ficam
-só as conferências do v3 e do que a regra ganhou com ele (versão nova da regra, quarto braço).
+só as conferências do v3 e do que a regra ganhou com ele (versão nova da regra, braços da terceira
+medição).
 """
 
 import contextlib
@@ -20,7 +21,7 @@ import leitura_fidelidade as lei
 REGRA_MD = comum.DIR / "regra-de-decisao.md"
 README_MD = comum.DIR / "README.md"
 NORMAS = {"LC 214/2025", "EC 132/2023", "LC 227/2026", "Lei 8.212/1991", "Lei 9.528/1997"}
-BRACOS_DA_TERCEIRA_MEDICAO = ["camada1", "camada1+juiz", "camada1+juiz+resgate"]
+BRACOS_DA_TERCEIRA_MEDICAO = ["camada1", "camada1+juiz+resgate", "camada1+resgate"]
 
 
 class ConjuntoV3Test(unittest.TestCase):
@@ -34,10 +35,11 @@ class ConjuntoV3Test(unittest.TestCase):
 
     def test_versao_propria_e_regra_nova(self):
         self.assertEqual(self.conjunto["versao"], comum.VERSAO_CONJUNTO_V3)
-        self.assertNotIn(self.conjunto["versao"], (comum.VERSAO_REGRA, comum.VERSAO_REGRA_ATUAL,
-                                                   comum.VERSAO_CONJUNTO_V2))
-        self.assertEqual(self.conjunto["regra"], comum.VERSAO_REGRA_ATUAL)
-        self.assertNotEqual(comum.VERSAO_REGRA_ATUAL, comum.VERSAO_REGRA)
+        self.assertNotIn(self.conjunto["versao"], (comum.VERSAO_REGRA, comum.VERSAO_REGRA_DO_V3,
+                                                   comum.VERSAO_REGRA_ATUAL, comum.VERSAO_CONJUNTO_V2))
+        # o conjunto não mudou quando a regra subiu: ele guarda a versão com que foi escrito
+        self.assertEqual(self.conjunto["regra"], comum.VERSAO_REGRA_DO_V3)
+        self.assertEqual(len({comum.VERSAO_REGRA, comum.VERSAO_REGRA_DO_V3, comum.VERSAO_REGRA_ATUAL}), 3)
 
     def test_trinta_e_seis_perguntas_seis_por_classe(self):
         self.assertEqual(len(self.perguntas), 36)
@@ -99,10 +101,15 @@ class ConjuntoV3Test(unittest.TestCase):
         readme = README_MD.read_text(encoding="utf-8")
         for texto in (regra, readme):
             self.assertIn("perguntas-fidelidade-lei-v3.json", texto)
-            self.assertIn("camada1+juiz+resgate", texto)
+            for braco in BRACOS_DA_TERCEIRA_MEDICAO:
+                self.assertIn(f"`{braco}`", texto)
         self.assertIn(f"`{comum.VERSAO_CONJUNTO_V3}`", regra)
         self.assertIn(f"Versão da regra: `{comum.VERSAO_REGRA_ATUAL}`", regra)
+        self.assertIn(f"`{comum.VERSAO_REGRA_DO_V3}`", regra)  # a do v3 fica registrada
         self.assertIn(f"`{comum.VERSAO_REGRA}`", regra)  # a versão do v1 e do v2 fica registrada
+        self.assertIn("tokens_saida_juiz", regra)  # os tokens do juiz entram na medida M6
+        self.assertIn("camada1+juiz` (só veto)", regra)  # o braço que saiu fica explicado
+        self.assertNotIn("camada1+juiz`,", regra.split("## 10.")[1])  # e não volta ao desenho
 
     def test_hash_diferente_e_recusado(self):
         with tempfile.TemporaryDirectory() as pasta:
@@ -139,8 +146,8 @@ class QuartoBracoTest(unittest.TestCase):
     @staticmethod
     def _bracos():
         return ex.montar_bracos([], [], ["camada1:F=true",
-                                         "camada1+juiz:F=true,J=true",
-                                         "camada1+juiz+resgate:F=true,J=true,R=true"])
+                                         "camada1+juiz+resgate:F=true,J=true,R=true",
+                                         "camada1+resgate:F=true,R=true"])
 
     def test_executor_aceita_os_quatro_bracos(self):
         self.assertEqual(list(self._bracos()), ["desligada"] + BRACOS_DA_TERCEIRA_MEDICAO)
@@ -153,7 +160,7 @@ class QuartoBracoTest(unittest.TestCase):
         for _, _, bracos in plano:
             self.assertEqual(sorted(bracos), sorted(nomes))
 
-    def test_a_escolha_considera_o_quarto_braco_pela_mesma_ordem_de_desempate(self):
+    def test_a_escolha_dos_tres_bracos_usa_a_mesma_ordem_de_desempate(self):
         def comp(nome, infiel, falsos, tokens, desfecho="ENTRA"):
             return {"desfecho": desfecho, "braco": {nome: {"infiel": infiel, "tokensMedios": tokens}},
                     "porPergunta": {"falsosDescartes": ["Q"] * falsos}}
