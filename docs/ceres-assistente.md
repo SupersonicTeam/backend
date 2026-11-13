@@ -581,7 +581,9 @@ juiz, o juiz na configuração `justificativa`, vetando as aprovadas e resgatand
 por polaridade. **Os padrões do código não mudam: tudo segue desligado.** Ligar na VPS é decisão à parte,
 ainda não tomada; quando for, é só configuração, com estas variáveis no `.env` de lá (os booleanos em
 minúsculas; o provedor é o de sempre, `AI_CHAT_PROVIDER=anthropic`, `AI_ANTHROPIC_MODEL=claude-haiku-5-5`,
-`AI_ANTHROPIC_THINKING=disabled`):
+`AI_ANTHROPIC_THINKING=disabled`). Na VPS o `deploy/compose.yaml` precisa repassar essas variáveis ao
+backend (repassa desde o #269) antes de o `.env` ter efeito; passo a passo e reversão em
+`deploy/README.md`, "Fidelidade da rota de lei":
 
 ```
 AI_FIDELIDADE_LEI_HABILITADA=true
