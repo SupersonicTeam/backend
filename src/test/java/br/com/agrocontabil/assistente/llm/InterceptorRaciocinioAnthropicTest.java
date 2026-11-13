@@ -123,4 +123,10 @@ class InterceptorRaciocinioAnthropicTest {
     assertThat(InterceptorRaciocinioAnthropic.tokensDeRaciocinio(
         "nao e json".getBytes(StandardCharsets.UTF_8))).isNull();
   }
+  @Test
+  @DisplayName("URL base sem host falha na construção, em vez de desligar o raciocínio calado")
+  void urlSemHostFalha() {
+    assertThatThrownBy(() -> new InterceptorRaciocinioAnthropic("api.anthropic.com"))
+        .isInstanceOf(IllegalStateException.class);
+  }
 }

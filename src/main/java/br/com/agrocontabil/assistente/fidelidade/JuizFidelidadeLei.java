@@ -154,9 +154,6 @@ public class JuizFidelidadeLei {
       }
       ChatResponse resposta = chamar(frases, contexto, configuracao, tetoSaida);
       chamou = true;
-      if (configuracao.raciocina()) {
-        raciocinio = RaciocinioPorChamada.consumir();
-      }
       String texto = textoDaResposta(resposta);
       if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida)) {
         log.warn("Ceres: juiz da fidelidade da lei cortado pelo teto de {} tokens", tetoSaida);
@@ -178,6 +175,10 @@ public class JuizFidelidadeLei {
       return new Julgamento(DesfechoFidelidadeLei.REPROVADA_JUIZ_FALHA, Falha.ERRO_MODELO,
           List.of(), null);
     } finally {
+      // Consumido sempre, inclusive na falha: o valor da thread local nao passa para outra pergunta.
+      if (configuracao.raciocina()) {
+        raciocinio = RaciocinioPorChamada.consumir();
+      }
       if (registrar) {
         long latencia = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicio);
         contexto.registrarJuizLei(latencia,

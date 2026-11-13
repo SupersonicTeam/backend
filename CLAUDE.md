@@ -349,8 +349,13 @@ br.com.agrocontabil
 │                  #   (app.assistente.fidelidade-lei.juiz.resgate.enabled / AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO,
 │                  #   DESLIGADO, só com o juiz): a frase reprovada em código por número (e, com resgate.polaridade
 │                  #   e resgate.cobertura, desligadas, por polaridade e cobertura) vai ao juiz na mesma chamada; só o SUSTENTA de todas aceita
-│                  #   (APROVADA_RESGATE_JUIZ), senão fica o motivo da camada 1. Raciocínio do provedor no juiz:
-│                  #   não implementado (o Spring AI 1.1.8 não o liga por chamada). Bancada manual do juiz:
+│                  #   (APROVADA_RESGATE_JUIZ), senão fica o motivo da camada 1. Raciocínio do provedor no juiz
+│                  #   (adaptativo-baixo/-medio/-alto, só AI_CHAT_PROVIDER=anthropic, teto tetos.juiz-com-raciocinio
+│                  #   3072): o Spring AI 1.1.8 não o liga por chamada, então o juiz marca a chamada com o cabeçalho
+│                  #   X-AgroConIA-Raciocinio e o llm/InterceptorRaciocinioAnthropic (no RestClient do Boot) troca o
+│                  #   thinking por adaptive e põe output_config.effort só nela; o juiz lê a geração de texto (o bloco
+│                  #   thinking vem antes, vazio); as outras chamadas seguem com thinking disabled e lendo a primeira
+│                  #   geração (llm/CorpoDoJuizNoFioTest trava os corpos). Bancada manual do juiz:
 │                  #   fidelidade/BancadaJuizFidelidadeManual (src/test, fora do ./mvnw test);
 │                  # orquestracao/AtalhosFixos (#343: as 3 perguntas da tela, texto exato, sem
 │                  #   modelo, pagando só a leitura da mensagem (#511); dados → RotaDados.responderAtalho, lei →

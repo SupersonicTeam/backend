@@ -457,7 +457,8 @@ frase, na ordem.
   da pergunta.
 
 **Configuração do juiz**, um valor só e nomeado (`app.assistente.fidelidade-lei.juiz.configuracao`,
-`AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO`, padrão `atual`; os nomes são os de
+`AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO`, padrão `atual`; `justificativa`, `adaptativo-baixo`,
+`adaptativo-medio` e `adaptativo-alto`; os nomes são os de
 `AssistenteProperties.FidelidadeLei.Juiz.Configuracao.nome()`, os mesmos da bancada): `atual` é o juiz
 acima; `justificativa` (configuração (d) da segunda medição) usa os mesmos
 critérios, mas pede, em cada item, uma `justificativa` curta (até 20 palavras) **antes** do `veredito`
@@ -465,15 +466,49 @@ critérios, mas pede, em cada item, uma `justificativa` curta (até 20 palavras)
 (`tetos.juiz-com-justificativa`, `AI_TETO_JUIZ_JUSTIFICATIVA`, 1.024: o Haiku escreveu até ~85 tokens
 por frase na bancada, e 512 cortou respostas de 5 e 6 frases), que substitui o `tetos.juiz` também
 na reserva: 31.744 + 8.192 + 1.024 × 4 = **44.032** créditos por pergunta com fator 1 (contra 40.448 no
-`atual`). **O raciocínio do provedor no juiz (as adaptativas, (b) e (c)) não está implementado:** o
-Spring AI 1.1.8 só conhece `thinking` `enabled` (com `budget_tokens`, que o Haiku 5.5 recusa) e
-`disabled`, não tem `output_config.effort`, e as opções por chamada não tiram o `thinking: disabled`
-padrão (o 1.1.8 é a última 1.1.x; a 2.x exige o Boot 4). As opções (reescrever o corpo da requisição só
-na chamada do juiz, ou um cliente próprio com o SDK oficial) estão com a orquestração da #269. Quando
-entrarem, entram como mais valores da configuração. O `llm/CorpoDoJuizNoFioTest` trava o corpo que sai
-para a API, com o `ChatModel` real do Spring AI e um servidor local: hoje, em toda configuração, o juiz e
-as outras chamadas saem com `thinking.type = disabled` e sem `output_config`, e o juiz muda só o
-`max_tokens` e a instrução.
+`atual`).
+
+**Juiz que raciocina** (`adaptativo-baixo`, `adaptativo-medio`, `adaptativo-alto`: o raciocínio
+adaptativo do provedor com esforço `low`, `medium` e `high`, só na chamada do juiz, só com
+`AI_CHAT_PROVIDER=anthropic`; com o juiz ativo noutro provedor a subida falha). O Spring AI 1.1.8 não o
+liga pelas opções: só conhece `thinking` `enabled` (com `budget_tokens`, que o Haiku 5.5 recusa) e
+`disabled`, não tem `output_config`, e o 1.1.8 é a última 1.1.x (a 2.x exige o Boot 4). Por isso, a
+opção A (escolha da orquestração em 13/11, trocável pela B, cliente próprio com o SDK oficial, se o
+Murillo preferir): o juiz marca a chamada com o cabeçalho `X-AgroConIA-Raciocinio` (o esforço), pelas
+`httpHeaders` por chamada das opções da Anthropic (`ModeloLinguagem.comRaciocinio`), e o
+`llm/InterceptorRaciocinioAnthropic`, posto no `RestClient.Builder` do Boot que o Spring AI usa
+(`AssistenteConfig`), age **só** na requisição marcada e ao host da API da Anthropic: tira o cabeçalho,
+troca o `thinking` do corpo por `{"type": "adaptive"}`, põe `output_config.effort` e lê da resposta
+`usage.output_tokens_details.thinking_tokens`. Todas as outras chamadas passam intactas, com
+`thinking: disabled`. A instrução é a da `atual` (só o veredito), e o teto
+(`tetos.juiz-com-raciocinio`, `AI_TETO_JUIZ_RACIOCINIO`, 3.072, a metade do contexto mínimo) cobre
+raciocínio e vereditos: o raciocínio é cobrado como saída e entra no `max_tokens`; cortado, falha fecha.
+Reserva por pergunta: 31.744 + 8.192 + 3.072 × 4 = **52.224** créditos com fator 1. A saída inteira,
+raciocínio incluído, fica em `tokens_saida_juiz`; os tokens de raciocínio são só detalhe
+(`ContextoAssistente.JuizLei.tokensRaciocinio` e o `tokens_raciocinio` da bancada), sem coluna.
+
+O Spring AI entrega cada bloco `thinking` da resposta como uma `Generation` à parte, **antes** da do
+texto e com o texto vazio (a API omite o raciocínio por padrão): o juiz lê a geração de texto
+(`JuizFidelidadeLei.textoDaResposta`), não a primeira. As outras chamadas seguem lendo a primeira, e por
+isso o raciocínio tem de continuar desligado nelas. O `llm/CorpoDoJuizNoFioTest` trava o corpo que sai
+para a API, com o `ChatModel` real do Spring AI e um servidor local, em cada configuração: nas
+adaptativas, o juiz com `thinking.type = adaptive`, o esforço e o teto de 3.072, com a resposta
+começando pelo bloco de raciocínio; nas outras e em todas as outras chamadas, `thinking.type = disabled`
+e sem `output_config`; e o cabeçalho-marca nunca chega ao servidor.
+
+**Medição das adaptativas com o Haiku (2026-11-13, bancada, chamada só do juiz):**
+
+| Configuração | Inversão da F24 aprovada | 5 resgatadas certas aprovadas | Raciocínio (média / máx.), 57 respostas do braço desligado | p50 / p95 da chamada |
+|---|---|---|---|---|
+| `adaptativo-baixo` | 0 de 3 | 15 de 15 | 521 / 1.249 tokens | 3,1 s / 5,3 s |
+| `adaptativo-medio` | 0 de 3 | 15 de 15 | 631 / 1.583 | 3,3 s / 6,0 s |
+| `adaptativo-alto` | 0 de 3 | 15 de 15 | 925 / 2.713 | 3,8 s / 10,3 s |
+
+Nenhum corte no teto de 3.072. As três reprovaram a inversão que o `atual` aprovou 3 de 3 e o
+`justificativa` 1 de 3, mas o p95 da chamada passa dos 4 s em todas (nas respostas curtas que já passaram
+pela camada 1, o raciocínio cai para ~100 a ~190 tokens no p50). Na rota inteira com `adaptativo-baixo` (8
+perguntas próprias × 2), a chamada de lei trouxe o texto na primeira geração em todas: o raciocínio
+segue desligado fora do juiz.
 
 **Resgate** (`app.assistente.fidelidade-lei.juiz.resgate.enabled`,
 `AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO`, padrão `false`; só tem efeito com o juiz). A frase que a
@@ -1073,7 +1108,7 @@ perto de ÷ 3, então leia como faixa), não medição pelo tokenizador do Qwen.
 | Classificação | `LlmClassificadorIntencao` | só no desempate das camadas e na `perguntaLei` do MISTO (#265); nunca nos atalhos (#343) | `CLASSIFICACAO` (1.128) | pergunta (até 1.000) | nenhuma | `tetos.classificacao` (256) |
 | Escolha das funções de dados | `RotaDados` | DADOS e a parte de dados do MISTO | `SISTEMA_DADOS` (884) + 13 definições de função (11.870, ordenadas pelo nome) | data de hoje + pergunta (até ~1.030) | as 13 de dados | `tetos.funcoes` (512) |
 | Lei | `RotaLegislacao` | LEGISLACAO e a parte de lei do MISTO, só com trecho recuperado | regras (712; 1.035 na variante só regra geral do MISTO; ~1.170 com a conferência de fidelidade ligada, #269) | data de hoje + trechos (top-k 5 + complementares do MISTO, sem teto de tamanho) + pergunta | nenhuma | `tetos.legislacao` (1.024) |
-| Juiz da fidelidade da lei (#269, camada 2) | `JuizFidelidadeLei` | só com a camada 1 e o juiz ligados, depois que a resposta de lei passa por todas as conferências em código | `JUIZ_FIDELIDADE` ou, na configuração `justificativa`, `JUIZ_FIDELIDADE_COM_JUSTIFICATIVA` (~1.100, todo o sistema) | frases e dispositivos citados, na mensagem do usuário (com o resgate, também as frases a resgatar) | nenhuma | `tetos.juiz` (128) ou `tetos.juiz-com-justificativa` (1.024) |
+| Juiz da fidelidade da lei (#269, camada 2) | `JuizFidelidadeLei` | só com a camada 1 e o juiz ligados, depois que a resposta de lei passa por todas as conferências em código | `JUIZ_FIDELIDADE` ou, na configuração `justificativa`, `JUIZ_FIDELIDADE_COM_JUSTIFICATIVA` (~1.100, todo o sistema) | frases e dispositivos citados, na mensagem do usuário (com o resgate, também as frases a resgatar) | nenhuma | `tetos.juiz` (128), `tetos.juiz-com-justificativa` (1.024) ou, nas adaptativas (raciocínio do provedor só nesta chamada), `tetos.juiz-com-raciocinio` (3.072) |
 
 Estimativa do maior prompt de cada uma (sem o template do modelo, ~300 caracteres a mais):
 classificação ~2.100 caracteres (~530 a ~710 tokens); dados ~13.800 (~3.450 a ~4.600 tokens);

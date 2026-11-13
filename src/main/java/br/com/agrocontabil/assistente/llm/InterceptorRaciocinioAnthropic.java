@@ -50,9 +50,14 @@ public class InterceptorRaciocinioAnthropic implements ClientHttpRequestIntercep
    * Constrói o interceptor para o host da API da Anthropic.
    *
    * @param urlBase o {@code spring.ai.anthropic.base-url} (ex.: {@code https://api.anthropic.com})
+   * @throws IllegalStateException se a URL não tem host (sem esquema, por exemplo): sem isso, as
+   *         configurações adaptativas do juiz rodariam caladas sem o raciocínio
    */
   public InterceptorRaciocinioAnthropic(String urlBase) {
     this.host = URI.create(urlBase).getHost();
+    if (host == null) {
+      throw new IllegalStateException("spring.ai.anthropic.base-url sem host: " + urlBase);
+    }
   }
 
   @Override
@@ -63,7 +68,7 @@ public class InterceptorRaciocinioAnthropic implements ClientHttpRequestIntercep
       return execution.execute(request, body);
     }
     request.getHeaders().remove(RaciocinioPorChamada.CABECALHO);
-    if (host == null || !host.equalsIgnoreCase(request.getURI().getHost())) {
+    if (!host.equalsIgnoreCase(request.getURI().getHost())) {
       log.warn("Ceres: marca de raciocinio numa requisicao fora da API da Anthropic; ignorada");
       return execution.execute(request, body);
     }
