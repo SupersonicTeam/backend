@@ -55,6 +55,7 @@ Texto de referência: `docs/premissas-e-escopo.md` (roteiro da banca em
   adquirente (RN009) sai **destacado no `infCpl`** e nos Dados Adicionais do DANFE (#332):
   `NotaFiscalNfeMapper.textoFunrural`, valores do `RetencaoService.funruralDaVenda` (a mesma conta
   da RN009, em qualquer status); 1,5% até a pergunta A da #284 (o contador citou 1,63%).
+- **Ordem dos runners (#470):** `DataLoader` (`@Order` 10) roda antes do `SeedDemonstracao` (`@Order` 20); o seed fecha os meses antigos de todos os produtores que existem, então a ordem muda a apuração dos produtores do `DataLoader` (travada pelo `OrdemDosRunnersTest`). Ordem nova de runner: declare `@Order`.
 - **Demonstração:** o produtor semeado é optante (art. 165), nas observações do vínculo semeado.
   Mudança de seed chega à VPS pelo **reset dos dados da demonstração** (`docs/demonstracao/reset-*.sql`,
   procedimento em `docs/demonstracao-banca.md`, testado no PostgreSQL pelo
@@ -156,7 +157,13 @@ não usa Ollama para o chat, desliga o raciocínio e o prova na API, e lê `ANTH
 ambiente (nunca em arquivo; oculta em log, erro e relatório; o executor recusa a rodada sem ela e
 faz uma prova antes de começar). A latência dela é de API pela rede: sai marcada **(API)** e fora da
 viabilidade dos modelos locais. As perguntas, inclusive as inéditas do cego, saem para a API
-("Célula do modelo por API" no README do benchmark). Desde a #352 as
+("Célula do modelo por API" no README do benchmark). **Célula opcional com a fidelidade da rota
+de lei (#269):** `claude-haiku-5-5+fidelidade-lei` (`modelosApi` com `opcional: true`; só com
+`--com-fidelidade-lei`, nunca no comando de sempre), só na Ceres 2.0, com as cinco variáveis
+`AI_FIDELIDADE_LEI_*` da configuração escolhida; o executor a recusa se o SHA da rodada não as lê no
+`application.yml`; fica fora de média, viabilidade, conclusão e gráficos, com seção própria no relatório
+(o descarte pela fidelidade baixa citação e número e sobe a recusa por descarte; README, "Célula com a
+fidelidade da rota de lei"). Desde a #352 as
 células leem o **conjunto congelado** `docs/avaliacao/benchmark/perguntas-benchmark.json` (100
 perguntas, 12 temas, `capacidade` `comum`/`so_ceres_2`, hash no `.sha256` ao lado — mudou uma
 pergunta, mude a versão e o hash), conferido pelo `PerguntasBenchmarkIntegrationTest` e pelo
@@ -181,6 +188,24 @@ oficial: SHA com a Sessão 7 (`54a4201`), a 8a (`54f02ee`), a 8b (`d8b0b36`) e a
 > adaptada nem `src/test/resources/benchmark/`, e **nunca recebem acesso** ao
 > `SupersonicTeam/ceres-benchmark-cego`. Mensagem a uma sessão de código cita só o id da inédita
 > (`E03`), nunca o texto. Mudança da Ceres feita por quem conheceu uma inédita a contamina.
+
+**Fidelidade da rota de lei (#269):** `docs/avaliacao/fidelidade-lei/` guarda o conjunto de 36 perguntas
+(`perguntas-fidelidade-lei.json`, sha256 ao lado), a regra de decisão e os scripts da medição do
+braço flag desligada × ligada com o Haiku. Vale a mesma regra do teste cego: quem escreve ou revisa a
+correção da fidelidade **não lê** o conjunto (nem o gabarito, os prompts dos juízes ou os resultados),
+e a mensagem a essa sessão cita só o id (`FL07`). O `ConjuntoFidelidadeLeiTest` e os testes Python
+da pasta (`python3 -m unittest discover -s docs/avaliacao/fidelidade-lei -p "test_*.py"`, na CI)
+guardam o hash, o treino e o prompt; a regra (`regra-de-decisao.md`) e as margens do
+`fidelidade_comum.py` são uma coisa só: mudou uma, mude a outra e a versão. **Conjunto v2:** a correção
+foi ajustada depois da primeira rodada, olhando os números do v1; a segunda medição usa o
+`perguntas-fidelidade-lei-v2.json` (versão própria e sha256 ao lado, ids `F2-07`), escrito por uma
+sessão que não viu o v1 nem a correção, com a mesma regra e os mesmos scripts (`--conjunto v1|v2|v3`; a
+regra, seção 9). A regra do teste cego vale para o v2 do mesmo jeito. **Conjunto v3:** o juiz da correção foi
+ajustado depois da segunda rodada, também olhando o v1 e o v2; a terceira medição usa o
+`perguntas-fidelidade-lei-v3.json` (versão `2026-11-13.v3`, ids `F3-07`), escrito por sessão que não viu
+v1, v2, conjuntos antigos nem a correção. Regra `2026-11-13.6` (`VERSAO_REGRA_ATUAL`; a `2026-11-13.5` é a com que o v3 foi
+escrito e a `2026-11-12.4` segue como a do v1 e do v2): mesmas margens, quatro braços (`desligada`, `camada1`, `camada1+juiz+resgate`,
+`camada1+resgate`), regra seção 10; teste cego igual.
 
 ## Arquitetura — regras inegociáveis
 
@@ -309,6 +334,40 @@ br.com.agrocontabil
 │                  #   da LC 214/2025, arts. 172 a 307, os regimes específicos, e a pergunta não cita o setor do
 │                  #   capítulo; desfecho REGIME_ESPECIFICO_SEM_SETOR, que a régua da avaliação conta como texto
 │                  #   descartado);
+│                  # fidelidade/ (#269, item 1; flag app.assistente.fidelidade-lei.enabled /
+│                  #   AI_FIDELIDADE_LEI_HABILITADA, DESLIGADA por padrão; cobertura-minima 0,7): ligada, o prompt de
+│                  #   lei pede JSON com a passagem copiada do trecho por frase e a ConferenciaFidelidadeLei confere
+│                  #   em código, sem chamada a mais: cópia literal, número, negação/restrição e cobertura das palavras
+│                  #   (TextoLei), e põe a citação no nível em que a cópia está (NivelDispositivo: o caput quando a
+│                  #   regra está no caput). Reprovada = TRECHOS_SEM_CONFIRMACAO com os trechos marcados, desfecho
+│                  #   FIDELIDADE_REPROVADA (descarte na régua da avaliação); o motivo vai em
+│                  #   assistente_interacao.fidelidade_lei (changeSet 0065). Desligada = prompt e resultado da main
+│                  #   (RotaLegislacaoFidelidadeTest). Configuração escolhida (Murillo, 2026-11-13, terceira
+│                  #   medição, 6b5cd4ac): camada 1 + juiz justificativa com veto + resgate com polaridade
+│                  #   (docs/ceres-assistente.md, "Configuração escolhida"); tudo segue desligado no código, e
+│                  #   ligar na VPS é decisão à parte;
+│                  #   camada 2, o juiz (fidelidade/JuizFidelidadeLei; app.assistente.fidelidade-lei.juiz.enabled /
+│                  #   AI_FIDELIDADE_LEI_JUIZ_HABILITADO, DESLIGADO por padrão, só com a camada 1): uma chamada ao
+│                  #   modelo com as frases e os dispositivos citados (com o contexto de cima, lidos em sequência),
+│                  #   veredito SUSTENTA/NAO_SUSTENTA/CONTRADIZ por frase; só
+│                  #   reprova, falha fecha (REPROVADA_JUIZ_*); cobertura cai para cobertura-minima-com-juiz (0,3);
+│                  #   teto tetos.juiz (128) como parcela da reserva da pergunta (AssistenteProperties.tetoDaPergunta);
+│                  #   tempo e tokens em latencia_juiz_ms/tokens_*_juiz, fora dos da pergunta; configuração
+│                  #   do juiz, pelo nome (AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO: atual, o padrão, ou justificativa, justificativa curta
+│                  #   antes de cada veredito, teto tetos.juiz-com-justificativa 1024); resgate
+│                  #   (app.assistente.fidelidade-lei.juiz.resgate.enabled / AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO,
+│                  #   DESLIGADO, só com o juiz): a frase reprovada em código por número (e, com resgate.polaridade
+│                  #   e resgate.cobertura, desligadas, por polaridade e cobertura) vai ao juiz na mesma chamada; só o SUSTENTA de todas aceita
+│                  #   (APROVADA_RESGATE_JUIZ), senão fica o motivo da camada 1. Só resgate (juiz.veto=false /
+│                  #   AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO, padrão true): o juiz só roda na resposta a resgatar,
+│                  #   a aprovada sai sem ele e a cobertura volta a cobertura-minima (0,7). Raciocínio do provedor no juiz
+│                  #   (adaptativo-baixo/-medio/-alto, só AI_CHAT_PROVIDER=anthropic, teto tetos.juiz-com-raciocinio
+│                  #   3072): o Spring AI 1.1.8 não o liga por chamada, então o juiz marca a chamada com o cabeçalho
+│                  #   X-AgroConIA-Raciocinio e o llm/InterceptorRaciocinioAnthropic (no RestClient do Boot) troca o
+│                  #   thinking por adaptive e põe output_config.effort só nela; o juiz lê a geração de texto (o bloco
+│                  #   thinking vem antes, vazio); as outras chamadas seguem com thinking disabled e lendo a primeira
+│                  #   geração (llm/CorpoDoJuizNoFioTest trava os corpos). Bancada manual do juiz:
+│                  #   fidelidade/BancadaJuizFidelidadeManual (src/test, fora do ./mvnw test);
 │                  # orquestracao/AtalhosFixos (#343: as 3 perguntas da tela, texto exato, sem
 │                  #   modelo, pagando só a leitura da mensagem (#511); dados → RotaDados.responderAtalho, lei →
 │                  #   AtalhoReformaTributaria: texto explicado do TextoReformaTributaria, #347,
@@ -388,6 +447,7 @@ br.com.agrocontabil
 | GET | `/api/contador/notas/resumo` | Contagem por caixa de triagem (#341), uma consulta `GROUP BY status`, com os mesmos filtros da lista (menos `status`, ignorado): `{revisao, travadas, rascunhos, devolvidas, autorizadas, canceladas, todas}`. Mapeamento em `GrupoNotasCarteira`: revisão = `AGUARDANDO_APROVACAO`; travadas = `COM_INCONSISTENCIAS` + `REJEITADA`; rascunhos = `RASCUNHO`; devolvidas = `DEVOLVIDA`; autorizadas = `AUTORIZADA`; canceladas = `CANCELADA`; todas = tudo, inclusive `APROVADA`, `XML_GERADO`, `ENVIANDO`, `PENDENTE_SEFAZ` e `CANCELANDO`, que nenhuma caixa mostra |
 | GET | `/api/contador/produtores/{produtorId}/notas` (+ `/{id}`, `/{id}/validacoes`) | Notas do cliente, só leitura, com os filtros de `GET /api/notas`; array + `X-Total-Count`; fora da carteira ou nota de outro produtor → 404 (#177) |
 | GET | `/api/notas?status=&tipoDocumento=&emitidaDe=&emitidaAte=&busca=` | Lista paginada do produtor autenticado com filtros opcionais e combináveis (#174): `status` repetível (OU), `tipoDocumento`, faixa de emissão em dias inclusivos (Brasília), `busca` em número/destinatário/natureza, CPF/CNPJ do destinatário **completo** (11 ou 14 dígitos, com ou sem máscara) e descrição/NCM dos itens, sem acento nem caixa (3–100 caracteres; número curto casa por prefixo; GIN de trigrama, changeSet 0037; coluna de 8000 e versão da regra, changeSet 0056, #271). **Desde a #399** o documento não fica no texto de busca (`NormalizacaoBusca.VERSAO_REGRA` 3; o `BuscaNotasLegadoRunner` reescreve as notas antigas em segundo plano): o CPF/CNPJ completo casa por igualdade na coluna `destinatario_cpf_cnpj`, e um trecho dele (a raiz do CNPJ, por exemplo) não casa mais. `totalElements` reflete o filtro. `sort` só `dataEmissao`, `numero`, `status`, `valorTotal`, `createdAt`; faixa invertida ou `sort` fora da lista → 400 `FILTRO_NOTAS_INVALIDO` |
+| GET | `/api/notas/proximo-numero?serie=` | Número sugerido para a nota própria (#539): `{serie, numero}` = maior `numero` das notas `PROPRIA` do produtor autenticado na série (modelo 55, qualquer status, NF-e e NFA juntas) mais 1; sem nota, 1. Compra `IMPORTADA`, outra série e outro produtor não contam (o filtro espelha o índice parcial `uk_nota_fiscal_propria_numero_serie_modelo`). `serie` opcional (padrão 1), 0 a 999 (400 `VALIDATION_ERROR`); contador 403 `PAPEL_NAO_AUTORIZADO`; série no 999.999.999 → 409 `SERIE_ESGOTADA`. **Só sugestão, sem reserva**: duas abas recebem o mesmo número e o `POST` seguinte recusa pelo índice. Uma consulta de `max` |
 | GET | `/api/notas/{id}` | Busca por ID (anti-IDOR 404). `NotaFiscalResponse` traz `origem` (`PROPRIA`/`IMPORTADA`), `emitenteNome` e `emitenteCpfCnpj`, estes nulos na própria (#409); as rotas do contador por cliente devolvem o mesmo DTO, e o `NotaCarteiraResponse` (lista da carteira) traz só `origem` e `emitenteNome`, nunca o documento do emitente (#451) |
 | POST | `/api/notas` | Cria nota (status RASCUNHO). A resposta (e a do `PUT`) traz `avisos[]` (#389): `CCLASSTRIB_NAO_ADMITIDO` por item cujo cClassTrib informado o NCM não admite (a regra do `gerar-xml`), sem 422 — salvar nunca é impedido |
 | POST | `/api/notas/importar` | Importa XML(s) de NF-e (multipart; produtor=destinatário; origem=IMPORTADA). Desde a #223, por arquivo: `dest` = CPF/CNPJ do produtor, assinatura conferida, dedup só na conta do produtor (chave única por produtor+chave+origem, 0045) e autorização **confirmada na SEFAZ pela chave** com o `digVal` igual ao DigestValue do XML (o `protNFe` do upload é ignorado); falha em qualquer uma → `INVALIDA` com `motivo`, nada gravado; SEFAZ sem resposta → `IMPORTADA` em `PENDENTE_SEFAZ` (fora da apuração), o job confirma com as mesmas regras |
@@ -409,6 +469,9 @@ br.com.agrocontabil
 | GET | `/api/notas/{id}/status-sefaz` | Consulta e sincroniza status na SEFAZ |
 | POST | `/api/notas/{id}/cancelar` | Cancela NF-e autorizada (limite 30 dias — RN006). Compra `IMPORTADA` → 409 `CANCELAMENTO_COMPRA_IMPORTADA`, antes de qualquer transmissão (#418) |
 | GET | `/api/notas/{id}/validacoes` | Histórico de inconsistências de validação (anti-IDOR 404) |
+| POST/GET | `/api/guias` (+ `PATCH /api/guias/{id}/pagar`) | Guias do **produtor autenticado** (#273), sem `produtorId` em corpo, query nem path (um `produtorId` no JSON é ignorado): `POST` corpo `{tipoGuia, dataVencimento, valor, observacoes?}` (`NovaGuiaFiscalRequest`), 201 com `Location`; `GET` `page`/`size` (padrão 100, máx. 200, página até 10.000) e `X-Total-Count`, array; `pagar` 404 para guia de outro produtor, 409 se já paga. Contador 403 `PAPEL_NAO_AUTORIZADO` nas três (cadeia: `/api/guias/**` só `PRODUTOR`). Mesmo `GuiaFiscalService` das rotas antigas e da carteira |
+| POST/GET | `/api/contador/produtores/{produtorId}/guias` | Guias de um cliente da **carteira ativa** (#273): mesmo corpo, paginação e `X-Total-Count` de `/api/guias`; `exigirContadorComAcesso` (fora da carteira, suspenso ou encerrado 404; produtor 403, até para si mesmo; corpo não escolhe o alvo) |
+| POST/GET/PATCH | `/api/contador/guias` (+ `/{id}/pagar`) — **`deprecated`** (#273) | Rotas antigas, seguem respondendo igual (o `produtorId` vem no corpo/query e o `ProdutorEmContextoResolver` decide); marcadas `deprecated` no OpenAPI, saem depois que o Angular migrar |
 | POST | `/api/contador/guias` | Cria guia fiscal (produtorId deve ser o do usuário autenticado; 404 se divergir) |
 | GET | `/api/contador/guias?produtorId=&page=&size=` | Lista paginada (padrão 100, máx. 200) das guias do usuário autenticado (404 se o id for de outro); corpo array + total em `X-Total-Count` (#103) |
 | PATCH | `/api/contador/guias/{id}/pagar` | Marca guia como paga (só papel PRODUTOR; contador recebe 403) |
@@ -422,7 +485,7 @@ br.com.agrocontabil
 | GET | `/api/alertas` | Alertas tributários do produtor (RN010, #140): guia pendente, fechamento da apuração do mês e fim do prazo de cancelamento de NF-e (RN006) que vencem em **menos de 5 dias**; gerados por job diário às 9h, e o motivo é conferido na leitura (guia paga some na hora). Só produtor (contador 403) |
 | POST | `/api/assistente/chat` | Pergunta à Ceres (`{pergunta}`, máx. 1000 caracteres); resposta `{resposta, rota, citacoes[], fontesDados[{funcao, parametros, origem}], modoFallback, atalhos[]}` (`origem` `PRODUTOR`/`TABELA_OFICIAL`, #342; o rótulo em português é do frontend), mais `explicacao` (#268: explicação curta da resposta de dados, conferida pelo `VerificadorFidelidade`; **ausente** quando nula, inclusive com a flag `app.assistente.explicacao.enabled` desligada, o padrão); rota decidida pelo orquestrador: DADOS/LEGISLACAO/MISTO/FORA_DE_ESCOPO (#157); só produtor (contador 403); 503 `ASSISTENTE_OCUPADO` + `Retry-After` sem vaga (limite global ou pergunta anterior do mesmo produtor em andamento), 503 `ASSISTENTE_TEMPO_ESGOTADO`; com o modelo fora, **200 com `modoFallback: true`** (trechos de lei verbatim ou `atalhos` de tela, #146) — 503 `ASSISTENTE_INDISPONIVEL` só com o banco também fora. **Continuidade (#499), atrás de `AI_CONTINUIDADE_HABILITADA` (desligada):** a requisição aceita `historico` (até 3 trocas assinadas, cada uma igual ao `turno` recebido) e `ultimaRespostaSemTurno`; a resposta traz `perguntaInterpretada` e `turno` (fora do JSON quando nulos). Par adulterado, alheio ou vencido (30 min) é ignorado em silêncio; mais de 3 itens → 400 de corpo ilegível; item vazio → 400 em `historico[i]`. Corpo da Ceres até 80 KB. Contrato em `docs/contrato-frontend-ceres.md`, seção 4a |
 | POST | `/api/assistente/chat/stream` | Mesma pergunta em SSE (#157): eventos `rota` → `resposta` → `fim`, ou `erro` (envelope `errors[]`); sem tokens parciais (só a resposta já validada). Com a explicação ligada (#268, desligada por padrão): `rota` → `resposta` → `explicacao` (`{"explicacao": "..."}`, opcional: descartada ou fora do prazo, não vem) → `fim`; a vaga só volta depois dela ou do prazo dela; um `erro` depois da `resposta` não invalida o que já foi enviado. Abre com o comentário `:ceres`, escrito pela thread da requisição: o commit da resposta nunca é da Ceres (#335); o mesmo comentário vai antes de cada chamada ao modelo (#499). Cancelada pelo cliente (conexão caiu, sem prazo vencido antes) paga o gasto: chamadas concluídas e a entrada estimada da interrompida, até o reservado; falha do servidor estorna tudo |
-| GET | `/api/assistente/uso` | Uso semanal da Ceres em créditos (#166): `{plano, habilitada, creditosSemana, consumidos, restantes, renovaEm, percentualUsado, conversaVaiAoProvedor}`. **A tela mostra só o `percentualUsado` (#511)**, inteiro de 0 a 100: ⌈consumidos ÷ creditosSemana × 100⌉, no máximo 99 com saldo, 100 só com `restantes` = 0, 0 só sem uso; os créditos ficam no JSON para compatibilidade e nenhuma mensagem ao usuário cita número de créditos. Semana de segunda a domingo (Brasília), sem acúmulo. Só produtor (contador 403). Sem saldo para o teto de uma pergunta, os dois `POST` acima respondem **429 `LIMITE_USO_ASSISTENTE`** com `Retry-After`, antes de o stream abrir — inclusive as três perguntas de atalho da tela, a conversa leve e as recusas pelo filtro de injeção e antes do classificador (#497), que não usam o modelo mas pagam a leitura da mensagem (#511): para elas (`OrquestradorService.respondeSemModelo`), o 429 vem só sem saldo para a leitura. **Desde a #511, 1 crédito por token ponderado** (`tokens-por-credito` = 1; produtor 1.000.000 e escritório 5.000.000 por semana; changeSet 0060 converteu o uso gravado × 1000): toda pergunta tem custo; sem chamada ao modelo (atalho, conversa leve, recusa pelo filtro ou antes do classificador, fallback), a leitura é ⌈tokens estimados da mensagem × peso-entrada × fator⌉, com tokens = ⌈caracteres ÷ 4⌉ (`ContextoAssistente.tokensDaLeitura`); com chamadas, o consumo real, sem taxa extra. `conversaVaiAoProvedor` (#499): `true` com a continuidade ligada e o modelo por API (a tela mostra o aviso). Reserva por caminho (`config/CaminhoCota`, #499): a leitura da mensagem no caminho sem modelo (inclusive a reexecução e os textos fixos da continuidade), 31.744, 24.576, 34.816 ou 43.776 créditos |
+| GET | `/api/assistente/uso` | Uso semanal da Ceres em créditos (#166): `{plano, habilitada, creditosSemana, consumidos, restantes, renovaEm, percentualUsado, conversaVaiAoProvedor}`. **A tela mostra só o `percentualUsado` (#511)**, inteiro de 0 a 100: ⌈consumidos ÷ creditosSemana × 100⌉, no máximo 99 com saldo, 100 só com `restantes` = 0, 0 só sem uso; os créditos ficam no JSON para compatibilidade e nenhuma mensagem ao usuário cita número de créditos. Semana de segunda a domingo (Brasília), sem acúmulo. Só produtor (contador 403). Sem saldo para o teto de uma pergunta, os dois `POST` acima respondem **429 `LIMITE_USO_ASSISTENTE`** com `Retry-After`, antes de o stream abrir — inclusive as três perguntas de atalho da tela, a conversa leve e as recusas pelo filtro de injeção e antes do classificador (#497), que não usam o modelo mas pagam a leitura da mensagem (#511): para elas (`OrquestradorService.respondeSemModelo`), o 429 vem só sem saldo para a leitura. **Desde a #511, 1 crédito por token ponderado** (`tokens-por-credito` = 1; produtor 1.000.000 e escritório 5.000.000 por semana; changeSet 0060 converteu o uso gravado × 1000): toda pergunta tem custo; sem chamada ao modelo (atalho, conversa leve, recusa pelo filtro ou antes do classificador, fallback), a leitura é ⌈tokens estimados da mensagem × peso-entrada × fator⌉, com tokens = ⌈caracteres ÷ 4⌉ (`ContextoAssistente.tokensDaLeitura`); com chamadas, o consumo real, sem taxa extra. `conversaVaiAoProvedor` (#499): `true` com a continuidade ligada e o modelo por API (a tela mostra o aviso). Reserva por caminho (`config/CaminhoCota`, #499): a leitura da mensagem no caminho sem modelo (inclusive a reexecução e os textos fixos da continuidade), 31.744, 24.576, 34.816 ou 43.776 créditos, mais a parcela do juiz da lei (#269) em todo caminho com modelo quando ele pode rodar (`AssistenteProperties.tetoDaPergunta(fator, caminho)`) |
 
 ## Segurança
 
@@ -440,7 +503,9 @@ br.com.agrocontabil
   | `GET /interno/tls/permitido` (#464) | público na cadeia, protegido pela chave e pela rede interna | idem |
   | `/api/notas/**`, `/api/dashboard`, `/api/apuracao/**`, `/api/creditos`, `/api/relatorios/**`, `/api/assistente/**`, `/api/alertas`, `/api/notificacao/**` (#182) | próprios dados | **403** no service — o contador usa as rotas da carteira (linha abaixo, #255) |
   | `GET /api/contador/produtores/{produtorId}/apuracao`, `/relatorios/conformidade/**`, `/creditos`, `/dashboard` (#255) | **403** | qualquer membro, carteira ativa (404 fora dela) |
-  | `POST`/`GET /api/contador/guias` | próprias guias (404 para outro produtor) | guias dos produtores da carteira (404 fora dela) |
+  | `POST`/`GET /api/guias`, `PATCH /api/guias/{id}/pagar` (#273) | próprias guias (404 para guia de outro) | **403** — a cadeia barra |
+  | `POST`/`GET /api/contador/produtores/{produtorId}/guias` (#273) | **403** | guias dos clientes da carteira ativa (404 fora dela) |
+  | `POST`/`GET /api/contador/guias` (`deprecated`, #273) | próprias guias (404 para outro produtor) | guias dos produtores da carteira (404 fora dela) |
   | `PATCH /api/contador/guias/{id}/pagar` | sim (anti-IDOR 404) | **403** — quitar a guia é ato do produtor |
   | `GET /api/calendario-fiscal/{produtorId}/vencimentos` | próprio calendário | calendário dos produtores da carteira |
   | `GET /api/auditoria` | **403** | auditoria dos produtores da carteira (404 fora dela) |
@@ -471,7 +536,9 @@ br.com.agrocontabil
   ligado na VPS e, desde a #464, em dev); nunca ler o cabeçalho cru. O cookie de refresh segue
   *host-only* (nunca `Domain=.agroconia.com.br`) e o CORS segue a lista fixa: a SPA do subdomínio
   chama `/api` na mesma origem. **Invariante:** todo subdomínio serve o mesmo SPA, sem conteúdo
-  enviado pelo cliente (o `SameSite=Strict` não separa subdomínios). **Infra:** no Caddy, os
+  enviado pelo cliente (o `SameSite=Strict` não separa subdomínios). A única pasta servida do disco
+  é a `jornada/` dos quadros da landing (frontend#174, `/jornada/*`): só a equipe publica nela e o
+  Caddy só entrega dela imagem e JSON (`deploy/README.md`, "Jornada da landing"). **Infra:** no Caddy, os
   endereços dos escritórios são um site *catch-all* `https://` com `tls { on_demand }` e o "ask" do
   backend (`deploy/Caddyfile`), com o mesmo snippet `(app)` de cabeçalhos do `www` e
   `X-Robots-Tag: noindex` (frontend#175); **nunca** o site curinga `*.{$SITE_DOMINIO}`, que no Caddy 2.10 faz o

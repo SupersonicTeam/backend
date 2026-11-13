@@ -409,6 +409,12 @@ ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS latencia_explicacao_ms
 ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS tokens_entrada_explicacao INTEGER;
 ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS tokens_saida_explicacao INTEGER;
 
+-- Conferencia de fidelidade da rota de lei — Ceres issue #269 (migration 0065). Idempotente.
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS fidelidade_lei VARCHAR(40);
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS latencia_juiz_ms BIGINT;
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS tokens_entrada_juiz INTEGER;
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS tokens_saida_juiz INTEGER;
+
 -- Cota semanal de creditos da Ceres — Sprint 7 issue #166 (migration 0029). Manter sincronizado
 -- com 0029-assistente-uso-semanal.xml.
 CREATE TABLE IF NOT EXISTS assistente_uso_semanal (

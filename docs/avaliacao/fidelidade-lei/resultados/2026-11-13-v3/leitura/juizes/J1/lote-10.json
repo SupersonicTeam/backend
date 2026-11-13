@@ -1,0 +1,128 @@
+{
+  "juiz": "J1",
+  "lote": "lote-10",
+  "itens": [
+    {
+      "id": "R109",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, a gorjeta pode ficar fora da base de cálculo, mas só se cumprir condições.", "rotulo": "SUPORTADA", "dispositivoCitado": null, "fato": "F1"},
+        {"n": 2, "texto": "Ela precisa ser repassada integralmente ao empregado, sem prejuízo dos valores que o empregador reter por determinação legal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea a", "fato": "F2"},
+        {"n": 3, "texto": "Há também um limite: o valor da gorjeta não pode ultrapassar 15% do valor total do fornecimento de alimentos e bebidas", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea b", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R110",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O percentual da receita do IBS destinado ao Fundo de Combate à Pobreza pode ser estabelecido por lei específica do respectivo ente", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 129", "fato": "F1"},
+        {"n": 2, "texto": "O limite superior desse percentual é de 1% (um por cento), para vigência a partir de 1º de janeiro de 2033", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 129", "fato": "F2"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Frase 2 cobre F2 e F3."
+    },
+    {
+      "id": "R111",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026 em que o PIS/Pasep e a Cofins são exigidos conforme o recebimento efetivo", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": "F2"},
+        {"n": 2, "texto": "Nesse mesmo caso, a CBS não será exigida sobre o recebimento da receita decorrente da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso III", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Frase 2 omite a ressalva do § 2º (regimes opcionais), parte de F3; omissão pouco relevante ao caso."
+    },
+    {
+      "id": "R112",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A gorjeta cobrada no fornecimento de alimentação fica de fora da base de cálculo do IBS e da CBS, desde que cumpra as condições", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I", "fato": "F1"},
+        {"n": 2, "texto": "Uma das condições é que a gorjeta seja repassada integralmente ao empregado, sem prejuízo dos valores retidos pelo empregador", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea a", "fato": "F2"},
+        {"n": 3, "texto": "Outra condição é que o valor da gorjeta não exceda 15% (quinze por cento) do valor total do fornecimento de alimento e bebidas", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea b", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R113",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para contestar a penalidade, o prestador de serviço de pagamento ou a instituição operadora do sistema de pagamento pode impugnar", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 471-F", "fato": null, "nota": "Trecho literal, mas trata de penalidade a instituição de pagamento; não responde rito sumário e induz a erro."},
+        {"n": 2, "texto": "A impugnação é dirigida à RFB, relativamente à CBS, e ao CGIBS, relativamente ao IBS", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 471-F", "fato": null, "nota": "Procedimento de outro sujeito apresentado como resposta à contestação do produtor."}
+      ],
+      "omiteEssencial": ["F1", "F2", "F3"],
+      "observacao": "A resposta ignora o rito sumário do art. 76 da LC 227/2026."
+    },
+    {
+      "id": "R114",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Se a sua empresa estiver no regime regular do IBS e da CBS e comprar um título de capitalização, ela poderá apropriar créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 225, § 5º", "fato": "F1"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "A frase cobre F1 e F2."
+    },
+    {
+      "id": "R115",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim. Se a empresa está no regime regular, ela pode apropriar créditos de IBS e CBS pelo valor dos tributos pagos na compra", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 225, § 5º", "fato": "F1"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "A frase cobre F1 e F2."
+    },
+    {
+      "id": "R116",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Os créditos do IBS e da CBS são apropriados e compensados ou ressarcidos pelo seu valor nominal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1"},
+        {"n": 2, "texto": "A lei veda correção ou atualização monetária sobre esses créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R117",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Os créditos do IBS e da CBS são apropriados e compensados ou ressarcidos pelo seu valor nominal, sem correção ou atualização", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1"},
+        {"n": 2, "texto": "Há exceção: podem existir acréscimos de juros relativos a ressarcimento, quando expressamente previstos na lei", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F2"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R118",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Na intermediação de serviços turísticos realizada por agências de turismo, a base de cálculo do IBS e da CBS é o valor da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1"},
+        {"n": 2, "texto": "Os serviços de agências de turismo ficam sujeitos a regime específico de incidência do IBS e da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 288", "fato": null}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Não responde se a comissão paga pelo hotel entra na base (F3)."
+    },
+    {
+      "id": "R119",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, a gorjeta pode ficar fora da base de cálculo, desde que atenda a condições.", "rotulo": "SUPORTADA", "dispositivoCitado": null, "fato": "F1"},
+        {"n": 2, "texto": "Ela deve ser repassada integralmente ao empregado, sem prejuízo dos valores que o empregador retenha por determinação legal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea a", "fato": "F2"},
+        {"n": 3, "texto": "Além disso, seu valor não pode exceder 15% do valor total do fornecimento de alimentos e bebidas", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea b", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R120",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A gorjeta incidente no fornecimento de alimentação fica excluída da base de cálculo do IBS e da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I", "fato": "F1"},
+        {"n": 2, "texto": "Para ficar de fora, a gorjeta deve ser repassada integralmente ao empregado, sem prejuízo dos valores retidos pelo empregador", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea a", "fato": "F2"},
+        {"n": 3, "texto": "Há também um limite: o valor da gorjeta não pode exceder 15% (quinze por cento) do valor total do fornecimento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea b", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    }
+  ]
+}

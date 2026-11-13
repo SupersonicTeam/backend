@@ -26,6 +26,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       explicacao: 256              # explicacao depois da resposta de dados (#268)
  *       classificacao: 256
  *       legislacao: 1024
+ *       juiz: 128                    # juiz da fidelidade da lei (#269), so com ele ativo
  *       contexto: 8192               # = num-ctx do Ollama, so para a validacao
  * </pre>
  *
@@ -76,6 +77,9 @@ public class AssistenteProperties implements InitializingBean {
 
   /** Explicação do modelo depois da resposta de dados (#268), atrás da flag. */
   private Explicacao explicacao = new Explicacao();
+
+  /** Conferência de fidelidade da rota de lei (#269); desligada por padrão. */
+  private FidelidadeLei fidelidadeLei = new FidelidadeLei();
 
   /** Teto de tokens gerados por tipo de chamada ao modelo (#270). */
   private Tetos tetos = new Tetos();
@@ -145,8 +149,9 @@ public class AssistenteProperties implements InitializingBean {
           + cota.getTetoTokensEntradaPorChamada() + ") deve ser >= app.assistente.tetos.contexto ("
           + tetos.getContexto() + ")");
     }
-    // O caminho mais caro (com reescrita, #499), com ou sem a continuidade ligada.
-    long teto = cota.tetoDaPergunta(tetos, cota.maiorFator(), CaminhoCota.REESCRITA);
+    // O caminho mais caro (com reescrita, #499), com ou sem a continuidade ligada, e o juiz da
+    // lei (#269) quando ele pode rodar.
+    long teto = tetoDaPergunta(cota.maiorFator(), CaminhoCota.REESCRITA);
     long menorPlano = Math.min(
         cota.getCreditosPorSemanaProdutor(), cota.getCreditosPorSemanaEscritorio());
     if (cota.isHabilitada() && teto > menorPlano) {
@@ -173,6 +178,88 @@ public class AssistenteProperties implements InitializingBean {
               + maxConversasSimultaneas);
     }
     explicacao.validar(timeoutPergunta);
+    fidelidadeLei.validar();
+  }
+
+  /**
+   * {@code true} se o juiz da fidelidade da lei (#269, camada 2) roda: ele e a camada 1 ligados.
+   * Só então a reserva da pergunta inclui a chamada dele.
+   */
+  public boolean juizDaLeiAtivo() {
+    return fidelidadeLei.isEnabled() && fidelidadeLei.getJuiz().isEnabled();
+  }
+
+  /**
+   * {@code true} se o resgate da fidelidade da lei (#269) roda: a chave dele, a do juiz e a da
+   * camada 1. Sem o juiz o resgate não tem efeito.
+   */
+  public boolean resgateDaLeiAtivo() {
+    return juizDaLeiAtivo() && fidelidadeLei.getJuiz().getResgate().isEnabled();
+  }
+
+  /**
+   * Custo máximo de uma pergunta (#166): as chamadas da fórmula ({@link Cota#tetoDaPergunta}) e,
+   * com o juiz da lei ativo (#269), a chamada dele como parcela própria
+   * ({@link Cota#tetoDoJuiz}). O juiz roda no meio da pergunta e os tokens dele entram nos da
+   * pergunta: por isso a parcela fica na reserva dela, não numa reserva à parte como a explicação.
+   *
+   * @param fator fator de custo do modelo
+   * @return créditos
+   */
+  public long tetoDaPergunta(double fator) {
+    return tetoDaPergunta(fator, CaminhoCota.NORMAL);
+  }
+
+  /**
+   * Custo máximo de uma pergunta pelo caminho dela (#499), com a parcela do juiz da lei (#269)
+   * quando ele pode rodar. Todo caminho que chama o modelo pode passar uma vez pela rota de lei (a
+   * pergunta comum, a concordância da reconferência, o caminho depois da reescrita), e é nela que
+   * o juiz roda; o caminho sem modelo não reserva teto (paga a leitura, #511).
+   *
+   * @param fator   fator de custo do modelo
+   * @param caminho caminho da pergunta
+   * @return créditos
+   */
+  public long tetoDaPergunta(double fator, CaminhoCota caminho) {
+    long teto = cota.tetoDaPergunta(tetos, fator, caminho);
+    return juizDaLeiPodeRodar() && caminho != CaminhoCota.SEM_MODELO
+        ? teto + cota.tetoDoJuiz(tetoSaidaDoJuiz(), fator) : teto;
+  }
+
+  /**
+   * {@code true} se o juiz da lei pode ser chamado numa pergunta (#269): ativo e com o veto ou o
+   * resgate ligado. Com os dois desligados ele nunca roda, e a reserva não inclui a parcela dele.
+   */
+  public boolean juizDaLeiPodeRodar() {
+    return juizDaLeiAtivo()
+        && (fidelidadeLei.getJuiz().isVeto() || fidelidadeLei.getJuiz().getResgate().isEnabled());
+  }
+
+  /** Teto de saída do juiz da lei (#269) na configuração dele. */
+  public int tetoSaidaDoJuiz() {
+    return tetoSaidaDoJuiz(fidelidadeLei.getJuiz().getConfiguracao());
+  }
+
+  /**
+   * Teto de saída do juiz da lei (#269) numa configuração: {@code tetos.juiz} na {@code atual},
+   * {@code tetos.juiz-com-justificativa} na {@code justificativa} e
+   * {@code tetos.juiz-com-raciocinio} nas adaptativas.
+   */
+  public int tetoSaidaDoJuiz(FidelidadeLei.Juiz.Configuracao configuracao) {
+    if (configuracao.raciocina()) {
+      return tetos.getJuizComRaciocinio();
+    }
+    return configuracao == FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA
+        ? tetos.getJuizComJustificativa()
+        : tetos.getJuiz();
+  }
+
+  public FidelidadeLei getFidelidadeLei() {
+    return fidelidadeLei;
+  }
+
+  public void setFidelidadeLei(FidelidadeLei fidelidadeLei) {
+    this.fidelidadeLei = fidelidadeLei;
   }
 
   public Explicacao getExplicacao() {
@@ -444,7 +531,9 @@ public class AssistenteProperties implements InitializingBean {
      * das camadas e na {@code perguntaLei} do MISTO, #265), escolha das funções de dados (uma
      * só desde a #266) e lei. O pior caso é o MISTO com desempate. Uma chamada nova ao modelo
      * exige rever este número e {@link #tetoDaPergunta}: o {@code TetoDaCotaCobreChamadasTest}
-     * quebra se aparecer outro ponto que chame o modelo.
+     * quebra se aparecer outro ponto que chame o modelo. O juiz da fidelidade da lei (#269) fica
+     * fora deste número: entra como parcela própria ({@link #tetoDoJuiz}), só com ele ativo, pelo
+     * {@code AssistenteProperties.tetoDaPergunta}, que é o teto inteiro.
      */
     public static final int CHAMADAS_POR_PERGUNTA = 3;
 
@@ -466,7 +555,9 @@ public class AssistenteProperties implements InitializingBean {
     }
 
     /**
-     * Custo máximo possível de uma pergunta (#166, revisto depois da #270): as
+     * Custo máximo das chamadas da fórmula de uma pergunta (#166, revisto depois da #270), sem o
+     * juiz da fidelidade da lei (#269): o teto inteiro é o {@code AssistenteProperties
+     * .tetoDaPergunta}, que soma o {@link #tetoDoJuiz} com ele ativo. As
      * {@value #CHAMADAS_POR_PERGUNTA} chamadas, cada uma com o teto de entrada e com o próprio
      * teto de saída ({@code app.assistente.tetos}: classificação + funções + lei). O teto de saída
      * é o {@code maxTokens} que a própria chamada manda ao modelo, então a saída real nunca passa
@@ -488,6 +579,15 @@ public class AssistenteProperties implements InitializingBean {
     public long tetoDaPergunta(Tetos tetos, double fator, CaminhoCota caminho) {
       return creditos((long) caminho.chamadas() * tetoTokensEntradaPorChamada,
           caminho.saida(tetos), fator);
+    }
+
+    /**
+     * Custo máximo do juiz da fidelidade da lei (#269, camada 2): uma chamada, com o teto de entrada
+     * e o teto de saída próprio ({@code app.assistente.tetos.juiz}). Entra na reserva da pergunta
+     * só com o juiz ativo ({@code AssistenteProperties.tetoDaPergunta}).
+     */
+    public long tetoDoJuiz(int tetoSaida, double fator) {
+      return creditos(tetoTokensEntradaPorChamada, tetoSaida, fator);
     }
 
     /**
@@ -698,6 +798,27 @@ public class AssistenteProperties implements InitializingBean {
     private int reconferencia = 1024;
 
     /**
+     * Juiz da fidelidade da lei (#269, camada 2): um veredito curto por frase em JSON. Entra na
+     * reserva da pergunta só com o juiz ativo ({@link Cota#tetoDoJuiz}).
+     */
+    private int juiz = 128;
+
+    /**
+     * Juiz na configuração {@code justificativa} (#269, (d)): uma justificativa curta antes de cada
+     * veredito. O prompt pede até 20 palavras, mas o Haiku escreveu até ~85 tokens por frase na
+     * bancada de 2026-11-13: 512 cortou respostas de 5 e 6 frases, 1024 cabe ~12. Substitui o
+     * {@link #juiz} nessa configuração, também na reserva da pergunta; o gasto real é o da saída.
+     */
+    private int juizComJustificativa = 1024;
+
+    /**
+     * Juiz nas configurações adaptativas (#269): o raciocínio do provedor é cobrado como saída e
+     * entra no {@code max_tokens}, então o teto cobre raciocínio e vereditos. Cortado, falha fecha.
+     * Substitui o {@link #juiz} nelas, também na reserva da pergunta; o gasto real é o da saída.
+     */
+    private int juizComRaciocinio = 3072;
+
+    /**
      * Janela de contexto do modelo (o {@code num-ctx} do Ollama, lido da mesma propriedade). Só
      * para a validação: nenhum teto pode comer mais da metade dela, que é do prompt.
      */
@@ -714,6 +835,9 @@ public class AssistenteProperties implements InitializingBean {
       exigirTeto("legislacao", legislacao);
       exigirTeto("reescrita", reescrita);
       exigirTeto("reconferencia", reconferencia);
+      exigirTeto("juiz", juiz);
+      exigirTeto("juiz-com-justificativa", juizComJustificativa);
+      exigirTeto("juiz-com-raciocinio", juizComRaciocinio);
     }
 
     private void exigirTeto(String nome, int valor) {
@@ -749,6 +873,30 @@ public class AssistenteProperties implements InitializingBean {
 
     public int getLegislacao() {
       return legislacao;
+    }
+
+    public int getJuiz() {
+      return juiz;
+    }
+
+    public int getJuizComRaciocinio() {
+      return juizComRaciocinio;
+    }
+
+    public void setJuizComRaciocinio(int juizComRaciocinio) {
+      this.juizComRaciocinio = juizComRaciocinio;
+    }
+
+    public int getJuizComJustificativa() {
+      return juizComJustificativa;
+    }
+
+    public void setJuizComJustificativa(int juizComJustificativa) {
+      this.juizComJustificativa = juizComJustificativa;
+    }
+
+    public void setJuiz(int juiz) {
+      this.juiz = juiz;
     }
 
     public void setLegislacao(int legislacao) {
@@ -878,6 +1026,256 @@ public class AssistenteProperties implements InitializingBean {
 
     public void setMaxCaracteres(int maxCaracteres) {
       this.maxCaracteres = maxCaracteres;
+    }
+  }
+
+  /**
+   * Conferência de fidelidade da rota de lei (#269): o modelo responde em JSON, cada frase com a
+   * passagem do trecho que a sustenta, e o {@code ConferenciaFidelidadeLei} confere em código a
+   * cópia, o número, a negação e a cobertura de cada frase e põe a citação no nível do dispositivo
+   * em que a passagem está (o caput, quando a regra está no caput). Reprovada, o texto do modelo sai
+   * e ficam os trechos, sem afirmar que respondem.
+   *
+   * <p><strong>Desligada por padrão.</strong> Com ela desligada a rota de lei é a de antes: o mesmo
+   * prompt, nenhuma conferência a mais. A configuração escolhida pela terceira medição (camada 1 +
+   * juiz {@code justificativa} com veto + resgate com polaridade) está no
+   * {@code docs/ceres-assistente.md}; ligar na VPS é decisão à parte.
+   */
+  public static class FidelidadeLei {
+
+    /** Liga a conferência para todas as perguntas de lei ({@code AI_FIDELIDADE_LEI_HABILITADA}). */
+    private boolean enabled;
+
+    /**
+     * Fração mínima (maior que 0, no máximo 1) das palavras de conteúdo de cada frase que têm de
+     * aparecer nas passagens copiadas dela ({@code AI_FIDELIDADE_LEI_COBERTURA_MINIMA}).
+     */
+    private double coberturaMinima = 0.7;
+
+    /**
+     * A mesma fração com o juiz ativo e o veto ligado
+     * ({@code AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ}; sem o veto, no modo só resgate, vale a
+     * {@link #coberturaMinima}): um
+     * piso baixo, para a paráfrase em linguagem simples passar; quem decide o sentido passa a ser o
+     * juiz. Literalidade, número e polaridade seguem eliminatórios em código.
+     */
+    private double coberturaMinimaComJuiz = 0.3;
+
+    /** Camada 2, o juiz. */
+    private Juiz juiz = new Juiz();
+
+    /**
+     * Juiz da fidelidade da lei (#269, camada 2): uma chamada ao modelo por resposta aprovada pela
+     * camada 1, com as frases e as cópias; qualquer frase sem {@code SUSTENTA} reprova. Desligado
+     * por padrão, e sem efeito com a camada 1 desligada.
+     */
+    public static class Juiz {
+
+      /** Liga o juiz ({@code AI_FIDELIDADE_LEI_JUIZ_HABILITADO}). */
+      private boolean enabled;
+
+      /**
+       * O juiz veta as respostas que a camada 1 aprovou ({@code AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO},
+       * padrão {@code true}, o comportamento de antes). Desligado, é o modo "só resgate": o juiz só
+       * roda nas respostas que a camada 1 mandou resgatar, a aprovada sai sem ele e a cobertura
+       * exigida volta à {@code cobertura-minima} (0,7), porque ninguém confere a paráfrase solta.
+       */
+      private boolean veto = true;
+
+      public boolean isVeto() {
+        return veto;
+      }
+
+      public void setVeto(boolean veto) {
+        this.veto = veto;
+      }
+
+      /** O resgate pelo juiz. */
+      private Resgate resgate = new Resgate();
+
+      /**
+       * Configuração do juiz, um valor só e nomeado ({@code AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO}:
+       * {@code atual}, o padrão, ou {@code justificativa}); a bancada e os braços da medição a
+       * escolhem pelo nome, sem saber como ela é montada por baixo.
+       */
+      private Configuracao configuracao = Configuracao.ATUAL;
+
+      /**
+       * Configurações do juiz (#269), pelo nome. As adaptativas ligam o raciocínio do provedor só
+       * na chamada do juiz (o Spring AI 1.1.8 não o faz pelas opções: a marca por cabeçalho e o
+       * {@code InterceptorRaciocinioAnthropic}), só na API da Anthropic, com a instrução da
+       * {@code atual} e o teto {@code tetos.juiz-com-raciocinio}, que cobre raciocínio e resposta.
+       */
+      public enum Configuracao {
+        /** Só o veredito de cada frase ({@code tetos.juiz}): o juiz da camada 2 original. */
+        ATUAL(null),
+        /**
+         * Uma justificativa curta antes de cada veredito, sem raciocínio do provedor
+         * ({@code tetos.juiz-com-justificativa}).
+         */
+        JUSTIFICATIVA(null),
+        /** Raciocínio adaptativo com esforço {@code low}. */
+        ADAPTATIVO_BAIXO("low"),
+        /** Raciocínio adaptativo com esforço {@code medium}. */
+        ADAPTATIVO_MEDIO("medium"),
+        /** Raciocínio adaptativo com esforço {@code high}. */
+        ADAPTATIVO_ALTO("high");
+
+        private final String esforco;
+
+        Configuracao(String esforco) {
+          this.esforco = esforco;
+        }
+
+        /** O esforço ({@code output_config.effort}) da configuração adaptativa; nulo nas outras. */
+        public String esforco() {
+          return esforco;
+        }
+
+        /** {@code true} se a configuração liga o raciocínio do provedor. */
+        public boolean raciocina() {
+          return esforco != null;
+        }
+
+        /** O nome usado na propriedade e na bancada: minúsculas, com hífen. */
+        public String nome() {
+          return name().toLowerCase(java.util.Locale.ROOT).replace('_', '-');
+        }
+
+        /**
+         * A configuração de um nome ({@link #nome()}).
+         *
+         * @throws IllegalArgumentException se nenhuma tem esse nome
+         */
+        public static Configuracao deNome(String nome) {
+          for (Configuracao c : values()) {
+            if (c.nome().equals(nome == null ? null : nome.strip())) {
+              return c;
+            }
+          }
+          throw new IllegalArgumentException("configuração do juiz desconhecida: " + nome);
+        }
+      }
+
+      public Configuracao getConfiguracao() {
+        return configuracao;
+      }
+
+      public void setConfiguracao(Configuracao configuracao) {
+        this.configuracao = configuracao;
+      }
+
+      public boolean isEnabled() {
+        return enabled;
+      }
+
+      public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+      }
+
+      public Resgate getResgate() {
+        return resgate;
+      }
+
+      public void setResgate(Resgate resgate) {
+        this.resgate = resgate;
+      }
+
+      /**
+       * Resgate (#269): a frase que a camada 1 reprovaria por número (e, com {@code polaridade} e
+       * {@code cobertura}, por polaridade e por cobertura) vai ao juiz na mesma chamada do veto, com o dispositivo
+       * citado inteiro; só o {@code SUSTENTA} de todas as frases aceita a resposta. Formato,
+       * evidência ausente e cópia não literal não têm resgate. Desligado por padrão, e sem efeito
+       * sem o juiz.
+       */
+      public static class Resgate {
+
+        /** Liga o resgate ({@code AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO}). */
+        private boolean enabled;
+
+        /**
+         * Inclui a reprovação por polaridade no resgate
+         * ({@code AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE}). Desligado por padrão: no diagnóstico
+         * de 2026-11-13 o juiz aprovou uma inversão real que a camada 1 pegou pela polaridade ("já
+         * tiver se aperfeiçoado" onde a lei diz "não tenha"), 3 de 3 na configuração {@code atual}
+         * e 1 de 3 na {@code justificativa}.
+         */
+        private boolean polaridade;
+
+        /**
+         * Inclui a reprovação por cobertura no resgate
+         * ({@code AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA}). Desligado por padrão.
+         */
+        private boolean cobertura;
+
+        public boolean isPolaridade() {
+          return polaridade;
+        }
+
+        public void setPolaridade(boolean polaridade) {
+          this.polaridade = polaridade;
+        }
+
+        public boolean isEnabled() {
+          return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+          this.enabled = enabled;
+        }
+
+        public boolean isCobertura() {
+          return cobertura;
+        }
+
+        public void setCobertura(boolean cobertura) {
+          this.cobertura = cobertura;
+        }
+      }
+    }
+
+    void validar() {
+      exigirFracao("cobertura-minima", coberturaMinima);
+      exigirFracao("cobertura-minima-com-juiz", coberturaMinimaComJuiz);
+    }
+
+    private static void exigirFracao(String nome, double valor) {
+      if (!(valor > 0 && valor <= 1)) {
+        throw new IllegalStateException("app.assistente.fidelidade-lei." + nome + " deve estar"
+            + " entre 0 (exclusive) e 1, recebido: " + valor);
+      }
+    }
+
+    public double getCoberturaMinimaComJuiz() {
+      return coberturaMinimaComJuiz;
+    }
+
+    public void setCoberturaMinimaComJuiz(double coberturaMinimaComJuiz) {
+      this.coberturaMinimaComJuiz = coberturaMinimaComJuiz;
+    }
+
+    public Juiz getJuiz() {
+      return juiz;
+    }
+
+    public void setJuiz(Juiz juiz) {
+      this.juiz = juiz;
+    }
+
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+      this.enabled = enabled;
+    }
+
+    public double getCoberturaMinima() {
+      return coberturaMinima;
+    }
+
+    public void setCoberturaMinima(double coberturaMinima) {
+      this.coberturaMinima = coberturaMinima;
     }
   }
 

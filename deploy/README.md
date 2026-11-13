@@ -9,7 +9,7 @@ ClamAV e Caddy (HTTPS automático) numa VM só.
 | Endereço | `https://www.agroconia.com.br` (`SITE_HOST`). `agroconia.com.br` e o antigo `agrocontabil.<ip-com-hífens>.sslip.io` redirecionam para ele (`SITE_REDIRECIONA`) |
 | DNS | Hostinger (`dns-parking.com`): registro `A` de `@` e de `www` para o IP da VPS, sem `AAAA` (a VM não tem IPv6). O `A *` dos endereços dos escritórios entra pela seção [Endereço próprio do escritório](#endereço-próprio-do-escritório-464) |
 | Acesso SSH | `ssh -i ~/.ssh/agrocontabil_lightsail ubuntu@<ip>` (a chave privada fica só no PC de quem fez o deploy) |
-| Pasta na VM | `/opt/agrocontabil` — `compose.yaml`, `Caddyfile`, `.env` (600), `certs/nfe-teste.p12` |
+| Pasta na VM | `/opt/agrocontabil` — `compose.yaml`, `Caddyfile`, `.env` (600), `certs/nfe-teste.p12`, `jornada/` (quadros da landing, seção [Jornada da landing](#jornada-da-landing-frontend174)) |
 | Imagens | `ghcr.io/supersonicteam/backend` e `ghcr.io/supersonicteam/frontend` (workflow `docker-publish.yml` de cada repo, amd64 + arm64) |
 
 ## Profile `homolog`, sem senha no Caddy
@@ -323,6 +323,83 @@ docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
   2. rodar o primeiro comando de contagem;
   3. ver com `docker compose exec caddy cat /data/acessos/www.log` que a linha não tem IP.
 - **Reverter:** `cp Caddyfile.anterior Caddyfile` e o mesmo `reload`.
+
+## Jornada da landing (frontend#174)
+
+A landing tem uma seção 3D: uma sequência de imagens que anda com a rolagem. Os quadros **não vão
+na imagem do frontend** (seriam 81 MB a mais em cada imagem; decisão de 2026-11-09). Ficam na VPS,
+em `/opt/agrocontabil/jornada/<versão>/`, e o Caddy os serve em `/jornada/<versão>/`, no mesmo host
+do site. O player lê `/jornada/v0.1/manifesto.json` e tira dele os caminhos dos quadros.
+
+- **Pacote:** o zip da Release do repositório privado `luizGervazio/Animation-Agroconia`
+  (`agroconia-jornada-v0.1.zip`: 75 MB, 2.442 arquivos, em AVIF e em WebP, a reserva para navegador
+  sem AVIF). No ar desde 2026-11-12: a `v0.1`.
+- **No Caddy:** o `handle_path /jornada/*` do snippet `(app)` serve a pasta `/srv/jornada`, que o
+  `compose.yaml` monta de `./jornada`, só para leitura. Vale também nos endereços dos escritórios
+  (o mesmo snippet). O `nginx.conf` do frontend não entra nisso: o Caddy responde antes.
+- **Cache de um ano** (`Cache-Control: public, max-age=31536000, immutable`), só em arquivo que
+  existe. Por isso **uma versão publicada nunca muda**: pacote novo entra como pasta nova (`v0.2`).
+  Um arquivo trocado dentro da `v0.1` não chegaria a quem já visitou. O 404 sai sem o cabeçalho,
+  para a falta de um arquivo não ficar guardada no navegador.
+- **Só imagem e JSON, e nada enviado por cliente.** A pasta é servida na origem do aplicativo, em
+  todo host. Um `.html` ali rodaria com a sessão de quem o abrisse (o cookie de refresh não separa
+  subdomínios, #464). Por isso há duas barreiras: o Caddy só entrega `.avif`, `.webp` e `.json`
+  (o resto é 404, mesmo que o arquivo exista), e o `publicar-jornada.sh` só deixa entrar `.avif`,
+  `.webp` e o `manifesto.json`. O `LEIA-ME.md` do pacote, documento interno, fica de fora.
+
+Conferido no `caddy:2.10-alpine`: `manifesto.json` sai como `application/json`, `.avif` como
+`image/avif` e `.webp` como `image/webp`, sem regra de tipo no Caddyfile. Caminho com `..` não chega
+ao disco (cai no frontend, como qualquer rota fora de `/jornada/*`).
+
+### Publicar um pacote
+
+**O pacote entra antes do frontend que o pede.** Até ele chegar, o player recebe 404 (sem cache).
+
+```bash
+# no PC, com o zip da Release
+scp -i ~/.ssh/agrocontabil_lightsail agroconia-jornada-v0.2.zip ubuntu@<ip>:/tmp/
+# na VPS
+cd /opt/agrocontabil
+./publicar-jornada.sh /tmp/agroconia-jornada-v0.2.zip v0.2 && rm /tmp/agroconia-jornada-v0.2.zip
+```
+
+O script (nesta pasta, copiado para `/opt/agrocontabil`) extrai e confere o pacote fora de
+`jornada/` e só então o move para `jornada/v0.2/`, de uma vez. Ele recusa a versão que já existe, o
+manifesto de outra versão, qualquer arquivo fora dos tipos esperados e o pacote com mais de 1 GB
+aberto (`JORNADA_TETO_MB`; a extração cai no disco do banco). Nenhum container reinicia: a pasta
+nova já aparece no Caddy.
+
+Conferir de fora da VPS. O status 200 sozinho não prova nada: sem a rota no Caddy, `/jornada/*` cai
+no frontend, que devolve o `index.html` com 200 e `text/html`.
+
+```bash
+curl -sI https://www.agroconia.com.br/jornada/v0.2/manifesto.json | grep -iE "^(HTTP|content-type|cache-control)"            # 200, application/json
+curl -sI https://www.agroconia.com.br/jornada/v0.2/parados/16x9/nome.avif | grep -iE "^(HTTP|content-type|cache-control)"   # 200, image/avif
+```
+
+**Apagar uma versão antiga** (`rm -rf jornada/v0.1`) só depois de o frontend que a pede sair do ar.
+Uma aba aberta antes do deploy continua pedindo a versão antiga.
+
+### Primeira vez num ambiente
+
+A montagem da pasta só entra quando o container do Caddy é recriado; o `reload` não basta.
+
+```bash
+cd /opt/agrocontabil
+mkdir -p jornada                                  # antes do up: se faltar, o Docker cria a pasta vazia e do root
+# copiar compose.yaml, Caddyfile e publicar-jornada.sh do repositório; publicar o pacote (acima)
+docker compose config -q                          # o compose novo com o .env real
+docker compose run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile   # Valid configuration
+docker compose up -d --no-deps caddy              # recria só o Caddy; o HTTPS cai por alguns segundos
+curl -s https://www.agroconia.com.br/healthz      # UP
+```
+
+- **Validar antes de recriar:** com o Caddyfile inválido, o container novo não sobe e o site cai. O
+  `run` valida num container à parte, com o arquivo e as variáveis que o novo vai usar.
+- **`--no-deps`:** evita recriar o backend e o frontend quando o `compose.yaml` copiado também
+  mudou para eles. Essas mudanças entram no próximo deploy de cada um.
+- **Certificados:** ficam no volume `caddy_data` e sobrevivem à recriação.
+- **Reverter:** voltar o `compose.yaml` e o `Caddyfile` anteriores e repetir o `up`.
 
 ## Endereço próprio do escritório (#464)
 

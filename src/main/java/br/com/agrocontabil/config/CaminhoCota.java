@@ -8,7 +8,9 @@ package br.com.agrocontabil.config;
  * <p>Com os padrões (8192 de entrada por chamada, peso de saída 4, 1 token por crédito desde a
  * #511, fator 1): {@link #NORMAL} 31.744, {@link #RECONFERENCIA} 24.576,
  * {@link #RECONFERENCIA_MISTO} 34.816 e {@link #REESCRITA} 43.776. {@link #SEM_MODELO} não reserva
- * teto: paga a leitura da mensagem ({@code CotaUsoAssistenteService.reservarLeitura}).
+ * teto: paga a leitura da mensagem ({@code CotaUsoAssistenteService.reservarLeitura}). Com o
+ * juiz da lei (#269) podendo rodar, todo caminho com modelo ganha a parcela dele
+ * ({@code AssistenteProperties.tetoDaPergunta(fator, caminho)}).
  */
 public enum CaminhoCota {
 

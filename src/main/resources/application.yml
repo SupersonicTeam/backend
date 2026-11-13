@@ -599,6 +599,12 @@ app:
       # Continuidade (#499): reescrita da mensagem (JSON curto) e reconferencia de lei.
       reescrita: ${AI_TETO_REESCRITA:192}
       reconferencia: ${AI_TETO_RECONFERENCIA:1024}
+      # Juiz da fidelidade da lei (#269, camada 2): um veredito por frase; so com o juiz ativo.
+      juiz: ${AI_TETO_JUIZ:128}
+      # O juiz na configuracao justificativa: uma justificativa curta antes de cada veredito.
+      juiz-com-justificativa: ${AI_TETO_JUIZ_JUSTIFICATIVA:1024}
+      # Nas configuracoes adaptativas do juiz: raciocinio do provedor + vereditos.
+      juiz-com-raciocinio: ${AI_TETO_JUIZ_RACIOCINIO:3072}
       # A janela do Ollama (mesma propriedade do num-ctx), so para validar os tetos.
       contexto: ${spring.ai.ollama.chat.options.num-ctx:8192}
     # Modo fallback (issue #146): com o modelo fora, trechos de lei por busca textual (tsvector) e
@@ -619,6 +625,36 @@ app:
       max-frases: 3
       min-caracteres: 40
       max-caracteres: 480
+    # Conferencia de fidelidade da rota de lei (#269): o modelo responde em JSON com a passagem do
+    # trecho que sustenta cada frase, e o backend confere copia, numero, negacao e cobertura e cita
+    # o nivel do dispositivo em que a passagem esta. Reprovada, ficam so os trechos. Desligada, a
+    # rota de lei e a de antes. Ligar exige a medicao no conjunto novo e o OK do Murillo.
+    fidelidade-lei:
+      enabled: ${AI_FIDELIDADE_LEI_HABILITADA:false}
+      cobertura-minima: ${AI_FIDELIDADE_LEI_COBERTURA_MINIMA:0.7}
+      # Camada 2, o juiz: uma chamada ao modelo por resposta aprovada pela camada 1; qualquer frase
+      # sem SUSTENTA reprova, e a falha dele fecha. So tem efeito com a camada 1 ligada; ligado, a
+      # cobertura exigida em codigo cai para cobertura-minima-com-juiz e a reserva da pergunta
+      # inclui a chamada dele (tetos.juiz).
+      cobertura-minima-com-juiz: ${AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ:0.3}
+      juiz:
+        enabled: ${AI_FIDELIDADE_LEI_JUIZ_HABILITADO:false}
+        # Configuracao do juiz, pelo nome: atual (padrao: so o veredito por frase, teto
+        # tetos.juiz), justificativa (uma justificativa curta antes de cada veredito, teto
+        # tetos.juiz-com-justificativa) ou adaptativo-baixo/-medio/-alto (raciocinio do provedor so
+        # na chamada do juiz, so com AI_CHAT_PROVIDER=anthropic, teto tetos.juiz-com-raciocinio).
+        configuracao: ${AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO:atual}
+        # Veto: o juiz confere as respostas aprovadas pela camada 1 (padrao). Desligado, "so
+        # resgate": o juiz so roda nas respostas a resgatar, e a cobertura volta a cobertura-minima.
+        veto: ${AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO:true}
+        # Resgate: a frase reprovada em codigo por numero (e, com polaridade e cobertura, por
+        # polaridade e por cobertura) vai ao juiz na mesma chamada; so o SUSTENTA de todas as
+        # frases aceita. Sem efeito sem o juiz. Polaridade desligada: o juiz aprovou uma inversao
+        # real no diagnostico de 2026-11-13.
+        resgate:
+          enabled: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO:false}
+          polaridade: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE:false}
+          cobertura: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA:false}
     # Isolamento de recursos (issue #157). Tempo total de uma pergunta (tambem o timeout do SSE) e
     # de cada consulta de funcao ao banco (vira timeout de transacao, resolucao de segundos).
     timeout-pergunta: ${AI_TIMEOUT_PERGUNTA:5m}

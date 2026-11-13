@@ -65,9 +65,10 @@ _GATILHO_REDUCAO = re.compile(r"redu[cç][aã]o|reduzid\w*|\bmenor que\b|\bdesco
                               r"sessenta por cento", re.IGNORECASE)
 #: Desfechos em que o comando descarta o texto: a citacao dele nao conta (regra do AvaliadorResposta
 #: da main; o do 2463c27 nao a aplica, e as duas arquiteturas tem de ser medidas pela mesma regua).
-#: Igual ao ``AvaliadorResposta.RESPOSTA_DESCARTADA`` do Java (#433).
+#: Igual ao ``AvaliadorResposta.RESPOSTA_DESCARTADA`` do Java (#433). ``FIDELIDADE_REPROVADA`` (#269)
+#: so aparece com a conferencia de fidelidade da lei ligada; desligada, nunca sai.
 DESCARTADAS = {"CITACAO_INVALIDA", "NUMERO_SEM_FONTE", "RESPOSTA_CORTADA",
-               "REGIME_ESPECIFICO_SEM_SETOR"}
+               "REGIME_ESPECIFICO_SEM_SETOR", "FIDELIDADE_REPROVADA"}
 #: Funcoes que, ao rodar, sao o sinal (nos campos gravados) de que o backend pode ter juntado citacoes
 #: fixas (``FundamentoRetencao`` e ``TextosDoBackend``). E um sinal, nao uma garantia. Limites aceitos
 #: na #433: com a funcao, conta qualquer citacao da lista (inclusive a da lei descartada); sem ela, a

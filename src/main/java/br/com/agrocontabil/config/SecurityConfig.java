@@ -45,7 +45,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
  *   <tr><td>{@code /api/v1/health}, Swagger, Actuator</td><td>publico</td></tr>
  *   <tr><td>{@code POST /api/auth/cadastro}, {@code /login}, {@code /refresh}, {@code /logout}
  *   </td><td>publico</td></tr>
- *   <tr><td>{@code PATCH /api/contador/guias/&#42;/pagar}</td><td>somente PRODUTOR</td></tr>
+ *   <tr><td>{@code PATCH /api/contador/guias/&#42;/pagar}, {@code /api/guias/**} (#273)</td>
+ *   <td>somente PRODUTOR</td></tr>
  *   <tr><td>demais {@code /api/**}</td><td>PRODUTOR ou CONTADOR</td></tr>
  * </table>
  *
@@ -157,6 +158,9 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, RotasEscritorio.TLS_ASK).permitAll()
                     // Quitar a guia e ato do produtor: e ele quem paga o que o escritorio anexou.
                     .requestMatchers(HttpMethod.PATCH, "/api/contador/guias/*/pagar")
+                    .hasRole(PapelUsuario.PRODUTOR.name())
+                    // Guias do produtor (#273): rota sem produtorId, so do produtor.
+                    .requestMatchers("/api/guias", "/api/guias/**")
                     .hasRole(PapelUsuario.PRODUTOR.name())
                     .requestMatchers("/api/**")
                     .hasAnyRole(PapelUsuario.PRODUTOR.name(), PapelUsuario.CONTADOR.name())

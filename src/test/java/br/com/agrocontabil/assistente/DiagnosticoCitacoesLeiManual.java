@@ -108,8 +108,9 @@ class DiagnosticoCitacoesLeiManual {
         crus.clear();
         long inicio = System.nanoTime();
         ResultadoRota r;
+        ContextoAssistente contexto = new ContextoAssistente(UUID.randomUUID(), hoje);
         try {
-          r = rota.responder(pergunta, new ContextoAssistente(UUID.randomUUID(), hoje));
+          r = rota.responder(pergunta, contexto);
         } catch (RuntimeException e) {
           // Falha do modelo (timeout etc.): registra e segue, sem derrubar a rodada.
           ObjectNode erro = rodadas.addObject();
@@ -121,13 +122,36 @@ class DiagnosticoCitacoesLeiManual {
           continue;
         }
         ObjectNode o = rodadas.addObject();
-        o.put("cru", crus.isEmpty() ? "" : crus.get(crus.size() - 1));
+        o.put("cru", crus.isEmpty() ? "" : crus.get(0));
+        // Com o juiz da fidelidade (#269) ha uma segunda chamada: o veredito dele.
+        ArrayNode todas = o.putArray("crus");
+        crus.forEach(todas::add);
         o.put("ms", (System.nanoTime() - inicio) / 1_000_000);
         o.put("desfecho", r.desfecho().name());
+        // Conferencia de fidelidade (#269): o desfecho dela, quando rodou.
+        o.put("fidelidade", contexto.fidelidadeLei() == null ? null
+            : contexto.fidelidadeLei().name());
         o.put("texto", r.texto());
         ArrayNode citacoes = o.putArray("citacoes");
         for (CitacaoLegal c : r.citacoes()) {
           citacoes.add(c.norma() + " " + c.dispositivo());
+        }
+        // As citacoes como o chat as devolve: a entrada da BancadaJuizFidelidadeManual (#269).
+        ArrayNode doChat = o.putArray("citacoes_chat");
+        for (CitacaoLegal c : r.citacoes()) {
+          ObjectNode cc = doChat.addObject();
+          cc.put("norma", c.norma());
+          cc.put("dispositivo", c.dispositivo());
+          cc.put("url", c.url());
+          cc.put("trecho", c.trecho());
+        }
+        // Tokens da pergunta inteira, com o juiz (#269); e os do juiz, a parte.
+        o.put("tokens_entrada", contexto.tokensEntrada());
+        o.put("tokens_saida", contexto.tokensSaida());
+        if (contexto.juizLei() != null) {
+          o.put("juiz_ms", contexto.juizLei().latenciaMs());
+          o.put("juiz_tokens_entrada", contexto.juizLei().tokensEntrada());
+          o.put("juiz_tokens_saida", contexto.juizLei().tokensSaida());
         }
       }
       resultado.add(item);

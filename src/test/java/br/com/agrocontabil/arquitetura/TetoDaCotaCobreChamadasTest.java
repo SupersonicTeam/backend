@@ -8,6 +8,7 @@ import br.com.agrocontabil.assistente.RotaLegislacao;
 import br.com.agrocontabil.assistente.continuidade.ReconferenciaLei;
 import br.com.agrocontabil.assistente.continuidade.ReescritaContinuidade;
 import br.com.agrocontabil.assistente.explicacao.ExplicadorResposta;
+import br.com.agrocontabil.assistente.fidelidade.JuizFidelidadeLei;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.orquestracao.LlmClassificadorIntencao;
 import br.com.agrocontabil.config.AssistenteProperties;
@@ -42,6 +43,10 @@ import org.springframework.ai.chat.model.ChatModel;
  * ({@link ExplicadorResposta}), que fica <strong>fora</strong> da fórmula da pergunta: ela tem
  * reserva própria, feita só quando a explicação vai acontecer
  * ({@link AssistenteProperties.Cota#tetoDaExplicacao}, uma chamada).
+ *
+ * <p>Desde a #269 há um quinto, o juiz da fidelidade da lei ({@link JuizFidelidadeLei}), que roda
+ * no meio da pergunta e entra na reserva dela como parcela própria, só com ele ativo
+ * ({@link AssistenteProperties#tetoDaPergunta}, {@link AssistenteProperties.Cota#tetoDoJuiz}).
  */
 class TetoDaCotaCobreChamadasTest {
 
@@ -55,8 +60,9 @@ class TetoDaCotaCobreChamadasTest {
   }
 
   @Test
-  @DisplayName("#166/#270/#499/#268: os 5 pontos dos caminhos e o da explicacao, um por classe")
-  void soOsPontosDosCaminhosEODaExplicacao() {
+  @DisplayName("#166/#270/#499/#268/#269: os 5 pontos dos caminhos, o da explicacao e o do juiz "
+      + "da lei, um por classe")
+  void soOsPontosDosCaminhosDaExplicacaoEDoJuiz() {
     List<JavaMethodCall> chamadas = producao.stream()
         .flatMap(c -> c.getMethodCallsFromSelf().stream())
         .filter(c -> c.getTargetOwner().isEquivalentTo(ContextoAssistente.class)
@@ -69,14 +75,17 @@ class TetoDaCotaCobreChamadasTest {
     // As 3 da pergunta comum (CHAMADAS_POR_PERGUNTA) e as 2 da continuidade (#499): a reescrita
     // e a reconferencia de lei. Cada caminho do CaminhoCota soma as que pode fazer; o com
     // reescrita e o mais caro e e o que a subida confere. A da explicacao (#268) fica fora dos
-    // caminhos: tem reserva propria, feita depois do acerto da pergunta.
+    // caminhos: tem reserva propria, feita depois do acerto da pergunta. A do juiz da lei (#269)
+    // e parcela propria da reserva de todo caminho com modelo, so com ele ativo (a rota de lei,
+    // onde ele roda, cabe uma vez em cada caminho).
     assertThat(porClasse).containsOnly(
         Map.entry(LlmClassificadorIntencao.class.getName(), 1L),
         Map.entry(RotaDados.class.getName(), 1L),
         Map.entry(RotaLegislacao.class.getName(), 1L),
         Map.entry(ReescritaContinuidade.class.getName(), 1L),
         Map.entry(ReconferenciaLei.class.getName(), 1L),
-        Map.entry(ExplicadorResposta.class.getName(), 1L));
+        Map.entry(ExplicadorResposta.class.getName(), 1L),
+        Map.entry(JuizFidelidadeLei.class.getName(), 1L));
     assertThat(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA)
         .isEqualTo(CaminhoCota.NORMAL.chamadas());
     assertThat(CaminhoCota.REESCRITA.chamadas()).isEqualTo(4);
@@ -100,6 +109,64 @@ class TetoDaCotaCobreChamadasTest {
         .isEqualTo(34_816);
     // 4 x 8.192 + (192 + 2.560) x 4.
     assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.REESCRITA)).isEqualTo(43_776);
+  }
+
+  @Test
+  @DisplayName("#499/#269: com o juiz da lei podendo rodar, todo caminho com modelo ganha a "
+      + "parcela dele (8.192 + 128 x 4 = 8.704); o sem modelo, nao; desligado, nada muda")
+  void reservasPorCaminhoComOJuizDaLei() {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    for (CaminhoCota caminho : CaminhoCota.values()) {
+      assertThat(propriedades.tetoDaPergunta(1.0, caminho)).as(caminho.name())
+          .isEqualTo(propriedades.getCota().tetoDaPergunta(propriedades.getTetos(), 1.0,
+              caminho));
+    }
+    propriedades.getFidelidadeLei().setEnabled(true);
+    propriedades.getFidelidadeLei().getJuiz().setEnabled(true);
+    assertThat(propriedades.juizDaLeiPodeRodar()).isTrue();
+
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.SEM_MODELO)).isZero();
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.NORMAL)).isEqualTo(31_744 + 8_704)
+        .isEqualTo(propriedades.tetoDaPergunta(1.0));
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.RECONFERENCIA))
+        .isEqualTo(24_576 + 8_704);
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.RECONFERENCIA_MISTO))
+        .isEqualTo(34_816 + 8_704);
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.REESCRITA))
+        .isEqualTo(43_776 + 8_704);
+  }
+
+  @Test
+  @DisplayName("#269: com o juiz da lei ativo, a reserva da pergunta ganha a chamada dele: "
+      + "31.744 + 8.192 + 128 x 4 = 40.448 com os padroes; desligado, nada muda")
+  void reservaComOJuizDaLei() {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(31_744);
+    // So o juiz, sem a camada 1: ele nao roda e a reserva nao muda.
+    propriedades.getFidelidadeLei().getJuiz().setEnabled(true);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(31_744);
+    // Camada 1 sem o juiz: tambem nao muda (a camada 1 nao chama o modelo a mais).
+    propriedades.getFidelidadeLei().getJuiz().setEnabled(false);
+    propriedades.getFidelidadeLei().setEnabled(true);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(31_744);
+    propriedades.getFidelidadeLei().getJuiz().setEnabled(true);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(40_448);
+    assertThat(propriedades.getCota().tetoDoJuiz(propriedades.getTetos().getJuiz(), 2.0))
+        .isEqualTo(17_408);
+    // Configuracao justificativa: a parcela do juiz usa o teto dele (1024): 8.192 + 1.024 x 4.
+    propriedades.getFidelidadeLei().getJuiz()
+        .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(44_032);
+    // Adaptativas: o teto cobre raciocinio e vereditos (3.072): 8.192 + 3.072 x 4 = 20.480.
+    propriedades.getFidelidadeLei().getJuiz()
+        .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ADAPTATIVO_ALTO);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(52_224);
+    // Sem veto e sem resgate o juiz nunca roda: a reserva volta a de sem juiz.
+    propriedades.getFidelidadeLei().getJuiz().setVeto(false);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(31_744);
+    // So resgate: o juiz pode rodar, a parcela volta.
+    propriedades.getFidelidadeLei().getJuiz().getResgate().setEnabled(true);
+    assertThat(propriedades.tetoDaPergunta(1.0)).isEqualTo(52_224);
   }
 
   @Test

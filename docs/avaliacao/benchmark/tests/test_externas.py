@@ -189,6 +189,10 @@ class AchadosReviewDelta361Test(unittest.TestCase):
     def test_regime_especifico_sem_setor_e_descartado_como_no_java(self):
         self.assertFalse(ext.citacao_vale(resultado("x", "REGIME_ESPECIFICO_SEM_SETOR", citacao_valida=True)))
 
+    def test_fidelidade_reprovada_e_descartada_como_no_java(self):
+        # #269: a lei reprovada na conferencia de fidelidade mostra so os trechos, sem o texto.
+        self.assertFalse(ext.citacao_vale(resultado("x", "FIDELIDADE_REPROVADA", citacao_valida=True)))
+
     def test_misto_com_lei_descartada_so_vale_com_funcao_de_citacao_fixa(self):
         # #433: pergunta e funcoes ficticias; mesma tabela do AvaliadorRespostaTest.
         for lei in ("NUMERO_SEM_FONTE", "CITACAO_INVALIDA", "RESPOSTA_CORTADA", "REGIME_ESPECIFICO_SEM_SETOR"):

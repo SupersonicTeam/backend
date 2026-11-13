@@ -1,0 +1,133 @@
+{
+  "juiz": "J1",
+  "lote": "lote-01",
+  "itens": [
+    {
+      "id": "R001",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A gorjeta incidente no fornecimento de alimentação fica excluída da base de cálculo do IBS e da CBS, desde que seja repassada", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea a", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Para a gorjeta ficar fora da base de cálculo, o seu valor não pode exceder 15% (quinze por cento) do valor total do fornecimento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea b", "fato": "F3", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R002",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O contribuinte do IBS e da CBS sujeito ao regime regular que adquire títulos de capitalização poderá apropriar créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 225, § 5º", "fato": "F1", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": "A frase cobre F1 e F2."
+    },
+    {
+      "id": "R003",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A gorjeta incidente no fornecimento de alimentação fica excluída da base de cálculo do IBS e da CBS, desde que seja repassada", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea a", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Além disso, o valor da gorjeta não pode exceder 15% (quinze por cento) do valor total do fornecimento de alimento e bebidas", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea b", "fato": "F3", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R004",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A multa para quem falsifica, adultera, extravia ou inutiliza documento fiscal é de 100% do valor do tributo de referência", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIV", "fato": null, "nota": ""},
+        {"n": 2, "texto": "No caso de reincidência específica, as penalidades são majoradas em 50%", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 341-G, § 1º", "fato": null, "nota": "Majoração vale para multas de obrigações acessórias; dita genericamente, induz a crer que rege a multa de ofício perguntada."}
+      ],
+      "omiteEssencial": ["F1", "F3", "F4", "F5"],
+      "observacao": "A resposta trata das multas por obrigação acessória (art. 341-G), não da multa de ofício por tributo não declarado (art. 341-F) perguntada."
+    },
+    {
+      "id": "R005",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Resposta afirmativa introdutória."},
+        {"n": 2, "texto": "O percentual da receita do IBS destinado ao Fundo de Combate à Pobreza pode ser fixado por lei específica do próprio estado", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 129", "fato": "F1", "nota": ""},
+        {"n": 3, "texto": "Ou seja, quem define o percentual é a lei do respectivo ente federativo, dentro do teto de 1%.", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 129", "fato": "F2", "nota": ""},
+        {"n": 4, "texto": "Para os entes que já tinham esse fundo na data da Emenda Constitucional nº 132, de 20 de dezembro de 2023, há regras específicas", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 129, § 1º, incisos I e II", "fato": "F4", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": "A frase 2 cobre também F2 e F3."
+    },
+    {
+      "id": "R006",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Contribuinte do IBS e da CBS sujeito ao regime regular que adquira títulos de capitalização poderá apropriar créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 225, § 5º", "fato": "F1", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": "A frase cobre F1 e F2."
+    },
+    {
+      "id": "R007",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A gorjeta incidente no fornecimento de alimentação fica excluída da base de cálculo do IBS e da CBS, desde que seja repassada", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea a", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Há também um limite: o valor da gorjeta não pode exceder 15% (quinze por cento) do valor total do fornecimento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea b", "fato": "F3", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R008",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Se a sua empresa estava no regime cumulativo do PIS/Pasep e da COFINS em 31 de dezembro de 2026, e não apurou créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso I", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Esse direito ao crédito não se aplica a produtos cuja aquisição teve alíquota zero, isenção, suspensão ou não sofreu incidência", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, § 1º, inciso II", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F2", "F3", "F4", "F5"],
+      "observacao": "Não responde de quanto, até quando apropriar nem como usar o crédito."
+    },
+    {
+      "id": "R009",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Pelo que está nos trechos, o PIS/Pasep e a Cofins continuam sendo exigidos mesmo que o recebimento ocorra depois da extinção", "rotulo": "SUPORTADA", "dispositivoCitado": null, "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Para operações feitas até 31 de dezembro de 2026, quando o PIS/Pasep e a Cofins são exigidos pelo regime de caixa, eles são", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": "F2", "nota": ""},
+        {"n": 3, "texto": "Já a CBS não será exigida sobre esse recebimento, salvo na hipótese prevista no § 2º do mesmo artigo, em que então não são", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso III", "fato": "F3", "nota": ""},
+        {"n": 4, "texto": "Ou seja, a regra é que, no seu caso, o recebimento em 2027 tende a seguir o PIS/Pasep e a Cofins, e não a CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, incisos II e III", "fato": "F3", "nota": ""},
+        {"n": 5, "texto": "Observação: os trechos disponíveis não trazem o § 2º completo, então não consigo confirmar em que situações ele se aplica.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhecimento de limite."},
+        {"n": 6, "texto": "Vale conferir esse ponto com seu contador antes de fechar a conta.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugestão de falar com o contador."}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Não explica que a exceção do § 2º são os regimes opcionais dos arts. 485 a 487, mas declara o limite."
+    },
+    {
+      "id": "R010",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Cada obra é apurada separadamente.", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "A apuração do IBS e da CBS é feita para cada empreendimento de construção civil, vinculada a um CNPJ ou CPF específico", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único; art. 270", "fato": "F1", "nota": ""},
+        {"n": 3, "texto": "Além disso, o documento fiscal deve indicar o número do cadastro da obra nas aquisições de bens e serviços usados em cada obra", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único", "fato": null, "nota": ""},
+        {"n": 4, "texto": "Já a regra geral para os demais estabelecimentos é outra: a apuração consolida as operações de todos os estabelecimentos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 42", "fato": null, "nota": ""},
+        {"n": 5, "texto": "Ou seja, a sua fazenda e a construtora podem entrar na mesma apuração geral, mas as duas obras da construtora precisam ser", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 42", "fato": null, "nota": "Art. 42 trata de estabelecimentos do mesmo contribuinte; nada sustenta fazenda e construtora numa só apuração."}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R011",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, serão exigidas a Contribuição para o PIS/Pasep e a Cofins no momento", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": "Generaliza para todas as operações; o trecho vale só quando exigidas pelo regime de caixa."},
+        {"n": 2, "texto": "Caso a mesma situação configure fato gerador do PIS/Pasep e da Cofins até 31 de dezembro de 2026, e fato gerador da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 1º, inciso II, alíneas a e b", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não responde se o IBS e a CBS de 2026 precisam ser recolhidos (dispensa do art. 348)."
+    },
+    {
+      "id": "R012",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Na intermediação de serviços turísticos feita por agências de turismo, a base de cálculo do IBS e da CBS é o valor da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Os serviços de agências de turismo ficam sujeitos a regime específico de incidência do IBS e da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 288", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Não responde se a comissão paga pelo hotel entra na base."
+    }
+  ]
+}

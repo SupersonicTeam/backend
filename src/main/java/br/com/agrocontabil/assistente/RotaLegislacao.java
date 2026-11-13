@@ -1,15 +1,21 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.assistente.fidelidade.ConferenciaFidelidadeLei;
+import br.com.agrocontabil.assistente.fidelidade.JuizFidelidadeLei;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.rag.BuscaLegislacaoService;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
 import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +24,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -38,6 +45,29 @@ import org.springframework.stereotype.Component;
  *   <li>a resposta aceita ganha a linha "O que isso quer dizer" ({@link LinhaGlossario}) com a
  *       definição dos termos do glossário que ela usa sem explicar, montada pelo backend (#269).</li>
  * </ol>
+ *
+ * <p><strong>Fidelidade (#269, flag {@code app.assistente.fidelidade-lei.enabled}, desligada por
+ * padrão):</strong> ligada, o modelo responde em JSON, cada frase com a passagem do trecho que a
+ * sustenta, e a {@link ConferenciaFidelidadeLei} confere em código, antes do passo 3, a cópia, o
+ * número, a negação e a cobertura de cada frase, e põe a citação no nível do dispositivo em que a
+ * passagem está. Reprovada, o texto do modelo sai e ficam os trechos que ele marcou, sem afirmar que
+ * respondem (desfecho {@code FIDELIDADE_REPROVADA}). Desligada, nada muda.
+ *
+ * <p><strong>Juiz (#269, camada 2, {@code app.assistente.fidelidade-lei.juiz.enabled}, desligado
+ * por padrão, só com a camada 1 ligada):</strong> depois de todas as conferências em código, uma
+ * chamada ao modelo ({@link JuizFidelidadeLei}) julga se as cópias sustentam cada frase. Qualquer
+ * frase sem {@code SUSTENTA}, ou a falha do juiz, reprova a resposta pelo mesmo caminho da camada 1.
+ *
+ * <p><strong>Resgate (#269, {@code app.assistente.fidelidade-lei.juiz.resgate.enabled}, desligado
+ * por padrão, só com o juiz):</strong> a frase que a camada 1 reprovaria por número (e, com
+ * {@code resgate.polaridade} e {@code resgate.cobertura}, por polaridade e por cobertura) segue
+ * para as conferências seguintes e para o juiz, na mesma chamada do veto. Só o {@code SUSTENTA} de todas as frases a aceita
+ * ({@code APROVADA_RESGATE_JUIZ}); veto, falha ou corte do juiz mantêm o descarte com o motivo da
+ * camada 1. Formato, evidência ausente e cópia não literal não têm resgate.
+ *
+ * <p><strong>Só resgate (#269, {@code app.assistente.fidelidade-lei.juiz.veto=false}; padrão
+ * {@code true}):</strong> o juiz não veta a resposta que a camada 1 aprovou, que sai sem ele; só a
+ * resposta a resgatar o chama. A cobertura exigida volta à {@code cobertura-minima}.
  */
 @Component
 public class RotaLegislacao {
@@ -89,17 +119,67 @@ public class RotaLegislacao {
   private final ValidadorNumeros validadorNumeros;
   private final VerificadorAfirmacaoDados verificadorDados;
   private final int tetoSaida;
+  /** Nula = conferência de fidelidade desligada (flag desligada ou construtor sem ela). */
+  private final ConferenciaFidelidadeLei conferencia;
+  /** Nulo = juiz desligado (chave, camada 1 desligada ou construtor sem ele). */
+  private final JuizFidelidadeLei juiz;
+  private final double coberturaMinima;
+  /** O juiz veta as respostas aprovadas pela camada 1; falso = só resgate (#269). */
+  private final boolean vetoDoJuiz;
+  /** Motivos da camada 1 que vão ao juiz em vez de reprovar (#269); vazio = sem resgate. */
+  private final Set<DesfechoFidelidadeLei> resgataveis;
 
-  /** Constrói a rota; o teto de tokens da resposta vem de {@code app.assistente.tetos} (#270). */
+  /**
+   * Constrói a rota sem a conferência de fidelidade (#269): a rota de lei de antes da flag. O teto de
+   * tokens da resposta vem de {@code app.assistente.tetos} (#270).
+   */
   public RotaLegislacao(ModeloLinguagem modelo, BuscaLegislacaoService busca,
       ValidadorCitacao validadorCitacao, ValidadorNumeros validadorNumeros,
       VerificadorAfirmacaoDados verificadorDados, AssistenteProperties propriedades) {
+    this(modelo, busca, validadorCitacao, validadorNumeros, verificadorDados, propriedades, null,
+        null);
+  }
+
+  /**
+   * Constrói a rota; a conferência de fidelidade só roda com
+   * {@code app.assistente.fidelidade-lei.enabled}, e o juiz só com ela e
+   * {@code app.assistente.fidelidade-lei.juiz.enabled} (#269).
+   */
+  @Autowired
+  public RotaLegislacao(ModeloLinguagem modelo, BuscaLegislacaoService busca,
+      ValidadorCitacao validadorCitacao, ValidadorNumeros validadorNumeros,
+      VerificadorAfirmacaoDados verificadorDados, AssistenteProperties propriedades,
+      ConferenciaFidelidadeLei conferencia, JuizFidelidadeLei juiz) {
     this.modelo = modelo;
     this.busca = busca;
     this.validadorCitacao = validadorCitacao;
     this.validadorNumeros = validadorNumeros;
     this.verificadorDados = verificadorDados;
     this.tetoSaida = propriedades.getTetos().getLegislacao();
+    AssistenteProperties.FidelidadeLei fidelidade = propriedades.getFidelidadeLei();
+    this.conferencia = fidelidade.isEnabled() ? conferencia : null;
+    this.juiz = this.conferencia != null && propriedades.juizDaLeiAtivo() ? juiz : null;
+    this.vetoDoJuiz = this.juiz != null && fidelidade.getJuiz().isVeto();
+    // O piso baixo da cobertura so vale com o veto: sem ele, a aprovada sai sem o juiz e a
+    // parafrase solta tem de ser barrada em codigo, como na camada 1 sozinha.
+    this.coberturaMinima = this.vetoDoJuiz
+        ? fidelidade.getCoberturaMinimaComJuiz()
+        : fidelidade.getCoberturaMinima();
+    this.resgataveis = this.juiz != null && propriedades.resgateDaLeiAtivo()
+        ? resgataveis(fidelidade.getJuiz().getResgate())
+        : Set.of();
+  }
+
+  private static Set<DesfechoFidelidadeLei> resgataveis(
+      AssistenteProperties.FidelidadeLei.Juiz.Resgate resgate) {
+    Set<DesfechoFidelidadeLei> motivos = EnumSet.of(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    if (resgate.isPolaridade()) {
+      motivos.add(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+    }
+    if (resgate.isCobertura()) {
+      motivos.add(DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+    }
+    return Set.copyOf(motivos);
   }
 
   /**
@@ -200,9 +280,7 @@ public class RotaLegislacao {
     }
 
     String perguntaAoModelo = DataSanitizer.mascarar(pergunta);
-    String sistema = soRegraGeral
-        ? PromptsCeres.sistemaLegislacaoRegraGeral(contexto.hoje(), formatar(trechos))
-        : PromptsCeres.sistemaLegislacao(contexto.hoje(), formatar(trechos));
+    String sistema = prompt(soRegraGeral, contexto, trechos);
     Prompt prompt = new Prompt(List.<Message>of(
         new SystemMessage(sistema), new UserMessage(perguntaAoModelo)),
         ModeloLinguagem.comTeto(tetoSaida));
@@ -216,18 +294,43 @@ public class RotaLegislacao {
     }
     String texto = limpar(resposta.getResult().getOutput().getText());
 
-    if (texto.contains(PromptsCeres.NAO_ENCONTREI)) {
+    if (texto.contains(PromptsCeres.NAO_ENCONTREI)
+        && !(conferencia != null && ConferenciaFidelidadeLei.temFrases(texto))) {
       // O modelo disse que os trechos nao respondem: o texto dele sai, com ou sem marca. Os mais
-      // proximos ficam para consulta (#343), sem afirmar que respondem.
+      // proximos ficam para consulta (#343), sem afirmar que respondem. Com a conferencia de
+      // fidelidade (#269) e frases no formato ao lado, o NAO_ENCONTREI e so a parte que os trechos
+      // nao respondem: este ramo nao roda, e as frases seguem para a conferencia.
       log.info("Ceres: modelo nao encontrou a resposta nos trechos; trechos relacionados");
       return trechosRelacionados(trechos, contexto, soRegraGeral, perguntaSeparada);
     }
-    ValidadorCitacao.Resultado citacao = validadorCitacao.validar(texto, trechos);
+    // Com a conferencia de fidelidade (#269) a citacao pode apontar um ancestral (o caput) que a
+    // busca nao trouxe: ele entra depois dos trechos recebidos, com a marca seguinte.
+    List<TrechoRecuperado> citaveis = trechos;
+    ConferenciaFidelidadeLei.Resultado conferida = null;
+    if (conferencia != null) {
+      ConferenciaFidelidadeLei.Resultado fidelidade =
+          conferencia.conferir(texto, trechos, coberturaMinima, resgataveis);
+      conferida = fidelidade;
+      contexto.registrarFidelidadeLei(fidelidade.desfecho());
+      if (fidelidade.resgatavel()) {
+        // Resgate (#269): a frase reprovada em codigo segue, e so o juiz a aceita. Se outra
+        // conferencia em codigo a descartar antes dele, vale o desfecho dela.
+        log.info("Ceres: resposta de legislacao com frase a resgatar pelo juiz ({})",
+            fidelidade.desfecho());
+      } else if (!fidelidade.aprovada()) {
+        log.info("Ceres: resposta de legislacao reprovada na conferencia de fidelidade ({})",
+            fidelidade.desfecho());
+        return fidelidadeReprovada(fidelidade, trechos, contexto, soRegraGeral, perguntaSeparada);
+      }
+      texto = fidelidade.texto();
+      citaveis = fidelidade.trechos();
+    }
+    ValidadorCitacao.Resultado citacao = validadorCitacao.validar(texto, citaveis);
     if (!citacao.valida()) {
       // Sem marca ou com marca inventada. Com marca inventada e alguma certa, os trechos certos
       // sao os mais proximos (#258); sem nenhuma certa, os mais proximos da busca (#343). Nos dois
       // casos sem o texto e sem afirmar que respondem.
-      ValidadorCitacao.Resultado validas = validadorCitacao.marcasValidas(texto, trechos);
+      ValidadorCitacao.Resultado validas = validadorCitacao.marcasValidas(texto, citaveis);
       if (validas.citacoes().isEmpty()) {
         log.info("Ceres: resposta de legislacao sem citacao valida; trechos relacionados");
         return trechosRelacionados(trechos, contexto, soRegraGeral, perguntaSeparada);
@@ -266,19 +369,82 @@ public class RotaLegislacao {
       log.info("Ceres: resposta de lei so com regime especifico e a pergunta nao cita o setor");
       return descartePorRegimeEspecifico(trechos, contexto, soRegraGeral, perguntaSeparada);
     }
-    contexto.registrarTrechosCitados(citacao.idsCitados());
+    // distinct: com a fidelidade (#269), o ancestral que a busca nao trouxe leva o id do trecho em
+    // que a copia foi achada, e os dois podem ser citados. Sem ela os ids ja sao distintos.
+    List<String> idsCitados = citacao.idsCitados().stream().distinct().toList();
     String regra = soRegraGeral && perguntaSeparada
         ? semSimOuNaoInicial(citacao.texto())
         : citacao.texto();
     if (soRegraGeral && verificadorDados.afirmaSobreDados(regra)) {
       log.info("Ceres: parte de legislacao do MISTO falou dos dados do produtor; so trechos");
+      contexto.registrarTrechosCitados(idsCitados);
       return new ResultadoRota(
           SO_TRECHOS, DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, citacao.citacoes());
     }
+    if (juiz != null && conferida != null && (vetoDoJuiz || conferida.resgatavel())) {
+      // Camada 2 (#269): depois de todas as conferencias em codigo, para nao gastar a chamada numa
+      // resposta que elas ja descartariam. So reprova, nunca reescreve. Os trechos citados sao
+      // registrados depois dele: reprovada, ficam so os que o modelo marcou. Sem o veto (so
+      // resgate), so a resposta a resgatar chega aqui.
+      DesfechoFidelidadeLei veredito = juiz.julgar(conferida.frases(), contexto);
+      if (conferida.resgatavel()) {
+        // Resgate (#269): so o SUSTENTA de todas as frases aceita; senao (veto, falha, corte)
+        // fica o motivo da camada 1, ja registrado.
+        if (veredito != null) {
+          log.info("Ceres: resgate negado pelo juiz da fidelidade ({}); fica {}", veredito,
+              conferida.desfecho());
+          return fidelidadeReprovada(conferida, trechos, contexto, soRegraGeral, perguntaSeparada);
+        }
+        contexto.registrarFidelidadeLei(DesfechoFidelidadeLei.APROVADA_RESGATE_JUIZ);
+      } else if (veredito != null) {
+        log.info("Ceres: resposta de legislacao reprovada pelo juiz da fidelidade ({})", veredito);
+        contexto.registrarFidelidadeLei(veredito);
+        return fidelidadeReprovada(conferida, trechos, contexto, soRegraGeral, perguntaSeparada);
+      }
+    }
+    contexto.registrarTrechosCitados(idsCitados);
     // Depois de todas as conferencias (#269): a linha do glossario e do backend, sem numero, e nao
     // pode ser lida como parte do que o modelo afirmou.
     return new ResultadoRota(LinhaGlossario.acrescentadaA(regra), DesfechoInteracao.RESPONDIDA,
         citacao.citacoes(), List.of(), new DetalheLei(regra, texto, trechos));
+  }
+
+  /** O prompt de sistema: o de sempre, ou o com evidência por frase se a conferência está ligada. */
+  private String prompt(boolean soRegraGeral, ContextoAssistente contexto,
+      List<TrechoRecuperado> trechos) {
+    if (conferencia != null) {
+      return soRegraGeral
+          ? PromptsCeres.sistemaLegislacaoRegraGeralComEvidencia(contexto.hoje(), formatar(trechos))
+          : PromptsCeres.sistemaLegislacaoComEvidencia(contexto.hoje(), formatar(trechos));
+    }
+    return soRegraGeral
+        ? PromptsCeres.sistemaLegislacaoRegraGeral(contexto.hoje(), formatar(trechos))
+        : PromptsCeres.sistemaLegislacao(contexto.hoje(), formatar(trechos));
+  }
+
+  /**
+   * Resposta reprovada na conferência de fidelidade (#269): o caminho da lei descartada de sempre
+   * (como o número sem fonte, #258). O texto do modelo sai inteiro; ficam os trechos que ele marcou
+   * nas evidências, sem afirmar que respondem, também no MISTO com a pergunta inteira (como o número
+   * sem fonte). Sem nenhuma marca existente (formato inválido), o caminho do {@code NAO_ENCONTREI}:
+   * os mais próximos da busca (#343), e no MISTO sem parte legal separada, nada da lei (#260).
+   */
+  private static ResultadoRota fidelidadeReprovada(ConferenciaFidelidadeLei.Resultado fidelidade,
+      List<TrechoRecuperado> trechos, ContextoAssistente contexto, boolean soRegraGeral,
+      boolean perguntaSeparada) {
+    Map<String, TrechoRecuperado> porMarca = new LinkedHashMap<>();
+    trechos.forEach(t -> porMarca.put(t.marca(), t));
+    List<TrechoRecuperado> marcados = fidelidade.marcasCitadas().stream()
+        .map(porMarca::get)
+        .filter(Objects::nonNull)
+        .toList();
+    if (marcados.isEmpty()) {
+      return trechosRelacionados(trechos, contexto, soRegraGeral, perguntaSeparada,
+          DesfechoInteracao.FIDELIDADE_REPROVADA);
+    }
+    contexto.registrarTrechosCitados(marcados.stream().map(TrechoRecuperado::id).toList());
+    return new ResultadoRota(TRECHOS_SEM_CONFIRMACAO, DesfechoInteracao.FIDELIDADE_REPROVADA,
+        marcados.stream().map(TrechoRecuperado::comoCitacao).toList());
   }
 
   /**

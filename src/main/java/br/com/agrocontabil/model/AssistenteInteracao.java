@@ -78,6 +78,31 @@ public class AssistenteInteracao {
   @Column(name = "camada_classificacao", length = 20, updatable = false)
   private String camadaClassificacao;
 
+  /**
+   * Desfecho da conferência de fidelidade da resposta de lei (#269, changeSet 0065): aprovada,
+   * aprovada com a citação corrigida ou o motivo da reprovação. Só o enum, nunca o texto (#144).
+   * Nulo quando a conferência não rodou (flag desligada, outra rota, sem trecho, resposta cortada).
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "fidelidade_lei", length = 40, updatable = false,
+      columnDefinition = "VARCHAR(40)")
+  private DesfechoFidelidadeLei fidelidadeLei;
+
+  /**
+   * Tempo da chamada do juiz da fidelidade da lei (#269, camada 2, changeSet 0065); nulo se ele não
+   * rodou. Com ele, {@code latenciaMs} é o da pergunta sem o juiz: a soma é o total.
+   */
+  @Column(name = "latencia_juiz_ms", updatable = false)
+  private Long latenciaJuizMs;
+
+  /** Tokens de entrada do juiz (#269); nulo se ele não rodou. Fora de {@code tokensEntrada}. */
+  @Column(name = "tokens_entrada_juiz", updatable = false)
+  private Integer tokensEntradaJuiz;
+
+  /** Tokens de saída do juiz (#269); nulo se ele não rodou. Fora de {@code tokensSaida}. */
+  @Column(name = "tokens_saida_juiz", updatable = false)
+  private Integer tokensSaidaJuiz;
+
   /** Funções usadas e parâmetros (JSON), já sanitizados. */
   @Column(name = "funcoes", columnDefinition = "TEXT", updatable = false)
   private String funcoes;

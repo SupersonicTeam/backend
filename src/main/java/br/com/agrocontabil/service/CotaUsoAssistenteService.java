@@ -56,6 +56,7 @@ public class CotaUsoAssistenteService {
   private final PlanoUsoProvider planoProvider;
   private final AssistenteProperties.Cota cota;
   private final AssistenteProperties.Tetos tetos;
+  private final AssistenteProperties propriedades;
   private final Duration timeoutPergunta;
   private final Clock clock;
   private final TransactionTemplate transacao;
@@ -69,6 +70,7 @@ public class CotaUsoAssistenteService {
     this.planoProvider = planoProvider;
     this.cota = propriedades.getCota();
     this.tetos = propriedades.getTetos();
+    this.propriedades = propriedades;
     this.timeoutPergunta = propriedades.getTimeoutPergunta();
     this.clock = clock;
     this.transacao = new TransactionTemplate(transactionManager);
@@ -291,7 +293,8 @@ public class CotaUsoAssistenteService {
    * mesma que a validação da subida usa.
    */
   public long tetoDaPergunta(String modelo) {
-    return cota.tetoDaPergunta(tetos, fator(modelo));
+    // Com o juiz da fidelidade da lei ativo (#269), a chamada dele entra como parcela propria.
+    return propriedades.tetoDaPergunta(fator(modelo));
   }
 
   /**
@@ -302,7 +305,8 @@ public class CotaUsoAssistenteService {
    * @return créditos
    */
   public long tetoDaPergunta(String modelo, CaminhoCota caminho) {
-    return cota.tetoDaPergunta(tetos, fator(modelo), caminho);
+    // Com o juiz da lei (#269) quando ele pode rodar, como a pergunta comum.
+    return propriedades.tetoDaPergunta(fator(modelo), caminho);
   }
 
   /**

@@ -20,10 +20,25 @@ os testes do PR da continuidade. A sessão só seguiu o contrato da issue. Fica 
 - **Mudança no conjunto:** pergunta mudou, mude a versão e o `.sha256`; o validador e o teste
   conferem os dois.
 - **Revisão da lei:** os fatos de lei (`fatos`) e as trocas (`edicoes`) passam pela revisão da
-  equipe e do orientador, sem contador. Quem revisa registra em `revisao_lei` (`status`
-  `revisado`, `por`, `em`), e a rodada oficial exige isso.
+  equipe e do orientador, sem contador. O registro fica em `revisao_lei`: `status` `revisado`,
+  `por`, `em` e `conteudo_revisado_sha256`, o sha256 do arquivo como foi revisado (com a revisão
+  ainda pendente). O validador refaz o arquivo assim e compara, e a rodada oficial exige o
+  registro.
 
 ## Versões
+
+### Revisão de lei registrada (2026-11-13), com a regra v3 e o conjunto na v2
+
+- **Quem revisou:** o orientador do TCC, Murillo Weiss e Herick Eduardo Vavassori, sobre o
+  material `revisao-lei.md` da v2.
+- **Resultado:** todos os itens foram aceitos sem alteração. Os fatos e as trocas ficam como
+  estavam.
+- **sha256:** o registro fica dentro dos arquivos, então o sha256 deles mudou. O do teste foi de
+  `23b1221c…` para `b0a7cf3e…`, e o do dev, de `fa029659…` para `0f82e816…`.
+- **Versão:** continua a v2, porque nenhuma pergunta, fato ou troca mudou.
+- **Conferência:** o `conteudo_revisado_sha256` guarda o `23b1221c…` (teste) e o `fa029659…`
+  (dev). Uma pergunta, um fato ou uma troca mudados depois da revisão fazem o validador recusar
+  o conjunto, e o executor não roda.
 
 ### Regra v3 (2026-11-11), com o conjunto na v2
 
@@ -118,7 +133,8 @@ O dev tem uma conversa de cada uma destas categorias:
 ```json
 {
   "versao": "continuidade-v2-teste", "parte": "teste", "produtor": "carlos.rossi@example.com",
-  "revisao_lei": {"status": "pendente", "por": null, "em": null},
+  "revisao_lei": {"status": "revisado", "por": "...", "em": "AAAA-MM-DD", "nota": "...",
+                  "conteudo_revisado_sha256": "<sha256 do arquivo com a revisão pendente>"},
   "preparo": [ ... ],
   "conversas": [ {"id": "t-...", "categoria": "...", "turnos": [ ... ]} ]
 }

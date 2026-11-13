@@ -163,4 +163,99 @@ class AssistentePropertiesTest {
     assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("app.assistente.tetos.contexto");
   }
+
+  @Test
+  @DisplayName("#269: conferencia de fidelidade da lei desligada por padrao, cobertura entre 0 e 1")
+  void fidelidadeLei() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(p.getFidelidadeLei().isEnabled()).isFalse();
+    assertThat(p.getFidelidadeLei().getCoberturaMinima()).isEqualTo(0.7);
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+
+    p.getFidelidadeLei().setCoberturaMinima(1.0);
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+    for (double invalida : new double[] {0.0, -0.1, 1.01, Double.NaN}) {
+      p.getFidelidadeLei().setCoberturaMinima(invalida);
+      assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("app.assistente.fidelidade-lei.cobertura-minima");
+    }
+  }
+
+  @Test
+  @DisplayName("#269: juiz desligado por padrao, cobertura com juiz 0,3, teto do juiz 128")
+  void juizDaFidelidadeLei() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(p.getFidelidadeLei().getJuiz().isEnabled()).isFalse();
+    assertThat(p.juizDaLeiAtivo()).isFalse();
+    assertThat(p.getFidelidadeLei().getCoberturaMinimaComJuiz()).isEqualTo(0.3);
+    assertThat(p.getTetos().getJuiz()).isEqualTo(128);
+    p.getFidelidadeLei().getJuiz().setEnabled(true);
+    // O juiz so roda com a camada 1.
+    assertThat(p.juizDaLeiAtivo()).isFalse();
+    p.getFidelidadeLei().setEnabled(true);
+    assertThat(p.juizDaLeiAtivo()).isTrue();
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+
+    p.getFidelidadeLei().setCoberturaMinimaComJuiz(0);
+    assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("cobertura-minima-com-juiz");
+    p.getFidelidadeLei().setCoberturaMinimaComJuiz(0.3);
+    p.getTetos().setJuiz(AssistenteProperties.Tetos.MINIMO - 1);
+    assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("app.assistente.tetos.juiz");
+  }
+  @Test
+  void resgateDaFidelidadeLei() {
+    AssistenteProperties p = new AssistenteProperties();
+    AssistenteProperties.FidelidadeLei.Juiz.Resgate resgate =
+        p.getFidelidadeLei().getJuiz().getResgate();
+    assertThat(resgate.isEnabled()).isFalse();
+    assertThat(resgate.isCobertura()).isFalse();
+    assertThat(resgate.isPolaridade()).isFalse();
+    // O veto vem ligado: o comportamento de antes do modo so resgate.
+    assertThat(p.getFidelidadeLei().getJuiz().isVeto()).isTrue();
+    resgate.setEnabled(true);
+    // O resgate so roda com o juiz, que so roda com a camada 1.
+    assertThat(p.resgateDaLeiAtivo()).isFalse();
+    p.getFidelidadeLei().getJuiz().setEnabled(true);
+    assertThat(p.resgateDaLeiAtivo()).isFalse();
+    p.getFidelidadeLei().setEnabled(true);
+    assertThat(p.resgateDaLeiAtivo()).isTrue();
+    resgate.setEnabled(false);
+    assertThat(p.resgateDaLeiAtivo()).isFalse();
+  }
+  @Test
+  void configuracaoDoJuizPeloNome() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(p.getFidelidadeLei().getJuiz().getConfiguracao())
+        .isEqualTo(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ATUAL);
+    assertThat(p.tetoSaidaDoJuiz()).isEqualTo(128);
+    for (AssistenteProperties.FidelidadeLei.Juiz.Configuracao c
+        : AssistenteProperties.FidelidadeLei.Juiz.Configuracao.values()) {
+      assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome(c.nome())).isEqualTo(c);
+    }
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA.nome())
+        .isEqualTo("justificativa");
+    assertThatThrownBy(() -> AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome("veredito"))
+        .isInstanceOf(IllegalArgumentException.class);
+    p.getFidelidadeLei().getJuiz()
+        .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA);
+    assertThat(p.tetoSaidaDoJuiz()).isEqualTo(1024);
+  }
+  @Test
+  void configuracoesAdaptativas() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome("adaptativo-baixo")
+        .esforco()).isEqualTo("low");
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome("adaptativo-medio")
+        .esforco()).isEqualTo("medium");
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome("adaptativo-alto")
+        .esforco()).isEqualTo("high");
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ATUAL.raciocina()).isFalse();
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA.raciocina())
+        .isFalse();
+    assertThat(p.getTetos().getJuizComRaciocinio()).isEqualTo(3072);
+    assertThat(p.tetoSaidaDoJuiz(AssistenteProperties.FidelidadeLei.Juiz.Configuracao
+        .ADAPTATIVO_MEDIO)).isEqualTo(3072);
+  }
 }

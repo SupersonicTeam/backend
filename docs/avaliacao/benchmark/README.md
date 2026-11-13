@@ -16,7 +16,8 @@ e na #270), que não é reproduzível e fica só como origem da pergunta.
 ## Matriz
 
 **2 arquiteturas × 3 modelos locais = 6 células, mais 1 célula por API (Ceres 2.0 ×
-`claude-haiku-5-5`) = 7**, cada uma com o **mesmo conjunto de 100 perguntas**
+`claude-haiku-5-5`) = 7** (e, só com `--com-fidelidade-lei`, uma 8ª, opcional: o mesmo Haiku com a
+fidelidade da lei ligada, fora de toda comparação), cada uma com o **mesmo conjunto de 100 perguntas**
 ([`perguntas-benchmark.json`](perguntas-benchmark.json), abaixo) em **3 repetições**
 (`--avaliacao.repeticoes=3`, a régua da #264): ~1.800 respostas. Configurada em
 [`matriz.json`](matriz.json).
@@ -87,7 +88,8 @@ anteriores da mesma rodada. Para regenerar só o relatório: `python3 docs/avali
 
 | Opção / variável | Padrão | Para quê |
 |---|---|---|
-| `--modelos` | os da matriz (locais e `modelosApi`) | ex.: `qwen3:1.7b` para refazer uma célula; `claude-haiku-5-5` só a célula por API; sem ele vale tudo, e a célula por API pede a chave |
+| `--com-fidelidade-lei` | desligada | acrescenta a **célula opcional** do `claude-haiku-5-5` com a fidelidade da rota de lei ligada (#269), só na Ceres 2.0. Sem ela a matriz roda exatamente como sempre. Ver "Célula com a fidelidade da rota de lei" |
+| `--modelos` | os da matriz (locais e `modelosApi`, menos as opcionais) | ex.: `qwen3:1.7b` para refazer uma célula; `claude-haiku-5-5` só a célula por API; sem ele vale tudo, e a célula por API pede a chave |
 | `--arquiteturas` | `ceres-1,ceres-2` | |
 | `--ref-ceres2` | `origin/main` | fixar o commit da Ceres 2.0 (faça `git fetch` antes) |
 | `--repeticoes` | 3 | só para depurar; **o relatório da banca usa 3** |
@@ -626,6 +628,91 @@ python3 docs/avaliacao/benchmark/executar_matriz.py --retomar docs/avaliacao/res
   --modelos claude-haiku-5-5 --arquiteturas ceres-2
 ```
 
+## Célula com a fidelidade da rota de lei (`claude-haiku-5-5+fidelidade-lei`, #269)
+
+Uma célula **opcional**, a mais, só na Ceres 2.0: o mesmo `claude-haiku-5-5` da célula acima, com a
+fidelidade da rota de lei ligada na configuração escolhida pela terceira medição da #269
+(`docs/ceres-assistente.md`, "Configuração escolhida"). Fica em `modelosApi` do `matriz.json` com
+`opcional: true`, `variante: fidelidade-lei`, `modeloApi: claude-haiku-5-5` (o `modelo` é o nome da
+célula, da pasta e do relatório) e o `ambiente`:
+
+```
+AI_FIDELIDADE_LEI_HABILITADA=true
+AI_FIDELIDADE_LEI_JUIZ_HABILITADO=true
+AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO=justificativa
+AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO=true
+AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE=true
+```
+
+**Só roda quando pedida.** Sem `--com-fidelidade-lei` (ou o nome dela em `--modelos`) a matriz, a
+prova do raciocínio, a rodada e o relatório são os de sempre; nenhuma outra célula muda de
+comportamento. Pedir só o `claude-haiku-5-5` em `--modelos` também não a puxa.
+
+```bash
+export ANTHROPIC_API_KEY='<a chave, só nesta sessão do shell>'
+# na rodada inteira:
+python3 docs/avaliacao/benchmark/executar_matriz.py --com-fidelidade-lei --hardware "..."
+# ou só ela, numa rodada que já existe:
+python3 docs/avaliacao/benchmark/executar_matriz.py --retomar docs/avaliacao/resultados/benchmark/<rodada> \
+  --modelos claude-haiku-5-5+fidelidade-lei --arquiteturas ceres-2
+```
+
+**O commit precisa conhecer as chaves.** O Spring ignora em silêncio uma variável que o
+`application.yml` não lê: a célula sairia com o nome da fidelidade medindo a configuração de antes
+dela. Por isso, antes de qualquer trabalho, o executor lê o `application.yml` **do SHA da Ceres 2.0 da
+rodada** e **recusa** a célula (em banca, ensaio e teste) se alguma variável do `ambiente` não estiver
+lá. As cinco só existem em SHA que contenha o resgate e a configuração do juiz (#269, PR #551, `47bdf9fe`);
+a `main` de antes dele (`e55eb28b`, só a conferência e o juiz de veredito) só lê as duas primeiras e a
+célula é recusada. O SHA é **um só por arquitetura**:
+a célula roda no mesmo commit das outras da Ceres 2.0, e `--ref-ceres2` muda o commit de todas.
+
+**O que o executor faz de diferente nela** (o resto é a célula por API): aplica o `ambiente` da variante
+depois da configuração publicada do commit e antes do que ele fixa (provedor, modelo, chave, endereço e
+read-timeout nunca podem ser mudados por uma variante; `validar_ambiente_da_celula`); manda ao
+`AI_ANTHROPIC_MODEL` o `modeloApi`; faz a prova do raciocínio no modelo real (a pré-rodada prova o mesmo
+modelo uma vez só); grava no `celula.json` a `variante`, o `modeloApi`, o `ambienteCelula` e um aviso; e a
+retomada recusa uma célula medida com outro ambiente. O banco da Ceres 2.0 é o mesmo das outras células.
+
+**O que a célula é.** A resposta de lei do Haiku com a conferência em código (cópia literal do trecho,
+número, polaridade, cobertura) e o juiz por segunda chamada, que reprova ou resgata, lida pela mesma
+régua e pelo mesmo conjunto das outras. **O que ela prova:** o que essa configuração faz com as métricas
+da régua do benchmark (quanto da resposta de lei é descartada, o que acontece com citação, número e
+recusa, e quanto a latência sobe), ao lado da célula do mesmo modelo sem ela, no mesmo SHA e no mesmo
+conjunto.
+
+**O que ela não prova.**
+- **Não prova que a resposta é mais fiel.** A régua do benchmark não lê a fidelidade: ela conta citação,
+  número e recusa. Quem mede se a resposta é fiel ao trecho da lei, com conjunto e juízes cegos, é a
+  medição da #269 (`docs/avaliacao/fidelidade-lei/`): lá, 15 das 40 respostas entregues sem a correção
+  eram infiéis. Este benchmark não repete nem substitui isso.
+- **Não compara modelos nem arquiteturas.** A Ceres 1 e os qwen3 não têm a fidelidade (a conferência
+  pede ao modelo uma cópia literal do trecho em JSON, e os qwen3 menores não a produzem). A célula não
+  entra em média, viabilidade, conclusão, gráfico nem na conta de "efeito da arquitetura". A única
+  leitura é "com menos sem" contra a célula irmã.
+- **Não mede latência de produção.** É de API pela rede, com a chamada do juiz a mais, na máquina da
+  rodada.
+- **Não separa os motivos do descarte.** O JSON da avaliação só traz o desfecho `FIDELIDADE_REPROVADA`,
+  igual para a reprovação em código, a do juiz, a falha do juiz (que fecha como reprovação) e o resgate
+  não concedido. O motivo (`assistente_interacao.fidelidade_lei`) só é gravado pelo `AssistenteService`,
+  e o comando de avaliação chama o orquestrador direto.
+
+**O que a fidelidade faz com as métricas** (a frase está também no relatório). Quando ela descarta uma
+resposta, a Ceres devolve `TRECHOS_SEM_CONFIRMACAO` com os trechos e o desfecho `FIDELIDADE_REPROVADA`,
+que o `AvaliadorResposta` põe em `DESFECHOS_DE_RECUSA` e em `RESPOSTA_DESCARTADA`, como o
+`CITACAO_INVALIDA` e o `RESPOSTA_CORTADA`. Nas perguntas de lei isso quer dizer: **citação válida cai**
+(o texto foi descartado, e os trechos mostrados não contam), **número cai** quando a pergunta o pede e o
+trecho não o traz, **rota e função não mudam** (a rota fica `LEGISLACAO`; no MISTO só a parte de lei é
+descartada), **recusa correta sobe** nas adversárias, por descarte e não por acerto (a mesma armadilha
+da recusa por corte de teto), e a **falha técnica não muda** (descarte não é falha). Sem a leitura
+certa, a célula parece pior que a do Haiku sem fidelidade em citação e número sem o ser: ela só entrega
+menos, e menos infiel. O relatório por isso traz, na seção própria, a diferença "com − sem", a **recusa
+sem os descartes da fidelidade** (a recusa correta que não vem do descarte) e quantas respostas foram
+descartadas.
+
+**Custo e privacidade.** Como a célula do Haiku: 3 repetições do conjunto inteiro pela API, com as
+perguntas, inclusive as inéditas do repositório cego, saindo da máquina; e uma chamada a mais (o juiz) por
+resposta de lei aceita pela conferência em código.
+
 ## Latência na VPS (produção)
 
 Só a configuração de produção (o modelo do `.env` da VPS e a Ceres 2.0), na VPS de produção (CPU ARM, sem
@@ -686,7 +773,10 @@ Rodam na CI (passo próprio no `ci.yml`). Os JSONs de exemplo de `tests/fixtures
 têm as duas arquiteturas nos dois esquemas (o do `2463c27`, sem `semBecoSemSaida` nem
 `camadaClassificacao`, e o da `main`), com o recorte comum, a penalização por capacidade, o valor
 esperado divergente, a viabilidade, os exemplos de falha e a marca de dados fictícios conferidos
-contra números calculados à mão. O `test_celula_api` cobre a célula do Haiku sem a API real: matriz,
+contra números calculados à mão. O `test_fidelidade_lei` cobre a célula opcional com a fidelidade (opcional de fato, as cinco variáveis só
+nela, variável do executor recusada, commit sem as chaves recusado, o modelo real na API e na prova, a
+retomada, a seção própria, a exclusão da conclusão e dos gráficos). O `test_celula_api` cobre a célula do
+Haiku sem a API real: matriz,
 `--modelos`, recusa sem a chave, ambiente da JVM (a chave só na célula por API), prova do raciocínio
 (dublê e servidor local), ocultação da chave, `rodar_celula` com executor falso e o relatório com a
 célula marcada **(API)**. O `ConjuntoRealTest` confere o `capacidade` e o hash do conjunto
