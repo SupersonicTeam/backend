@@ -6,7 +6,8 @@ uma rodada invalida a rodada: muda-se a regra, sobe-se a versão do conjunto/da 
 novo. Quem escreveu esta regra e o conjunto nunca viu os conjuntos anteriores da Ceres nem o código
 da correção.
 
-Versão da regra: `2026-11-12.4` (a mesma do conjunto).
+Versão da regra: `2026-11-13.5`. A versão `2026-11-12.4` é a das duas primeiras medições (conjuntos v1
+e v2); o que mudou para a terceira está na seção 10.
 
 ## 1. O que se compara
 
@@ -18,9 +19,10 @@ o mesmo modelo. O desenho padrão tem dois:
 | `desligada` | flag da correção desligada (comportamento da `main`): o braço de **referência** |
 | `ligada` | flag da correção ligada |
 
-A rodada pode trazer **outros braços**. O desenho previsto para a correção da #269 tem três:
+A rodada pode trazer **outros braços**. O desenho das duas primeiras medições tinha três:
 `desligada`, `camada1` (conferência em código) e `camada1+juiz` (a conferência mais uma segunda
-chamada ao modelo que só reprova). **Cada braço extra é
+chamada ao modelo que só reprova). O da terceira (seção 10) tem **quatro**, com
+`camada1+juiz+resgate`. **Cada braço extra é
 comparado ao `desligada`, um a um, com a mesma regra** (seções 5 a 7); não se comparam braços entre si
 e cada comparação tem o seu desfecho. A leitura dos juízes é uma só (as respostas aceitas de todos os
 braços, embaralhadas), e a concordância entre os juízes vale para todas as comparações. O `desligada`
@@ -263,3 +265,37 @@ conjuntos anteriores nem o código da correção.
   do conjunto (`VERSAO_CONJUNTO_V2` em `fidelidade_comum.py`), grave o novo hash e rode de novo.
 - **Teste cego do v2:** vale a mesma regra do v1. Quem escreve ou revisa a correção não lê o v2, não o
   usa em exemplo, treino ou teste e recebe só os ids (`F2-07`).
+
+## 10. Conjunto v3 e o quarto braço (terceira medição)
+
+O juiz da correção foi ajustado depois da segunda rodada (o Haiku passa a raciocinar e entra um papel
+de resgate), olhando os números do v1 e do v2. Por isso nenhum dos dois é mais teste cego para esse
+ajuste. A terceira medição usa o **conjunto v3**, `perguntas-fidelidade-lei-v3.json` (versão
+`2026-11-13.v3`, sha256 em `perguntas-fidelidade-lei-v3.json.sha256`), escrito por uma sessão que
+nunca viu o v1, o v2, os conjuntos antigos da Ceres nem o código da correção.
+
+- **Versão da regra `2026-11-13.5`.** A regra passa a prever o conjunto v3 e o quarto braço. Só isso:
+  **as mesmas medidas, as mesmas margens e limiares (seção 7.1), os mesmos juízes (J1 `opus`, J2
+  `sonnet`, J3 `opus`), 3 repetições e o mesmo modelo.** Nenhuma margem, limiar ou prompt de juiz
+  muda. A versão `2026-11-12.4` fica registrada como a do v1 e do v2 (seção 9); os arquivos e os testes
+  deles continuam como estão.
+- **Mesma forma do v1 e do v2:** 36 perguntas, 6 por classe (`CAPUT`, `PARAGRAFO`, `EXCECAO`, `AMPLA`,
+  `AUSENTE`, `SIMPLES`), ids com prefixo `F3-`, gabarito de fidelidade tirado do texto de
+  `legislacao_trecho` e conferido por subagentes independentes. A escolha do conjunto é por parâmetro
+  (`--conjunto v1|v2|v3`; padrão `v1`); o manifesto da rodada guarda `conjunto.arquivo`, e a leitura e a
+  decisão usam o conjunto do manifesto.
+- **Quatro braços** no mesmo commit (o head da correção): `desligada` (referência), `camada1`,
+  `camada1+juiz` (agora com o juiz novo, só com veto) e `camada1+juiz+resgate` (o juiz mais o papel de
+  resgate). O `camada1+juiz+resgate` é julgado **pelos mesmos critérios dos outros braços ligados**,
+  contra o `desligada` (seções 5 a 7), e entra na escolha entre braços aprovados (seção 7.4) pela
+  **mesma ordem de desempate**: menos `INFIEL`, depois menos falsos descartes, depois menos tokens, por
+  fim o nome. As chamadas novas do juiz e do resgate entram na medida M6 se gravarem os tokens em
+  colunas `tokens_entrada*`/`tokens_saida*` da auditoria. Desfecho novo que o juiz ou o resgate
+  criarem vale como **descartada** (seção 3), salvo decisão registrada antes da rodada, e então a
+  versão da regra sobe.
+- **Se o resgate não for entregue,** a rodada volta a três braços (`desligada`, `camada1`,
+  `camada1+juiz`) e esta seção é ajustada **antes de qualquer execução**.
+- Mudar uma pergunta, um fato ou o gabarito do v3 depois do congelamento muda o sha256: suba a versão
+  do conjunto (`VERSAO_CONJUNTO_V3` em `fidelidade_comum.py`), grave o novo hash e rode de novo.
+- **Teste cego do v3:** vale a mesma regra do v1 e do v2. Quem escreve ou revisa a correção não lê o
+  v3, não o usa em exemplo, treino ou teste e recebe só os ids (`F3-07`).

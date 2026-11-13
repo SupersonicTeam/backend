@@ -17,16 +17,21 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * Os conjuntos de perguntas da medição de fidelidade da rota de lei (#269), o v1 e o v2 (segunda
- * medição, escrito depois do ajuste da correção), são conjuntos de teste: nunca estão no treino nem
- * no prompt do classificador, e o hash versionado é o dos bytes.
+ * Os conjuntos de perguntas da medição de fidelidade da rota de lei (#269), o v1, o v2 (segunda
+ * medição, escrito depois do ajuste da correção) e o v3 (terceira, escrita depois do ajuste do
+ * juiz), são conjuntos de teste: nunca estão no treino nem no prompt do classificador, e o hash
+ * versionado é o dos bytes.
  */
 class ConjuntoFidelidadeLeiTest {
 
   private static final Path PASTA = Path.of("docs/avaliacao/fidelidade-lei");
 
   @ParameterizedTest(name = "{0}")
-  @ValueSource(strings = {"perguntas-fidelidade-lei.json", "perguntas-fidelidade-lei-v2.json"})
+  @ValueSource(strings = {
+    "perguntas-fidelidade-lei.json",
+    "perguntas-fidelidade-lei-v2.json",
+    "perguntas-fidelidade-lei-v3.json"
+  })
   @DisplayName("Guarda real: nenhuma pergunta do conjunto de fidelidade está no treino nem no prompt")
   void conjuntoForaDoTreinoEDoPrompt(String arquivo) throws IOException {
     Path conjuntoArquivo = PASTA.resolve(arquivo);
@@ -49,7 +54,11 @@ class ConjuntoFidelidadeLeiTest {
   }
 
   @ParameterizedTest(name = "{0}")
-  @ValueSource(strings = {"perguntas-fidelidade-lei.json", "perguntas-fidelidade-lei-v2.json"})
+  @ValueSource(strings = {
+    "perguntas-fidelidade-lei.json",
+    "perguntas-fidelidade-lei-v2.json",
+    "perguntas-fidelidade-lei-v3.json"
+  })
   @DisplayName("O sha256 versionado é o dos bytes do conjunto congelado")
   void hashRegistradoConfere(String arquivo) throws IOException, NoSuchAlgorithmException {
     Path conjunto = PASTA.resolve(arquivo);

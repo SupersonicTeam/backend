@@ -1,0 +1,1862 @@
+{
+  "versao": "2026-11-13.v3",
+  "regra": "2026-11-13.5",
+  "descricao": "Conjunto v3 da medição de fidelidade da rota de lei da Ceres (#269), da terceira medição: 36 perguntas, 6 por classe. Escrito depois do ajuste do juiz da correção, por sessão que nunca viu o v1, o v2, os conjuntos antigos nem o código da correção. Gabarito de fidelidade tirado do texto de legislacao_trecho e conferido por subagentes independentes (conferencia-do-gabarito-v3.md).",
+  "perguntas": [
+    {
+      "id": "F3-02",
+      "classe": "CAPUT",
+      "pergunta": "Tenho dúvida sobre como o IBS e a CBS se aplicam ao que eu vendo. Posso perguntar por escrito ao fisco antes de decidir? O que preciso dizer nessa pergunta?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "É assegurado ao sujeito passivo o direito de formular consulta escrita sobre a aplicação da legislação do IBS e da CBS a fato determinado de seu interesse, que deve ser completa e exatamente descrito na petição.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 323-A"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 323-A)"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Da consulta devem constar a qualificação do consulente, a matéria de direito objeto da dúvida, a data do fato gerador se já ocorrido e a declaração de existência ou não de início de procedimento fiscal em relação ao consulente.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 323-A, § 1º"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 323-A, § 1º, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 323-A, § 1º, inciso II"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 323-A, § 1º, inciso III"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 323-A, § 1º, inciso IV"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 323-A, § 1º)"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 323-A, § 1º, inciso I)"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 323-A, § 1º, inciso II)"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 323-A, § 1º, inciso III)"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 323-A, § 1º, inciso IV)"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Cada consulta deve referir-se a uma só matéria, admitindo-se a cumulação apenas quando se tratar de questões conexas.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 323-A, § 2º"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 323-A, § 2º)"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "A consulta pode descrever o fato de forma resumida, sem precisar ser completa e exata.",
+        "Na mesma consulta o contribuinte pode reunir várias matérias sem qualquer relação entre si.",
+        "A consulta não precisa informar se já existe procedimento fiscal contra o consulente.",
+        "A lei não prevê direito de consulta escrita sobre o IBS e a CBS."
+      ],
+      "permitidos": [
+        "A solução da consulta é emitida pelos respectivos órgãos do CGIBS e da RFB.",
+        "A consulta não suspende o prazo para recolhimento do tributo nem o das obrigações acessórias."
+      ]
+    },
+    {
+      "id": "F3-03",
+      "classe": "CAPUT",
+      "pergunta": "Recebi uma cobrança pequena de IBS e quero contestar. Existe um rito mais rápido e simples para casos assim? Quando ele é usado?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "A tramitação e o julgamento do processo administrativo tributário do IBS poderão ser diferenciados mediante adoção de rito sumário, nos termos definidos em ato do CGIBS.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 76"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Um dos critérios é o crédito tributário inferior ao valor de alçada, fixado em caráter uniforme em âmbito nacional, desde que não ultrapasse 1.000 UPFs (Unidade Padrão Fiscal dos Tributos sobre Bens e Serviços).",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 76, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Outro critério é a menor complexidade da matéria, como o indeferimento de pedido de restituição e ressarcimento, a exclusão de programas especiais de parcelamento e o indeferimento de opção ou a exclusão de ofício do Simples Nacional.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 76, inciso II"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 76, inciso II, alínea a"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 76, inciso II, alínea b"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 76, inciso II, alínea c"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "Nesses casos, a decisão de primeira instância de julgamento é considerada definitiva, ressalvado o direito de interpor pedido de retificação e os recursos que a lei indica.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 76, parágrafo único"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "O rito sumário só vale para créditos acima de 1.000 UPFs.",
+        "O contribuinte escolhe livremente se quer ou não o rito sumário, qualquer que seja o valor cobrado.",
+        "No rito sumário a decisão de primeira instância nunca é definitiva e sempre cabe recurso voluntário a uma segunda instância.",
+        "O valor de alçada do rito sumário é fixado separadamente por cada Estado e cada Município."
+      ],
+      "permitidos": [
+        "A previsão do Simples Nacional na alínea c do inciso II produz efeitos a partir de 1º de janeiro de 2027.",
+        "O rito sumário é definido em ato do CGIBS."
+      ]
+    },
+    {
+      "id": "F3-05",
+      "classe": "CAPUT",
+      "pergunta": "Faço operações na bolsa de mercadorias para travar o preço da soja e pago taxas pelos serviços da bolsa. Estando no regime regular do IBS e da CBS, posso aproveitar crédito desses tributos nessas taxas?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O contribuinte do IBS e da CBS sujeito ao regime regular que adquirir serviços de entidades administradoras de mercados organizados, infraestruturas de mercado e depositárias centrais poderá apropriar créditos desses tributos.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 221"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O crédito é apropriado com base nos valores pagos pelo fornecedor.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 221"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Só quem está no Simples Nacional pode aproveitar crédito sobre os serviços da bolsa.",
+        "Não há crédito de IBS e CBS sobre os serviços da bolsa, porque são serviços financeiros.",
+        "O crédito é calculado sobre o valor da operação de compra e venda do produto feita na bolsa, e não sobre o que o fornecedor pagou de imposto.",
+        "O crédito só vale se o contribuinte estiver no regime específico dos serviços financeiros."
+      ],
+      "permitidos": [
+        "As atividades dessas entidades ficam sujeitas à incidência do IBS e da CBS sobre o valor da operação de fornecimento de serviços, pelas alíquotas do art. 189 (art. 220)."
+      ]
+    },
+    {
+      "id": "F3-06",
+      "classe": "CAPUT",
+      "pergunta": "Depois que o IBS substituir o ICMS, o estado poderá separar uma parte da arrecadação do IBS para o fundo de combate à pobreza? Quem define o percentual e qual é o limite?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O percentual da receita do IBS dos Estados, do Distrito Federal e dos Municípios destinado ao financiamento do Fundo de Combate à Pobreza (art. 82 do ADCT) poderá ser estabelecido por lei específica do respectivo ente federativo.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 129"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Como regra geral, o limite superior desse percentual é de 1% (um por cento).",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 129"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "A regra é para vigência a partir de 1º de janeiro de 2033.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 129"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "essencial": false,
+          "afirmacao": "Para o ente que já tinha o Fundo de Combate à Pobreza na data de publicação da EC 132/2023 e cuja relação percentual apurada supera o limite do caput, o percentual fica limitado a 3/4 dessa relação em 2033 a 2040, à metade em 2041 a 2048, a 1/4 em 2049 a 2056 e a 1% a partir de 2057; se esses limites forem inferiores ao do caput, vale o percentual que o ente definiu na forma do caput.",
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 129, § 1º"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 129, § 2º"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 129, § 2º, inciso I"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 129, § 2º, inciso II"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 129, § 2º, inciso III"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 129, § 2º, inciso IV"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 129, § 3º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "O percentual é fixado pelo Comitê Gestor do IBS, e não por lei do respectivo ente federativo.",
+        "O limite geral do percentual é de 5% da receita do IBS, igual para todos os entes.",
+        "A destinação de parte do IBS ao fundo de combate à pobreza já vale desde 2027.",
+        "O percentual é fixado por lei federal, igual para todos os Estados e Municípios."
+      ],
+      "permitidos": [
+        "O percentual escolhido deve ser informado ao CGIBS até o dia 31 de julho do ano anterior ao da sua aplicação."
+      ]
+    },
+    {
+      "id": "F3-07",
+      "classe": "CAPUT",
+      "pergunta": "Se uma dívida de contribuição previdenciária minha for cobrada na Justiça pela União, quem escolhe os bens que vão ser penhorados e em que momento a penhora é feita?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Na execução judicial da dívida ativa da União, suas autarquias e fundações públicas, é facultado ao exequente (quem cobra) indicar bens à penhora.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 53"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "A penhora dos bens indicados será efetivada concomitantemente com a citação inicial do devedor.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 53"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Só o devedor pode indicar os bens à penhora, e o credor precisa aceitar a indicação.",
+        "A penhora só pode ser feita depois que o devedor deixar de pagar no prazo de 15 dias após a citação.",
+        "A penhora só ocorre depois do julgamento dos embargos do devedor."
+      ],
+      "permitidos": [
+        "Os bens penhorados ficam desde logo indisponíveis.",
+        "Pagando a dívida executada integralmente, com os acréscimos legais, em 2 dias úteis contados da citação, a penhora poderá ser liberada, desde que não haja outra execução pendente."
+      ]
+    },
+    {
+      "id": "F3-08",
+      "classe": "CAPUT",
+      "pergunta": "Além da fazenda, tenho uma construtora pequena com duas obras em andamento. O IBS e a CBS das obras são apurados juntando tudo numa conta só ou cada obra é apurada separadamente?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "A apuração do IBS e da CBS é feita para cada empreendimento de construção civil, vinculada a um CNPJ ou CPF específico.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 270"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Cada obra de construção civil (assim como cada incorporação ou parcelamento do solo) é considerada um centro de custo distinto.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 270"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "A apuração é única para todas as obras da empresa, somando todas numa só conta.",
+        "Só a incorporação e o parcelamento do solo são apurados por empreendimento; a obra comum entra na apuração geral da empresa.",
+        "A apuração por obra só vale para obras acima de determinado valor."
+      ],
+      "permitidos": [
+        "No caso de apuração por empreendimento, o documento fiscal das aquisições de bens e serviços usados na obra deve indicar o número do cadastro da obra (art. 270, parágrafo único).",
+        "A obra de construção civil recebe identificação cadastral no cadastro de imóveis (art. 269)."
+      ]
+    },
+    {
+      "id": "F3-09",
+      "classe": "PARAGRAFO",
+      "pergunta": "Minha loja de produtos agropecuários tem um programa de pontos próprio: o cliente troca os pontos por produtos da própria loja. Esse programa também entra no regime específico dos programas de fidelidade? E os pontos usados na troca?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O regime específico da administração de programas de fidelização aplica-se inclusive aos programas de fidelidade próprios em que os pontos sejam utilizados como contraprestação no fornecimento de bens e serviços pelo próprio emissor dos pontos.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 219-A, parágrafo único"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 219-A, parágrafo único)"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Nesse caso, os pontos utilizados como contraprestação são deduzidos da base de cálculo do IBS e da CBS, tendo por base o valor considerado na fixação da base de cálculo na operação.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 219-A, parágrafo único"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 219-A, parágrafo único)"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "A base de cálculo da administração de programas de fidelização corresponde, a cada período de apuração, ao valor dos pontos emitidos, deduzidos os valores pagos no resgate dos pontos e os ressarcidos por pontos não utilizados computados como receita.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 219-A, inciso I"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 219-A, inciso I)"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Programas de fidelidade próprios, em que os pontos são trocados por produtos do próprio emissor, ficam fora do regime específico.",
+        "Os pontos usados como pagamento dos produtos do próprio emissor não são deduzidos: entram inteiros na base de cálculo.",
+        "A base de cálculo do programa é o valor total das vendas feitas com os pontos."
+      ],
+      "permitidos": [
+        "O adquirente dos pontos não terá direito ao crédito de IBS e de CBS (art. 219-A, inciso II, também na redação do art. 174 da LC 227/2026)."
+      ]
+    },
+    {
+      "id": "F3-11",
+      "classe": "PARAGRAFO",
+      "pergunta": "Já entreguei meus documentos e respostas numa fiscalização do IBS e da CBS sobre as vendas de um mês. Se outro fisco abrir outra fiscalização sobre as mesmas operações e o mesmo período, ele pode me pedir tudo de novo?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "No ambiente compartilhado entre a RFB e as administrações tributárias dos Estados, do Distrito Federal e dos Municípios, ficam arquivadas as respostas, os esclarecimentos e os documentos fornecidos em procedimento de fiscalização de qualquer dos entes federativos.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 325, § 4º, inciso I, alínea a)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 325, § 4º, inciso I, alínea a"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "É vedado solicitar, em outro procedimento de fiscalização relativo aos mesmos fatos geradores e ao mesmo período, as mesmas respostas, esclarecimentos e documentos.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 325, § 4º, inciso I, alínea a)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 325, § 4º, inciso I, alínea a"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "As respostas, os esclarecimentos e os documentos fornecidos em processo administrativo tributário de qualquer dos entes federativos serão levados em consideração pelos órgãos de julgamento em outros processos administrativos relativos aos mesmos fatos e período de apuração.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 325, § 4º, inciso I, alínea b)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 325, § 4º, inciso I, alínea b"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Cada ente federativo pode pedir de novo os mesmos documentos, porque cada fiscalização é independente das outras.",
+        "A vedação de pedir de novo vale só dentro do mesmo ente federativo, e não entre a RFB e os Estados ou Municípios.",
+        "A vedação vale mesmo que o período ou os fatos geradores da nova fiscalização sejam outros.",
+        "As respostas e os documentos entregues são apagados do ambiente compartilhado quando a fiscalização termina."
+      ],
+      "permitidos": [
+        "A RFB e as administrações tributárias dos Estados, do Distrito Federal e dos Municípios compartilham, em um mesmo ambiente, os registros do início e do resultado das fiscalizações da CBS e do IBS.",
+        "No ambiente compartilhado são registrados os acessos, com a identificação do servidor público efetivo, a data, a hora e o motivo do acesso.",
+        "O uso, por um ente, das provas e fundamentações de outro ente não dispensa a oportunidade do contraditório e da ampla defesa do sujeito passivo."
+      ]
+    },
+    {
+      "id": "F3-12",
+      "classe": "PARAGRAFO",
+      "pergunta": "Minha empresa agrícola contratou um operador autônomo de colheitadeira, que deu recibo pelo serviço. Sobre que parte do valor desse recibo incide a contribuição previdenciária da empresa que contrata?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Na contratação de serviços de transporte rodoviário de carga ou de passageiro, ou de serviços prestados com a utilização de trator, máquina de terraplenagem, colheitadeira e assemelhados, a base de cálculo da contribuição da empresa corresponde a 20% do valor da nota fiscal, fatura ou recibo.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 22, § 15"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Essa base de 20% vale quando os serviços forem prestados por condutor autônomo de veículo rodoviário, por auxiliar de condutor autônomo de veículo rodoviário ou por operador de máquinas.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 22, § 15"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "A base de cálculo é 100% do valor do recibo, sem redução.",
+        "A base de 20% vale só para serviços de transporte, não para serviços com colheitadeira ou trator.",
+        "A base de 20% vale para qualquer prestador, inclusive empresa prestadora com empregados."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F3-13",
+      "classe": "PARAGRAFO",
+      "pergunta": "Tenho uma agência de turismo rural que vende pacotes com hospedagem em fazenda e passeios. O IBS e a CBS incidem só sobre a minha comissão ou sobre o valor do pacote? E a comissão que o hotel me paga entra na conta?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Na intermediação de serviços turísticos por agências de turismo, a base de cálculo do IBS e da CBS é o valor da operação, deduzidos os valores repassados aos fornecedores intermediados pela agência, com base no documento que subsidia a operação de agenciamento.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 289, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O valor da operação compreende o valor total cobrado do usuário do serviço da agência, incluídos todos os bens e serviços prestados e usufruídos com a intermediação, somados a margem de agregação da agência e outros acréscimos cobrados do usuário.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 289, § 1º"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Integram também a base de cálculo os demais valores, comissões e incentivos pagos por terceiros em virtude da atuação da agência.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 289, § 2º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "O IBS e a CBS incidem apenas sobre a comissão que o hotel paga à agência.",
+        "A base de cálculo é o valor total do pacote, sem dedução dos valores repassados aos fornecedores intermediados.",
+        "As comissões e incentivos pagos por terceiros (como o hotel) ficam fora da base de cálculo."
+      ],
+      "permitidos": [
+        "O adquirente do serviço de intermediação prestado pela agência de turismo pode apropriar os créditos de IBS e de CBS, observados os arts. 47 a 56 (art. 290)."
+      ]
+    },
+    {
+      "id": "F3-14",
+      "classe": "PARAGRAFO",
+      "pergunta": "Minha empresa paga PIS e Cofins só quando recebe (regime de caixa). Vendi a prazo em 2026 e vou receber em 2027. No recebimento, vou pagar PIS e Cofins ou CBS?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Para operações ocorridas até 31 de dezembro de 2026 em que o PIS/Pasep e a Cofins forem exigidos à medida que recebida a receita pelo regime de caixa, considera-se ocorrido o fato gerador dessas contribuições na data do auferimento da receita pelo regime de competência.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 408, § 3º"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 408, § 3º, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O PIS/Pasep e a Cofins serão exigidos no momento do recebimento da receita, ainda que ocorrido após a extinção dessas contribuições.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 408, § 3º, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Não será exigida a CBS sobre o recebimento da receita dessa operação, salvo no caso dos regimes opcionais dos arts. 485 a 487, em que se exige a CBS e não se exigem o PIS/Pasep e a Cofins.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 408, § 3º, inciso III"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 408, § 2º"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 408, § 2º)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 408, § 1º, inciso I"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "No recebimento em 2027 exige-se a CBS no lugar do PIS e da Cofins.",
+        "Sobre o recebimento em 2027 não se exige nem PIS e Cofins nem CBS, porque a venda foi feita em 2026.",
+        "Sobre o mesmo recebimento exigem-se PIS e Cofins e também a CBS.",
+        "As contribuições deixam de ser exigidas depois de extintas, ainda que a venda tenha ocorrido antes."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F3-15",
+      "classe": "PARAGRAFO",
+      "pergunta": "Acho que o fisco cometeu um erro no processo do IBS contra mim que poderia anular o ato. Posso guardar isso para reclamar só no final do processo? E se o erro foi causado por mim mesmo?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "A nulidade deve ser arguida na primeira oportunidade que a parte dispuser, sob pena de preclusão, exceto as nulidades que sejam cognoscíveis de ofício pela autoridade julgadora.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 66, § 8º"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O sujeito passivo não poderá arguir nulidade a que haja dado causa ou para a qual tenha concorrido.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 66, § 6º"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Quando puder decidir o mérito a favor do sujeito passivo a quem aproveitaria a declaração de nulidade, a autoridade julgadora não a pronunciará nem mandará repetir o ato ou suprir-lhe a falta.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 66, § 7º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "A nulidade pode ser arguida em qualquer momento, até o fim do processo, sem nenhum prejuízo para a parte.",
+        "O contribuinte pode arguir mesmo a nulidade que ele próprio causou ou para a qual concorreu.",
+        "Declarada a nulidade, a autoridade sempre manda repetir o ato, ainda que pudesse decidir o mérito a favor do contribuinte."
+      ],
+      "permitidos": [
+        "São nulos, entre outros, os atos praticados com preterição do direito de defesa e as decisões não fundamentadas.",
+        "A nulidade de um ato somente prejudica os atos posteriores que dele diretamente dependam ou sejam consequentes."
+      ]
+    },
+    {
+      "id": "F3-17",
+      "classe": "EXCECAO",
+      "pergunta": "Compro etanol direto de uma usina produtora para abastecer as máquinas. Se a usina não recolher o IBS e a CBS dessa venda, eu posso ser cobrado? Isso muda se o pagamento for liquidado por meio eletrônico que já recolhe o imposto na hora?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Nas operações realizadas diretamente com os contribuintes do regime específico dos combustíveis (entre eles o produtor nacional de biocombustíveis), o adquirente fica solidariamente responsável pelo pagamento do IBS e da CBS incidentes na operação.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 177"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 176, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Essa responsabilidade não se aplica quando a transação de pagamento tiver sido liquidada por instrumento eletrônico que permita o recolhimento do IBS e da CBS na liquidação financeira da operação (split payment).",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 177, § 1º, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "A responsabilidade do adquirente restringe-se ao valor do IBS e da CBS não extintos pelo contribuinte.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 177, § 1º, inciso II"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "O adquirente responde pelo imposto da operação mesmo quando o pagamento foi liquidado por meio eletrônico que recolhe o IBS e a CBS na liquidação financeira.",
+        "O adquirente responde pelo total do imposto da operação, ainda que o fornecedor já tenha extinto parte dele.",
+        "O adquirente nunca responde pelo imposto devido pelo produtor do combustível."
+      ],
+      "permitidos": [
+        "A responsabilidade se estende aos demais participantes da cadeia que realizarem operações subsequentes, se houver comprovação de que concorreram para o não pagamento do imposto (art. 177, § 1º, inciso III)."
+      ]
+    },
+    {
+      "id": "F3-18",
+      "classe": "EXCECAO",
+      "pergunta": "Já tenho folha de tabaco (fumo) tratada e destalada da minha colheita. Posso vender para qualquer comprador? Existe alguma exceção?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O tabaco em folhas tratadas, total ou parcialmente destaladas, aparadas ou não, mesmo cortadas em forma regular ou picadas, somente será vendido ou remetido a empresa industrializadora de charutos, cigarros, cigarrilhas ou de fumo desfiado, picado, migado ou em pó, em rolo ou em corda.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 429"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "A regra ressalva o caso de exportação.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 429"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Fica admitida a comercialização desses produtos entre estabelecimentos que exerçam a atividade de beneficiamento e acondicionamento por enfardamento.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 429, § 1º"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "Os bens encontrados em transporte, depósito ou exposição à venda em desacordo com essa regra estão sujeitos à pena prevista no art. 428 da lei.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 429, § 3º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "A folha de tabaco tratada pode ser vendida a qualquer comprador, inclusive atacadistas.",
+        "A regra proíbe também a venda para exportação.",
+        "É proibida a venda de tabaco entre estabelecimentos de beneficiamento e enfardamento.",
+        "Não há nenhuma consequência para o tabaco encontrado em transporte ou depósito em desacordo com a regra."
+      ],
+      "permitidos": [
+        "O Poder Executivo da União exigirá, nessas operações, os meios de controle necessários."
+      ]
+    },
+    {
+      "id": "F3-19",
+      "classe": "EXCECAO",
+      "pergunta": "Estou contestando uma cobrança de IBS no processo administrativo e também entrei na Justiça sobre o mesmo assunto. Isso prejudica o processo administrativo? E se a ação na Justiça tratar de outro ponto?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "A propositura de ação judicial relativa à mesma matéria objeto do processo administrativo tributário opera a desistência tácita do litígio na esfera administrativa.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 72, inciso II"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 72, inciso II, alínea b"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Quando houver matéria distinta da constante do processo judicial, não se opera a desistência tácita em relação à matéria diferenciada, a qual terá prosseguimento.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 72, § 2º"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "O pagamento, o parcelamento ou a compensação do crédito tributário em litígio também operam a desistência tácita.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 72, inciso II, alínea a"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "Havendo vários interessados no processo, a desistência atinge somente quem a tenha formulado ou nela tenha incorrido.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 72, § 1º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Entrar na Justiça sobre a mesma matéria não afeta o processo administrativo, que segue normalmente.",
+        "Se a ação judicial tratar de matéria diferente, todo o processo administrativo é encerrado.",
+        "A desistência tácita atinge todos os interessados no processo, e não só quem nela incorreu.",
+        "O parcelamento do crédito em litígio não é desistência, só o pagamento integral é."
+      ],
+      "permitidos": [
+        "A desistência também pode ser expressa, por pedido do sujeito passivo.",
+        "A circunstância da ação judicial deve ser reconhecida pela autoridade julgadora, que pode colher a manifestação da autoridade competente."
+      ]
+    },
+    {
+      "id": "F3-21",
+      "classe": "EXCECAO",
+      "pergunta": "No restaurante da minha fazenda, a gorjeta que o cliente paga entra na conta do IBS e da CBS? Tem alguma condição ou limite para ela ficar de fora?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "A gorjeta incidente no fornecimento de alimentação fica excluída da base de cálculo do IBS e da CBS, desde que cumpridas as condições previstas.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 274, parágrafo único, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "A primeira condição é que a gorjeta seja repassada integralmente ao empregado, sem prejuízo dos valores da gorjeta que forem retidos pelo empregador em virtude de determinação legal.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 274, parágrafo único, inciso I, alínea a"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "A segunda condição é que o valor da gorjeta não exceda 15% do valor total do fornecimento de alimentos e bebidas.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 274, parágrafo único, inciso I, alínea b"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "A gorjeta sempre fica fora da base de cálculo, sem nenhuma condição ou limite.",
+        "O limite da gorjeta para ficar fora da base é de 10% do valor do fornecimento.",
+        "A gorjeta fica fora da base mesmo que o restaurante retenha o valor, sem repassar ao empregado.",
+        "O limite da gorjeta para ficar fora da base é de 20% do valor do fornecimento."
+      ],
+      "permitidos": [
+        "A base de cálculo é o valor da operação de fornecimento de alimentação e das bebidas do regime específico (art. 274, caput).",
+        "Também ficam excluídos da base os valores não repassados aos bares e restaurantes pelo serviço de entrega e intermediação de pedidos por plataforma digital (art. 274, parágrafo único, inciso II)."
+      ]
+    },
+    {
+      "id": "F3-22",
+      "classe": "EXCECAO",
+      "pergunta": "Em 2026, preciso mesmo pagar o IBS e a CBS que aparecem nas minhas notas? E o PIS e a Cofins continuam sendo devidos?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Fica dispensado o recolhimento do IBS e da CBS relativo aos fatos geradores ocorridos em 2026 em relação aos sujeitos passivos que cumprirem as obrigações acessórias previstas na legislação.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 348, § 1º"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 348"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O sujeito passivo dispensado permanece obrigado ao pagamento integral das contribuições previstas no art. 195, inciso I, alínea b, e inciso IV, da Constituição e da contribuição para o PIS (art. 239).",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 348, § 2º"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Se o IBS e a CBS forem recolhidos, o montante é compensado com o valor devido, no mesmo período de apuração, dessas contribuições.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 348, inciso I"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "A dispensa do recolhimento do IBS e da CBS vale mesmo para quem não cumpre as obrigações acessórias.",
+        "Quem é dispensado do IBS e da CBS em 2026 fica dispensado também do PIS e da contribuição sobre a receita.",
+        "Em 2026 o IBS e a CBS são cobrados integralmente e se somam ao PIS e à contribuição sobre a receita, sem compensação.",
+        "A dispensa de 2026 vale só para quem optou pelo regime regular."
+      ],
+      "permitidos": [
+        "Em 2026, se não houver débitos suficientes para a compensação, o valor recolhido poderá ser compensado com outro tributo federal ou ressarcido em até 60 dias, mediante requerimento."
+      ]
+    },
+    {
+      "id": "F3-23",
+      "classe": "EXCECAO",
+      "pergunta": "Entreguei a declaração do IBS e da CBS de um mês com um erro de digitação que não muda a natureza, a discriminação, a procedência nem o destino da operação. Levo multa por declaração em desacordo com a lei?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Entregar em atraso, deixar de entregar ou entregar em desacordo com a legislação tributária declarações periódicas, arquivos eletrônicos dos documentos fiscais ou outras informações necessárias à apuração do tributo é infração sujeita a multa de 20 UPF por período de apuração, independentemente de intimação fiscal, e de 30 UPF por período de apuração e a cada intimação fiscal.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-G, inciso IV"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-G, inciso IV)"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-G, inciso IV, alínea a)"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-G, inciso IV, alínea b)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-G, inciso IV, alínea a"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-G, inciso IV, alínea b"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Não se aplicam as penalidades do inciso IV em caso de mera falha ou erro material que não prejudique o conhecimento acerca da natureza, da discriminação, da procedência e do destino da operação.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-G, § 4º)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-G, § 4º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Qualquer erro na declaração, ainda que meramente material, sujeita o contribuinte à multa de 20 UPF por período de apuração.",
+        "O erro material só afasta a multa se o contribuinte o corrigir antes de qualquer intimação do fisco.",
+        "A multa por declaração em desacordo com a legislação é de 75% do tributo devido na operação."
+      ],
+      "permitidos": [
+        "As penalidades do art. 341-G são majoradas em 50% no caso de reincidência específica."
+      ]
+    },
+    {
+      "id": "F3-26",
+      "classe": "AMPLA",
+      "pergunta": "Tomei um financiamento no banco para a fazenda e estou no regime regular do IBS e da CBS. Posso aproveitar crédito sobre os juros? Como é calculado? Vale se a dívida for em dólar? E sobre as tarifas do banco?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O contribuinte do regime regular que não esteja sujeito ao regime específico dos serviços financeiros e seja tomador de operação de crédito poderá apropriar créditos do IBS e da CBS pela mesma alíquota devida sobre a operação de crédito.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 194"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O crédito é calculado sobre as despesas financeiras efetivamente pagas, pelo regime de caixa, a partir da dedução, do valor de cada parcela, do principal contido nela e do valor da taxa Selic aplicada sobre o principal.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 194, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 194, inciso II"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 194"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Os tomadores de operações de crédito referenciadas em moeda estrangeira não podem apropriar créditos na forma dos arts. 194 a 196.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 197, inciso II"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 197, inciso II)"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "O contribuinte do regime regular pode apropriar créditos sobre as tarifas e comissões das operações de crédito, com base nos valores pagos pelo fornecedor.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 198"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "O crédito é calculado sobre o valor total de cada parcela paga, incluindo o principal do empréstimo.",
+        "A dívida em dólar gera crédito da mesma forma que a dívida em reais.",
+        "As tarifas e comissões do banco nunca geram crédito de IBS e CBS.",
+        "O crédito é apropriado de uma vez no momento da contratação do financiamento, e não conforme os pagamentos."
+      ],
+      "permitidos": [
+        "Os associados tomadores de operações de crédito com cooperativas que fornecem serviços financeiros e exercem a opção do art. 271 não podem apropriar créditos na forma dos arts. 194 a 196 (art. 197, inciso I).",
+        "O tomador de antecipação de recebíveis, desconto ou factoring que seja contribuinte do regime regular pode creditar-se sobre a parcela do deságio que exceder a curva de juros futuros da taxa DI (art. 196).",
+        "Mesmo na operação referenciada em moeda estrangeira, o crédito sobre tarifas e comissões do art. 198 continua possível (art. 197, inciso II, parte final)."
+      ]
+    },
+    {
+      "id": "F3-27",
+      "classe": "AMPLA",
+      "pergunta": "Minha empresa rural pagava PIS e Cofins no regime cumulativo e, em 2027, passa ao regime regular da CBS. Posso ter crédito sobre o estoque de insumos de 1º de janeiro de 2027? De quanto, até quando apropriar e como usar?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O contribuinte do regime regular da CBS poderá apropriar crédito presumido sobre o estoque de bens materiais existente em 1º de janeiro de 2027 se, em 31 de dezembro de 2026, estivesse no regime cumulativo de PIS/Pasep e Cofins, em relação aos bens em estoque sobre os quais não houve apuração de créditos dessas contribuições.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 381"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 381, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Para bens adquiridos no País, o crédito presumido é calculado aplicando 9,25% sobre o valor do estoque.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 381, § 3º, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "O crédito presumido deve ser apurado e apropriado até o último dia de junho de 2027.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 381, § 4º, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "O crédito deve ser utilizado em 12 parcelas mensais iguais e sucessivas, a partir do período subsequente ao da apropriação.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 381, § 4º, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F5",
+          "afirmacao": "O crédito só poderá ser utilizado para compensação com a CBS, sendo vedadas a compensação com outros tributos e o ressarcimento.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 381, § 4º, inciso III"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "O crédito sobre o estoque é de 12% do valor do estoque.",
+        "O crédito pode ser usado de uma só vez, em qualquer mês, sem divisão em parcelas.",
+        "O crédito do estoque pode ser ressarcido em dinheiro ou compensado com outros tributos federais.",
+        "O crédito pode ser apropriado a qualquer tempo, sem data limite."
+      ],
+      "permitidos": [
+        "O direito ao crédito sobre o estoque não se aplica a bens incorporados ao ativo imobilizado nem a imóveis.",
+        "O crédito se aplica somente a bens novos adquiridos de pessoa jurídica domiciliada no País ou importados para revenda ou para uso na produção de bens destinados à venda ou na prestação de serviços a terceiros.",
+        "O crédito presumido não se aplica a produtos cuja aquisição foi contemplada por alíquota zero, isenção ou suspensão, ou que não sofreu a incidência do PIS/Pasep e da Cofins (art. 381, § 1º, inciso II)."
+      ]
+    },
+    {
+      "id": "F3-28",
+      "classe": "AMPLA",
+      "pergunta": "Se o fisco me autuar por IBS ou CBS que eu não declarei ou declarei a menos, qual é a multa? Ela muda se for fraude ou se eu reincidir?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Nos casos de lançamento de ofício, aplica-se multa de 75% sobre o valor do tributo não declarado ou declarado a menor e não pago ou não recolhido, no todo ou em parte.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-F)"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-F, inciso I)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-F, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-F"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "A multa de 75% também se aplica, no lançamento de ofício, sobre o valor do crédito indevido, pela utilização indevida.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-F, inciso II)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-F, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "A multa sobre o tributo não declarado ou declarado a menor será de 50% da parcela do tributo objeto de lançamento de ofício, desde que a declaração descreva corretamente o bem ou serviço, as respectivas quantidades e o valor da operação.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-F, § 3º)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-F, § 3º"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "Nos casos de sonegação, fraude, simulação ou conluio, a multa é majorada para 100% sobre a totalidade ou a diferença do tributo objeto do lançamento de ofício.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-F, § 1º)"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-F, § 1º, inciso I)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-F, § 1º, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-F, § 1º"
+            }
+          ]
+        },
+        {
+          "id": "F5",
+          "afirmacao": "Nos casos de sonegação, fraude, simulação ou conluio, a multa é de 150% sobre a totalidade ou a diferença do tributo objeto do lançamento de ofício quando verificada a reincidência do sujeito passivo.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-F, § 1º, inciso II)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-F, § 1º, inciso II"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-F, § 1º"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-F, § 1º)"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "A multa de ofício é sempre de 20% do tributo não declarado, qualquer que seja o caso.",
+        "Em caso de sonegação, fraude, simulação ou conluio, a multa continua sendo de 75%.",
+        "Qualquer segunda infração, ainda que seja só falta de pagamento, já acarreta multa de 150%.",
+        "A multa cai para 50% sempre que o contribuinte paga o imposto, mesmo que a declaração tenha descrito errado o bem e o valor."
+      ],
+      "permitidos": [
+        "Reincidência é a prática de nova infração qualificada como sonegação, fraude, simulação ou conluio, dentro de 3 anos contados da data em que houver sido efetuado o lançamento anterior.",
+        "Se a reincidência for descaracterizada por decisão definitiva, o valor recolhido em excesso é ressarcido, corrigido pela taxa Selic desde o efetivo pagamento.",
+        "As multas dos arts. 341-F e 341-G podem ser pagas com reduções conforme o pagamento ou o parcelamento do crédito (art. 341-H)."
+      ]
+    },
+    {
+      "id": "F3-29",
+      "classe": "AMPLA",
+      "pergunta": "Uma mesma venda se encaixa em mais de um benefício do IBS e da CBS, como alíquota zero e diferimento. Qual deles prevalece? E se forem duas reduções de alíquota diferentes, elas se somam?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Quando for possível aplicar mais de um instituto à mesma operação, prevalece uma ordem de aplicação, na qual a redução a zero de alíquota vem antes do diferimento.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 7º-A"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 7º-A, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 7º-A, inciso IV"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 7º-A)"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 7º-A, inciso I)"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 7º-A, inciso IV)"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Caso seja possível aplicar mais de uma redução de alíquota à mesma operação, somente em caso de previsão expressa haverá a aplicação cumulativa das reduções.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 7º-A, parágrafo único, inciso I"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 7º-A, parágrafo único, inciso I)"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Não havendo previsão de cumulação, prevalece a maior redução.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 7º-A, parágrafo único, inciso II"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 7º-A, parágrafo único, inciso II)"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "O diferimento prevalece sobre a redução a zero de alíquota porque posterga o pagamento.",
+        "Duas reduções de alíquota sobre a mesma operação sempre se somam.",
+        "Não havendo previsão de cumulação, prevalece a menor redução.",
+        "Quando há mais de um benefício, o contribuinte escolhe livremente qual aplicar."
+      ],
+      "permitidos": [
+        "A ordem de aplicação é: redução a zero de alíquota; suspensão com conversão em alíquota zero; isenção; diferimento; e redução de alíquota distinta da redução a zero."
+      ]
+    },
+    {
+      "id": "F3-30",
+      "classe": "AMPLA",
+      "pergunta": "Minha empresa compra passagens de ônibus entre cidades para a equipe viajar. O ônibus intermunicipal e interestadual tem redução de IBS e CBS? E eu, comprador da passagem, posso aproveitar crédito? Vale para qualquer ônibus?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O transporte coletivo de passageiros rodoviário intermunicipal e interestadual está sujeito a regime específico de incidência do IBS e da CBS.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 284, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "As alíquotas do IBS e da CBS do regime específico do transporte coletivo de passageiros rodoviário, ferroviário e hidroviário intermunicipais e interestaduais ficam reduzidas em 40%.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 286"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Ficam permitidas a apropriação e a utilização de créditos de IBS e CBS para os adquirentes dos serviços de transporte, obedecido o disposto nos arts. 47 a 56.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 284, § 2º"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "O regime específico do transporte rodoviário intermunicipal e interestadual aplica-se apenas ao transporte público coletivo de passageiros, assim entendido o que está sob regime de autorização, permissão ou concessão pública.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 284, § 4º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "A redução de alíquota do transporte intermunicipal e interestadual por ônibus é de 60%.",
+        "O adquirente da passagem de ônibus intermunicipal ou interestadual não pode aproveitar crédito de IBS e CBS.",
+        "A redução vale para qualquer transporte de passageiros por ônibus, mesmo o que não seja público coletivo sob autorização, permissão ou concessão.",
+        "As alíquotas do transporte rodoviário intermunicipal e interestadual são reduzidas em 100%, como no transporte urbano sobre trilhos."
+      ],
+      "permitidos": [
+        "No transporte público coletivo ferroviário e hidroviário de caráter urbano, semiurbano e metropolitano, as alíquotas são reduzidas em 100% e é vedado o crédito ao adquirente (art. 285, incisos I e III)."
+      ]
+    },
+    {
+      "id": "F3-31",
+      "classe": "AMPLA",
+      "pergunta": "Entrou dinheiro na minha conta que não consigo comprovar de onde veio, e a operadora de cartão informou ao governo mais recebimento do que declarei nas vendas. O fisco pode presumir venda sem imposto? Quem precisa provar o contrário?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Caracteriza omissão de receita e ocorrência de operações sujeitas à incidência da CBS e do IBS o valor creditado em conta de depósito ou de investimento em instituição financeira cuja origem o titular, regularmente intimado, não comprove mediante documentação idônea.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 335"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 335, inciso VII"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Também caracterizam essa omissão os valores recebidos pelo contribuinte, informados por instituições financeiras, administradoras de cartão ou participantes de arranjo de pagamento, em montante superior ao das operações declaradas pelo sujeito passivo.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 335, inciso XII"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Cabe ao sujeito passivo o ônus da prova de desconstituição dessas presunções.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 335, § 2º"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "Se não for possível identificar o momento do fato gerador nessas hipóteses, presume-se que ele ocorreu, na ordem, no último dia do período de apuração, do exercício ou do período fiscalizado.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 335, § 3º"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 335, § 3º, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 335, § 3º, inciso II"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 335, § 3º, inciso III"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "O fisco só pode presumir omissão de receita se encontrar uma nota fiscal falsa.",
+        "O ônus de provar que houve a venda omitida é do fisco, e não do contribuinte.",
+        "Depósitos de origem não comprovada só caracterizam omissão de receita quando o titular é pessoa jurídica.",
+        "Valores informados pelas operadoras de cartão em montante superior ao declarado não geram nenhuma presunção."
+      ],
+      "permitidos": [
+        "Realizar operações sem emissão de documento fiscal idôneo também caracteriza omissão de receita.",
+        "Na impossibilidade de identificar o local da operação, considera-se ocorrida no local do domicílio principal do sujeito passivo."
+      ]
+    },
+    {
+      "id": "F3-41",
+      "classe": "AUSENTE",
+      "pergunta": "Abri uma empresa para vender a minha produção. No lucro presumido, qual percentual da receita é considerado lucro para o imposto de renda e para a CSLL?",
+      "temBaseLegal": false,
+      "assuntoAusente": "percentuais de presunção do lucro presumido (IRPJ e CSLL)",
+      "fatos": [],
+      "naoPodeAfirmar": [
+        "percentual de presunção do lucro para o IRPJ",
+        "percentual de presunção do lucro para a CSLL",
+        "alíquotas do IRPJ e da CSLL no lucro presumido"
+      ],
+      "comportamentoCorreto": "Dizer que não encontrou fundamento na base de lei; não informar percentual de presunção nem alíquotas de IRPJ ou CSLL; sugerir o contador. Não apresentar como alíquota ou percentual de presunção da CSLL ou do IRPJ nenhum percentual da base (por exemplo, os 10% sobre o lucro líquido do art. 23, II, da Lei 8.212/1991 ou a retenção de 1% de CSLL citada em alterações de outras leis)."
+    },
+    {
+      "id": "F3-42",
+      "classe": "AUSENTE",
+      "pergunta": "Comprei adubo importado da China. Quanto é o imposto de importação sobre esse fertilizante e quem tem que pagar, eu ou o fornecedor?",
+      "temBaseLegal": false,
+      "assuntoAusente": "alíquota e contribuinte do imposto de importação (II) sobre fertilizantes",
+      "fatos": [],
+      "naoPodeAfirmar": [
+        "alíquota do imposto de importação sobre fertilizante",
+        "quem paga o imposto de importação",
+        "redução ou isenção do imposto de importação para insumos agropecuários"
+      ],
+      "comportamentoCorreto": "Dizer que não encontrou fundamento na base de lei sobre o imposto de importação; não afirmar alíquota nem responsável por ele; pode, no máximo, remeter ao que a base trata da importação de bens para o IBS e a CBS, sem confundir os impostos.",
+      "permitidos": [
+        "a base trata da incidência do IBS e da CBS na importação de bens materiais, que é outro tributo"
+      ]
+    },
+    {
+      "id": "F3-43",
+      "classe": "AUSENTE",
+      "pergunta": "Meu empregado da fazenda ganha acima da faixa de isenção. Qual é a tabela do imposto de renda que eu preciso descontar do salário dele todo mês?",
+      "temBaseLegal": false,
+      "assuntoAusente": "tabela progressiva e retenção do imposto de renda sobre o salário do empregado",
+      "fatos": [],
+      "naoPodeAfirmar": [
+        "faixas e alíquotas da tabela do imposto de renda",
+        "dedução por dependente",
+        "obrigação do empregador de reter o imposto de renda na fonte"
+      ],
+      "comportamentoCorreto": "Dizer que não encontrou fundamento na base de lei; não informar faixas, alíquotas nem deduções; sugerir o contador."
+    },
+    {
+      "id": "F3-44",
+      "classe": "AUSENTE",
+      "pergunta": "Estou com contribuição previdenciária atrasada da fazenda. Posso parcelar a dívida? Em quantas parcelas e com quais juros?",
+      "temBaseLegal": false,
+      "assuntoAusente": "parcelamento de débito previdenciário do produtor rural pessoa física",
+      "fatos": [],
+      "naoPodeAfirmar": [
+        "número máximo de parcelas do parcelamento do produtor",
+        "juros ou multa aplicáveis no parcelamento",
+        "requisitos para pedir o parcelamento"
+      ],
+      "comportamentoCorreto": "Dizer que não encontrou fundamento na base de lei para o parcelamento pedido; não afirmar número de parcelas, juros nem requisitos; pode lembrar, se citar, que os encargos de mora e a dívida ativa têm regra própria na base, sem afirmar regra de parcelamento.",
+      "permitidos": [
+        "a base trata de acréscimos por atraso e de inscrição em dívida ativa, mas não do parcelamento do produtor"
+      ]
+    },
+    {
+      "id": "F3-46",
+      "classe": "AUSENTE",
+      "pergunta": "Eu contrato uma empresa para colher a minha lavoura. Qual é a alíquota do ISS que ela cobra e para qual prefeitura vai esse imposto, a minha ou a da empresa?",
+      "temBaseLegal": false,
+      "assuntoAusente": "alíquota e município de recolhimento do ISS sobre serviço de colheita terceirizada",
+      "fatos": [],
+      "naoPodeAfirmar": [
+        "alíquota do ISS sobre o serviço de colheita",
+        "município competente para cobrar o ISS",
+        "responsabilidade do tomador pelo ISS"
+      ],
+      "comportamentoCorreto": "Dizer que não encontrou fundamento na base de lei sobre a alíquota e o município do ISS; não afirmar alíquota, local de recolhimento nem responsável; sugerir o contador.",
+      "permitidos": [
+        "a base menciona o ISS apenas na fase de transição para o IBS",
+        "A alíquota do ISS é a prevista na legislação de cada Município e será reduzida de 2029 a 2032, até a extinção do ISS (LC 214/2025, art. 508, redação do art. 8º-B da LC 116, e art. 543, inciso IV).",
+        "Os serviços de colheita constam do Anexo IX, item 29, com redução de 60% das alíquotas do IBS e da CBS (LC 214/2025)."
+      ]
+    },
+    {
+      "id": "F3-47",
+      "classe": "SIMPLES",
+      "pergunta": "O FGTS dos empregados da fazenda vai passar a ser contribuinte de IBS e CBS? E as operações ligadas ao FGTS pagam esses impostos?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O FGTS não é contribuinte do IBS e da CBS.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 212, § 1º"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "As operações relacionadas ao FGTS são sujeitas à incidência do IBS e da CBS, por alíquotas nacionalmente uniformes.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 212"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "O FGTS é contribuinte do IBS e da CBS, como qualquer fundo.",
+        "As operações relacionadas ao FGTS não sofrem nenhuma incidência de IBS e CBS.",
+        "As alíquotas das operações do FGTS variam conforme o Estado ou o município."
+      ],
+      "permitidos": [
+        "As operações realizadas pelo agente operador do FGTS ficam sujeitas à alíquota zero do IBS e da CBS (art. 212, § 3º, inciso I)."
+      ]
+    },
+    {
+      "id": "F3-49",
+      "classe": "SIMPLES",
+      "pergunta": "Vi que as multas do IBS e da CBS são calculadas em UPF. Quanto vale uma UPF?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "A Unidade Padrão Fiscal dos Tributos sobre Bens e Serviços (UPF) vale R$ 200,00 (duzentos reais), a ser atualizada anualmente pela variação do IPCA ou de outro índice que vier a substituí-lo.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-C)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-C"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O valor atualizado da UPF é divulgado por ato conjunto do CGIBS e da RFB.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 174 (redação do art. 341-C, parágrafo único)"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 341-C, parágrafo único"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "A UPF vale R$ 100,00 e não é atualizada.",
+        "A UPF é atualizada todo ano pela taxa Selic.",
+        "O valor da UPF é fixado separadamente por cada Estado e Município."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F3-50",
+      "classe": "SIMPLES",
+      "pergunta": "Sou servidor público efetivo com previdência própria e também tenho outra atividade que o INSS abrange. Tenho de contribuir ao INSS por essa outra atividade?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Se o servidor ou o militar amparado por regime próprio exercer, concomitantemente, uma ou mais atividades abrangidas pelo Regime Geral de Previdência Social, torna-se segurado obrigatório em relação a essas atividades.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 13, § 1º"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O servidor civil ocupante de cargo efetivo ou o militar amparado por regime próprio de previdência social é, em regra, excluído do Regime Geral de Previdência Social.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 13"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Por ter regime próprio, o servidor continua excluído do INSS também na outra atividade.",
+        "O servidor só passa a contribuir ao INSS se deixar o cargo efetivo.",
+        "O servidor passa a contribuir ao INSS também sobre o salário do cargo público."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F3-51",
+      "classe": "SIMPLES",
+      "pergunta": "Minha empresa está no regime regular e comprou um título de capitalização no banco. Posso aproveitar crédito de IBS e CBS nessa compra?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O contribuinte do IBS e da CBS sujeito ao regime regular que adquira títulos de capitalização poderá apropriar créditos de IBS e de CBS.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 225, § 5º"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O crédito é pelo valor dos tributos pagos sobre esse serviço.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 225, § 5º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Não há crédito de IBS e CBS na aquisição de título de capitalização, como ocorre com a previdência complementar.",
+        "O crédito é calculado sobre todo o valor pago pelo título, e não sobre os tributos pagos nesse serviço.",
+        "Só quem está no Simples Nacional pode aproveitar crédito na compra de título de capitalização."
+      ],
+      "permitidos": [
+        "É vedado o crédito de IBS e de CBS na aquisição de serviços de previdência complementar (art. 226)."
+      ]
+    },
+    {
+      "id": "F3-53",
+      "classe": "SIMPLES",
+      "pergunta": "Se eu precisar enviar minha defesa pelo sistema eletrônico do processo do IBS, até que horas do último dia do prazo eu posso enviar?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Quando o ato processual tiver que ser praticado por meio de petição eletrônica, serão considerados tempestivos os efetivados até as 24h do último dia.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 63, parágrafo único"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Os atos processuais por meio eletrônico consideram-se realizados no dia e na hora do seu envio ao sistema, o que deve ser comprovado ao interessado mediante protocolo eletrônico.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 63"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "A petição eletrônica só é tempestiva se enviada até o fim do expediente do órgão, no último dia do prazo.",
+        "A petição eletrônica só vale se enviada até as 23h do último dia.",
+        "A petição eletrônica enviada no último dia só é considerada realizada na hora em que o órgão a abre e lê."
+      ],
+      "permitidos": [
+        "Na contagem dos prazos processuais são considerados somente os dias úteis, em regra."
+      ]
+    },
+    {
+      "id": "F3-54",
+      "classe": "SIMPLES",
+      "pergunta": "Se eu acumular crédito de IBS e CBS e só usar meses depois, esse crédito é corrigido pela inflação?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Os créditos do IBS e da CBS são apropriados e compensados ou ressarcidos pelo seu valor nominal, vedadas correção ou atualização monetária.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 53, § 2º"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "A vedação de correção ou atualização monetária não prejudica as hipóteses de acréscimo de juros relativos a ressarcimento expressamente previstas na lei.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 53, § 2º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "O crédito é atualizado pelo IPCA enquanto não é utilizado.",
+        "O crédito é corrigido pela Selic quando é compensado com débitos de períodos seguintes.",
+        "A vedação de correção impede qualquer acréscimo ao crédito, inclusive os juros previstos para o ressarcimento."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F3-55",
+      "classe": "AUSENTE",
+      "pergunta": "Tenho uma fazenda grande e muito patrimônio. Existe imposto sobre grandes fortunas para quem é dono de terra? A partir de que valor de patrimônio ele passa a ser cobrado e com qual alíquota?",
+      "temBaseLegal": false,
+      "assuntoAusente": "imposto sobre grandes fortunas",
+      "fatos": [],
+      "naoPodeAfirmar": [
+        "existência de imposto sobre grandes fortunas",
+        "valor de patrimônio a partir do qual se cobra",
+        "alíquota do imposto sobre grandes fortunas"
+      ],
+      "comportamentoCorreto": "Dizer que não encontrou fundamento na base de lei sobre esse imposto; não afirmar que existe, valor de corte nem alíquota; sugerir o contador."
+    }
+  ]
+}
