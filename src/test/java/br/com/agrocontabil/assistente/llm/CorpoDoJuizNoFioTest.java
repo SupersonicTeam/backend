@@ -132,7 +132,7 @@ class CorpoDoJuizNoFioTest {
               .isEqualTo(propriedades.tetoSaidaDoJuiz(configuracao))
               .isEqualTo(configuracao
                   == AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA
-                  ? 512 : 128);
+                  ? 1024 : 128);
           assertThat(juiz.toString()).contains(configuracao
               == AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA
               ? "justificativa" : "um veredito por frase");

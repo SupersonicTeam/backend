@@ -211,6 +211,7 @@ class AssistentePropertiesTest {
         p.getFidelidadeLei().getJuiz().getResgate();
     assertThat(resgate.isEnabled()).isFalse();
     assertThat(resgate.isCobertura()).isFalse();
+    assertThat(resgate.isPolaridade()).isFalse();
     resgate.setEnabled(true);
     // O resgate so roda com o juiz, que so roda com a camada 1.
     assertThat(p.resgateDaLeiAtivo()).isFalse();
@@ -237,6 +238,6 @@ class AssistentePropertiesTest {
         .isInstanceOf(IllegalArgumentException.class);
     p.getFidelidadeLei().getJuiz()
         .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA);
-    assertThat(p.tetoSaidaDoJuiz()).isEqualTo(512);
+    assertThat(p.tetoSaidaDoJuiz()).isEqualTo(1024);
   }
 }

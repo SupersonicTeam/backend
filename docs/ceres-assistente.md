@@ -462,8 +462,9 @@ frase, na ordem.
 acima; `justificativa` (configuração (d) da segunda medição) usa os mesmos
 critérios, mas pede, em cada item, uma `justificativa` curta (até 20 palavras) **antes** do `veredito`
 (`PromptsCeres.JUIZ_FIDELIDADE_COM_JUSTIFICATIVA`); a decisão é a mesma. Saída maior, teto próprio
-(`tetos.juiz-com-justificativa`, `AI_TETO_JUIZ_JUSTIFICATIVA`, 512), que substitui o `tetos.juiz` também
-na reserva: 31.744 + 8.192 + 512 × 4 = **41.984** créditos por pergunta com fator 1 (contra 40.448 no
+(`tetos.juiz-com-justificativa`, `AI_TETO_JUIZ_JUSTIFICATIVA`, 1.024: o Haiku escreveu até ~85 tokens
+por frase na bancada, e 512 cortou respostas de 5 e 6 frases), que substitui o `tetos.juiz` também
+na reserva: 31.744 + 8.192 + 1.024 × 4 = **44.032** créditos por pergunta com fator 1 (contra 40.448 no
 `atual`). **O raciocínio do provedor no juiz (as adaptativas, (b) e (c)) não está implementado:** o
 Spring AI 1.1.8 só conhece `thinking` `enabled` (com `budget_tokens`, que o Haiku 5.5 recusa) e
 `disabled`, não tem `output_config.effort`, e as opções por chamada não tiram o `thinking: disabled`
@@ -476,8 +477,9 @@ as outras chamadas saem com `thinking.type = disabled` e sem `output_config`, e 
 
 **Resgate** (`app.assistente.fidelidade-lei.juiz.resgate.enabled`,
 `AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO`, padrão `false`; só tem efeito com o juiz). A frase que a
-camada 1 reprovaria por **número** ou **polaridade** (e, com `resgate.cobertura`,
-`AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA`, por **cobertura**) não reprova na hora: segue no texto, passa
+camada 1 reprovaria por **número** (e, com `resgate.polaridade`, `AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE`,
+por **polaridade**, e com `resgate.cobertura`, `AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA`, por
+**cobertura**, as duas desligadas por padrão) não reprova na hora: segue no texto, passa
 pelas conferências em código seguintes e vai ao juiz **na mesma chamada** do veto, com o dispositivo citado
 inteiro. As outras frases continuam sendo conferidas: uma reprovação estrutural (formato, evidência
 ausente, cópia não literal) depois dela reprova como antes, sem juiz. Só o `SUSTENTA` de **todas** as frases
@@ -485,7 +487,13 @@ aceita a resposta (`fidelidade_lei` = `APROVADA_RESGATE_JUIZ`); veto, falha, cor
 esgotado mantêm o descarte com o **motivo da camada 1** (o primeiro). Frase reprovada sem palavra de
 conteúdo ("Não.") não tem o que o juiz julgar e reprova na hora. Se outra conferência em código (número sem
 fonte, citação, regime específico) descartar antes do juiz, vale o desfecho dela. A cota não muda: a chamada
-é a mesma do veto.
+é a mesma do veto. **Por que a polaridade fica de fora por padrão:** no diagnóstico de 2026-11-13 o juiz
+aprovou uma inversão real que a camada 1 tinha pegado pela polaridade ("se o elemento temporal **já
+tiver** se aperfeiçoado… será devido só o IBS", quando o art. 408, § 4º, II, b diz "caso **não** tenha"):
+3 de 3 vezes na configuração `atual` e 1 de 3 na `justificativa`, pela bancada. As outras 5 respostas
+resgatadas do diagnóstico estavam certas ("somente se aplica aos registrados" virando "não se aplica aos
+não registrados"; condição escrita como "somente se"). Resgatar a polaridade troca falso descarte por
+risco de inversão, o erro mais grave: só com medição.
 
 **Bancada do juiz** (`fidelidade/BancadaJuizFidelidadeManual`, fora do `./mvnw test`, profile `dev`):
 compara as configurações do juiz sobre respostas já prontas, sem a rota. Entrada em JSONL,
@@ -1044,7 +1052,7 @@ perto de ÷ 3, então leia como faixa), não medição pelo tokenizador do Qwen.
 | Classificação | `LlmClassificadorIntencao` | só no desempate das camadas e na `perguntaLei` do MISTO (#265); nunca nos atalhos (#343) | `CLASSIFICACAO` (1.128) | pergunta (até 1.000) | nenhuma | `tetos.classificacao` (256) |
 | Escolha das funções de dados | `RotaDados` | DADOS e a parte de dados do MISTO | `SISTEMA_DADOS` (884) + 13 definições de função (11.870, ordenadas pelo nome) | data de hoje + pergunta (até ~1.030) | as 13 de dados | `tetos.funcoes` (512) |
 | Lei | `RotaLegislacao` | LEGISLACAO e a parte de lei do MISTO, só com trecho recuperado | regras (712; 1.035 na variante só regra geral do MISTO; ~1.170 com a conferência de fidelidade ligada, #269) | data de hoje + trechos (top-k 5 + complementares do MISTO, sem teto de tamanho) + pergunta | nenhuma | `tetos.legislacao` (1.024) |
-| Juiz da fidelidade da lei (#269, camada 2) | `JuizFidelidadeLei` | só com a camada 1 e o juiz ligados, depois que a resposta de lei passa por todas as conferências em código | `JUIZ_FIDELIDADE` ou, na configuração `justificativa`, `JUIZ_FIDELIDADE_COM_JUSTIFICATIVA` (~1.100, todo o sistema) | frases e dispositivos citados, na mensagem do usuário (com o resgate, também as frases a resgatar) | nenhuma | `tetos.juiz` (128) ou `tetos.juiz-com-justificativa` (512) |
+| Juiz da fidelidade da lei (#269, camada 2) | `JuizFidelidadeLei` | só com a camada 1 e o juiz ligados, depois que a resposta de lei passa por todas as conferências em código | `JUIZ_FIDELIDADE` ou, na configuração `justificativa`, `JUIZ_FIDELIDADE_COM_JUSTIFICATIVA` (~1.100, todo o sistema) | frases e dispositivos citados, na mensagem do usuário (com o resgate, também as frases a resgatar) | nenhuma | `tetos.juiz` (128) ou `tetos.juiz-com-justificativa` (1.024) |
 
 Estimativa do maior prompt de cada uma (sem o template do modelo, ~300 caracteres a mais):
 classificação ~2.100 caracteres (~530 a ~710 tokens); dados ~13.800 (~3.450 a ~4.600 tokens);

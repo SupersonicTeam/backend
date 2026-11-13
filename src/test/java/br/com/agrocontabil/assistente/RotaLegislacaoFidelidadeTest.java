@@ -74,11 +74,17 @@ class RotaLegislacaoFidelidadeTest {
 
   private RotaLegislacao rota(boolean ligada, double cobertura, boolean juiz, boolean resgate,
       boolean resgateCobertura) {
+    return rota(ligada, cobertura, juiz, resgate, true, resgateCobertura);
+  }
+
+  private RotaLegislacao rota(boolean ligada, double cobertura, boolean juiz, boolean resgate,
+      boolean resgatePolaridade, boolean resgateCobertura) {
     AssistenteProperties propriedades = new AssistenteProperties();
     propriedades.getFidelidadeLei().setEnabled(ligada);
     propriedades.getFidelidadeLei().setCoberturaMinima(cobertura);
     propriedades.getFidelidadeLei().getJuiz().setEnabled(juiz);
     propriedades.getFidelidadeLei().getJuiz().getResgate().setEnabled(resgate);
+    propriedades.getFidelidadeLei().getJuiz().getResgate().setPolaridade(resgatePolaridade);
     propriedades.getFidelidadeLei().getJuiz().getResgate().setCobertura(resgateCobertura);
     return new RotaLegislacao(modelo, busca, new ValidadorCitacao(), new ValidadorNumeros(),
         new VerificadorAfirmacaoDados(), propriedades,
@@ -596,6 +602,20 @@ class RotaLegislacaoFidelidadeTest {
 
     assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.NUMERO_SEM_FONTE);
     assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    assertThat(chatModel.promptsRecebidos()).hasSize(1);
+    assertThat(contexto.juizLei()).isNull();
+  }
+  @Test
+  @DisplayName("resgate padrão: polaridade fica de fora, reprova na camada 1 sem chamar o juiz")
+  void resgatePadraoSemPolaridade() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    chatModel.responderTexto(NEGA_SEM_A_COPIA);
+
+    ResultadoRota r = rota(true, 0.7, true, true, false, false)
+        .responder("Qual a reducao dos insumos?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
     assertThat(chatModel.promptsRecebidos()).hasSize(1);
     assertThat(contexto.juizLei()).isNull();
   }

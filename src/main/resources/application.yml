@@ -593,7 +593,7 @@ app:
       # Juiz da fidelidade da lei (#269, camada 2): um veredito por frase; so com o juiz ativo.
       juiz: ${AI_TETO_JUIZ:128}
       # O juiz na configuracao justificativa: uma justificativa curta antes de cada veredito.
-      juiz-com-justificativa: ${AI_TETO_JUIZ_JUSTIFICATIVA:512}
+      juiz-com-justificativa: ${AI_TETO_JUIZ_JUSTIFICATIVA:1024}
       # A janela do Ollama (mesma propriedade do num-ctx), so para validar os tetos.
       contexto: ${spring.ai.ollama.chat.options.num-ctx:8192}
     # Modo fallback (issue #146): com o modelo fora, trechos de lei por busca textual (tsvector) e
@@ -632,11 +632,13 @@ app:
         # tetos.juiz) ou justificativa (uma justificativa curta antes de cada veredito, teto
         # tetos.juiz-com-justificativa).
         configuracao: ${AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO:atual}
-        # Resgate: a frase reprovada em codigo por numero ou polaridade (e, com cobertura, por
-        # cobertura) vai ao juiz na mesma chamada; so o SUSTENTA de todas as frases aceita. Sem
-        # efeito sem o juiz.
+        # Resgate: a frase reprovada em codigo por numero (e, com polaridade e cobertura, por
+        # polaridade e por cobertura) vai ao juiz na mesma chamada; so o SUSTENTA de todas as
+        # frases aceita. Sem efeito sem o juiz. Polaridade desligada: o juiz aprovou uma inversao
+        # real no diagnostico de 2026-11-13.
         resgate:
           enabled: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO:false}
+          polaridade: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE:false}
           cobertura: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA:false}
     # Isolamento de recursos (issue #157). Tempo total de uma pergunta (tambem o timeout do SSE) e
     # de cada consulta de funcao ao banco (vira timeout de transacao, resolucao de segundos).

@@ -202,7 +202,7 @@ class JuizFidelidadeLeiTest {
     assertThat(prompt.getSystemMessage().getText())
         .isEqualTo(PromptsCeres.JUIZ_FIDELIDADE_COM_JUSTIFICATIVA)
         .contains("justificativa");
-    assertThat(prompt.getOptions().getMaxTokens()).isEqualTo(512);
+    assertThat(prompt.getOptions().getMaxTokens()).isEqualTo(1024);
     // Os criterios sao os mesmos nos dois modos; so o formato da resposta muda.
     assertThat(PromptsCeres.JUIZ_FIDELIDADE_COM_JUSTIFICATIVA).startsWith(PromptsCeres
         .JUIZ_FIDELIDADE.substring(0, PromptsCeres.JUIZ_FIDELIDADE.indexOf("Responda somente")));

@@ -10,6 +10,7 @@ import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,9 +59,9 @@ import org.springframework.stereotype.Component;
  * frase sem {@code SUSTENTA}, ou a falha do juiz, reprova a resposta pelo mesmo caminho da camada 1.
  *
  * <p><strong>Resgate (#269, {@code app.assistente.fidelidade-lei.juiz.resgate.enabled}, desligado
- * por padrão, só com o juiz):</strong> a frase que a camada 1 reprovaria por número ou polaridade
- * (e, com {@code resgate.cobertura}, por cobertura) segue para as conferências seguintes e para o
- * juiz, na mesma chamada do veto. Só o {@code SUSTENTA} de todas as frases a aceita
+ * por padrão, só com o juiz):</strong> a frase que a camada 1 reprovaria por número (e, com
+ * {@code resgate.polaridade} e {@code resgate.cobertura}, por polaridade e por cobertura) segue
+ * para as conferências seguintes e para o juiz, na mesma chamada do veto. Só o {@code SUSTENTA} de todas as frases a aceita
  * ({@code APROVADA_RESGATE_JUIZ}); veto, falha ou corte do juiz mantêm o descarte com o motivo da
  * camada 1. Formato, evidência ausente e cópia não literal não têm resgate.
  */
@@ -162,10 +163,14 @@ public class RotaLegislacao {
 
   private static Set<DesfechoFidelidadeLei> resgataveis(
       AssistenteProperties.FidelidadeLei.Juiz.Resgate resgate) {
-    return resgate.isCobertura()
-        ? Set.of(DesfechoFidelidadeLei.REPROVADA_NUMERO, DesfechoFidelidadeLei.REPROVADA_POLARIDADE,
-            DesfechoFidelidadeLei.REPROVADA_COBERTURA)
-        : Set.of(DesfechoFidelidadeLei.REPROVADA_NUMERO, DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+    Set<DesfechoFidelidadeLei> motivos = EnumSet.of(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    if (resgate.isPolaridade()) {
+      motivos.add(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
+    }
+    if (resgate.isCobertura()) {
+      motivos.add(DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+    }
+    return Set.copyOf(motivos);
   }
 
   /**

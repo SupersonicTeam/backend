@@ -345,10 +345,10 @@ br.com.agrocontabil
 │                  #   teto tetos.juiz (128) como parcela da reserva da pergunta (AssistenteProperties.tetoDaPergunta);
 │                  #   tempo e tokens em latencia_juiz_ms/tokens_*_juiz, fora dos da pergunta; configuração
 │                  #   do juiz, pelo nome (AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO: atual, o padrão, ou justificativa, justificativa curta
-│                  #   antes de cada veredito, teto tetos.juiz-com-justificativa 512); resgate
+│                  #   antes de cada veredito, teto tetos.juiz-com-justificativa 1024); resgate
 │                  #   (app.assistente.fidelidade-lei.juiz.resgate.enabled / AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO,
-│                  #   DESLIGADO, só com o juiz): a frase reprovada em código por número ou polaridade (e, com
-│                  #   resgate.cobertura, por cobertura) vai ao juiz na mesma chamada; só o SUSTENTA de todas aceita
+│                  #   DESLIGADO, só com o juiz): a frase reprovada em código por número (e, com resgate.polaridade
+│                  #   e resgate.cobertura, desligadas, por polaridade e cobertura) vai ao juiz na mesma chamada; só o SUSTENTA de todas aceita
 │                  #   (APROVADA_RESGATE_JUIZ), senão fica o motivo da camada 1. Raciocínio do provedor no juiz:
 │                  #   não implementado (o Spring AI 1.1.8 não o liga por chamada). Bancada manual do juiz:
 │                  #   fidelidade/BancadaJuizFidelidadeManual (src/test, fora do ./mvnw test);

@@ -720,11 +720,12 @@ public class AssistenteProperties implements InitializingBean {
     private int juiz = 128;
 
     /**
-     * Juiz na configuração {@code justificativa} (#269, (d)): uma justificativa de até ~20
-     * palavras antes de cada veredito, cerca de 40 tokens por frase; 512 cabe ~10 frases. Substitui
-     * o {@link #juiz} nessa configuração, também na reserva da pergunta.
+     * Juiz na configuração {@code justificativa} (#269, (d)): uma justificativa curta antes de cada
+     * veredito. O prompt pede até 20 palavras, mas o Haiku escreveu até ~85 tokens por frase na
+     * bancada de 2026-11-13: 512 cortou respostas de 5 e 6 frases, 1024 cabe ~12. Substitui o
+     * {@link #juiz} nessa configuração, também na reserva da pergunta; o gasto real é o da saída.
      */
-    private int juizComJustificativa = 512;
+    private int juizComJustificativa = 1024;
 
     /**
      * Janela de contexto do modelo (o {@code num-ctx} do Ollama, lido da mesma propriedade). Só
@@ -1020,8 +1021,8 @@ public class AssistenteProperties implements InitializingBean {
       }
 
       /**
-       * Resgate (#269): a frase que a camada 1 reprovaria por número ou polaridade (e, com
-       * {@code cobertura}, por cobertura) vai ao juiz na mesma chamada do veto, com o dispositivo
+       * Resgate (#269): a frase que a camada 1 reprovaria por número (e, com {@code polaridade} e
+       * {@code cobertura}, por polaridade e por cobertura) vai ao juiz na mesma chamada do veto, com o dispositivo
        * citado inteiro; só o {@code SUSTENTA} de todas as frases aceita a resposta. Formato,
        * evidência ausente e cópia não literal não têm resgate. Desligado por padrão, e sem efeito
        * sem o juiz.
@@ -1032,10 +1033,27 @@ public class AssistenteProperties implements InitializingBean {
         private boolean enabled;
 
         /**
+         * Inclui a reprovação por polaridade no resgate
+         * ({@code AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE}). Desligado por padrão: no diagnóstico
+         * de 2026-11-13 o juiz aprovou uma inversão real que a camada 1 pegou pela polaridade ("já
+         * tiver se aperfeiçoado" onde a lei diz "não tenha"), 3 de 3 na configuração {@code atual}
+         * e 1 de 3 na {@code justificativa}.
+         */
+        private boolean polaridade;
+
+        /**
          * Inclui a reprovação por cobertura no resgate
-         * ({@code AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA}). Desligado: só número e polaridade.
+         * ({@code AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA}). Desligado por padrão.
          */
         private boolean cobertura;
+
+        public boolean isPolaridade() {
+          return polaridade;
+        }
+
+        public void setPolaridade(boolean polaridade) {
+          this.polaridade = polaridade;
+        }
 
         public boolean isEnabled() {
           return enabled;
