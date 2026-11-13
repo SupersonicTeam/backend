@@ -144,7 +144,7 @@ O que o executor faz, e o que ele exige da outra sessão:
   jar, ambiente dos braços sem segredo, contagens), `logs/` (com segredos mascarados). Nada de URL,
   conta ou senha.
 
-### Três braços (desenho previsto para a correção da #269)
+### Três braços (desenho das duas primeiras medições; o da terceira está na seção acima)
 
 ```bash
 python3 -I docs/avaliacao/fidelidade-lei/executar_fidelidade.py --jar <jar> --commit <sha>     --braco "camada1:NOME_DA_FLAG=true"     --braco "camada1+juiz:NOME_DA_FLAG=true,NOME_DA_FLAG_DO_JUIZ=true"
