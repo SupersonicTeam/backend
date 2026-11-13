@@ -91,6 +91,45 @@ def nome_celula(arquitetura: str, modelo: str) -> str:
     return f"{arquitetura}--" + re.sub(r"[^a-z0-9.]+", "-", modelo.lower()).strip("-")
 
 
+def modelo_da_api(api: dict) -> str:
+    """O modelo que a API recebe. Uma variante da celula (``variante``, ex.: a fidelidade da lei)
+    tem um nome proprio em ``modelo`` (a chave da celula, do relatorio e da pasta) e o modelo real
+    em ``modeloApi``; sem ele, o nome da celula e o modelo."""
+    return api.get("modeloApi") or api["modelo"]
+
+
+_NOME_DE_VARIAVEL = re.compile(r"^AI_[A-Z0-9_]+$")
+
+
+def validar_ambiente_da_celula(api: dict) -> dict[str, str]:
+    """``ambiente`` da celula por API: variaveis ``AI_*`` proprias da variante (ex.: as chaves da
+    fidelidade da lei), aplicadas **depois** da configuracao publicada do commit e **antes** das que
+    o executor fixa. Nao pode tocar no que define o provedor, o modelo, a chave, o endereco nem o
+    read-timeout: isso e do executor e da matriz, nao de uma variante.
+
+    :raises RuntimeError: nome fora do padrao ``AI_*``, variavel reservada ou valor que nao e texto
+    """
+    ambiente = api.get("ambiente") or {}
+    reservadas = FORA_DA_CONFIGURACAO | {"AI_READ_TIMEOUT"}
+    for nome, valor in ambiente.items():
+        if not _NOME_DE_VARIAVEL.match(nome):
+            raise RuntimeError(f"{api['modelo']}: variavel de ambiente {nome!r} fora do padrao AI_*")
+        if nome in reservadas:
+            raise RuntimeError(f"{api['modelo']}: {nome} e do executor (provedor, modelo, chave, "
+                               "endereco ou read-timeout) e nao pode ser mudada por uma variante")
+        if not isinstance(valor, str) or not valor.strip():
+            raise RuntimeError(f"{api['modelo']}: o valor de {nome} tem de ser um texto nao vazio")
+    return dict(ambiente)
+
+
+def variaveis_que_o_commit_nao_conhece(ambiente: dict[str, str], application_yml: str) -> list[str]:
+    """Variaveis do ``ambiente`` da celula que o ``application.yml`` do commit nao le
+    (``${NOME:padrao}`` ou ``${NOME}``). Variavel que o commit nao conhece e ignorada em silencio
+    pelo Spring: a celula mediria outra configuracao e se chamaria pelo nome da pedida."""
+    return [nome for nome in ambiente
+            if not re.search(r"\$\{" + re.escape(nome) + r"[:}]", application_yml)]
+
+
 def bytes_de_docker_stats(texto: str) -> int | None:
     """``"1.234GiB / 15.5GiB"`` -> bytes usados (saida de ``docker stats --format {{.MemUsage}}``)."""
     m = re.match(r"\s*([\d.]+)\s*([KMGT]?i?B)", texto, re.IGNORECASE)
@@ -347,6 +386,14 @@ def avisos_da_amostra(memoria: dict) -> list[str]:
     return avisos
 
 
+#: Aviso gravado na celula com a fidelidade da lei ligada (#269); o relatorio o repete e explica.
+AVISO_FIDELIDADE_LEI = (
+    "fidelidade da rota de lei LIGADA (#269): a resposta de lei que nao passa na conferencia e "
+    "descartada (desfecho FIDELIDADE_REPROVADA, que a regua conta como recusa e texto descartado), "
+    "entao citacao e numero das perguntas de lei tendem a ficar abaixo, e a recusa correta acima "
+    "por descarte, da celula sem fidelidade; a latencia inclui a chamada do juiz. Nao compare "
+    "com as outras celulas: leia so ao lado da do mesmo modelo sem fidelidade")
+
 #: Variaveis do ``.env.example`` que nao sao configuracao da Ceres medida: endereco, chave, modelo
 #: (o da celula) e estrategia de pull (o executor baixa). O resto vale como publicado no commit.
 FORA_DA_CONFIGURACAO = {"AI_API_KEY", "AI_API_BASE_URL", "AI_API_COMPLETIONS_PATH",
@@ -590,6 +637,7 @@ class Executor:
             if api.get("raciocinio") != "disabled":
                 raise RuntimeError(f"{api.get('modelo')}: o raciocinio tem de ficar desligado "
                                    "(raciocinio=disabled na matriz): ele gastaria os tetos por chamada")
+            validar_ambiente_da_celula(api)
         self.url_anthropic()  # endereco invalido para aqui, nao na ultima celula
         if not os.environ.get("ANTHROPIC_API_KEY"):
             raise RuntimeError(
@@ -606,18 +654,41 @@ class Executor:
         """
         vistos = set()
         for _, api in self.cfg.celulas_api():
-            if api["modelo"] in vistos:
+            real = modelo_da_api(api)  # a variante prova o mesmo modelo da celula base: uma prova so
+            if real in vistos:
                 continue
-            vistos.add(api["modelo"])
-            prova = self.provar_pensamento_api(api["modelo"], api)
+            vistos.add(real)
+            prova = self.provar_pensamento_api(real, api)
             if prova.get("erro"):
-                raise RuntimeError(f"a API da Anthropic nao respondeu a prova de {api['modelo']} "
+                raise RuntimeError(f"a API da Anthropic nao respondeu a prova de {real} "
                                    f"({prova['erro']}): confira a chave, o saldo e o acesso ao modelo "
                                    "antes de comecar a rodada")
             if prova.get("raciocinou"):
-                raise RuntimeError(f"{api['modelo']} raciocinou apesar de thinking={api['raciocinio']}: "
+                raise RuntimeError(f"{real} raciocinou apesar de thinking={api['raciocinio']}: "
                                    "a celula seria invalida; nao vale comecar a rodada")
-            log(f"{api['modelo']} (API): pensamento {prova['resumo']}")
+            log(f"{real} (API): pensamento {prova['resumo']}")
+
+    def conferir_ambiente_no_commit(self) -> None:
+        """Variante com ``ambiente`` (ex.: a fidelidade da lei): o ``application.yml`` do commit da
+        arquitetura tem de ler cada variavel. O Spring ignora em silencio a que ele nao conhece, e
+        a celula sairia com o nome da variante medindo a configuracao de antes dela. Conferido
+        **antes** de qualquer trabalho de horas, em toda rodada (banca, ensaio ou teste).
+
+        :raises RuntimeError: o commit nao conhece alguma variavel da celula
+        """
+        for arquitetura, api in self.cfg.celulas_api():
+            ambiente = validar_ambiente_da_celula(api)
+            if not ambiente:
+                continue
+            yml = self.capturar(["git", "show", f"{arquitetura['sha']}:src/main/resources/application.yml"],
+                                self.cfg.repo)
+            faltam = variaveis_que_o_commit_nao_conhece(ambiente, yml)
+            if faltam:
+                raise RuntimeError(
+                    f"a celula {api['modelo']} pede {', '.join(faltam)}, que o application.yml de "
+                    f"{arquitetura['nome']} em {arquitetura['sha'][:7]} nao le: ela mediria outra "
+                    "configuracao que a do nome dela. Use um commit que as tenha (--ref-ceres2 <sha>, "
+                    "valendo para todas as celulas da arquitetura) ou rode sem --com-fidelidade-lei")
 
     def resolver_sha(self, ref: str) -> str:
         return self.capturar(["git", "rev-parse", "--verify", ref + "^{commit}"], self.cfg.repo)
@@ -666,6 +737,10 @@ class Executor:
                if not k.startswith("AI_") and k != "ANTHROPIC_API_KEY"}
         if arquitetura is not None:
             env.update(arquitetura.get("configuracaoPublicada") or {})
+        # Variante da celula por API (ex.: fidelidade da lei): depois da publicada, antes do que o
+        # executor fixa (provedor, modelo, chave e endereco nunca saem do lugar).
+        if api is not None:
+            env.update(validar_ambiente_da_celula(api))
         # Depois da publicada, a unica excecao a ela (``matriz.json``): ver Config.read_timeout_celula.
         validar_read_timeout(self.cfg.read_timeout_celula)
         leitura = self.read_timeout(api)
@@ -688,7 +763,7 @@ class Executor:
             # O embedding segue no Ollama local (bge-m3); so o chat vai pela API.
             env.update({
                 "AI_CHAT_PROVIDER": api["provedor"],
-                "AI_ANTHROPIC_MODEL": modelo,
+                "AI_ANTHROPIC_MODEL": modelo_da_api(api),
                 "AI_ANTHROPIC_THINKING": api["raciocinio"],
                 "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY", ""),
             })
@@ -941,11 +1016,12 @@ class Executor:
             anterior = json.loads(manifesto_arquivo.read_text(encoding="utf-8"))
             # O read-timeout entra na comparacao (sem default): celula medida antes dele existir, ou
             # com outro valor, nao se mistura com as novas.
+            # O ambiente da variante tambem (celula antiga e celula comum nao tem: ``{}``).
             mesma = (anterior.get("sha"), anterior.get("modelo"), anterior.get("repeticoes"),
                      anterior.get("embedding", self.cfg.embedding),
-                     anterior.get("readTimeoutCelula")) == (
+                     anterior.get("readTimeoutCelula"), anterior.get("ambienteCelula") or {}) == (
                 arquitetura["sha"], modelo, self.cfg.repeticoes, self.cfg.embedding,
-                self.read_timeout(api))
+                self.read_timeout(api), (api or {}).get("ambiente") or {})
             decisao = decidir_retomada(anterior, mesma)
             if decisao == "pular":
                 log(f"{nome}: ja medida nesta rodada, pulando")
@@ -967,7 +1043,7 @@ class Executor:
         num_ctx = None if api else self.num_ctx(arquitetura)
 
         def provar() -> dict:
-            return (self.provar_pensamento_api(modelo, api) if api
+            return (self.provar_pensamento_api(modelo_da_api(api), api) if api
                     else self.provar_pensamento(modelo, num_ctx))
 
         pensamento = provar()
@@ -1015,6 +1091,8 @@ class Executor:
             avisos.append("o chat desta célula foi pela API da Anthropic: a latência é de API pela "
                           "rede (com a fila do provedor), não de inferência local; não a compare "
                           "com a das células do qwen3")
+            if api.get("variante") == "fidelidade-lei":
+                avisos.append(AVISO_FIDELIDADE_LEI)
             for achado in ocultar_em_arquivos(destino):
                 aviso = f"a chave da API apareceu em {achado} e foi redigida; confira antes de publicar"
                 avisos.append(aviso)
@@ -1030,6 +1108,9 @@ class Executor:
             "readTimeoutCelula": self.read_timeout(api),
             "readTimeoutEfetivo": env.get("AI_READ_TIMEOUT"),
             "provedor": api["provedor"] if api else "ollama",
+            "modeloApi": modelo_da_api(api) if api else None,
+            "variante": api.get("variante") if api else None,
+            "ambienteCelula": (api.get("ambiente") or {}) if api else {},
             "inferenciaEm": "API da Anthropic (rede)" if api else "local (Ollama)",
             "numCtx": num_ctx,
             "tipo": self.cfg.tipo,
@@ -1096,6 +1177,7 @@ class Executor:
             raise RuntimeError(f"nao misture rodada de {anterior.get('tipo', 'banca')} com rodada de "
                                f"{cfg.tipo}: use uma pasta nova")
         self.fixar_shas(anterior)
+        self.conferir_ambiente_no_commit()
         if anterior:
             self.conferir_retomada(anterior)
 
@@ -1405,6 +1487,8 @@ class Executor:
             por_api[api["modelo"]] = {
                 "modelo": api["modelo"], "provedor": api["provedor"],
                 "raciocinio": api["raciocinio"], "nota": api.get("nota"),
+                "modeloApi": modelo_da_api(api), "variante": api.get("variante"),
+                "ambiente": api.get("ambiente") or {},
                 "arquiteturas": sorted({*(antigo or {}).get("arquiteturas", []), arquitetura["nome"]}),
                 "opcoes": opcoes or (antigo or {}).get("opcoes") or {},
             }
@@ -1491,7 +1575,13 @@ def montar_config(argumentos, repo: Path) -> Config:
     por_api = {m["modelo"]: m for m in matriz.get("modelosApi", [])}
     pedidos = argumentos.modelos.split(",") if argumentos.modelos else None
     modelos = ([m for m in pedidos if m not in por_api] if pedidos else list(matriz["modelos"]))
-    modelos_api = ([por_api[m] for m in pedidos if m in por_api] if pedidos else list(por_api.values()))
+    # Celula ``opcional`` (variante, ex.: a fidelidade da lei): fora do padrao; so entra pelo nome em
+    # ``--modelos`` ou pela opcao da variante. Sem isso a matriz roda exatamente como sempre.
+    modelos_api = ([por_api[m] for m in pedidos if m in por_api] if pedidos
+                   else [m for m in por_api.values() if not m.get("opcional")])
+    if getattr(argumentos, "com_fidelidade_lei", False):
+        modelos_api += [m for m in por_api.values()
+                        if m.get("variante") == "fidelidade-lei" and m not in modelos_api]
     return Config(
         repo=repo,
         matriz=matriz,

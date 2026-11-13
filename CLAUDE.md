@@ -157,7 +157,13 @@ não usa Ollama para o chat, desliga o raciocínio e o prova na API, e lê `ANTH
 ambiente (nunca em arquivo; oculta em log, erro e relatório; o executor recusa a rodada sem ela e
 faz uma prova antes de começar). A latência dela é de API pela rede: sai marcada **(API)** e fora da
 viabilidade dos modelos locais. As perguntas, inclusive as inéditas do cego, saem para a API
-("Célula do modelo por API" no README do benchmark). Desde a #352 as
+("Célula do modelo por API" no README do benchmark). **Célula opcional com a fidelidade da rota
+de lei (#269):** `claude-haiku-5-5+fidelidade-lei` (`modelosApi` com `opcional: true`; só com
+`--com-fidelidade-lei`, nunca no comando de sempre), só na Ceres 2.0, com as cinco variáveis
+`AI_FIDELIDADE_LEI_*` da configuração escolhida; o executor a recusa se o SHA da rodada não as lê no
+`application.yml`; fica fora de média, viabilidade, conclusão e gráficos, com seção própria no relatório
+(o descarte pela fidelidade baixa citação e número e sobe a recusa por descarte; README, "Célula com a
+fidelidade da rota de lei"). Desde a #352 as
 células leem o **conjunto congelado** `docs/avaliacao/benchmark/perguntas-benchmark.json` (100
 perguntas, 12 temas, `capacidade` `comum`/`so_ceres_2`, hash no `.sha256` ao lado — mudou uma
 pergunta, mude a versão e o hash), conferido pelo `PerguntasBenchmarkIntegrationTest` e pelo
