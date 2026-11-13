@@ -206,17 +206,17 @@ public class AssistenteProperties implements InitializingBean {
     return juizDaLeiAtivo() ? teto + cota.tetoDoJuiz(tetoSaidaDoJuiz(), fator) : teto;
   }
 
-  /** Teto de saída do juiz da lei (#269) no modo configurado. */
+  /** Teto de saída do juiz da lei (#269) na configuração dele. */
   public int tetoSaidaDoJuiz() {
-    return tetoSaidaDoJuiz(fidelidadeLei.getJuiz().getModo());
+    return tetoSaidaDoJuiz(fidelidadeLei.getJuiz().getConfiguracao());
   }
 
   /**
-   * Teto de saída do juiz da lei (#269) num modo: {@code tetos.juiz} no {@code VEREDITO},
-   * {@code tetos.juiz-com-justificativa} no {@code JUSTIFICATIVA}.
+   * Teto de saída do juiz da lei (#269) numa configuração: {@code tetos.juiz} na {@code atual},
+   * {@code tetos.juiz-com-justificativa} na {@code justificativa}.
    */
-  public int tetoSaidaDoJuiz(FidelidadeLei.Juiz.Modo modo) {
-    return modo == FidelidadeLei.Juiz.Modo.JUSTIFICATIVA
+  public int tetoSaidaDoJuiz(FidelidadeLei.Juiz.Configuracao configuracao) {
+    return configuracao == FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA
         ? tetos.getJuizComJustificativa()
         : tetos.getJuiz();
   }
@@ -720,9 +720,9 @@ public class AssistenteProperties implements InitializingBean {
     private int juiz = 128;
 
     /**
-     * Juiz no modo {@code JUSTIFICATIVA} (#269, configuração (d)): uma justificativa de até ~20
+     * Juiz na configuração {@code justificativa} (#269, (d)): uma justificativa de até ~20
      * palavras antes de cada veredito, cerca de 40 tokens por frase; 512 cabe ~10 frases. Substitui
-     * o {@link #juiz} nesse modo, também na reserva da pergunta.
+     * o {@link #juiz} nessa configuração, também na reserva da pergunta.
      */
     private int juizComJustificativa = 512;
 
@@ -954,29 +954,53 @@ public class AssistenteProperties implements InitializingBean {
       /** O resgate pelo juiz. */
       private Resgate resgate = new Resgate();
 
-      /** Como o juiz responde ({@code AI_FIDELIDADE_LEI_JUIZ_MODO}); o padrão é o de antes. */
-      private Modo modo = Modo.VEREDITO;
+      /**
+       * Configuração do juiz, um valor só e nomeado ({@code AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO}:
+       * {@code atual}, o padrão, ou {@code justificativa}); a bancada e os braços da medição a
+       * escolhem pelo nome, sem saber como ela é montada por baixo.
+       */
+      private Configuracao configuracao = Configuracao.ATUAL;
 
       /**
-       * Formato da resposta do juiz (#269). O raciocínio do provedor (configurações (b) e (c)) não
-       * está aqui: o Spring AI 1.1.8 não o liga por chamada.
+       * Configurações do juiz (#269), pelo nome. O raciocínio do provedor (as adaptativas) ainda não
+       * existe: o Spring AI 1.1.8 não o liga por chamada, e o caminho está em decisão. Quando
+       * entrar, entra aqui como mais um valor, sem mudar o formato da bancada.
        */
-      public enum Modo {
+      public enum Configuracao {
         /** Só o veredito de cada frase ({@code tetos.juiz}): o juiz da camada 2 original. */
-        VEREDITO,
+        ATUAL,
         /**
          * Uma justificativa curta antes de cada veredito, sem raciocínio do provedor
          * ({@code tetos.juiz-com-justificativa}).
          */
-        JUSTIFICATIVA
+        JUSTIFICATIVA;
+
+        /** O nome usado na propriedade e na bancada: minúsculas, com hífen. */
+        public String nome() {
+          return name().toLowerCase(java.util.Locale.ROOT).replace('_', '-');
+        }
+
+        /**
+         * A configuração de um nome ({@link #nome()}).
+         *
+         * @throws IllegalArgumentException se nenhuma tem esse nome
+         */
+        public static Configuracao deNome(String nome) {
+          for (Configuracao c : values()) {
+            if (c.nome().equals(nome == null ? null : nome.strip())) {
+              return c;
+            }
+          }
+          throw new IllegalArgumentException("configuração do juiz desconhecida: " + nome);
+        }
       }
 
-      public Modo getModo() {
-        return modo;
+      public Configuracao getConfiguracao() {
+        return configuracao;
       }
 
-      public void setModo(Modo modo) {
-        this.modo = modo;
+      public void setConfiguracao(Configuracao configuracao) {
+        this.configuracao = configuracao;
       }
 
       public boolean isEnabled() {

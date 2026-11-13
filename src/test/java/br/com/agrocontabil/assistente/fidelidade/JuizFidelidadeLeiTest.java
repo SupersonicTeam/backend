@@ -154,10 +154,10 @@ class JuizFidelidadeLeiTest {
   @Test
   @DisplayName("julgamento detalhado: o motivo da falha separa formato, contagem, corte e erro")
   void julgamentoDetalhado() {
-    AssistenteProperties.FidelidadeLei.Juiz.Modo veredito =
-        AssistenteProperties.FidelidadeLei.Juiz.Modo.VEREDITO;
+    AssistenteProperties.FidelidadeLei.Juiz.Configuracao atual =
+        AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ATUAL;
     chatModel.responderTexto("{\"vereditos\": [\"SUSTENTA\", \"CONTRADIZ\"]}");
-    JuizFidelidadeLei.Julgamento j = juiz.avaliar(DUAS, contexto, veredito);
+    JuizFidelidadeLei.Julgamento j = juiz.avaliar(DUAS, contexto, atual);
     assertThat(j.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_JUIZ_CONTRADIZ);
     assertThat(j.falha()).isNull();
     assertThat(j.vereditos()).containsExactly(JuizFidelidadeLei.Veredito.SUSTENTA,
@@ -165,28 +165,28 @@ class JuizFidelidadeLeiTest {
     assertThat(j.cru()).contains("CONTRADIZ");
 
     chatModel.responderTexto("sem json");
-    assertThat(juiz.avaliar(DUAS, contexto, veredito).falha())
+    assertThat(juiz.avaliar(DUAS, contexto, atual).falha())
         .isEqualTo(JuizFidelidadeLei.Falha.FORMATO);
     chatModel.responderTexto("{\"vereditos\": [\"SUSTENTA\"]}");
-    assertThat(juiz.avaliar(DUAS, contexto, veredito).falha())
+    assertThat(juiz.avaliar(DUAS, contexto, atual).falha())
         .isEqualTo(JuizFidelidadeLei.Falha.CONTAGEM_DIFERENTE);
     chatModel.responderEmSequencia(new ChatResponse(List.of(new Generation(
         new AssistantMessage("{\"vereditos\": [\"SUSTENTA\", \"SUSTENTA\"]}"),
         ChatGenerationMetadata.builder().finishReason("length").build()))));
-    JuizFidelidadeLei.Julgamento cortada = juiz.avaliar(DUAS, contexto, veredito);
+    JuizFidelidadeLei.Julgamento cortada = juiz.avaliar(DUAS, contexto, atual);
     assertThat(cortada.cortadaPeloTeto()).isTrue();
     assertThat(cortada.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_JUIZ_FALHA);
     chatModel.falharCom(new IllegalStateException("fora do ar"));
-    assertThat(juiz.avaliar(DUAS, contexto, veredito).falha())
+    assertThat(juiz.avaliar(DUAS, contexto, atual).falha())
         .isEqualTo(JuizFidelidadeLei.Falha.ERRO_MODELO);
   }
 
   @Test
-  @DisplayName("modo JUSTIFICATIVA: outra instrução, teto próprio e o veredito lido do objeto")
+  @DisplayName("configuração justificativa: outra instrução, teto próprio e o veredito lido do objeto")
   void modoJustificativa() {
     AssistenteProperties propriedades = new AssistenteProperties();
     propriedades.getFidelidadeLei().getJuiz()
-        .setModo(AssistenteProperties.FidelidadeLei.Juiz.Modo.JUSTIFICATIVA);
+        .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA);
     StaticListableBeanFactory beans = new StaticListableBeanFactory();
     beans.addBean("chatModel", chatModel);
     JuizFidelidadeLei comJustificativa = new JuizFidelidadeLei(

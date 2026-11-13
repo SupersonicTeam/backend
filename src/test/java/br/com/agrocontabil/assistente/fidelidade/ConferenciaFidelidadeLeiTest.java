@@ -616,14 +616,15 @@ class ConferenciaFidelidadeLeiTest {
         .isEqualTo(DesfechoFidelidadeLei.REPROVADA_EVIDENCIA_NAO_LITERAL);
     assertThat(naoLiteral.resgatavel()).isFalse();
 
-    // Uma frase a resgatar antes de uma estrutural: vale a estrutural, sem texto.
+    // Uma frase a resgatar antes de uma estrutural: reprova sem texto, com o primeiro motivo.
     String resposta = "{\"frases\": [{\"frase\": \"Em 2027, a CBS será cobrada com alíquota de "
         + "0,9%.\", \"evidencias\": [{\"trecho\": \"T1\", \"copia\": \"a CBS será cobrada mediante "
         + "aplicação da alíquota de 0,9%\"}]}, {\"frase\": \"A CBS é cobrada.\", \"evidencias\": []}]}";
     ConferenciaFidelidadeLei.Resultado r =
         conferencia.conferir(resposta, List.of(cbs()), COBERTURA, todos);
-    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA);
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
     assertThat(r.resgatavel()).isFalse();
+    assertThat(r.texto()).isNull();
   }
 
   @Test
@@ -635,5 +636,23 @@ class ConferenciaFidelidadeLeiTest {
 
     assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
     assertThat(r.resgatavel()).isFalse();
+  }
+  @Test
+  @DisplayName("resgate: reprovação posterior sem resgate grava o primeiro motivo, como a camada 1")
+  void resgateMantemOPrimeiroMotivo() {
+    // Frase 1 reprova por numero (resgatavel); frase 2 por copia nao literal (sem resgate).
+    String resposta = "{\"frases\": [{\"frase\": \"Em 2027, a CBS será cobrada com alíquota de "
+        + "0,9%.\", \"evidencias\": [{\"trecho\": \"T1\", \"copia\": \"a CBS será cobrada mediante "
+        + "aplicação da alíquota de 0,9%\"}]}, {\"frase\": \"A CBS é cobrada.\", \"evidencias\": "
+        + "[{\"trecho\": \"T1\", \"copia\": \"a CBS será cobrada pela alíquota de 1%\"}]}]}";
+
+    ConferenciaFidelidadeLei.Resultado comResgate =
+        conferencia.conferir(resposta, List.of(cbs()), COBERTURA, NUMERO_E_POLARIDADE);
+    ConferenciaFidelidadeLei.Resultado semResgate =
+        conferencia.conferir(resposta, List.of(cbs()), COBERTURA);
+
+    assertThat(semResgate.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    assertThat(comResgate.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    assertThat(comResgate.resgatavel()).isFalse();
   }
 }

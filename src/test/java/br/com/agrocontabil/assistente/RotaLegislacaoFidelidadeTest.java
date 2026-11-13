@@ -584,4 +584,19 @@ class RotaLegislacaoFidelidadeTest {
     assertThat(formato.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_FORMATO);
     assertThat(formato.juizLei()).isNull();
   }
+  @Test
+  @DisplayName("resgate: descartada por outra conferência em código antes do juiz, sem chamá-lo")
+  void resgateDescartadoAntesDoJuiz() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    // 2032 nao esta no trecho nem na pergunta: a camada 1 manda resgatar, o ValidadorNumeros
+    // descarta antes do juiz.
+    chatModel.responderTexto(NUMERO_FORA_DA_COPIA);
+
+    ResultadoRota r = comResgate().responder("Ate quando vale a reducao?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.NUMERO_SEM_FONTE);
+    assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+    assertThat(chatModel.promptsRecebidos()).hasSize(1);
+    assertThat(contexto.juizLei()).isNull();
+  }
 }

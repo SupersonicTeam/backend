@@ -36,10 +36,10 @@ import org.springframework.stereotype.Component;
  *
  * <p>O juiz não vê os trechos inteiros nem a pergunta: decide se as cópias sustentam a frase, não
  * se a frase responde à pergunta. Instrução fixa ({@link PromptsCeres#JUIZ_FIDELIDADE}), conteúdo
- * na mensagem do usuário, tudo pelo {@link DataSanitizer}. No modo {@code JUSTIFICATIVA}
- * ({@code app.assistente.fidelidade-lei.juiz.modo}) cada veredito vem depois de uma justificativa
+ * na mensagem do usuário, tudo pelo {@link DataSanitizer}. Na configuração {@code justificativa}
+ * ({@code app.assistente.fidelidade-lei.juiz.configuracao}) cada veredito vem depois de uma justificativa
  * curta ({@link PromptsCeres#JUIZ_FIDELIDADE_COM_JUSTIFICATIVA}); a decisão é a mesma. O teto de
- * saída é o do modo ({@code AssistenteProperties.tetoSaidaDoJuiz}), e o custo entra na reserva da pergunta como parcela própria
+ * saída é o da configuração ({@code AssistenteProperties.tetoSaidaDoJuiz}), e o custo entra na reserva da pergunta como parcela própria
  * quando o juiz está ativo ({@code AssistenteProperties.tetoDaPergunta}). O tempo, os tokens e a
  * latência da chamada vão ao {@link ContextoAssistente#registrarJuizLei}, e daí à auditoria.
  */
@@ -52,7 +52,7 @@ public class JuizFidelidadeLei {
   private final ModeloLinguagem modelo;
   private final AssistenteProperties propriedades;
 
-  /** Constrói o juiz sobre a porta do modelo; o teto de saída vem do modo. */
+  /** Constrói o juiz sobre a porta do modelo; o teto de saída vem da configuração. */
   public JuizFidelidadeLei(ModeloLinguagem modelo, AssistenteProperties propriedades) {
     this.modelo = modelo;
     this.propriedades = propriedades;
@@ -65,7 +65,7 @@ public class JuizFidelidadeLei {
 
   /** Por que o juiz falhou (todas reprovam: falha fecha). */
   public enum Falha {
-    /** A saída chegou ao teto do modo. */
+    /** A saída chegou ao teto da configuração. */
     CORTADA_PELO_TETO,
     /** Sem JSON legível, sem a lista ou com veredito desconhecido. */
     FORMATO,
@@ -107,31 +107,34 @@ public class JuizFidelidadeLei {
    */
   public DesfechoFidelidadeLei julgar(List<ConferenciaFidelidadeLei.FraseConferida> frases,
       ContextoAssistente contexto) {
-    return avaliar(frases, contexto, propriedades.getFidelidadeLei().getJuiz().getModo())
+    return avaliar(frases, contexto, propriedades.getFidelidadeLei().getJuiz().getConfiguracao())
         .desfecho();
   }
 
   /**
-   * Julga as frases num modo dado (a bancada do juiz compara os modos; a rota usa o configurado).
+   * Julga as frases numa configuração dada. Só a bancada do juiz escolhe a configuração; a rota usa
+   * a das propriedades, que é a que a reserva da pergunta cobre ({@code tetoSaidaDoJuiz}): outra
+   * configuração aqui, numa pergunta de verdade, gastaria além do reservado.
    * Mesmo efeito do {@link #julgar} sobre o contexto: a chamada pelo {@link ContextoAssistente} e
    * as métricas do juiz.
    *
    * @param frases   as frases entregues, com as passagens de cada uma (não vazia)
    * @param contexto contexto da pergunta
-   * @param modo     formato da resposta do juiz
+   * @param configuracao a configuração do juiz
    * @return o julgamento; nunca nulo
    * @throws PerguntaInterrompidaException se a pergunta foi interrompida
    */
   public Julgamento avaliar(List<ConferenciaFidelidadeLei.FraseConferida> frases,
-      ContextoAssistente contexto, AssistenteProperties.FidelidadeLei.Juiz.Modo modo) {
-    int tetoSaida = propriedades.tetoSaidaDoJuiz(modo);
+      ContextoAssistente contexto,
+      AssistenteProperties.FidelidadeLei.Juiz.Configuracao configuracao) {
+    int tetoSaida = propriedades.tetoSaidaDoJuiz(configuracao);
     long inicio = System.nanoTime();
     int entradaAntes = valor(contexto.tokensEntrada());
     int saidaAntes = valor(contexto.tokensSaida());
     boolean chamou = false;
     boolean registrar = true;
     try {
-      ChatResponse resposta = chamar(frases, contexto, modo, tetoSaida);
+      ChatResponse resposta = chamar(frases, contexto, configuracao, tetoSaida);
       chamou = true;
       String texto = resposta == null || resposta.getResult() == null
           ? null : resposta.getResult().getOutput().getText();
@@ -165,8 +168,8 @@ public class JuizFidelidadeLei {
   }
 
   private ChatResponse chamar(List<ConferenciaFidelidadeLei.FraseConferida> frases,
-      ContextoAssistente contexto, AssistenteProperties.FidelidadeLei.Juiz.Modo modo,
-      int tetoSaida) {
+      ContextoAssistente contexto,
+      AssistenteProperties.FidelidadeLei.Juiz.Configuracao configuracao, int tetoSaida) {
     List<ConferenciaFidelidadeLei.FraseConferida> conteudo = new ArrayList<>();
     for (ConferenciaFidelidadeLei.FraseConferida frase : frases) {
       conteudo.add(new ConferenciaFidelidadeLei.FraseConferida(
@@ -174,7 +177,7 @@ public class JuizFidelidadeLei {
           frase.copias().stream().map(DataSanitizer::mascarar).toList()));
     }
     Prompt prompt = new Prompt(List.<Message>of(
-        new SystemMessage(modo == AssistenteProperties.FidelidadeLei.Juiz.Modo.JUSTIFICATIVA
+        new SystemMessage(configuracao == AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA
             ? PromptsCeres.JUIZ_FIDELIDADE_COM_JUSTIFICATIVA
             : PromptsCeres.JUIZ_FIDELIDADE),
         new UserMessage(PromptsCeres.mensagemJuiz(conteudo))),
@@ -184,7 +187,7 @@ public class JuizFidelidadeLei {
 
   /**
    * Os vereditos lidos; nulo se o JSON não vem no formato ou traz veredito desconhecido. Cada item é
-   * o veredito em texto ou, no modo {@code JUSTIFICATIVA}, um objeto com {@code veredito}.
+   * o veredito em texto ou, na configuração {@code justificativa}, um objeto com {@code veredito}.
    */
   static List<Veredito> vereditos(String texto) {
     if (texto == null) {

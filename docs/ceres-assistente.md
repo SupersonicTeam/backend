@@ -438,7 +438,8 @@ frase, na ordem.
   (`AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ`, padrão `0.3`), para a paráfrase em linguagem simples
   passar; literalidade, número e polaridade seguem eliminatórios.
 - **Desfechos** na mesma coluna `fidelidade_lei`: `REPROVADA_JUIZ_NAO_SUSTENTA`, `REPROVADA_JUIZ_CONTRADIZ`,
-  `REPROVADA_JUIZ_FALHA`. Aprovada pelo juiz, fica o desfecho da camada 1.
+  `REPROVADA_JUIZ_FALHA`. Aprovada pelo juiz, fica o desfecho da camada 1; resgatada (abaixo),
+  `APROVADA_RESGATE_JUIZ`.
 - **Cota:** a chamada do juiz entra na **reserva da pergunta** como parcela própria
   (`Cota.tetoDoJuiz`: o teto de entrada + `tetos.juiz`, `AI_TETO_JUIZ`, 128), só com o juiz ativo
   (`AssistenteProperties.tetoDaPergunta`). Não é uma reserva à parte como a da explicação: o juiz roda no
@@ -455,10 +456,57 @@ frase, na ordem.
   camada 1 e 1,7 s com tudo desligado (rede de casa, não a VPS). Cabe no `timeout-pergunta`: roda dentro
   da pergunta.
 
-**Os três braços da medição:** tudo desligado (a `main`); só a camada 1
-(`AI_FIDELIDADE_LEI_HABILITADA=true`); camada 1 e juiz (mais `AI_FIDELIDADE_LEI_JUIZ_HABILITADO=true`).
-Com o juiz desligado, a camada 1 é a de antes dele (uma chamada, cobertura 0,7); com tudo desligado, a
-rota é a da `main` (`RotaLegislacaoFidelidadeTest`).
+**Configuração do juiz**, um valor só e nomeado (`app.assistente.fidelidade-lei.juiz.configuracao`,
+`AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO`, padrão `atual`; os nomes são os de
+`AssistenteProperties.FidelidadeLei.Juiz.Configuracao.nome()`, os mesmos da bancada): `atual` é o juiz
+acima; `justificativa` (configuração (d) da segunda medição) usa os mesmos
+critérios, mas pede, em cada item, uma `justificativa` curta (até 20 palavras) **antes** do `veredito`
+(`PromptsCeres.JUIZ_FIDELIDADE_COM_JUSTIFICATIVA`); a decisão é a mesma. Saída maior, teto próprio
+(`tetos.juiz-com-justificativa`, `AI_TETO_JUIZ_JUSTIFICATIVA`, 512), que substitui o `tetos.juiz` também
+na reserva: 31.744 + 8.192 + 512 × 4 = **41.984** créditos por pergunta com fator 1 (contra 40.448 no
+`atual`). **O raciocínio do provedor no juiz (as adaptativas, (b) e (c)) não está implementado:** o
+Spring AI 1.1.8 só conhece `thinking` `enabled` (com `budget_tokens`, que o Haiku 5.5 recusa) e
+`disabled`, não tem `output_config.effort`, e as opções por chamada não tiram o `thinking: disabled`
+padrão (o 1.1.8 é a última 1.1.x; a 2.x exige o Boot 4). As opções (reescrever o corpo da requisição só
+na chamada do juiz, ou um cliente próprio com o SDK oficial) estão com a orquestração da #269. Quando
+entrarem, entram como mais valores da configuração. O `llm/CorpoDoJuizNoFioTest` trava o corpo que sai
+para a API, com o `ChatModel` real do Spring AI e um servidor local: hoje, em toda configuração, o juiz e
+as outras chamadas saem com `thinking.type = disabled` e sem `output_config`, e o juiz muda só o
+`max_tokens` e a instrução.
+
+**Resgate** (`app.assistente.fidelidade-lei.juiz.resgate.enabled`,
+`AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO`, padrão `false`; só tem efeito com o juiz). A frase que a
+camada 1 reprovaria por **número** ou **polaridade** (e, com `resgate.cobertura`,
+`AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA`, por **cobertura**) não reprova na hora: segue no texto, passa
+pelas conferências em código seguintes e vai ao juiz **na mesma chamada** do veto, com o dispositivo citado
+inteiro. As outras frases continuam sendo conferidas: uma reprovação estrutural (formato, evidência
+ausente, cópia não literal) depois dela reprova como antes, sem juiz. Só o `SUSTENTA` de **todas** as frases
+aceita a resposta (`fidelidade_lei` = `APROVADA_RESGATE_JUIZ`); veto, falha, corte pelo teto ou tempo
+esgotado mantêm o descarte com o **motivo da camada 1** (o primeiro). Frase reprovada sem palavra de
+conteúdo ("Não.") não tem o que o juiz julgar e reprova na hora. Se outra conferência em código (número sem
+fonte, citação, regime específico) descartar antes do juiz, vale o desfecho dela. A cota não muda: a chamada
+é a mesma do veto.
+
+**Bancada do juiz** (`fidelidade/BancadaJuizFidelidadeManual`, fora do `./mvnw test`, profile `dev`):
+compara as configurações do juiz sobre respostas já prontas, sem a rota. Entrada em JSONL,
+`{"id", "pergunta", "resposta", "citacoes"}`, com `resposta` e `citacoes` como o `POST /api/assistente/chat`
+devolve; as frases são reconstruídas da resposta (`FrasesDaResposta`: a referência entre parênteses vira
+a citação, frase sem referência usa a da próxima) e as passagens são os dispositivos citados lidos da base
+de lei. Saída em JSONL por resposta e configuração: `veredito` (`APROVA`/`REPROVA`/`FALHA`), `motivo`,
+`latencia_ms`, `tokens_entrada`, `tokens_saida`, `tokens_raciocinio` (nulo: o Spring AI não o separa e
+nenhuma configuração raciocina), `cortada_pelo_teto`, os vereditos por frase e o texto cru do juiz. O
+Javadoc lista as diferenças para a produção (lá o juiz recebe as frases da camada 1 com as passagens da
+cópia; aqui, a resposta final dividida pela pontuação). Comando:
+
+```bash
+./mvnw test -Dtest=BancadaJuizFidelidadeManual -Dsurefire.failIfNoSpecifiedTests=false -Dspring.docker.compose.enabled=false -Dbancada.entrada=respostas.jsonl -Dbancada.saida=vereditos.jsonl -Dbancada.configuracoes=atual,justificativa
+```
+
+**Os braços da medição:** tudo desligado (a `main`); só a camada 1
+(`AI_FIDELIDADE_LEI_HABILITADA=true`); camada 1 e juiz, só o veto (mais `AI_FIDELIDADE_LEI_JUIZ_HABILITADO=true`);
+camada 1, juiz e resgate (mais `AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO=true`). Nos dois últimos, o modo
+do juiz vai em `AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO`. Com o juiz desligado, a camada 1 é a de antes dele (uma
+chamada, cobertura 0,7); com tudo desligado, a rota é a da `main` (`RotaLegislacaoFidelidadeTest`).
 
 **Limites conhecidos.** A régua é lexical: paráfrase com sinônimo fora da cópia reprova (falso
 descarte; a raiz casa "redução" com "reduzidas", mas não "isenção" com "não incide" fora da
@@ -996,7 +1044,7 @@ perto de ÷ 3, então leia como faixa), não medição pelo tokenizador do Qwen.
 | Classificação | `LlmClassificadorIntencao` | só no desempate das camadas e na `perguntaLei` do MISTO (#265); nunca nos atalhos (#343) | `CLASSIFICACAO` (1.128) | pergunta (até 1.000) | nenhuma | `tetos.classificacao` (256) |
 | Escolha das funções de dados | `RotaDados` | DADOS e a parte de dados do MISTO | `SISTEMA_DADOS` (884) + 13 definições de função (11.870, ordenadas pelo nome) | data de hoje + pergunta (até ~1.030) | as 13 de dados | `tetos.funcoes` (512) |
 | Lei | `RotaLegislacao` | LEGISLACAO e a parte de lei do MISTO, só com trecho recuperado | regras (712; 1.035 na variante só regra geral do MISTO; ~1.170 com a conferência de fidelidade ligada, #269) | data de hoje + trechos (top-k 5 + complementares do MISTO, sem teto de tamanho) + pergunta | nenhuma | `tetos.legislacao` (1.024) |
-| Juiz da fidelidade da lei (#269, camada 2) | `JuizFidelidadeLei` | só com a camada 1 e o juiz ligados, depois que a resposta de lei passa por todas as conferências em código | `JUIZ_FIDELIDADE` (~800, todo o sistema) | frases e cópias, na mensagem do usuário | nenhuma | `tetos.juiz` (128) |
+| Juiz da fidelidade da lei (#269, camada 2) | `JuizFidelidadeLei` | só com a camada 1 e o juiz ligados, depois que a resposta de lei passa por todas as conferências em código | `JUIZ_FIDELIDADE` ou, na configuração `justificativa`, `JUIZ_FIDELIDADE_COM_JUSTIFICATIVA` (~1.100, todo o sistema) | frases e dispositivos citados, na mensagem do usuário (com o resgate, também as frases a resgatar) | nenhuma | `tetos.juiz` (128) ou `tetos.juiz-com-justificativa` (512) |
 
 Estimativa do maior prompt de cada uma (sem o template do modelo, ~300 caracteres a mais):
 classificação ~2.100 caracteres (~530 a ~710 tokens); dados ~13.800 (~3.450 a ~4.600 tokens);

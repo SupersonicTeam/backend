@@ -592,7 +592,7 @@ app:
       legislacao: ${AI_TETO_LEGISLACAO:1024}
       # Juiz da fidelidade da lei (#269, camada 2): um veredito por frase; so com o juiz ativo.
       juiz: ${AI_TETO_JUIZ:128}
-      # O juiz no modo JUSTIFICATIVA: uma justificativa curta antes de cada veredito.
+      # O juiz na configuracao justificativa: uma justificativa curta antes de cada veredito.
       juiz-com-justificativa: ${AI_TETO_JUIZ_JUSTIFICATIVA:512}
       # A janela do Ollama (mesma propriedade do num-ctx), so para validar os tetos.
       contexto: ${spring.ai.ollama.chat.options.num-ctx:8192}
@@ -628,9 +628,10 @@ app:
       cobertura-minima-com-juiz: ${AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ:0.3}
       juiz:
         enabled: ${AI_FIDELIDADE_LEI_JUIZ_HABILITADO:false}
-        # VEREDITO (padrao: so o veredito por frase, teto tetos.juiz) ou JUSTIFICATIVA (uma
-        # justificativa curta antes de cada veredito, teto tetos.juiz-com-justificativa).
-        modo: ${AI_FIDELIDADE_LEI_JUIZ_MODO:VEREDITO}
+        # Configuracao do juiz, pelo nome: atual (padrao: so o veredito por frase, teto
+        # tetos.juiz) ou justificativa (uma justificativa curta antes de cada veredito, teto
+        # tetos.juiz-com-justificativa).
+        configuracao: ${AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO:atual}
         # Resgate: a frase reprovada em codigo por numero ou polaridade (e, com cobertura, por
         # cobertura) vai ao juiz na mesma chamada; so o SUSTENTA de todas as frases aceita. Sem
         # efeito sem o juiz.

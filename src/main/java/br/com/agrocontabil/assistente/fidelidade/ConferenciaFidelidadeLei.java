@@ -185,7 +185,8 @@ public class ConferenciaFidelidadeLei {
         continue;
       }
       if (frase.evidencias().isEmpty()) {
-        return reprovada(DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA, trechos, marcasCitadas);
+        return reprovada(primeiro(aResgatar, DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA),
+            trechos, marcasCitadas);
       }
       Set<String> marcasDaFrase = new LinkedHashSet<>();
       StringBuilder copias = new StringBuilder();
@@ -196,12 +197,13 @@ public class ConferenciaFidelidadeLei {
       for (RespostaComEvidencia.Evidencia evidencia : frase.evidencias()) {
         int indice = indice(evidencia.marca(), trechos.size());
         if (indice < 0 || evidencia.copia() == null || evidencia.copia().isBlank()) {
-          return reprovada(DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA, trechos, marcasCitadas);
+          return reprovada(primeiro(aResgatar, DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA),
+            trechos, marcasCitadas);
         }
         Citada citada = citacoes.citar(indice, evidencia.copia());
         if (citada == null) {
-          return reprovada(
-              DesfechoFidelidadeLei.REPROVADA_EVIDENCIA_NAO_LITERAL, trechos, marcasCitadas);
+          return reprovada(primeiro(aResgatar,
+              DesfechoFidelidadeLei.REPROVADA_EVIDENCIA_NAO_LITERAL), trechos, marcasCitadas);
         }
         marcasDaFrase.add(citada.marca());
         copias.append(evidencia.copia()).append(' ');
@@ -221,7 +223,7 @@ public class ConferenciaFidelidadeLei {
       boolean temConteudo = TextoLei.formas(textoFrase).stream().anyMatch(TextoLei::conteudo);
       if (motivo != null) {
         if (!temConteudo || !RESGATAVEIS.contains(motivo) || !resgataveis.contains(motivo)) {
-          return reprovada(motivo, trechos, marcasCitadas);
+          return reprovada(primeiro(aResgatar, motivo), trechos, marcasCitadas);
         }
         // Resgate (#269): a frase segue para o juiz; o primeiro motivo fica como desfecho.
         aResgatar = aResgatar == null ? motivo : aResgatar;
@@ -374,6 +376,15 @@ public class ConferenciaFidelidadeLei {
     }
     int numero = Integer.parseInt(m.group(1));
     return numero >= 1 && numero <= quantidade ? numero - 1 : -1;
+  }
+
+  /**
+   * O primeiro motivo da resposta: com uma frase a resgatar antes, o dela. Assim a reprovação de uma
+   * frase posterior, sem resgate, grava o mesmo motivo que a camada 1 sozinha gravaria.
+   */
+  private static DesfechoFidelidadeLei primeiro(DesfechoFidelidadeLei aResgatar,
+      DesfechoFidelidadeLei motivo) {
+    return aResgatar != null ? aResgatar : motivo;
   }
 
   private static Resultado reprovada(DesfechoFidelidadeLei motivo, List<TrechoRecuperado> trechos,

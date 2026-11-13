@@ -221,4 +221,22 @@ class AssistentePropertiesTest {
     resgate.setEnabled(false);
     assertThat(p.resgateDaLeiAtivo()).isFalse();
   }
+  @Test
+  void configuracaoDoJuizPeloNome() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(p.getFidelidadeLei().getJuiz().getConfiguracao())
+        .isEqualTo(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ATUAL);
+    assertThat(p.tetoSaidaDoJuiz()).isEqualTo(128);
+    for (AssistenteProperties.FidelidadeLei.Juiz.Configuracao c
+        : AssistenteProperties.FidelidadeLei.Juiz.Configuracao.values()) {
+      assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome(c.nome())).isEqualTo(c);
+    }
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA.nome())
+        .isEqualTo("justificativa");
+    assertThatThrownBy(() -> AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome("veredito"))
+        .isInstanceOf(IllegalArgumentException.class);
+    p.getFidelidadeLei().getJuiz()
+        .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA);
+    assertThat(p.tetoSaidaDoJuiz()).isEqualTo(512);
+  }
 }

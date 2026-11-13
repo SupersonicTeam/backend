@@ -3,7 +3,7 @@ package br.com.agrocontabil.assistente.fidelidade;
 import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
-import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.config.AssistenteProperties.FidelidadeLei.Juiz.Configuracao;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -15,7 +15,6 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -35,20 +34,22 @@ import org.springframework.test.context.ActiveProfiles;
  * <pre>
  * ./mvnw test -Dtest=BancadaJuizFidelidadeManual -Dsurefire.failIfNoSpecifiedTests=false \
  *   -Dbancada.entrada=respostas.jsonl -Dbancada.saida=vereditos.jsonl \
- *   [-Dbancada.configuracoes=veredito,justificativa] [-Dbancada.repeticoes=1] \
+ *   [-Dbancada.configuracoes=atual,justificativa] [-Dbancada.repeticoes=1] \
  *   [-Dbancada.data=2026-11-13]
  * </pre>
  *
  * <p><strong>Entrada</strong> ({@code bancada.entrada}, JSONL): uma resposta por linha,
  * {@code {"id", "pergunta", "resposta", "citacoes": [...]}}, com {@code resposta} e
  * {@code citacoes} exatamente como o {@code POST /api/assistente/chat} devolve
- * ({@code {norma, dispositivo, url, trecho}}). A {@code pergunta} só vai para a saída: o juiz não a
- * vê, como na produção.
+ * ({@code {norma, dispositivo, url, trecho}}). A {@code pergunta} não é usada: o juiz não a vê, como
+ * na produção (a saída liga a resposta pelo {@code id}).
  *
  * <p><strong>Configurações</strong> ({@code bancada.configuracoes}, separadas por vírgula; padrão
- * {@code veredito}): {@code veredito} = o juiz de hoje, configuração (a); {@code justificativa} =
- * modo {@code JUSTIFICATIVA}, configuração (d). As de raciocínio do provedor, (b) e (c), não
- * existem: o Spring AI 1.1.8 não liga raciocínio nem esforço por chamada.
+ * {@code atual}): os nomes de {@code AssistenteProperties.FidelidadeLei.Juiz.Configuracao}, os
+ * mesmos de {@code AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO}: {@code atual} = o juiz de hoje,
+ * configuração (a); {@code justificativa} = configuração (d). As de raciocínio do provedor, (b) e
+ * (c), entram no enum quando existirem (o Spring AI 1.1.8 não liga raciocínio nem esforço por
+ * chamada), sem mudar o formato da bancada.
  *
  * <p><strong>Saída</strong> ({@code bancada.saida}, JSONL): uma linha por resposta, configuração e
  * repetição, com {@code id}, {@code configuracao}, {@code repeticao}, {@code veredito}
@@ -83,14 +84,6 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("dev")
 class BancadaJuizFidelidadeManual {
 
-  private static final Map<String, AssistenteProperties.FidelidadeLei.Juiz.Modo> CONFIGURACOES =
-      new LinkedHashMap<>();
-
-  static {
-    CONFIGURACOES.put("veredito", AssistenteProperties.FidelidadeLei.Juiz.Modo.VEREDITO);
-    CONFIGURACOES.put("justificativa", AssistenteProperties.FidelidadeLei.Juiz.Modo.JUSTIFICATIVA);
-  }
-
   @Autowired
   private JuizFidelidadeLei juiz;
 
@@ -112,23 +105,27 @@ class BancadaJuizFidelidadeManual {
     configuracoes();
   }
 
-  private static List<String> configuracoes() {
-    List<String> nomes = new ArrayList<>();
-    for (String nome : System.getProperty("bancada.configuracoes", "veredito").split(",")) {
-      String limpo = nome.strip();
-      if (!CONFIGURACOES.containsKey(limpo)) {
-        throw new IllegalStateException("configuração desconhecida: " + limpo + "; existem "
-            + CONFIGURACOES.keySet() + " (as de raciocínio do provedor dependem do Spring AI)");
+  /** As configurações pedidas, pelo nome ({@code Configuracao.nome()}); desconhecida falha. */
+  private static List<Configuracao> configuracoes() {
+    List<Configuracao> escolhidas = new ArrayList<>();
+    for (String nome : System.getProperty("bancada.configuracoes", "atual").split(",")) {
+      try {
+        escolhidas.add(Configuracao.deNome(nome));
+      } catch (IllegalArgumentException e) {
+        List<String> existentes = new ArrayList<>();
+        for (Configuracao c : Configuracao.values()) {
+          existentes.add(c.nome());
+        }
+        throw new IllegalStateException(e.getMessage() + "; existem " + existentes, e);
       }
-      nomes.add(limpo);
     }
-    return nomes;
+    return escolhidas;
   }
 
   @Test
   void bancada() throws Exception {
     ObjectMapper json = new ObjectMapper();
-    List<String> configuracoes = configuracoes();
+    List<Configuracao> configuracoes = configuracoes();
     int repeticoes = Integer.getInteger("bancada.repeticoes", 1);
     LocalDate data = LocalDate.parse(System.getProperty("bancada.data",
         LocalDate.now().toString()));
@@ -155,11 +152,11 @@ class BancadaJuizFidelidadeManual {
         FrasesDaResposta.Montagem montagem =
             FrasesDaResposta.montar(entrada.path("resposta").asText(""), citacoes, porChave);
 
-        for (String configuracao : configuracoes) {
+        for (Configuracao configuracao : configuracoes) {
           for (int r = 1; r <= repeticoes; r++) {
             ObjectNode o = json.createObjectNode();
             o.put("id", entrada.path("id").asText());
-            o.put("configuracao", configuracao);
+            o.put("configuracao", configuracao.nome());
             o.put("repeticao", r);
             o.put("frases", montagem.frases().size());
             o.put("frases_sem_citacao", montagem.semCitacao());
@@ -176,7 +173,7 @@ class BancadaJuizFidelidadeManual {
               o.putArray("vereditos");
               o.putNull("cru");
             } else {
-              julgar(o, montagem, CONFIGURACOES.get(configuracao), data);
+              julgar(o, montagem, configuracao, data);
             }
             saida.write(json.writeValueAsString(o));
             saida.newLine();
@@ -188,9 +185,9 @@ class BancadaJuizFidelidadeManual {
   }
 
   private void julgar(ObjectNode o, FrasesDaResposta.Montagem montagem,
-      AssistenteProperties.FidelidadeLei.Juiz.Modo modo, LocalDate data) {
+      Configuracao configuracao, LocalDate data) {
     ContextoAssistente contexto = new ContextoAssistente(UUID.randomUUID(), data);
-    JuizFidelidadeLei.Julgamento j = juiz.avaliar(montagem.frases(), contexto, modo);
+    JuizFidelidadeLei.Julgamento j = juiz.avaliar(montagem.frases(), contexto, configuracao);
     String veredito = j.desfecho() == null ? "APROVA"
         : j.falha() != null ? "FALHA" : "REPROVA";
     o.put("veredito", veredito);
