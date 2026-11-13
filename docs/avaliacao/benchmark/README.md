@@ -661,8 +661,9 @@ python3 docs/avaliacao/benchmark/executar_matriz.py --retomar docs/avaliacao/res
 `application.yml` não lê: a célula sairia com o nome da fidelidade medindo a configuração de antes
 dela. Por isso, antes de qualquer trabalho, o executor lê o `application.yml` **do SHA da Ceres 2.0 da
 rodada** e **recusa** a célula (em banca, ensaio e teste) se alguma variável do `ambiente` não estiver
-lá. As cinco só existem se o SHA contiver o resgate e a configuração do juiz (#269); a `main` com a
-conferência e o juiz de veredito (`e55eb28b`) só lê as duas primeiras. O SHA é **um só por arquitetura**:
+lá. As cinco só existem em SHA que contenha o resgate e a configuração do juiz (#269, PR #551, `47bdf9fe`);
+a `main` de antes dele (`e55eb28b`, só a conferência e o juiz de veredito) só lê as duas primeiras e a
+célula é recusada. O SHA é **um só por arquitetura**:
 a célula roda no mesmo commit das outras da Ceres 2.0, e `--ref-ceres2` muda o commit de todas.
 
 **O que o executor faz de diferente nela** (o resto é a célula por API): aplica o `ambiente` da variante
