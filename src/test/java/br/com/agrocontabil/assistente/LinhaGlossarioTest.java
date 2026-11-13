@@ -3,6 +3,7 @@ package br.com.agrocontabil.assistente;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.agrocontabil.config.avaliacao.ClarezaTexto;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -61,9 +62,7 @@ class LinhaGlossarioTest {
         "- base de cálculo: ", "- fato gerador: ")
         .doesNotContain("- contribuinte: ", "- regime regular: ", "- crédito presumido: ");
     // Três comuns, no teto; as siglas que a definição do IBS cita (ICMS, ISS) entram, como antes.
-    // Só a sigla leva a forma por extenso entre parênteses, então o resto são os comuns.
-    assertThat(linha.lines().filter(l -> l.startsWith("- ") && !l.contains(" (")))
-        .hasSize(LinhaGlossario.MAXIMO_COMUNS);
+    assertThat(itensDeTermoComum(linha)).hasSize(LinhaGlossario.MAXIMO_COMUNS);
     assertThat(linha).contains("- ICMS (imposto sobre circulação de mercadorias e serviços): ",
         "- ISS (imposto sobre serviços): ");
   }
@@ -89,5 +88,14 @@ class LinhaGlossarioTest {
 
     assertThat(semExplicar).contains("- alíquota: ");
     assertThat(explicado).isEmpty();
+  }
+
+  /** Os itens da linha que explicam termo comum (não sigla), pelo rótulo antes dos dois-pontos. */
+  private static List<String> itensDeTermoComum(String linha) {
+    List<String> comuns = GlossarioProdutor.padrao().termos().stream()
+        .filter(t -> !t.sigla()).map(GlossarioProdutor.Termo::termo).toList();
+    return linha.lines().filter(l -> l.startsWith("- "))
+        .filter(l -> comuns.stream().anyMatch(termo -> l.startsWith("- " + termo + ":")))
+        .toList();
   }
 }

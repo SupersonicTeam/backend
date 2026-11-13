@@ -53,6 +53,8 @@ class GlossarioProdutorTest {
         .contains("alíquota");
     assertThat(GLOSSARIO.semExplicacao("os fatos geradores")).extracting(Termo::termo)
         .contains("fato gerador");
+    assertThat(GLOSSARIO.semExplicacao("as bases de cálculo do imposto")).extracting(Termo::termo)
+        .contains("base de cálculo");
     assertThat(GLOSSARIO.semExplicacao("o regime não cumulativo")).extracting(Termo::termo)
         .contains("não cumulatividade");
     assertThat(GLOSSARIO.semExplicacao("os responsáveis tributários")).extracting(Termo::termo)

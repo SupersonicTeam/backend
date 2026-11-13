@@ -23,7 +23,8 @@
 #              extenso depois da 1ª ocorrência ("LC 214/2025 (lei complementar)"); "LC" sozinho
 #              pode ser nome de cliente e "EC 250" é a formulação de um defensivo (concentrado
 #              emulsionável), sem ano
-#              ('crédito' não vale em 'crédito presumido': é outro conceito)
+#              ('crédito' não vale em 'crédito presumido': é outro conceito, com termo próprio
+#              desde a #269)
 #   nome       forma por extenso; vale como explicação se estiver no texto (sem acento/caixa)
 #   aceitas    outras expressões que valem como explicação no texto (sem acento/caixa)
 #   emLinha    true: a composição das respostas de dados insere "(nome)" depois da 1ª ocorrência
@@ -174,7 +175,7 @@ termos:
 
   - termo: base de cálculo
     sigla: false
-    padrao: '\bbase de c[áa]lculo\b'
+    padrao: '\bbases? de c[áa]lculo\b'
     ignorarCaixa: true
     explicacao: o valor sobre o qual o imposto é calculado, em geral o valor da venda
 
