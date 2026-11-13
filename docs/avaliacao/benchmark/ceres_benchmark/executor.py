@@ -126,8 +126,10 @@ def variaveis_que_o_commit_nao_conhece(ambiente: dict[str, str], application_yml
     """Variaveis do ``ambiente`` da celula que o ``application.yml`` do commit nao le
     (``${NOME:padrao}`` ou ``${NOME}``). Variavel que o commit nao conhece e ignorada em silencio
     pelo Spring: a celula mediria outra configuracao e se chamaria pelo nome da pedida."""
+    # Linha de comentario nao conta: ``# enabled: ${AI_X:false}`` nao liga nada.
+    codigo = "\n".join(l for l in application_yml.splitlines() if not l.lstrip().startswith("#"))
     return [nome for nome in ambiente
-            if not re.search(r"\$\{" + re.escape(nome) + r"[:}]", application_yml)]
+            if not re.search(r"\$\{" + re.escape(nome) + r"[:}]", codigo)]
 
 
 def bytes_de_docker_stats(texto: str) -> int | None:
@@ -1028,7 +1030,7 @@ class Executor:
                 return anterior
             if decisao == "outra":
                 raise RuntimeError(f"{nome} ja foi medida com outro SHA, modelo, embedding, numero "
-                                   "de repeticoes ou read-timeout da celula: use uma rodada nova "
+                                   "de repeticoes, read-timeout ou ambiente da variante: use uma rodada nova "
                                    "em vez de --retomar")
             if decisao == "sem_prova":
                 log(f"{nome}: medida sem nenhuma prova do pensamento, medindo de novo")

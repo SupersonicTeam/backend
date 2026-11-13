@@ -132,6 +132,11 @@ class AmbienteDaVarianteTest(unittest.TestCase):
             "AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO", "AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO",
             "AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE"])
 
+    def test_placeholder_so_em_comentario_nao_conta(self):
+        yml = "# enabled: ${AI_X:false}\n    # ${AI_Y}\nreal: ${AI_Z:1}"
+        self.assertEqual(ex.variaveis_que_o_commit_nao_conhece({"AI_X": "1", "AI_Y": "1", "AI_Z": "1"}, yml),
+                         ["AI_X", "AI_Y"])
+
     def test_placeholder_sem_padrao_vale_e_nome_parecido_nao(self):
         self.assertEqual(ex.variaveis_que_o_commit_nao_conhece({"AI_X": "1"}, "a: ${AI_X}"), [])
         self.assertEqual(ex.variaveis_que_o_commit_nao_conhece({"AI_X": "1"}, "a: ${AI_XY:1}"), ["AI_X"])
@@ -356,8 +361,8 @@ class RelatorioDaVarianteTest(unittest.TestCase):
     def test_a_secao_diz_em_uma_frase_o_que_o_descarte_faz_com_as_metricas(self):
         secao = self.secao()
         self.assertIn(rel.FRASE_FIDELIDADE, secao)
-        self.assertIn("a citação e o número das perguntas de lei **caem**", secao)
-        self.assertIn("sobe por descarte, não por acerto", secao)
+        self.assertIn("a citação e o número das perguntas de lei **tendem a cair**", secao)
+        self.assertIn("a subir por descarte, não por acerto", secao)
         self.assertIn("`FIDELIDADE_REPROVADA`", secao)
 
     def test_a_secao_traz_a_irma_a_variante_e_a_diferenca_com_o_descarte_contado(self):
@@ -394,6 +399,7 @@ class RelatorioDaVarianteTest(unittest.TestCase):
         self.assertIn("fica fora desta conclusão e de toda comparação", conclusao)
         self.assertNotIn(f"`{VARIANTE}` é viável", conclusao)
         self.assertNotIn("(API, fidelidade da lei)**:", conclusao)  # sem os numeros do paragrafo por API
+        self.assertIn("A linha **(API, fidelidade da lei)** não se compara com as outras", self.texto)
         # Nenhum grafico a tem; a base do Haiku continua la.
         for svg in (self.pasta / "graficos").glob("*.svg"):
             self.assertNotIn("fidelidade", svg.read_text(encoding="utf-8"), svg.name)

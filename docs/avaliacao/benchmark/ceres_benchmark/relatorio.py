@@ -1081,6 +1081,10 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
                 colunas.append(texto)
             md.append(f"| {c.titulo} | " + " | ".join(colunas) + " |")
         md.append("")
+        if any(c.com_fidelidade for c in celulas):
+            md.append("A linha **(API, fidelidade da lei)** não se compara com as outras: o descarte "
+                      "pela fidelidade baixa citação e número e sobe a recusa por descarte; leia a "
+                      "seção \"Célula com a fidelidade da rota de lei\".\n")
         md.append("### Tabela modelo × arquitetura\n")
         md.append(_tabela_modelo_arquitetura(celulas, modelos, arquiteturas, ids, canonico,
                                              adaptacoes_por_arq, recorte))
@@ -1436,8 +1440,9 @@ def _secao_cortadas(celulas) -> str:
 FRASE_FIDELIDADE = (
     "**Como ler:** com a fidelidade ligada, a resposta de lei que não passa na conferência é "
     "descartada (`FIDELIDADE_REPROVADA`), e a régua conta o descarte como recusa e texto descartado, "
-    "não como resposta: por isso a citação e o número das perguntas de lei **caem** e a recusa correta "
-    "**sobe por descarte, não por acerto** nesta célula, sem que o modelo tenha ficado pior; o que a "
+    "não como resposta: por isso a citação e o número das perguntas de lei **tendem a cair** e a recusa "
+    "correta **a subir por descarte, não por acerto** nesta célula, o que não quer dizer que o modelo "
+    "ficou pior; o que a "
     "fidelidade compra é a resposta infiel que o produtor deixa de receber, e isto o acerto da régua "
     "não mede (a medição própria da #269, com conjunto e juízes cegos, é o que mede).")
 
