@@ -1,6 +1,7 @@
 package br.com.agrocontabil.assistente.orquestracao;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
+import br.com.agrocontabil.assistente.GlossarioProdutor;
 import br.com.agrocontabil.assistente.PromptsCeres;
 import br.com.agrocontabil.assistente.ResultadoRota;
 import br.com.agrocontabil.assistente.RotaDados;
@@ -79,15 +80,18 @@ public class OrquestradorService {
   private final FundamentoRetencao fundamentoRetencao;
   private final TextosDoBackend textosDoBackend;
   private final AtalhoReformaTributaria atalhoReforma;
+  private final AtalhoDefinicao atalhoDefinicao;
   private final double confiancaMinima;
 
   /** Constrói o orquestrador. */
   public OrquestradorService(ClassificadorIntencao classificador, RotaDados rotaDados,
       RotaLegislacao rotaLegislacao, TrechosDasCompras trechosDasCompras,
       FundamentoRetencao fundamentoRetencao, TextosDoBackend textosDoBackend,
-      AtalhoReformaTributaria atalhoReforma, ModoFallback fallback,
+      AtalhoReformaTributaria atalhoReforma, AtalhoDefinicao atalhoDefinicao,
+      ModoFallback fallback,
       DisponibilidadeModelo disponibilidade, AssistenteProperties propriedades) {
     this.atalhoReforma = atalhoReforma;
+    this.atalhoDefinicao = atalhoDefinicao;
     this.classificador = classificador;
     this.rotaDados = rotaDados;
     this.rotaLegislacao = rotaLegislacao;
@@ -110,6 +114,7 @@ public class OrquestradorService {
    */
   public static boolean respondeSemModelo(String pergunta) {
     return AtalhosFixos.ehAtalho(pergunta) || ConversaLeve.ehConversaLeve(pergunta)
+        || AtalhoDefinicao.ehDefinicao(pergunta)
         || FiltroInjecao.pareceInjecao(pergunta) || SinalRecusaFirme.inequivoco(pergunta);
   }
 
@@ -135,6 +140,13 @@ public class OrquestradorService {
     Optional<ConversaLeve.Resposta> conversa = ConversaLeve.reconhecer(pergunta);
     if (conversa.isPresent()) {
       return responderConversaLeve(conversa.get(), contexto, aoDecidirRota);
+    }
+    // Definicao (#269): "o que e o IBS?" pelo glossario e pelo dispositivo que institui o termo,
+    // sem modelo e sem a busca por similaridade, que nao traz o artigo certo nessa pergunta. A
+    // formula e fechada e o termo vem do glossario: nao ha texto livre, como no atalho da tela.
+    Optional<GlossarioProdutor.Termo> definicao = AtalhoDefinicao.reconhecer(pergunta);
+    if (definicao.isPresent()) {
+      return responderDefinicao(definicao.get(), pergunta, contexto, aoDecidirRota);
     }
     ClassificacaoIntencao classificacao = classificar(pergunta, contexto);
     Intencao rota = classificacao.intencao();
@@ -172,6 +184,23 @@ public class OrquestradorService {
     ResultadoOrquestracao resultado = atalho.funcao() == null
         ? atalhoReforma.responder(contexto)
         : deRota(Intencao.DADOS, rotaDados.responderAtalho(atalho.funcao(), pergunta, contexto));
+    resultado = textosDoBackend.aplicar(resultado, contexto);
+    return fundamentoRetencao.aplicar(resultado, pergunta, contexto);
+  }
+
+  /**
+   * Pergunta de definição (#269): a definição do glossário e o dispositivo que institui o termo,
+   * sem nenhuma chamada ao modelo e sem depender do disjuntor. Rota {@code LEGISLACAO} com citação,
+   * como o atalho da reforma; camada e desfecho próprios na auditoria. O {@code TextosDoBackend} e
+   * o {@code FundamentoRetencao} seguem valendo: a pergunta pode ser de um termo de retenção
+   * ("o que é split payment?"), e aí o parágrafo da RN009 entra como em qualquer resposta.
+   */
+  private ResultadoOrquestracao responderDefinicao(GlossarioProdutor.Termo termo, String pergunta,
+      ContextoAssistente contexto, Consumer<Intencao> aoDecidirRota) {
+    contexto.registrarCamadaClassificacao(CamadaClassificacao.ATALHO_DEFINICAO.name());
+    aoDecidirRota.accept(Intencao.LEGISLACAO);
+    contexto.verificarAtiva();
+    ResultadoOrquestracao resultado = atalhoDefinicao.responder(termo, contexto);
     resultado = textosDoBackend.aplicar(resultado, contexto);
     return fundamentoRetencao.aplicar(resultado, pergunta, contexto);
   }

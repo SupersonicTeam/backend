@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import br.com.agrocontabil.assistente.SecaoResposta.Assunto;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.ferramentas.TextosDosTemplates;
+import br.com.agrocontabil.assistente.orquestracao.AtalhoDefinicao;
 import br.com.agrocontabil.assistente.orquestracao.ConversaLeve;
 import br.com.agrocontabil.assistente.orquestracao.FundamentoRetencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
@@ -116,6 +117,9 @@ public class TextosFixosAcentuadosTest {
     textos.put("PromptsCeres.RECUSA_FIRME", PromptsCeres.RECUSA_FIRME);
     // Conversa leve (#493): cada variante e cada parte fixa da resposta.
     ConversaLeve.textos().forEach((nome, texto) -> textos.put("ConversaLeve " + nome, texto));
+    // Atalho de definição (#269): o fecho e a definição montada de cada termo do mapa curado.
+    AtalhoDefinicao.textos().forEach((nome, texto) ->
+        textos.put("AtalhoDefinicao " + nome, texto));
     textos.put("ValidadorCitacao.SEM_FUNDAMENTO", ValidadorCitacao.SEM_FUNDAMENTO);
     // Textos de erro que o produtor lê (ErrorDetail.message dos erros da Ceres).
     for (DomainException erro : List.<DomainException>of(

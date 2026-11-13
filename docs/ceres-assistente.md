@@ -781,6 +781,73 @@ do tipo e uma das variantes do corpo, escolhida pelo `hashCode` da mensagem norm
 expressão dela tem forma de injeção (testado). A avaliação conta a recusa pela rota, e o
 `CONVERSA_LEVE` não entra entre os desfechos de recusa.
 
+**Atalho da pergunta de definição, depois da conversa leve (#269).** "O que é o IBS?" é a pergunta
+mais básica que um produtor faz, e na VPS em 2026-11-13 (fidelidade desligada, o comportamento de
+hoje) ela **não era respondida**: "o que é o ibs?" saiu como "Não encontrei fundamento legal para
+isso" e "oq é o imposto IBS?" trouxe o art. 69, § 2º, II, a base de cálculo da importação. O
+dispositivo que institui o IBS está na base — a busca por similaridade é que não o traz numa
+pergunta curta de definição, em que a pergunta casa mal com o texto jurídico e há centenas de
+trechos citando o termo (a #200). Como no #347, a saída é o backend responder o que sabe responder
+certo.
+
+O `AtalhoDefinicao` reconhece pelo molde da `ConversaLeve`: a mensagem normalizada começa por uma
+**fórmula** da lista fechada ("o que é", "oq é", "o que significa", "o que quer dizer", "defina"...)
+e o que sobra, sem as **palavras ignoráveis** ("o", "a", "imposto", "tributo", "sigla"...), é
+**exatamente** um termo do mapa curado — mesmo número de palavras, não só contê-lo. O padrão do
+glossário vale com a caixa ignorada (a sigla é escrita `\bIBS\b`, e a pergunta chega em minúsculas),
+então "o que são créditos?" acha o "crédito" e "o que é crédito presumido?" vai para o termo próprio.
+
+É essa **disciplina da mensagem inteira** que separa a definição da pergunta de lei e da de dados,
+sem lista de proibições: "o que é a alíquota do IBS?" (quer o número), "o que é o NCM da soja?"
+(quer o tratamento do produto, #283), "o que é a minha apuração?" (quer o dado — o possessivo não é
+palavra ignorável, de propósito) e "o que é insumo agropecuário para a lei?" (quer a regra) têm
+palavra a mais e seguem o fluxo normal. A `LEGISLACAO_GENERICA` das `RegrasClassificacao` não
+serviria de guarda: ela lista "alíquota", "isenção", "imunidade", "fato gerador" e "contribuinte",
+que são termos deste mapa.
+
+**Só termo com dispositivo conferido.** O mapa liga cada termo ao dispositivo que o institui ou
+define, conferido vigente na base em 2026-11-13, e a citação sai pelo `CitacoesFixas`, por rótulo
+exato — nunca por similaridade:
+
+| Termo | Dispositivo |
+|---|---|
+| IBS | LC 214/2025, art. 1º, inciso I |
+| CBS | LC 214/2025, art. 1º, inciso II |
+| Funrural | Lei 8.212/1991, art. 25, inciso I |
+| crédito | LC 214/2025, art. 47 |
+| apuração | LC 214/2025, art. 45 |
+| split payment | LC 214/2025, art. 31 |
+| alíquota | LC 214/2025, art. 14 |
+| base de cálculo | LC 214/2025, art. 12 |
+| fato gerador | LC 214/2025, art. 10 |
+| contribuinte | LC 214/2025, art. 21 |
+| crédito presumido | LC 214/2025, art. 168 |
+| imunidade | LC 214/2025, art. 8º |
+| não cumulatividade | EC 132/2023, art. 1º (redação do art. 156-A, § 1º, inciso VIII) |
+| regime regular | LC 214/2025, art. 47 |
+
+Termo do glossário **fora** do mapa não é atalho e segue para a rota de lei, como antes: NF-e,
+DANFE, NCM, CFOP, SEFAZ, cClassTrib e guia são conceitos do sistema, não da lei; LC, EC e ADCT são
+metalinguagem; ICMS, ISS, PIS e Cofins são instituídos por leis que não estão na base; e isenção,
+diferimento e responsável tributário não têm dispositivo que os defina em geral (o único
+diferimento na base é o do art. 138, § 2º, dos insumos do Anexo IX, **fora do escopo** pela #280).
+Sem essa regra, uma resposta de legislação sem citação contaria como "sem citação válida" na régua
+da avaliação, e o atalho melhoraria a leitura piorando o número.
+
+A resposta é a definição montada ("IBS (imposto sobre bens e serviços): o novo imposto sobre a
+venda..."), o fecho `COM_FONTE` — **só quando a citação veio da base** — e a linha "O que isso quer
+dizer" (`LinhaGlossario`) com os termos que a própria definição usa (a do IBS fala do ICMS e do ISS).
+Rota `LEGISLACAO` com citação, sem modelo e sem disjuntor, pagando só a leitura da mensagem (#511);
+camada `ATALHO_DEFINICAO` e desfecho `DEFINICAO_DO_GLOSSARIO` na auditoria, que **não** é recusa nem
+texto descartado. Os dois enums cabem nas colunas (`VARCHAR(20)` e `VARCHAR(40)`), sem changeSet. O
+`TextosDoBackend` e o `FundamentoRetencao` seguem valendo: "o que é split payment?" leva o parágrafo
+da RN009 como qualquer resposta.
+
+**Nenhum conjunto de avaliação mede pergunta de definição pura** (709 perguntas em 14 conjuntos,
+conferido pela sessão da orquestração em 2026-11-13: nenhuma cai no atalho, nem por perto). Ou seja,
+o atalho não muda a medição de nenhum conjunto existente — e também não pode ser validado por eles:
+ele se sustenta em teste de código, possível porque a resposta é determinística e do backend.
+
 **O atalho de legislação explicado (#347).** O texto curado da #343 (quatro itens) ficou
 engessado para o produtor. O `AtalhoReformaTributaria` responde agora com o texto explicado do
 `TextoReformaTributaria`, em seções: o que são o IBS e a CBS e o que eles substituem; o calendário
