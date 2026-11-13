@@ -233,7 +233,10 @@ public class RotaLegislacao {
     }
     String texto = limpar(resposta.getResult().getOutput().getText());
 
-    if (texto.contains(PromptsCeres.NAO_ENCONTREI)) {
+    if (texto.contains(PromptsCeres.NAO_ENCONTREI)
+        && !(conferencia != null && ConferenciaFidelidadeLei.temFrases(texto))) {
+      // Com a conferencia de fidelidade (#269), o NAO_ENCONTREI ao lado de frases no formato e so
+      // a parte que os trechos nao respondem: as frases seguem para a conferencia.
       // O modelo disse que os trechos nao respondem: o texto dele sai, com ou sem marca. Os mais
       // proximos ficam para consulta (#343), sem afirmar que respondem.
       log.info("Ceres: modelo nao encontrou a resposta nos trechos; trechos relacionados");

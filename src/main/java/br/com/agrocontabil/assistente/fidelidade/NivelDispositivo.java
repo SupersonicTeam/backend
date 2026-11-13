@@ -113,6 +113,48 @@ final class NivelDispositivo {
   }
 
   /**
+   * O texto próprio dos níveis que a passagem toca, do começo do nível em que ela começa ao fim do
+   * nível em que ela termina (#269): é o que o dispositivo citado diz, e a frase pode resumi-lo
+   * todo, mesmo que a cópia seja só um pedaço dele. O texto dos níveis de cima (o caput, para uma
+   * cópia no inciso) não entra.
+   *
+   * @param inicio  posição da primeira palavra da passagem no texto do trecho
+   * @param posicao posição da última palavra
+   * @return o texto dos níveis tocados
+   */
+  String textoDosNiveis(int inicio, int posicao) {
+    int primeiro = nivelDe(inicio);
+    int ultimo = nivelDe(posicao);
+    int fim = ultimo + 1 < inicios.size() ? inicios.get(ultimo + 1) : texto.length();
+    return texto.substring(inicios.get(primeiro), fim).strip();
+  }
+
+  /**
+   * O texto do trecho do começo (o caput) até o fim do nível em que a passagem termina (#269): o
+   * dispositivo citado com o contexto dos níveis de cima ("Durante o período de 2029 a 2032:" diz
+   * de quando vale a alínea). Serve ao número e à cobertura; a negação da frase confere só o texto
+   * próprio ({@link #textoDosNiveis}), para o "não" de uma condição de cima não valer pela frase.
+   *
+   * @param posicao posição da última palavra da passagem
+   * @return o texto do caput ao fim do nível
+   */
+  String textoAte(int posicao) {
+    int ultimo = nivelDe(posicao);
+    int fim = ultimo + 1 < inicios.size() ? inicios.get(ultimo + 1) : texto.length();
+    return texto.substring(0, fim).strip();
+  }
+
+  private int nivelDe(int posicao) {
+    int nivel = 0;
+    for (int i = 0; i < inicios.size(); i++) {
+      if (inicios.get(i) <= posicao) {
+        nivel = i;
+      }
+    }
+    return nivel;
+  }
+
+  /**
    * O ancestral em que está escrita a passagem que vai até {@code posicao}: o nível mais fundo que
    * começa antes dela.
    *
@@ -120,12 +162,7 @@ final class NivelDispositivo {
    * @return o ancestral; nulo se a passagem já está no nível do próprio trecho
    */
   Ancestral ancestralDe(int posicao) {
-    int nivel = 0;
-    for (int i = 0; i < inicios.size(); i++) {
-      if (inicios.get(i) <= posicao) {
-        nivel = i;
-      }
-    }
+    int nivel = nivelDe(posicao);
     if (nivel == rotulos.size() - 1) {
       return null;
     }

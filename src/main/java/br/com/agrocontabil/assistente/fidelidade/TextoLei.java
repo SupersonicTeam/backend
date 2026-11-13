@@ -46,7 +46,16 @@ final class TextoLei {
       "sem", "isento", "isenta", "isentos", "isentas", "isencao", "imune", "imunes", "imunidade",
       "suspensao", "suspenso", "suspensa", "suspensos", "suspensas", "dispensa", "dispensado",
       "dispensada", "zero", "zerada", "zeradas", "zerado", "fora", "deixa", "deixam", "afastado",
-      "afastada", "inexigivel"));
+      "afastada", "inexigivel", "ausencia", "ausente", "ausentes", "inexistencia", "inexistente",
+      "livre", "livres", "desonerado", "desonerada", "desonerados", "desoneradas",
+      "desoneracao"));
+
+  /**
+   * Negação estrita seguida do que ela nega, até a próxima pontuação (no texto já normalizado):
+   * "caso nao tenha se aperfeicoado, ..." nega "tenha se aperfeicoado".
+   */
+  private static final Pattern ESCOPO_NEGADO = Pattern.compile(
+      "\\b(?:" + String.join("|", NEGACAO) + ")\\b([^.,;:!?()]{0,80})");
 
   /** Restrição: se a frase restringe ("só o IBS"), a evidência também tem de restringir. */
   static final Set<String> RESTRICAO = Set.of(
@@ -103,6 +112,23 @@ final class TextoLei {
       lista.add(new Palavra(normalizar(m.group()), m.start()));
     }
     return lista;
+  }
+
+  /**
+   * Raízes das palavras de conteúdo que uma negação estrita do texto nega (#269): o que vem logo
+   * depois do "não", do "salvo" ou do "vedado", até a próxima pontuação. Se a frase fala disso sem
+   * negar, ela inverte o sentido; se não fala, só deixou a condição de fora.
+   *
+   * @param texto texto original (a cópia)
+   * @return raízes negadas; vazio sem negação estrita
+   */
+  static Set<String> negados(String texto) {
+    java.util.Set<String> raizes = new java.util.HashSet<>();
+    Matcher m = ESCOPO_NEGADO.matcher(NormalizacaoBusca.normalizar(texto));
+    while (m.find()) {
+      formas(m.group(1)).stream().filter(TextoLei::conteudo).forEach(p -> raizes.add(raiz(p)));
+    }
+    return raizes;
   }
 
   /** Só as formas, na ordem. */

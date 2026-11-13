@@ -31,6 +31,23 @@ class NivelDispositivoTest {
   }
 
   @Test
+  @DisplayName("texto dos níveis que a passagem toca: só eles, sem o de cima")
+  void textoDosNiveis() {
+    String texto = CAPUT + " " + PARAGRAFO + " " + INCISO;
+    NivelDispositivo niveis = NivelDispositivo.de("art. 10, § 2º, inciso IV", texto);
+
+    int insumos = texto.indexOf("insumos");
+    assertThat(niveis.textoDosNiveis(insumos, insumos)).isEqualTo(INCISO);
+    int aplica = texto.indexOf("aplica-se");
+    assertThat(niveis.textoDosNiveis(aplica, insumos)).isEqualTo(PARAGRAFO + " " + INCISO);
+    int regra = texto.indexOf("regra");
+    assertThat(niveis.textoDosNiveis(regra, regra)).isEqualTo(CAPUT);
+    // Com o contexto: do caput ao fim do nivel em que a passagem termina.
+    assertThat(niveis.textoAte(aplica)).isEqualTo(CAPUT + " " + PARAGRAFO);
+    assertThat(niveis.textoAte(insumos)).isEqualTo(texto);
+  }
+
+  @Test
   @DisplayName("parágrafo único, inciso com letra e alínea")
   void formasDoRotulo() {
     String unico = "Art. 3º Fica criado o regime. Parágrafo único. O regime vale a partir de 2027.";

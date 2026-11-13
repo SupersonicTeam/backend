@@ -90,6 +90,88 @@ class ConferenciaFidelidadeLeiTest {
   }
 
   @Test
+  @DisplayName("falso descarte 1: número no mesmo dispositivo, fora da cópia, passa (data do caput)")
+  void numeroNoMesmoDispositivoPassa() {
+    TrechoRecuperado cbs = trecho("T1", "id-cbs", "art. 9º", "Art. 9º Em relação aos fatos "
+        + "geradores ocorridos de 1º de janeiro a 31 de dezembro de 2026, a CBS será cobrada "
+        + "mediante aplicação da alíquota de 0,9% (nove décimos por cento).");
+    ConferenciaFidelidadeLei.Resultado r = conferir(json(
+        "De 1º de janeiro a 31 de dezembro de 2026, a CBS será cobrada com alíquota de 0,9%.",
+        "T1", "a CBS será cobrada mediante aplicação da alíquota de 0,9%"), cbs);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
+    // O numero que nao esta no dispositivo segue reprovando.
+    assertThat(conferir(json("Em 2027, a CBS será cobrada com alíquota de 0,9%.", "T1",
+        "a CBS será cobrada mediante aplicação da alíquota de 0,9%"), cbs).desfecho())
+        .isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+  }
+
+  @Test
+  @DisplayName("falso descarte 2: a frase resume o dispositivo da cópia, mesmo com a cópia curta")
+  void coberturaPeloDispositivoDaCopia() {
+    TrechoRecuperado lista = trecho("T1", "id-lista", "art. 138, § 4º", "Art. 138. Ficam reduzidas "
+        + "em 60% as alíquotas dos insumos agropecuários do Anexo IX. § 4º A lista do Anexo IX "
+        + "será revisada a cada 120 dias, tão somente para inclusão de insumos com as mesmas "
+        + "finalidades dos já contemplados.");
+    ConferenciaFidelidadeLei.Resultado r = conferir(json(
+        "A lista do Anexo IX é revisada a cada 120 dias, só para incluir insumos com as mesmas "
+            + "finalidades dos já contemplados.", "T1",
+        "A lista do Anexo IX será revisada a cada 120 dias, tão somente para inclusão de insumos"),
+        lista);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
+    // O que nao esta nem no dispositivo da copia (o caput, aqui, fica de fora) segue reprovando.
+    assertThat(conferir(json("A lista do Anexo IX é revisada a cada 120 dias por ato conjunto do "
+            + "ministro da fazenda com estados e municípios.", "T1",
+        "A lista do Anexo IX será revisada a cada 120 dias"), lista).desfecho())
+        .isEqualTo(DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+  }
+
+  @Test
+  @DisplayName("falso descarte 3: a frase que não retoma a condição negada da cópia não a inverte")
+  void condicaoNegadaOmitidaPassa() {
+    ConferenciaFidelidadeLei.Resultado r = conferir(json(
+        "Nesse caso, será devido só o IBS na operação.", "T1",
+        "caso não tenha se aperfeiçoado, até 31 de dezembro de 2032, o elemento temporal da "
+            + "hipótese de incidência do ICMS ou do ISS: b) será devido exclusivamente o IBS na "
+            + "operação"), alineaB("T1"));
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
+  }
+
+  @Test
+  @DisplayName("falso descarte 4: 'ausência de vinculação' conta como negação de 'não tem'")
+  void ausenciaContaComoNegacao() {
+    TrechoRecuperado comite = trecho("T1", "id-comite", "art. 480, § 4º", "Art. 480. O Comitê "
+        + "Gestor do IBS é entidade pública. § 4º O Comitê Gestor terá sua atuação caracterizada "
+        + "pela ausência de vinculação, tutela ou subordinação hierárquica a qualquer órgão da "
+        + "administração pública.");
+    ConferenciaFidelidadeLei.Resultado r = conferir(json(
+        "O Comitê Gestor não tem vinculação ou subordinação hierárquica a órgão da administração "
+            + "pública.", "T1", "pela ausência de vinculação, tutela ou subordinação hierárquica a "
+            + "qualquer órgão da administração pública"), comite);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
+  }
+
+  @Test
+  @DisplayName("NAO_ENCONTREI numa frase ao lado de outras: só ela sai; sozinho, não há frase")
+  void naoEncontreiParcial() {
+    String parcial = "{\"frases\": ["
+        + "{\"frase\": \"Nesse caso, será devido só o IBS na operação.\", \"evidencias\": ["
+        + "{\"trecho\": \"T1\", \"copia\": \"será devido exclusivamente o IBS na operação\"}]},"
+        + "{\"frase\": \"NAO_ENCONTREI\", \"evidencias\": []}]}";
+    ConferenciaFidelidadeLei.Resultado r = conferir(parcial, alineaB("T1"));
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
+    assertThat(r.texto()).isEqualTo("Nesse caso, será devido só o IBS na operação [T1].");
+    assertThat(ConferenciaFidelidadeLei.temFrases(parcial)).isTrue();
+    assertThat(ConferenciaFidelidadeLei.temFrases(
+        "{\"frases\": [{\"frase\": \"NAO_ENCONTREI\"}]}")).isFalse();
+    assertThat(ConferenciaFidelidadeLei.temFrases("NAO_ENCONTREI")).isFalse();
+  }
+
+  @Test
   @DisplayName("frase com negação que a evidência não tem reprova")
   void negacaoQueAEvidenciaNaoTemReprova() {
     ConferenciaFidelidadeLei.Resultado r = conferir(json(
@@ -137,13 +219,32 @@ class ConferenciaFidelidadeLeiTest {
   }
 
   @Test
-  @DisplayName("número da frase fora da evidência dela reprova, mesmo que esteja no trecho")
+  @DisplayName("número da frase fora da evidência e do dispositivo dela reprova")
   void numeroForaDaEvidenciaReprova() {
     ConferenciaFidelidadeLei.Resultado r = conferir(json(
-        "Até 2032 será devido só o IBS na operação.", "T1",
+        "Até 2033 será devido só o IBS na operação.", "T1",
         "será devido exclusivamente o IBS na operação"), alineaB("T1"));
 
     assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.REPROVADA_NUMERO);
+  }
+
+  @Test
+  @DisplayName("falso descarte 5: o período do parágrafo de cima vale como contexto da alínea")
+  void numeroDoNivelDeCimaPassa() {
+    ConferenciaFidelidadeLei.Resultado r = conferir(json(
+        "De 2029 a 2032, nesse caso, será devido só o IBS na operação.", "T1",
+        "será devido exclusivamente o IBS na operação"), alineaB("T1"));
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
+  }
+
+  @Test
+  @DisplayName("o 'não' de uma condição de cima não sustenta a negação da frase sobre a alínea")
+  void negacaoDeCimaNaoSustentaAFrase() {
+    // O inciso II tem "caso nao tenha se aperfeicoado"; a alinea b, citada, nao nega nada.
+    assertThat(conferir(json("O IBS não é devido na operação.", "T1",
+        "será devido exclusivamente o IBS na operação"), alineaB("T1")).desfecho())
+        .isEqualTo(DesfechoFidelidadeLei.REPROVADA_POLARIDADE);
   }
 
   @Test

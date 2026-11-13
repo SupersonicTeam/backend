@@ -349,19 +349,35 @@ no conjunto novo (escrito por outra sessão, cega ao código) e o OK do Murillo.
      caixa nem pontuação; fragmentos separados por reticências valem se cada um for literal e na
      ordem. Escrita só em outro trecho, a marca vai para ele; em nenhum, ou em vários que dariam
      citações diferentes, `REPROVADA_EVIDENCIA_NAO_LITERAL`;
-   - **número**: todo número da frase está nas cópias dela (`REPROVADA_NUMERO`), mais estrito que o
-     `ValidadorNumeros`, que aceita qualquer trecho; o ordinal ("1º", "1°") conta como o número;
+   - **número**: todo número da frase está nas cópias dela ou no **contexto** do dispositivo
+     citado, o texto do caput até o fim do nível em que a cópia termina (`REPROVADA_NUMERO`); o
+     ordinal ("1º", "1°") conta como o número;
    - **polaridade**: negação ("não", "nem", "vedado", "exceto", "salvo"...) ou restrição ("só",
-     "somente", "apenas", "exclusivamente") da frase precisa estar nas cópias, e negação das cópias
-     precisa estar na frase; isenção, imunidade, alíquota zero e suspensão contam como negação do
-     outro lado (`REPROVADA_POLARIDADE`). É o sinal de sentido invertido;
+     "somente", "apenas", "exclusivamente") da frase precisa estar nas cópias ou no texto **próprio**
+     do dispositivo (sem os níveis de cima: o "não" de uma condição do inciso não sustenta "não é
+     devido" citando a alínea). A negação das cópias exige negação na frase só quando a frase fala do
+     que foi negado (`TextoLei.negados`: as palavras depois do "não" até a pontuação); "nesse caso,
+     será devido só o IBS" não retoma "caso não tenha se aperfeiçoado" e passa. Isenção, imunidade,
+     alíquota zero, suspensão, ausência, "livre" e "desonerado" contam como negação do outro lado
+     (`REPROVADA_POLARIDADE`). É o sinal de sentido invertido;
    - **cobertura**: a fração das palavras de conteúdo da frase (sem as vazias da `fidelidade/TextoLei`,
-     comparadas pelos 5 primeiros caracteres, com "z" lido como "c"; sigla do glossário vale pelo nome por extenso e
-     vice-versa) que aparece nas cópias atinge a `cobertura-minima` (`REPROVADA_COBERTURA`). É o sinal
-     de afirmação além do trecho.
+     comparadas pelos 5 primeiros caracteres, com "z" lido como "c"; sigla do glossário vale pelo nome
+     por extenso e vice-versa) que aparece nas cópias ou no contexto do dispositivo atinge a
+     `cobertura-minima` (`REPROVADA_COBERTURA`). É o sinal de afirmação além do trecho.
    - frase sem nenhuma palavra de conteúdo ("Sim.", "Isso vale.") passa pelo número e pela
-     polaridade, mas **sai do texto**: não há o que a cópia sustente. Sem nenhuma frase com conteúdo,
-     `REPROVADA_COBERTURA`.
+     polaridade, mas **sai do texto**: não há o que a cópia sustente. A frase `NAO_ENCONTREI` ao lado
+     de outras (a parte que os trechos não respondem) também sai, sem conferência; só
+     `NAO_ENCONTREI`, sem outra frase, segue o caminho de sempre (`CITACAO_INVALIDA`, trechos mais
+     próximos). Sem nenhuma frase com conteúdo, `REPROVADA_COBERTURA`.
+
+   **Ajuste depois da primeira medição (2026-11-12, #269):** o falso descarte por pergunta passou da
+   margem (8 na camada 1, 6 com o juiz). O diagnóstico com o Haiku em perguntas próprias mostrou
+   três causas: o prompt com evidência levava o modelo a responder `NAO_ENCONTREI` quando os trechos
+   respondiam só em parte (o `CITACAO_INVALIDA` com `fidelidade_lei` nulo); a cópia era um pedaço do
+   dispositivo e a frase o resumia inteiro (número e cobertura); e a regra da negação lia como
+   inversão a frase que só deixava de fora uma condição negada. O prompt passou a pedir a parte que
+   os trechos sustentam (`NAO_ENCONTREI` só sem nenhum trecho sobre o assunto) e a exigir o JSON também
+   na resposta parcial; as regras ficaram como acima.
 
    A marca da evidência aceita `T1`, `[T1]`, `t1` e o número sozinho; numa lista (`T1, T3`), vale a
    primeira, e a cópia achada em outro trecho troca a marca.

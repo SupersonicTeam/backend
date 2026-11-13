@@ -1,6 +1,7 @@
 package br.com.agrocontabil.assistente.fidelidade;
 
 import br.com.agrocontabil.assistente.GlossarioProdutor;
+import br.com.agrocontabil.assistente.PromptsCeres;
 import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
 import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import java.util.ArrayList;
@@ -98,10 +99,14 @@ public class ConferenciaFidelidadeLei {
   }
 
   /**
-   * Frase aprovada pela camada 1, com as cópias que a sustentam (o que o juiz lê).
+   * Frase aprovada pela camada 1, com as passagens que a sustentam (o que o juiz lê).
    *
    * @param texto  a frase, sem as marcas
-   * @param copias as passagens copiadas dos trechos, na ordem do modelo
+   * @param copias os dispositivos citados, cada um com o contexto dos níveis de cima (o caput até o
+   *               fim do nível da cópia), sem repetição, na ordem do modelo: a mesma passagem
+   *               contra a qual a camada 1 conferiu número e cobertura. Só a cópia, o juiz
+   *               reprovava a frase que resume o dispositivo que a cópia corta (diagnóstico de
+   *               2026-11-12)
    */
   public record FraseConferida(String texto, List<String> copias) {
 
@@ -132,36 +137,45 @@ public class ConferenciaFidelidadeLei {
     List<String> frases = new ArrayList<>();
     List<FraseConferida> conferidas = new ArrayList<>();
     for (RespostaComEvidencia.Frase frase : lida.frases()) {
+      if (naoEncontrei(frase)) {
+        // A parte que os trechos nao respondem (#269): sai do texto, sem conferencia; as outras
+        // frases seguem. So NAO_ENCONTREI = a rota trata como antes (temFrases).
+        continue;
+      }
       if (frase.evidencias().isEmpty()) {
         return reprovada(DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA, trechos, marcasCitadas);
       }
       Set<String> marcasDaFrase = new LinkedHashSet<>();
       StringBuilder copias = new StringBuilder();
-      List<String> copiasDaFrase = new ArrayList<>();
+      StringBuilder proprios = new StringBuilder();
+      StringBuilder contextos = new StringBuilder();
+      Set<String> passagensDaFrase = new LinkedHashSet<>();
       for (RespostaComEvidencia.Evidencia evidencia : frase.evidencias()) {
         int indice = indice(evidencia.marca(), trechos.size());
         if (indice < 0 || evidencia.copia() == null || evidencia.copia().isBlank()) {
           return reprovada(DesfechoFidelidadeLei.REPROVADA_SEM_EVIDENCIA, trechos, marcasCitadas);
         }
-        String marca = citacoes.citar(indice, evidencia.copia());
-        if (marca == null) {
+        Citada citada = citacoes.citar(indice, evidencia.copia());
+        if (citada == null) {
           return reprovada(
               DesfechoFidelidadeLei.REPROVADA_EVIDENCIA_NAO_LITERAL, trechos, marcasCitadas);
         }
-        marcasDaFrase.add(marca);
+        marcasDaFrase.add(citada.marca());
         copias.append(evidencia.copia()).append(' ');
-        copiasDaFrase.add(evidencia.copia().strip());
+        proprios.append(citada.proprio()).append(' ');
+        contextos.append(citada.contexto()).append(' ');
+        passagensDaFrase.add(citada.contexto());
       }
       String textoFrase = MARCAS.matcher(frase.texto()).replaceAll(" ").replaceAll("\\s+", " ")
           .strip();
       DesfechoFidelidadeLei motivo = conferirSentido(textoFrase, copias.toString(),
-          coberturaMinima);
+          proprios.toString(), contextos.toString(), coberturaMinima);
       if (motivo != null) {
         return reprovada(motivo, trechos, marcasCitadas);
       }
       if (TextoLei.formas(textoFrase).stream().anyMatch(TextoLei::conteudo)) {
         frases.add(comMarcas(textoFrase, marcasDaFrase));
-        conferidas.add(new FraseConferida(textoFrase, copiasDaFrase));
+        conferidas.add(new FraseConferida(textoFrase, List.copyOf(passagensDaFrase)));
       }
     }
     if (frases.isEmpty()) {
@@ -174,27 +188,53 @@ public class ConferenciaFidelidadeLei {
         conferidas);
   }
 
-  /** Número, polaridade e cobertura; nulo se a frase passa. */
-  private DesfechoFidelidadeLei conferirSentido(String frase, String copias,
-      double coberturaMinima) {
+  /**
+   * Número, polaridade e cobertura; nulo se a frase passa.
+   *
+   * <p>A medição de 2026-11-12 mostrou o modelo copiando só um pedaço do dispositivo e resumindo-o
+   * inteiro na frase (a data no começo do caput que a cópia deixou de fora, o período do parágrafo
+   * que dá contexto à alínea). Por isso:
+   * <ul>
+   *   <li><strong>número e cobertura</strong> valem contra as cópias e o texto do caput até o fim
+   *       do dispositivo citado ({@code contextos}: o dispositivo com os níveis de cima);</li>
+   *   <li><strong>negação ou restrição da frase</strong> valem contra as cópias e o texto próprio
+   *       do dispositivo ({@code proprios}), sem os níveis de cima: o "não" de uma condição do
+   *       inciso não sustenta "o IBS não é devido" citando a alínea;</li>
+   *   <li><strong>negação das cópias</strong> só exige negação na frase quando a frase fala do que
+   *       foi negado ({@link TextoLei#negados}): "nesse caso, será devido só o IBS" não retoma a
+   *       condição "caso não tenha se aperfeiçoado" e não a inverte.</li>
+   * </ul>
+   */
+  private DesfechoFidelidadeLei conferirSentido(String frase, String copias, String proprios,
+      String contextos, double coberturaMinima) {
+    String evidencia = copias + " " + contextos;
     List<String> palavrasFrase = TextoLei.formas(frase);
-    List<String> palavrasCopias = TextoLei.formas(copias);
-    Set<String> formasCopias = new HashSet<>(palavrasCopias);
+    List<String> palavrasEvidencia = TextoLei.formas(evidencia);
+    List<String> palavrasProprias = TextoLei.formas(copias + " " + proprios);
+    Set<String> formasEvidencia = new HashSet<>(palavrasEvidencia);
     for (String forma : palavrasFrase) {
-      if (TextoLei.numero(forma) && !formasCopias.contains(forma)) {
+      if (TextoLei.numero(forma) && !formasEvidencia.contains(forma)) {
         return DesfechoFidelidadeLei.REPROVADA_NUMERO;
       }
     }
-    if (algum(palavrasFrase, TextoLei.NEGACAO) && !algum(palavrasCopias, TextoLei.NEGACAO_AMPLA)
-        || algum(palavrasCopias, TextoLei.NEGACAO) && !algum(palavrasFrase, TextoLei.NEGACAO_AMPLA)
-        || algum(palavrasFrase, TextoLei.RESTRICAO) && !algum(palavrasCopias, TextoLei.RESTRICAO)) {
+    boolean fraseNega = algum(palavrasFrase, TextoLei.NEGACAO_AMPLA);
+    Set<String> raizesDaFrase = new HashSet<>();
+    palavrasFrase.stream().filter(TextoLei::conteudo).forEach(p -> raizesDaFrase.add(
+        TextoLei.raiz(p)));
+    boolean inverte = !fraseNega
+        && TextoLei.negados(copias).stream().anyMatch(raizesDaFrase::contains);
+    if (algum(palavrasFrase, TextoLei.NEGACAO)
+        && !algum(palavrasProprias, TextoLei.NEGACAO_AMPLA)
+        || inverte
+        || algum(palavrasFrase, TextoLei.RESTRICAO)
+        && !algum(palavrasProprias, TextoLei.RESTRICAO)) {
       return DesfechoFidelidadeLei.REPROVADA_POLARIDADE;
     }
     List<String> conteudo = palavrasFrase.stream().filter(TextoLei::conteudo).toList();
     if (conteudo.isEmpty()) {
       return null;
     }
-    Set<String> raizes = raizesDasCopias(copias, palavrasCopias);
+    Set<String> raizes = raizesDasCopias(evidencia, palavrasEvidencia);
     long cobertas = conteudo.stream().filter(p -> raizes.contains(TextoLei.raiz(p))).count();
     return (double) cobertas / conteudo.size() + 1e-9 < coberturaMinima
         ? DesfechoFidelidadeLei.REPROVADA_COBERTURA
@@ -223,6 +263,25 @@ public class ConferenciaFidelidadeLei {
 
   private static boolean algum(List<String> palavras, Set<String> conjunto) {
     return palavras.stream().anyMatch(conjunto::contains);
+  }
+
+  /** A frase é o {@code NAO_ENCONTREI} do modelo para a parte que os trechos não respondem. */
+  private static boolean naoEncontrei(RespostaComEvidencia.Frase frase) {
+    return frase.texto().contains(PromptsCeres.NAO_ENCONTREI);
+  }
+
+  /**
+   * {@code true} se a resposta tem ao menos uma frase no formato além do {@code NAO_ENCONTREI}
+   * (#269): a rota só trata a resposta como "os trechos não respondem" quando não tem; com frases,
+   * quem decide é a conferência.
+   *
+   * @param resposta texto do modelo
+   * @return se há frase a conferir
+   */
+  public static boolean temFrases(String resposta) {
+    return RespostaComEvidencia.ler(resposta)
+        .map(r -> r.frases().stream().anyMatch(f -> !naoEncontrei(f)))
+        .orElse(false);
   }
 
   /** A frase com as marcas antes da pontuação final ("... operação [T1]."). */
@@ -269,11 +328,13 @@ public class ConferenciaFidelidadeLei {
   }
 
   /**
-   * Posição, no texto do trecho, da última palavra da cópia; -1 se a cópia não está escrita nele.
-   * Fragmentos separados por reticências têm de estar, cada um, escritos e na ordem.
+   * Posições, no texto do trecho, da primeira e da última palavra da cópia; nulo se a cópia não
+   * está escrita nele. Fragmentos separados por reticências têm de estar, cada um, escritos e na
+   * ordem.
    */
-  static int posicaoDaCopia(String copia, List<TextoLei.Palavra> texto) {
+  static int[] posicaoDaCopia(String copia, List<TextoLei.Palavra> texto) {
     int cursor = 0;
+    int primeira = -1;
     int ultima = -1;
     boolean algum = false;
     for (String fragmento : RETICENCIAS.split(copia)) {
@@ -283,14 +344,27 @@ public class ConferenciaFidelidadeLei {
       }
       int achado = procurar(texto, palavras, cursor);
       if (achado < 0) {
-        return -1;
+        return null;
+      }
+      if (!algum) {
+        primeira = texto.get(achado).inicio();
       }
       algum = true;
       cursor = achado + palavras.size();
       ultima = texto.get(cursor - 1).inicio();
     }
-    return algum ? ultima : -1;
+    return algum ? new int[] {primeira, ultima} : null;
   }
+
+  /**
+   * Onde a cópia foi citada.
+   *
+   * @param marca    marca a citar (o trecho ou o ancestral dele)
+   * @param proprio  texto próprio dos níveis que a cópia toca (o trecho inteiro quando o rótulo não
+   *                 tem a forma simples)
+   * @param contexto texto do caput até o fim do nível em que a cópia termina (idem)
+   */
+  private record Citada(String marca, String proprio, String contexto) {}
 
   private static int procurar(List<TextoLei.Palavra> texto, List<String> palavras, int desde) {
     for (int i = desde; i + palavras.size() <= texto.size(); i++) {
@@ -330,23 +404,24 @@ public class ConferenciaFidelidadeLei {
      * Marca a citar para a cópia que o modelo atribuiu ao trecho {@code indice}; nulo se a cópia não
      * está escrita em nenhum trecho, ou se está em vários que levariam a citações diferentes.
      */
-    String citar(int indice, String copia) {
-      int posicao = posicaoDaCopia(copia, palavrasDe(indice));
-      if (posicao >= 0) {
+    Citada citar(int indice, String copia) {
+      int[] posicao = posicaoDaCopia(copia, palavrasDe(indice));
+      if (posicao != null) {
         return situar(indice, posicao);
       }
-      Set<String> destinos = new LinkedHashSet<>();
+      Map<String, Citada> destinos = new LinkedHashMap<>();
       for (int outro = 0; outro < recebidos.size(); outro++) {
-        int p = posicaoDaCopia(copia, palavrasDe(outro));
-        if (p >= 0) {
-          destinos.add(situar(outro, p));
+        int[] p = posicaoDaCopia(copia, palavrasDe(outro));
+        if (p != null) {
+          Citada citada = situar(outro, p);
+          destinos.putIfAbsent(citada.marca(), citada);
         }
       }
       if (destinos.size() != 1) {
         return null;
       }
       corrigiu = true;
-      return destinos.iterator().next();
+      return destinos.values().iterator().next();
     }
 
     private List<TextoLei.Palavra> palavrasDe(int indice) {
@@ -354,20 +429,24 @@ public class ConferenciaFidelidadeLei {
           i -> TextoLei.palavras(recebidos.get(i).texto()));
     }
 
-    /** Marca do nível do dispositivo em que a cópia está escrita. */
-    private String situar(int indice, int posicao) {
+    /** Marca do nível do dispositivo em que a cópia está escrita, e o texto desse nível. */
+    private Citada situar(int indice, int[] posicao) {
       TrechoRecuperado trecho = recebidos.get(indice);
       NivelDispositivo nivel = niveis.computeIfAbsent(indice, i -> Optional.ofNullable(
           NivelDispositivo.de(trecho.dispositivo(), trecho.texto()))).orElse(null);
-      NivelDispositivo.Ancestral ancestral = nivel == null ? null : nivel.ancestralDe(posicao);
+      String proprio = nivel == null
+          ? trecho.texto()
+          : nivel.textoDosNiveis(posicao[0], posicao[1]);
+      String contexto = nivel == null ? trecho.texto() : nivel.textoAte(posicao[1]);
+      NivelDispositivo.Ancestral ancestral = nivel == null ? null : nivel.ancestralDe(posicao[1]);
       if (ancestral == null) {
-        return trecho.marca();
+        return new Citada(trecho.marca(), proprio, contexto);
       }
       corrigiu = true;
       String chave = chave(trecho.norma(), ancestral.dispositivo());
       String existente = marcaPorDispositivo.get(chave);
       if (existente != null) {
-        return existente;
+        return new Citada(existente, proprio, contexto);
       }
       String marca = "T" + (lista.size() + 1);
       // Sem o trecho do ancestral na busca, o id e o do trecho em que a copia foi achada: a
@@ -375,7 +454,7 @@ public class ConferenciaFidelidadeLei {
       lista.add(new TrechoRecuperado(marca, trecho.id(), trecho.norma(), ancestral.dispositivo(),
           trecho.url(), ancestral.texto(), trecho.similaridade()));
       marcaPorDispositivo.put(chave, marca);
-      return marca;
+      return new Citada(marca, proprio, contexto);
     }
 
     private static String chave(String norma, String dispositivo) {

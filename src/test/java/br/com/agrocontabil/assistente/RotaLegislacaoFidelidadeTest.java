@@ -161,6 +161,43 @@ class RotaLegislacaoFidelidadeTest {
   }
 
   @Test
+  @DisplayName("ligada: NAO_ENCONTREI ao lado de frases não derruba a resposta; sozinho, sim")
+  void naoEncontreiParcialNaoDerruba() {
+    when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
+    chatModel.responderTexto("{\"frases\": [{\"frase\": \"Os insumos agropecuarios tem as "
+        + "aliquotas reduzidas em 60%.\", \"evidencias\": [{\"trecho\": \"T1\", \"copia\": "
+        + "\"Ficam reduzidas em 60% as aliquotas do IBS e da CBS incidentes sobre os insumos "
+        + "agropecuarios\"}]}, {\"frase\": \"NAO_ENCONTREI\", \"evidencias\": []}]}");
+
+    ResultadoRota r = ligada().responder("Insumos tem reducao? E maquinas?", contexto);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(r.texto()).startsWith("Os insumos agropecuarios tem as aliquotas reduzidas em 60% "
+        + "(LC 214/2025, art. 138).").doesNotContain("NAO_ENCONTREI");
+
+    for (String so : List.of("NAO_ENCONTREI",
+        "{\"frases\": [{\"frase\": \"NAO_ENCONTREI\", \"evidencias\": []}]}")) {
+      chatModel.responderTexto(so);
+      ContextoAssistente outro = new ContextoAssistente(UUID.randomUUID(), HOJE);
+      ResultadoRota sozinho = ligada().responder("Maquinas tem reducao?", outro);
+      assertThat(sozinho.desfecho()).as(so).isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
+      assertThat(sozinho.texto()).isEqualTo(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO);
+      assertThat(outro.fidelidadeLei()).isNull();
+    }
+  }
+
+  @Test
+  @DisplayName("ligada: o prompt deixa responder a parte que os trechos sustentam")
+  void promptAceitaRespostaParcial() {
+    assertThat(PromptsCeres.sistemaLegislacaoComEvidencia(HOJE, "[T1] x"))
+        .contains("responda essa parte", "So se nenhum trecho tratar do assunto");
+    // O prompt de sempre nao muda.
+    assertThat(PromptsCeres.sistemaLegislacao(HOJE, "[T1] x"))
+        .contains("Se os trechos nao responderem a pergunta, responda apenas: NAO_ENCONTREI")
+        .doesNotContain("responda essa parte");
+  }
+
+  @Test
   @DisplayName("ligada e aprovada: as frases com as referências, a linha do glossário e as citações")
   void ligadaAprovada() {
     when(busca.buscar(anyString(), any())).thenReturn(List.of(INSUMOS));
@@ -356,7 +393,8 @@ class RotaLegislacaoFidelidadeTest {
     assertThat(sistemaRecebido()).isEqualTo(PromptsCeres.JUIZ_FIDELIDADE);
     assertThat(chatModel.promptsRecebidos().get(1).getUserMessage().getText())
         .startsWith("Frase 1: Os insumos agropecuarios tem as aliquotas reduzidas em 60%.")
-        .contains("Passagem: Ficam reduzidas em 60%")
+        // A passagem e o dispositivo citado inteiro (o caput, aqui), nao so a copia.
+        .contains("Passagem: " + CAPUT)
         .doesNotContain("Qual a reducao");
     assertThat(contexto.fidelidadeLei()).isEqualTo(DesfechoFidelidadeLei.APROVADA);
     assertThat(contexto.juizLei()).isNotNull();

@@ -159,15 +159,19 @@ public final class PromptsCeres {
    * ({@link #mensagemJuiz}). O juiz só reprova: o veredito nunca vira texto ao produtor.
    */
   public static final String JUIZ_FIDELIDADE = """
-      Voce confere se cada frase e sustentada pelas passagens de lei copiadas ao lado dela.
+      Voce confere se cada frase e sustentada pelas passagens de lei listadas logo abaixo dela.
 
       Para cada frase, responda:
       - SUSTENTA: tudo o que a frase afirma esta dito nas passagens, com o mesmo sentido, mesmo \
-      que em palavras mais simples.
-      - NAO_SUSTENTA: a frase afirma algo que as passagens nao dizem (condicao, consequencia, \
-      exemplo, alcance maior), ou deixa de fora uma excecao ou condicao delas que muda o sentido.
+      que em palavras mais simples. Resumir e deixar de fora partes das passagens nao e problema.
+      - NAO_SUSTENTA: a frase afirma algo que as passagens nao dizem: uma condicao, uma \
+      consequencia ou um exemplo que nao esta nelas, ou um alcance maior (dizer que vale sempre, \
+      ou para todos, quando as passagens limitam a um caso ou a um grupo).
       - CONTRADIZ: a frase diz o contrario das passagens.
 
+      As frases sao de uma mesma resposta, na ordem: uma frase pode retomar as anteriores \
+      ("tambem", "esse", "ele", "nesse caso"). Leia o que ela retoma nas frases e passagens \
+      anteriores, e julgue o que ela afirma.
       Use so as passagens. Nao use conhecimento proprio.
       Responda somente com JSON, sem nada antes ou depois: uma lista "vereditos" com exatamente \
       um veredito por frase, na ordem das frases, escrito como acima (SUSTENTA, NAO_SUSTENTA ou \
@@ -233,7 +237,11 @@ public final class PromptsCeres {
         - Responda somente com JSON, sem nada antes ou depois, neste formato:
         {"frases": [{"frase": "texto da frase", "evidencias": [{"trecho": "T1", "copia": \
         "passagem copiada do T1"}]}]}
-        - Se os trechos nao responderem a pergunta, responda apenas: %s
+        - Se os trechos responderem so a uma parte da pergunta, responda essa parte com as frases \
+        que eles sustentam.
+        - So se nenhum trecho tratar do assunto da pergunta, responda apenas: %s
+        - Fora isso, a resposta inteira, completa ou parcial, e somente o JSON acima: nada de texto \
+        corrido nem marca [T1] fora dele.
         """.formatted(NAO_ENCONTREI) + regraExtra + """
 
         Hoje e %s.
