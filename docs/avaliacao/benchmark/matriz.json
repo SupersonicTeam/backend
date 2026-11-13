@@ -45,6 +45,25 @@
       ],
       "raciocinio": "disabled",
       "nota": "Modelo por API (#483, decisao do Murillo de 2026-11-10): so na Ceres 2.0, porque a Ceres 1 (2463c27) nao tem o provedor da Anthropic. Sem Ollama para o chat (o embedding segue local); raciocinio desligado como na producao; chave so do ambiente (ANTHROPIC_API_KEY)."
+    },
+    {
+      "modelo": "claude-haiku-5-5+fidelidade-lei",
+      "modeloApi": "claude-haiku-5-5",
+      "variante": "fidelidade-lei",
+      "opcional": true,
+      "provedor": "anthropic",
+      "arquiteturas": [
+        "ceres-2"
+      ],
+      "raciocinio": "disabled",
+      "ambiente": {
+        "AI_FIDELIDADE_LEI_HABILITADA": "true",
+        "AI_FIDELIDADE_LEI_JUIZ_HABILITADO": "true",
+        "AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO": "justificativa",
+        "AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO": "true",
+        "AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE": "true"
+      },
+      "nota": "Variante do claude-haiku-5-5 na Ceres 2.0 com a fidelidade da rota de lei ligada (#269), na configuracao escolhida pela terceira medicao (camada 1 + juiz 'justificativa' + resgate por numero e por polaridade; docs/ceres-assistente.md, 'Configuracao escolhida'). OPCIONAL: so roda com --com-fidelidade-lei (ou --modelos claude-haiku-5-5+fidelidade-lei); sem isso a matriz roda como sempre. Fica fora de qualquer comparacao com as outras celulas (a Ceres 1 e os qwen3 nao tem a fidelidade) e tem secao propria no relatorio. O executor recusa a celula se o application.yml do commit da Ceres 2.0 nao conhece essas variaveis."
     }
   ],
   "modeloReferencia": "qwen3:4b-instruct",

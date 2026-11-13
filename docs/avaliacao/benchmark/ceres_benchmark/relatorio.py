@@ -123,9 +123,18 @@ class Celula:
         return self.manifesto.get("provedor", "ollama") != "ollama"
 
     @property
+    def com_fidelidade(self) -> bool:
+        """Variante com a fidelidade da rota de lei ligada (#269): fora de toda comparacao com as
+        outras celulas (a Ceres 1 e os qwen3 nao a tem) e com secao propria."""
+        return self.manifesto.get("variante") == "fidelidade-lei"
+
+    @property
     def titulo(self) -> str:
-        """``Ceres 2.0 · `modelo` `` (e ``(API)`` na celula por API), o rotulo das tabelas."""
-        return f"{self.rotulo_arquitetura} · `{self.modelo}`" + (" (API)" if self.por_api else "")
+        """``Ceres 2.0 · `modelo` `` (e ``(API)`` na celula por API, ``(API, fidelidade da lei)`` na
+        variante), o rotulo das tabelas."""
+        marca = (" (API, fidelidade da lei)" if self.com_fidelidade
+                 else " (API)" if self.por_api else "")
+        return f"{self.rotulo_arquitetura} · `{self.modelo}`" + marca
 
     @property
     def perguntas(self) -> dict[str, str]:
@@ -675,6 +684,13 @@ def _modelos_por_api(celulas, referencia, ids_comum, canonico, adaptacoes) -> li
     for c in celulas:
         if not c.por_api:
             continue
+        if c.com_fidelidade:
+            # A variante com a fidelidade nao se compara com o qwen3 de referencia: tem secao propria.
+            linhas.append(f"**{c.titulo}** fica fora desta conclusão e de toda comparação com as outras "
+                          "células (a Ceres 1 e os qwen3 não têm a fidelidade): leia a seção "
+                          "\"Célula com a fidelidade da rota de lei\".")
+            linhas.append("")
+            continue
         ref = next((r for r in celulas if r.arquitetura == c.arquitetura and r.modelo == referencia
                     and not r.por_api and r.rodadas and not r.invalida), None)
         if not c.rodadas or c.invalida:
@@ -813,7 +829,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     md: list[str] = []
     titulo = (f"# Benchmark da Ceres — {len(arquiteturas)} "
               + ("arquitetura" if len(arquiteturas) == 1 else "arquiteturas")
-              + f" × {len(modelos)} modelos")
+              + f" × {len({c.manifesto.get('modeloApi') or c.modelo for c in celulas})} modelos")
     md.append(titulo + (" (DADOS FICTÍCIOS)" if ficticio else "") + "\n")
     if ficticio:
         md.append(AVISO_FICTICIO)
@@ -902,8 +918,12 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         efetivos = sorted({c.manifesto.get("readTimeoutEfetivo") for c in da_api
                            if c.manifesto.get("readTimeoutEfetivo")})
         redigida = any("apareceu em" in a for c in da_api for a in c.manifesto.get("avisos") or [])
+        variante = api.get("variante") == "fidelidade-lei"
+        ambiente = api.get("ambiente") or {}
         md.append(f"| `{api['modelo']}` (API) | provedor {api.get('provedor')} (API pela rede, sem "
                   f"Ollama, sem digest); raciocínio {api.get('raciocinio')}; "
+                  + (f"**variante com a fidelidade da rota de lei ligada** (`{api.get('modeloApi')}` + "
+                     + ", ".join(f"{k}={v}" for k, v in ambiente.items()) + "); " if variante else "")
                   + (", ".join(f"{k}={v}" for k, v in o.items()) + " (application.yml do commit); "
                      if o else "")
                   + ("`AI_READ_TIMEOUT=" + "/".join(efetivos) + "` (o publicado, sem o ajuste da célula); "
@@ -1061,6 +1081,10 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
                 colunas.append(texto)
             md.append(f"| {c.titulo} | " + " | ".join(colunas) + " |")
         md.append("")
+        if any(c.com_fidelidade for c in celulas):
+            md.append("A linha **(API, fidelidade da lei)** não se compara com as outras: o descarte "
+                      "pela fidelidade baixa citação e número e sobe a recusa por descarte; leia a "
+                      "seção \"Célula com a fidelidade da rota de lei\".\n")
         md.append("### Tabela modelo × arquitetura\n")
         md.append(_tabela_modelo_arquitetura(celulas, modelos, arquiteturas, ids, canonico,
                                              adaptacoes_por_arq, recorte))
@@ -1084,6 +1108,8 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
     if ids_externas:
         md.append(_secao_externas(celulas, ids_externas, canonico))
     md.append(_secao_cortadas(celulas))
+    if any(c.com_fidelidade for c in celulas):
+        md.append(_secao_fidelidade(celulas, ids_comum, canonico, adaptacoes_por_arq))
     if any(c.invalida for c in celulas):
         md.append("**Células inválidas para comparar** (o pensamento não desligou na prova, ou as duas "
                   "provas falharam; o teto "
@@ -1188,7 +1214,12 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
 
     md.append("## Gráficos\n")
     destino = graficos_dir or (pasta / "graficos")
-    arquivos = graficos.gerar_todos(destino, celulas, modelos, arquiteturas, ids_comum, canonico,
+    # A variante com a fidelidade fica fora dos graficos (slide): eles comparam celulas, e ela nao e
+    # comparavel (secao propria). Sem variante, a lista e a de sempre.
+    modelos_graficos = [m for m in modelos
+                        if not any(c.modelo == m and c.com_fidelidade for c in celulas)]
+    arquivos = graficos.gerar_todos(destino, [c for c in celulas if not c.com_fidelidade],
+                                    modelos_graficos, arquiteturas, ids_comum, canonico,
                                     adaptacoes_todas, ficticio, rodada.get("repeticoes"),
                                     canonico_json.get("temas"), teste)
     for arquivo in arquivos:
@@ -1402,6 +1433,98 @@ def _secao_cortadas(celulas) -> str:
         linhas.append(f"| {c.titulo} | {_n(100.0 * acertos / aplicaveis)}% "
                       f"| {_n(100.0 * limpas / aplicaveis)}% | {por_corte} |")
     linhas.append("\nTodas as rodadas juntas (respostas = perguntas × rodadas).")
+    return "\n".join(linhas) + "\n"
+
+
+#: A frase que o relatorio precisa dizer para a leitura da celula com a fidelidade nao sair errada.
+FRASE_FIDELIDADE = (
+    "**Como ler:** com a fidelidade ligada, a resposta de lei que não passa na conferência é "
+    "descartada (`FIDELIDADE_REPROVADA`), e a régua conta o descarte como recusa e texto descartado, "
+    "não como resposta: por isso a citação e o número das perguntas de lei **tendem a cair** e a recusa "
+    "correta **a subir por descarte, não por acerto** nesta célula, o que não quer dizer que o modelo "
+    "ficou pior; o que a "
+    "fidelidade compra é a resposta infiel que o produtor deixa de receber, e isto o acerto da régua "
+    "não mede (a medição própria da #269, com conjunto e juízes cegos, é o que mede).")
+
+
+def descartou_pela_fidelidade(resultado: dict) -> bool:
+    """A resposta (ou a parte de lei do MISTO) foi descartada pela conferencia de fidelidade da lei."""
+    execucao = resultado.get("execucao") or {}
+    return "FIDELIDADE_REPROVADA" in (execucao.get("desfecho"), execucao.get("desfechoLegislacao"))
+
+
+def _taxas_de_recusa(celula: Celula, ids: list[str], canonico: dict[str, dict]) -> tuple[int, int, int, int]:
+    """(aplicaveis, certas, certas sem o descarte da fidelidade, descartes) nas perguntas ``ids``,
+    todas as rodadas juntas. Recusa certa que so existe porque a fidelidade descartou a resposta nao
+    e acerto do modelo: mesma ideia da ``recusa limpa`` do corte por teto."""
+    alvo = set(ids)
+    aplicaveis = certas = limpas = descartes = 0
+    for resultados in celula.rodadas:
+        for r in resultados:
+            if r["id"] not in alvo or r["id"] not in canonico:
+                continue
+            descartou = descartou_pela_fidelidade(r)
+            descartes += 1 if descartou else 0
+            if r.get("recusaCorreta") is None:
+                continue
+            aplicaveis += 1
+            if r["recusaCorreta"]:
+                certas += 1
+                limpas += 0 if descartou else 1
+    return aplicaveis, certas, limpas, descartes
+
+
+def _secao_fidelidade(celulas, ids_comum, canonico, adaptacoes_por_arq) -> str:
+    """Secao propria da celula com a fidelidade da rota de lei (#269), ao lado da do mesmo modelo
+    sem fidelidade. Nao entra na conclusao, na viabilidade nem nos graficos; a unica comparacao e
+    com a celula irma, e e o efeito da fidelidade, nao de arquitetura nem de modelo."""
+    linhas = ["## Célula com a fidelidade da rota de lei (#269)\n",
+              "Variante do modelo por API na Ceres 2.0 com a conferência em código e o juiz da "
+              "fidelidade da lei ligados. **Fora de toda comparação com as outras células** (a Ceres 1 "
+              "e os qwen3 não têm a fidelidade), das médias, da viabilidade, da conclusão e dos "
+              "gráficos. A única leitura é ao lado da célula do mesmo modelo sem a fidelidade, na "
+              "capacidade comum.\n", FRASE_FIDELIDADE + "\n"]
+    for c in (x for x in celulas if x.com_fidelidade):
+        irma = next((r for r in celulas if r.arquitetura == c.arquitetura and not r.com_fidelidade
+                     and r.modelo == (c.manifesto.get("modeloApi") or "") and r.rodadas
+                     and not r.invalida), None)
+        if not c.rodadas or c.invalida:
+            linhas.append(f"**{c.titulo}:** a célula não rodou até o fim ou é inválida (o raciocínio "
+                          "não ficou desligado, ou nenhuma prova valeu): sem números.\n")
+            continue
+        adapt = adaptacoes_por_arq.get(c.arquitetura, {})
+        criterios = ("rota", "funcao", "numero", "citacao", "recusa", "vazamento", "falha")
+        cabecalho = ("| Célula | " + " | ".join(CRITERIOS[k][0] for k in criterios)
+                     + " | Recusa sem os descartes da fidelidade | Respostas descartadas pela fidelidade "
+                     "| Latência p50 |\n|---|" + "---|" * (len(criterios) + 3))
+        linhas.append(f"Capacidade comum ({len(ids_comum)} perguntas), média (mínimo–máximo) das rodadas:\n")
+        linhas.append(cabecalho)
+        medias: dict[str, list[float | None]] = {}
+        alvo = set(ids_comum)
+        for cel in [x for x in (irma, c) if x is not None]:
+            faixas = [faixa(cel, k, ids_comum, canonico, adapt, RECORTE_COMUM) for k in criterios]
+            medias[cel.nome] = [f.media for f in faixas]
+            aplicaveis, _, limpas, descartes = _taxas_de_recusa(cel, ids_comum, canonico)
+            total = sum(1 for resultados in cel.rodadas for r in resultados if r["id"] in alvo)
+            lat = latencias(cel, ids_comum, canonico).get("TODAS", (None,))[0]
+            recusa_limpa = f"{_n(100.0 * limpas / aplicaveis)}%" if aplicaveis else "—"
+            linhas.append(
+                f"| {cel.titulo} | " + " | ".join(f.formatada() for f in faixas)
+                + f" | {recusa_limpa} | {descartes} de {total} | {_s(lat)} |")
+        if irma is not None:
+            linhas.append("| **Com − sem a fidelidade** | " + " | ".join(
+                _pontos(medias[c.nome][i], medias[irma.nome][i]) for i in range(len(criterios)))
+                + " | | | |")
+        else:
+            linhas.append("\nSem a célula do mesmo modelo sem a fidelidade nesta rodada (ou inválida): "
+                          "não há com o que comparar.")
+        linhas.append("")
+        linhas.append("As colunas de recusa sem descartes e de descartes somam todas as rodadas "
+                      "(respostas = perguntas × rodadas). **O JSON da avaliação só diz que houve descarte "
+                      "(`FIDELIDADE_REPROVADA`)**: não separa a reprovação da conferência em código, a "
+                      "do juiz, a falha do juiz (que fecha como reprovação) nem o resgate. Para isso "
+                      "serve a medição da #269, não este benchmark. A latência inclui a chamada do "
+                      "juiz, é de API pela rede e não é a da VPS.\n")
     return "\n".join(linhas) + "\n"
 
 
