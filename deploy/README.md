@@ -244,7 +244,7 @@ O veto, a cobertura mínima (0,7; 0,3 com o juiz) e os tetos do juiz (`AI_TETO_J
 `AI_TETO_JUIZ_JUSTIFICATIVA`) também passam pelo compose, com o padrão do código, e ficam como estão.
 O provedor é o do Haiku (`AI_CHAT_PROVIDER=anthropic`, seção acima). Com o juiz ligado, cada pergunta
 de lei faz uma chamada a mais ao modelo e a reserva da cota por pergunta sobe de 31.744 para 44.032
-créditos.
+créditos com a configuração `justificativa` (40.448 com o juiz `atual`).
 
 1. **O `compose.yaml` com as variáveis precisa estar na VPS antes**; senão o `.env` não tem efeito
    (o compose lista as variáveis do backend uma a uma). Vale a mesma cautela do passo 4 da seção
