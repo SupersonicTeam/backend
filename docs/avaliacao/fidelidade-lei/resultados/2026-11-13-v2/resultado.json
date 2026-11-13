@@ -1,0 +1,2019 @@
+{
+  "versaoDaRegra": "2026-11-12.4",
+  "bracos": [
+    "desligada",
+    "camada1",
+    "camada1+juiz"
+  ],
+  "desfechos": {
+    "camada1": "ENTRA",
+    "camada1+juiz": "ENTRA"
+  },
+  "escolha": {
+    "escolhido": "camada1",
+    "candidatos": [
+      "camada1",
+      "camada1+juiz"
+    ],
+    "criterio": "menos INFIEL, depois menos falsos descartes, depois menos tokens"
+  },
+  "comparacoes": {
+    "camada1": {
+      "desfecho": "ENTRA",
+      "motivo": "defeitos de fidelidade de 9 para 0 (queda de 100%), IC de 80% acima de zero e nenhuma margem violada",
+      "versaoDaRegra": "2026-11-12.4",
+      "base": "desligada",
+      "comparado": "camada1",
+      "braco": {
+        "desligada": {
+          "execucoes": 108,
+          "falhasTecnicas": 0,
+          "validas": 108,
+          "validasComBase": 90,
+          "validasAusentes": 18,
+          "infiel": 3,
+          "ressalvaCitacao": 6,
+          "ressalvaOutra": 6,
+          "fiel": 21,
+          "aceitasComBase": 36,
+          "recusasComBase": 30,
+          "descartadasComBase": 24,
+          "taxaAceitas": 0.4,
+          "taxaRecusaFalsa": 0.3333333333333333,
+          "taxaInfielEntreAceitas": 0.08333333333333333,
+          "ausenteInfiel": 0,
+          "ausenteAcertos": 18,
+          "p50Ms": 1790,
+          "p95Ms": 5195,
+          "tokensMedios": 2289.9166666666665
+        },
+        "camada1": {
+          "execucoes": 108,
+          "falhasTecnicas": 0,
+          "validas": 108,
+          "validasComBase": 90,
+          "validasAusentes": 18,
+          "infiel": 0,
+          "ressalvaCitacao": 0,
+          "ressalvaOutra": 0,
+          "fiel": 19,
+          "aceitasComBase": 19,
+          "recusasComBase": 30,
+          "descartadasComBase": 41,
+          "taxaAceitas": 0.2111111111111111,
+          "taxaRecusaFalsa": 0.3333333333333333,
+          "taxaInfielEntreAceitas": 0.0,
+          "ausenteInfiel": 0,
+          "ausenteAcertos": 18,
+          "p50Ms": 1488,
+          "p95Ms": 5260,
+          "tokensMedios": 2497.1574074074074
+        }
+      },
+      "m1": {
+        "defeitosBase": 9,
+        "defeitosComparado": 0,
+        "queda": 9,
+        "quedaRelativa": 1.0,
+        "ic80": {
+          "inferior": 3.0,
+          "superior": 15.0,
+          "pontual": 9,
+          "perguntas": 30
+        }
+      },
+      "porPergunta": {
+        "defeituosasPorMaioria": {
+          "desligada": 3,
+          "camada1": 0
+        },
+        "comDefeitoEmQualquerRepeticao": {
+          "desligada": 4,
+          "camada1": 0
+        },
+        "regressoes": [],
+        "ausentesQuePassamAAfirmar": [],
+        "falsosDescartes": [
+          "F2-08",
+          "F2-10",
+          "F2-23"
+        ],
+        "excluidas": [],
+        "tabela": {
+          "F2-01": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-02": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 1,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-06": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 3,
+              "infieis": 1,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": true,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": true
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-07": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-08": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-09": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-10": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 1,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-11": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-12": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-13": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-16": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-18": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-20": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-21": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-22": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-23": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-24": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-25": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-29": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 3,
+              "infieis": 2,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": true,
+              "afirmaEmMaioria": true,
+              "algumaRepeticao": true
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-33": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 2,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-34": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 1,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-37": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-38": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-39": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-40": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-41": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-42": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-46": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-48": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-51": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-52": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-53": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-54": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-55": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-57": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 2,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": true,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": true
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-58": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 1,
+              "infieis": 0,
+              "aceitas": 1,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": true
+            },
+            "camada1": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 1,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          }
+        }
+      },
+      "testesDeNaoPiora": [
+        {
+          "teste": "M2b falso descarte por pergunta",
+          "valor": 3,
+          "limite": 3,
+          "ok": true,
+          "descricao": "no máximo 3 perguntas boas e aceitas na maioria no base que deixam de ser aceitas"
+        },
+        {
+          "teste": "M3 recusa falsa",
+          "valor": 0.0,
+          "limite": 0.05,
+          "ok": true,
+          "descricao": "comparado <= base + 5 pontos percentuais"
+        },
+        {
+          "teste": "M4 lei ausente (execuções que afirmam)",
+          "valor": 0,
+          "limite": 1,
+          "ok": true,
+          "descricao": "comparado <= base + 1 execução"
+        },
+        {
+          "teste": "M4 lei ausente (perguntas que passam a afirmar em maioria)",
+          "valor": 0,
+          "limite": 0,
+          "ok": true,
+          "descricao": "nenhuma pergunta ausente com maioria afirmando só no comparado"
+        },
+        {
+          "teste": "M5 p50",
+          "valor": 0.8312849162011173,
+          "limite": 2.0,
+          "ok": true,
+          "descricao": "p50 comparado <= 2,0 x base"
+        },
+        {
+          "teste": "M5 p95",
+          "valor": 1.012512030798845,
+          "limite": 2.0,
+          "ok": true,
+          "descricao": "p95 comparado <= 2,0 x base"
+        },
+        {
+          "teste": "M5 p95 (teto absoluto)",
+          "valor": 5260,
+          "limite": 10000,
+          "ok": true,
+          "descricao": "p95 do comparado <= 10 segundos"
+        },
+        {
+          "teste": "M6 tokens",
+          "valor": 1.0905014334178424,
+          "limite": 2.0,
+          "ok": true,
+          "descricao": "média comparado <= 2,0 x base"
+        },
+        {
+          "teste": "Piora de INFIEL",
+          "valor": -3,
+          "limite": 1,
+          "ok": true,
+          "descricao": "INFIEL comparado <= base + 1"
+        },
+        {
+          "teste": "Piora de ressalva de citação",
+          "valor": -6,
+          "limite": 1,
+          "ok": true,
+          "descricao": "ressalva de citação comparado <= base + 1"
+        },
+        {
+          "teste": "Regressões por pergunta",
+          "valor": 0,
+          "limite": 1,
+          "ok": true,
+          "descricao": "no máximo 1 pergunta sem defeito no base e defeituosa em maioria no comparado"
+        },
+        {
+          "teste": "Perguntas defeituosas por maioria",
+          "valor": -3,
+          "limite": 0,
+          "ok": true,
+          "descricao": "o comparado não pode ter mais perguntas defeituosas que o base"
+        }
+      ],
+      "testesDeMelhora": [
+        {
+          "teste": "M1 defeitos (queda absoluta)",
+          "valor": 9,
+          "limite": 4,
+          "ok": true,
+          "descricao": "queda de pelo menos 4 execuções"
+        },
+        {
+          "teste": "M1 defeitos (queda relativa)",
+          "valor": 1.0,
+          "limite": 0.25,
+          "ok": true,
+          "descricao": "queda de pelo menos 25%"
+        },
+        {
+          "teste": "M1 IC de 80% (limite inferior)",
+          "valor": 3.0,
+          "limite": 0,
+          "ok": true,
+          "descricao": "o limite inferior da queda por pergunta fica acima de zero"
+        }
+      ]
+    },
+    "camada1+juiz": {
+      "desfecho": "ENTRA",
+      "motivo": "defeitos de fidelidade de 9 para 0 (queda de 100%), IC de 80% acima de zero e nenhuma margem violada",
+      "versaoDaRegra": "2026-11-12.4",
+      "base": "desligada",
+      "comparado": "camada1+juiz",
+      "braco": {
+        "desligada": {
+          "execucoes": 108,
+          "falhasTecnicas": 0,
+          "validas": 108,
+          "validasComBase": 90,
+          "validasAusentes": 18,
+          "infiel": 3,
+          "ressalvaCitacao": 6,
+          "ressalvaOutra": 6,
+          "fiel": 21,
+          "aceitasComBase": 36,
+          "recusasComBase": 30,
+          "descartadasComBase": 24,
+          "taxaAceitas": 0.4,
+          "taxaRecusaFalsa": 0.3333333333333333,
+          "taxaInfielEntreAceitas": 0.08333333333333333,
+          "ausenteInfiel": 0,
+          "ausenteAcertos": 18,
+          "p50Ms": 1790,
+          "p95Ms": 5195,
+          "tokensMedios": 2289.9166666666665
+        },
+        "camada1+juiz": {
+          "execucoes": 108,
+          "falhasTecnicas": 0,
+          "validas": 108,
+          "validasComBase": 90,
+          "validasAusentes": 18,
+          "infiel": 0,
+          "ressalvaCitacao": 0,
+          "ressalvaOutra": 0,
+          "fiel": 18,
+          "aceitasComBase": 18,
+          "recusasComBase": 30,
+          "descartadasComBase": 42,
+          "taxaAceitas": 0.2,
+          "taxaRecusaFalsa": 0.3333333333333333,
+          "taxaInfielEntreAceitas": 0.0,
+          "ausenteInfiel": 0,
+          "ausenteAcertos": 18,
+          "p50Ms": 1425,
+          "p95Ms": 6418,
+          "tokensMedios": 2960.7314814814813
+        }
+      },
+      "m1": {
+        "defeitosBase": 9,
+        "defeitosComparado": 0,
+        "queda": 9,
+        "quedaRelativa": 1.0,
+        "ic80": {
+          "inferior": 3.0,
+          "superior": 15.0,
+          "pontual": 9,
+          "perguntas": 30
+        }
+      },
+      "porPergunta": {
+        "defeituosasPorMaioria": {
+          "desligada": 3,
+          "camada1+juiz": 0
+        },
+        "comDefeitoEmQualquerRepeticao": {
+          "desligada": 4,
+          "camada1+juiz": 0
+        },
+        "regressoes": [],
+        "ausentesQuePassamAAfirmar": [],
+        "falsosDescartes": [
+          "F2-08",
+          "F2-10",
+          "F2-23"
+        ],
+        "excluidas": [],
+        "tabela": {
+          "F2-01": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-02": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 1,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-06": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 3,
+              "infieis": 1,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": true,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": true
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-07": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-08": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-09": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-10": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-11": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-12": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-13": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-16": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-18": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-20": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-21": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-22": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-23": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-24": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-25": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-29": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 3,
+              "infieis": 2,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": true,
+              "afirmaEmMaioria": true,
+              "algumaRepeticao": true
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-33": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 2,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-34": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 1,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-37": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-38": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-39": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-40": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-41": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-42": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-46": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-48": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-51": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-52": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-53": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-54": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-55": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-57": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 2,
+              "infieis": 0,
+              "aceitas": 3,
+              "aceitaEmMaioria": true,
+              "defeituosa": true,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": true
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 0,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          },
+          "F2-58": {
+            "desligada": {
+              "validas": 3,
+              "defeitos": 1,
+              "infieis": 0,
+              "aceitas": 1,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": true
+            },
+            "camada1+juiz": {
+              "validas": 3,
+              "defeitos": 0,
+              "infieis": 0,
+              "aceitas": 1,
+              "aceitaEmMaioria": false,
+              "defeituosa": false,
+              "afirmaEmMaioria": false,
+              "algumaRepeticao": false
+            }
+          }
+        }
+      },
+      "testesDeNaoPiora": [
+        {
+          "teste": "M2b falso descarte por pergunta",
+          "valor": 3,
+          "limite": 3,
+          "ok": true,
+          "descricao": "no máximo 3 perguntas boas e aceitas na maioria no base que deixam de ser aceitas"
+        },
+        {
+          "teste": "M3 recusa falsa",
+          "valor": 0.0,
+          "limite": 0.05,
+          "ok": true,
+          "descricao": "comparado <= base + 5 pontos percentuais"
+        },
+        {
+          "teste": "M4 lei ausente (execuções que afirmam)",
+          "valor": 0,
+          "limite": 1,
+          "ok": true,
+          "descricao": "comparado <= base + 1 execução"
+        },
+        {
+          "teste": "M4 lei ausente (perguntas que passam a afirmar em maioria)",
+          "valor": 0,
+          "limite": 0,
+          "ok": true,
+          "descricao": "nenhuma pergunta ausente com maioria afirmando só no comparado"
+        },
+        {
+          "teste": "M5 p50",
+          "valor": 0.7960893854748603,
+          "limite": 2.0,
+          "ok": true,
+          "descricao": "p50 comparado <= 2,0 x base"
+        },
+        {
+          "teste": "M5 p95",
+          "valor": 1.2354186717998075,
+          "limite": 2.0,
+          "ok": true,
+          "descricao": "p95 comparado <= 2,0 x base"
+        },
+        {
+          "teste": "M5 p95 (teto absoluto)",
+          "valor": 6418,
+          "limite": 10000,
+          "ok": true,
+          "descricao": "p95 do comparado <= 10 segundos"
+        },
+        {
+          "teste": "M6 tokens",
+          "valor": 1.29294289376534,
+          "limite": 2.0,
+          "ok": true,
+          "descricao": "média comparado <= 2,0 x base"
+        },
+        {
+          "teste": "Piora de INFIEL",
+          "valor": -3,
+          "limite": 1,
+          "ok": true,
+          "descricao": "INFIEL comparado <= base + 1"
+        },
+        {
+          "teste": "Piora de ressalva de citação",
+          "valor": -6,
+          "limite": 1,
+          "ok": true,
+          "descricao": "ressalva de citação comparado <= base + 1"
+        },
+        {
+          "teste": "Regressões por pergunta",
+          "valor": 0,
+          "limite": 1,
+          "ok": true,
+          "descricao": "no máximo 1 pergunta sem defeito no base e defeituosa em maioria no comparado"
+        },
+        {
+          "teste": "Perguntas defeituosas por maioria",
+          "valor": -3,
+          "limite": 0,
+          "ok": true,
+          "descricao": "o comparado não pode ter mais perguntas defeituosas que o base"
+        }
+      ],
+      "testesDeMelhora": [
+        {
+          "teste": "M1 defeitos (queda absoluta)",
+          "valor": 9,
+          "limite": 4,
+          "ok": true,
+          "descricao": "queda de pelo menos 4 execuções"
+        },
+        {
+          "teste": "M1 defeitos (queda relativa)",
+          "valor": 1.0,
+          "limite": 0.25,
+          "ok": true,
+          "descricao": "queda de pelo menos 25%"
+        },
+        {
+          "teste": "M1 IC de 80% (limite inferior)",
+          "valor": 3.0,
+          "limite": 0,
+          "ok": true,
+          "descricao": "o limite inferior da queda por pergunta fica acima de zero"
+        }
+      ]
+    }
+  },
+  "leitura": {
+    "itensLidos": 73,
+    "concordanciaJ1J2": 0.8356164383561644,
+    "kappaJ1J2": 0.49069767441860485,
+    "kappa": 0.49069767441860485,
+    "desacordo": 0.1643835616438356,
+    "itensAoJ3": 12,
+    "avisoKappa": true,
+    "juizes": {
+      "J1": "opus",
+      "J2": "sonnet",
+      "J3": "opus"
+    }
+  },
+  "rodada": {
+    "commit": "d79b57a9f4ae75eacf3d301bb6c44633839c103d",
+    "conjunto": {
+      "versao": "2026-11-13.v2",
+      "arquivo": "perguntas-fidelidade-lei-v2.json",
+      "sha256": "c222063a67810f214532e922f803a999359c79894405e23d7aa7ccba71c8e8af",
+      "perguntas": 36
+    },
+    "modelo": "claude-haiku-5-5",
+    "repeticoes": 3
+  }
+}
