@@ -16,8 +16,9 @@
 --     (qualquer situação) com esse escritório. CPF/CNPJ e e-mail vão cifrados ao banco (#147),
 --     então a identificação é pelo nome + vínculo, nunca só pelo nome,
 --   * o que pende deles: notas (itens, validações, revisões), alertas, apurações, guias,
---     pendências (e anexos), notificações, vínculos e etiquetas, convites, obrigações do
---     escritório, uso da Ceres (créditos, do produtor e do escritório), interações com a Ceres,
+--     pendências (e anexos), notificações, vínculos e etiquetas, convites, obrigações e
+--     modelos de pedido (#517) do escritório, uso da Ceres (créditos, do produtor e do
+--     escritório), interações com a Ceres,
 --     credenciais, sessões e links de senha, e os endereços anteriores do escritório (carência do
 --     slug, #464: um ensaio que troque o endereço não deixa o "ruraloeste" bloqueado, e o seed o
 --     grava de novo). Vínculo, pendência e notificação de produtor de fora
@@ -74,6 +75,7 @@ DELETE FROM convite_carteira
  WHERE escritorio_id IN (SELECT id FROM reset_esc) OR produtor_id IN (SELECT id FROM reset_prod);
 DELETE FROM convite_membro WHERE escritorio_id IN (SELECT id FROM reset_esc);
 DELETE FROM obrigacao_fiscal WHERE escritorio_id IN (SELECT id FROM reset_esc);
+DELETE FROM modelo_pedido WHERE escritorio_id IN (SELECT id FROM reset_esc);
 DELETE FROM assistente_uso_semanal
  WHERE titular_id IN (SELECT id FROM reset_prod) OR titular_id IN (SELECT id FROM reset_esc);
 DELETE FROM assistente_interacao WHERE produtor_id IN (SELECT id FROM reset_prod);

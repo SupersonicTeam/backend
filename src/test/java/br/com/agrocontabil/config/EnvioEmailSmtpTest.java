@@ -18,6 +18,8 @@ import br.com.agrocontabil.service.TipoEmail;
 import jakarta.mail.MessagingException;
 import jakarta.mail.SendFailedException;
 import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.Clock;
@@ -37,9 +39,9 @@ import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailParseException;
 import org.springframework.mail.MailPreparationException;
 import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.mail.javamail.MimeMessagePreparator;
 
 @ExtendWith(OutputCaptureExtension.class)
 @DisplayName("EnvioEmailSmtp — destino, teto, falhas e timeout do SMTP (#460)")
@@ -47,7 +49,8 @@ class EnvioEmailSmtpTest {
 
   private static final String DESTINO = "titular.secreto@fazenda.com.br";
   private static final MensagensEmail.Mensagem MENSAGEM =
-      MensagensEmail.redefinicaoSenha("https://x/redefinir-senha#token=t", Duration.ofMinutes(30));
+      MensagensEmail.redefinicaoSenha("https://x.test/redefinir-senha#token=t",
+          Duration.ofMinutes(30), "contato@gwnext.com.br");
 
   private static EmailProperties email(int tetoPorDia) {
     return new EmailProperties("agroconia.com.br", "contato@gwnext.com.br", 0, tetoPorDia, 5,
@@ -63,21 +66,36 @@ class EnvioEmailSmtpTest {
   }
 
   @Test
-  @DisplayName("monta a mensagem com remetente, Reply-To, destino, assunto e texto")
-  void montaMensagem() {
-    List<SimpleMailMessage> enviadas = new ArrayList<>();
+  @DisplayName("monta multipart/alternative: remetente, Reply-To, assunto, texto e HTML em UTF-8")
+  void montaMensagem() throws Exception {
+    List<MimeMessagePreparator> enviadas = new ArrayList<>();
     JavaMailSender cliente = mock(JavaMailSender.class);
-    doAnswer(i -> enviadas.add(i.getArgument(0))).when(cliente).send(any(SimpleMailMessage.class));
+    doAnswer(i -> enviadas.add(i.getArgument(0)))
+        .when(cliente).send(any(MimeMessagePreparator.class));
 
     envio(cliente, email(80)).enviar(TipoEmail.REDEFINICAO_SENHA, DESTINO, MENSAGEM);
 
-    assertThat(enviadas).singleElement().satisfies(m -> {
-      assertThat(m.getFrom()).isEqualTo("AgroConIA <nao-responda@agroconia.com.br>");
-      assertThat(m.getReplyTo()).isEqualTo("contato@gwnext.com.br");
-      assertThat(m.getTo()).containsExactly(DESTINO);
-      assertThat(m.getSubject()).isEqualTo(MENSAGEM.assunto());
-      assertThat(m.getText()).isEqualTo(MENSAGEM.texto());
-    });
+    assertThat(enviadas).hasSize(1);
+    MimeMessage mime = new JavaMailSenderImpl().createMimeMessage();
+    enviadas.get(0).prepare(mime);
+    mime.saveChanges();
+    InternetAddress remetente = (InternetAddress) mime.getFrom()[0];
+    assertThat(remetente.getPersonal()).isEqualTo("AgroConIA");
+    assertThat(remetente.getAddress()).isEqualTo("nao-responda@agroconia.com.br");
+    assertThat(mime.getReplyTo()).extracting(Object::toString)
+        .containsExactly("contato@gwnext.com.br");
+    assertThat(mime.getAllRecipients()).extracting(Object::toString).containsExactly(DESTINO);
+    assertThat(mime.getSubject()).isEqualTo(MENSAGEM.assunto());
+    assertThat(mime.getHeader("Auto-Submitted")).containsExactly("auto-generated");
+    MimeMultipart partes = (MimeMultipart) mime.getContent();
+    assertThat(partes.getContentType()).startsWith("multipart/alternative");
+    assertThat(partes.getCount()).isEqualTo(2);
+    assertThat(partes.getBodyPart(0).getContentType()).startsWith("text/plain")
+        .containsIgnoringCase("charset=UTF-8");
+    assertThat(partes.getBodyPart(0).getContent()).isEqualTo(MENSAGEM.texto());
+    assertThat(partes.getBodyPart(1).getContentType()).startsWith("text/html")
+        .containsIgnoringCase("charset=UTF-8");
+    assertThat(partes.getBodyPart(1).getContent()).isEqualTo(MENSAGEM.html());
   }
 
   @Test
@@ -86,7 +104,7 @@ class EnvioEmailSmtpTest {
     JavaMailSender cliente = mock(JavaMailSender.class);
     envio(cliente, email(80)).enviar(TipoEmail.CONVITE_CARTEIRA, "seed.produtor@example.com",
         MENSAGEM);
-    verify(cliente, never()).send(any(SimpleMailMessage.class));
+    verify(cliente, never()).send(any(MimeMessagePreparator.class));
     assertThat(saida).contains("CONVITE_CARTEIRA nao enviado: destino em dominio reservado")
         .doesNotContain("seed.produtor");
   }
@@ -98,7 +116,7 @@ class EnvioEmailSmtpTest {
     EnvioEmailSmtp envio = envio(cliente, email(1));
     envio.enviar(TipoEmail.CONVITE_EQUIPE, DESTINO, MENSAGEM);
     envio.enviar(TipoEmail.CONVITE_EQUIPE, DESTINO, MENSAGEM);
-    verify(cliente, times(1)).send(any(SimpleMailMessage.class));
+    verify(cliente, times(1)).send(any(MimeMessagePreparator.class));
   }
 
   @Test
@@ -109,7 +127,7 @@ class EnvioEmailSmtpTest {
         null, new InternetAddress[0], new InternetAddress[0],
         new InternetAddress[] {new InternetAddress(DESTINO)});
     doThrow(new MailSendException(Map.of(new Object(), recusa)))
-        .when(cliente).send(any(SimpleMailMessage.class));
+        .when(cliente).send(any(MimeMessagePreparator.class));
 
     assertThatThrownBy(() -> envio(cliente, email(80))
         .enviar(TipoEmail.REDEFINICAO_SENHA, DESTINO, MENSAGEM))
@@ -147,7 +165,7 @@ class EnvioEmailSmtpTest {
   void falhasSeguidas(CapturedOutput saida) {
     JavaMailSender cliente = mock(JavaMailSender.class);
     doThrow(new MailAuthenticationException("535 bad credentials"))
-        .when(cliente).send(any(SimpleMailMessage.class));
+        .when(cliente).send(any(MimeMessagePreparator.class));
     EnvioEmailSmtp envio = envio(cliente, email(0));
     for (int i = 0; i < EnvioEmailSmtp.FALHAS_PARA_AVISO; i++) {
       assertThatThrownBy(() -> envio.enviar(TipoEmail.REDEFINICAO_SENHA, DESTINO, MENSAGEM))

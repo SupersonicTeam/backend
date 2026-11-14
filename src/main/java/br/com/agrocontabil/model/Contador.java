@@ -19,7 +19,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Contador (escritório de contabilidade) que atende produtores rurais — issue #93.
+ * Contador que atende produtores rurais — issue #93. É a pessoa: desde a #228 o escritório de
+ * contabilidade é o {@link Escritorio}, de que o contador é membro.
  *
  * <p>É a segunda identidade do sistema, ao lado do {@link Produtor}. Até esta entrega o backend só
  * modelava o produtor: os endpoints de {@code /api/contador/**} existiam (issue #74) mas eram, na
@@ -47,13 +48,20 @@ public class Contador {
   @Column(name = "nome_completo", nullable = false)
   private String nomeCompleto;
 
-  /** CPF ou CNPJ do escritório — identifica o contador no login que chegará com o JWT. */
+  /**
+   * Documento da pessoa do contador, só dígitos, único entre os contadores.
+   *
+   * <p>Desde a issue #519 o cadastro só aceita CPF (regra em
+   * {@code validation/DocumentoDoContador}); contas anteriores podem ter um CNPJ aqui, gravado
+   * quando o campo era "CPF ou CNPJ". O CNPJ do escritório fica no {@link Escritorio#getCnpj()}.
+   */
   @Convert(converter = DadoPessoalCifradoConverter.class)
   @Column(name = "cpf_cnpj", length = 100, unique = true)
   private String cpfCnpj;
 
   /**
-   * Registro no Conselho Regional de Contabilidade (ex.: {@code MT-012345/O}).
+   * Registro no Conselho Regional de Contabilidade (ex.: {@code MT-012345/O}), opcional, informado
+   * no cadastro (issue #519).
    *
    * <p>Guardado para exibição e rastreio de quem assina a escrituração; sem validação de formato,
    * que varia por conselho regional — mesma decisão tomada para a Inscrição Estadual do produtor.

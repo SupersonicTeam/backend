@@ -14,8 +14,9 @@
 --     (qualquer situação) com esse escritório. CPF/CNPJ e e-mail vão cifrados ao banco (#147),
 --     então a identificação é pelo nome + vínculo, nunca só pelo nome,
 --   * o que pende deles: notas (itens, validações, revisões), alertas, apurações, guias,
---     pendências (e anexos), notificações, vínculos e etiquetas, convites, obrigações do
---     escritório, uso da Ceres (créditos, do produtor e do escritório), interações com a Ceres,
+--     pendências (e anexos), notificações, vínculos e etiquetas, convites, obrigações e
+--     modelos de pedido (#517) do escritório, uso da Ceres (créditos, do produtor e do
+--     escritório), interações com a Ceres,
 --     credenciais, sessões e links de senha. Vínculo, pendência e notificação de produtor de fora
 --     do seed com esse escritório também saem (o escritório deixa de existir), mas o produtor e a
 --     conta dele ficam.
@@ -108,5 +109,7 @@ SELECT tabela, linhas FROM (
           AND NOT EXISTS (SELECT 1 FROM carteira_vinculo v WHERE v.produtor_id = p.id))
   UNION ALL SELECT 27, 'escritorio_slug_anterior',
       (SELECT COUNT(*) FROM escritorio_slug_anterior WHERE escritorio_id IN (SELECT id FROM esc))
+  UNION ALL SELECT 28, 'modelo_pedido',
+      (SELECT COUNT(*) FROM modelo_pedido WHERE escritorio_id IN (SELECT id FROM esc))
 ) contagem
 ORDER BY ordem;

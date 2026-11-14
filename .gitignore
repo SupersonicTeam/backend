@@ -46,3 +46,7 @@ CLAUDE-*.log
 .env
 *.env
 !.env.example
+
+### Python (scripts de avaliação) ###
+# Bytecode do import (ex.: pontuar.py): sujava o worktree que o executor da medição exige limpo.
+__pycache__/

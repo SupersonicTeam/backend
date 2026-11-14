@@ -37,6 +37,10 @@ def main() -> int:
                    "relatorio apontar queda de acerto")
     p.add_argument("--cego", help="checkout do SupersonicTeam/ceres-benchmark-cego (padrao: "
                    "CERES_BENCHMARK_CEGO ou ../ceres-benchmark-cego); a rodada da banca o exige")
+    p.add_argument("--com-fidelidade-lei", action="store_true",
+                   help="acrescenta a celula claude-haiku-5-5 com a fidelidade da rota de lei ligada "
+                   "(#269), so na Ceres 2.0: fora de toda comparacao, secao propria no relatorio; "
+                   "pede o ANTHROPIC_API_KEY e um commit que tenha as chaves dela (README)")
     p.add_argument("--retomar", help="pasta de uma rodada interrompida: pula as celulas medidas")
     args = p.parse_args()
     cfg = executor.montar_config(args, repo)

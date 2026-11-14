@@ -52,7 +52,9 @@ public class AssistenteController {
       description = "Responde perguntas sobre os dados do produtor autenticado (compras, "
           + "apuracao de IBS/CBS, creditos, notas e vencimentos) e sobre a legislacao do IBS/CBS. "
           + "Todo numero da resposta vem de uma consulta aos dados (fontesDados) e toda afirmacao "
-          + "legal cita o dispositivo (citacoes).")
+          + "legal cita o dispositivo (citacoes). Com a explicacao ligada (#268, desligada por "
+          + "padrao), a resposta de dados pode trazer 'explicacao', conferida em codigo; ausente "
+          + "quando descartada, fora do prazo ou desligada.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Resposta da Ceres"),
       @ApiResponse(responseCode = "400", description = "Pergunta vazia ou longa demais",
@@ -77,13 +79,14 @@ public class AssistenteController {
   /**
    * Uso da Ceres na semana, para a barra de uso do chat (issue #166).
    *
-   * @return plano, créditos da semana, consumidos, restantes e quando renova
+   * @return plano, créditos da semana, consumidos, restantes, quando renova e o percentual usado
    */
   @GetMapping("/uso")
   @Operation(summary = "Uso semanal da Ceres",
       description = "Creditos da semana (segunda 00:00 a domingo 23:59, horario de Brasilia) do "
-          + "produtor autenticado: limite do plano, consumidos, restantes e quando renova. Em "
-          + "creditos, nunca tokens. So o produtor (contador 403).")
+          + "produtor autenticado: limite do plano, consumidos, restantes, quando renova e o "
+          + "percentualUsado (0 a 100), o unico numero que a tela mostra. Nunca tokens. So o "
+          + "produtor (contador 403).")
   public ResponseEntity<AssistenteUsoResponse> uso() {
     return ResponseEntity.ok(assistenteService.uso());
   }
@@ -92,8 +95,10 @@ public class AssistenteController {
    * Mesma pergunta, com a resposta em streaming (SSE, issue #157).
    *
    * <p>Eventos, nesta ordem: {@code rota} ({@code {"rota":"DADOS"}}), {@code resposta} (o mesmo
-   * contrato do {@code POST /chat}, já validado) e {@code fim}; em caso de falha, {@code erro} com o
-   * envelope {@code errors[]}. Não há tokens parciais do modelo: números e citações só saem depois
+   * contrato do {@code POST /chat}, já validado), {@code explicacao} (opcional, #268:
+   * {@code {"explicacao":"..."}}, só com a flag ligada e a explicação aceita) e {@code fim}; em caso
+   * de falha, {@code erro} com o envelope {@code errors[]}, que depois da {@code resposta} não a
+   * invalida. Não há tokens parciais do modelo: números e citações só saem depois
    * de conferidos. Path próprio: com os dois no mesmo path, um {@code Accept: *}{@code /*} (padrão
    * dos navegadores) cairia no streaming.
    *
@@ -104,9 +109,10 @@ public class AssistenteController {
   @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   @Operation(
       summary = "Pergunta a Ceres com resposta em streaming (SSE)",
-      description = "Eventos: rota, resposta (contrato do POST /chat, ja validado), fim; ou erro "
-          + "com o envelope errors[]. 400/401/403 e 503 ASSISTENTE_OCUPADO sao respondidos antes "
-          + "de o stream abrir.")
+      description = "Eventos: rota, resposta (contrato do POST /chat, ja validado), explicacao "
+          + "(opcional, #268: {\"explicacao\": \"...\"}, so com a flag ligada e a explicacao "
+          + "aceita), fim; ou erro com o envelope errors[] (depois da resposta, nao a invalida). "
+          + "400/401/403 e 503 ASSISTENTE_OCUPADO sao respondidos antes de o stream abrir.")
   public SseEmitter chatStream(
       @Valid @RequestBody AssistenteChatRequest request, HttpServletRequest http) {
     return assistenteService.conversarEmStream(request, http.getRequestURI());

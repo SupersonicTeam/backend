@@ -28,7 +28,7 @@ nem o assunto da pergunta.
 | **2** | Entende pouco | Linguagem de lei ou de sistema; várias siglas soltas; não fica claro o que fazer |
 | **1** | Não entende | Texto confuso, contraditório ou que não responde à pergunta feita |
 
-Recusas ("não encontrei...", "essa pergunta está fora do que consigo responder") também recebem
+Recusas ("não encontrei...", "desculpe, não consigo ajudar com isso") também recebem
 nota: uma recusa clara, que diz o que foi procurado, vale 4 ou 5.
 
 ## Como preencher

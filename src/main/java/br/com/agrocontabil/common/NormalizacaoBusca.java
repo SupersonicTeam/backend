@@ -26,7 +26,7 @@ public final class NormalizacaoBusca {
 
   /**
    * Tamanho da coluna {@code nota_fiscal.busca_normalizada}: 600 no changeSet 0037, 8000 desde o
-   * 0056 (descrição e NCM dos itens e documento do destinatário entram no texto, #271).
+   * 0056 (descrição e NCM dos itens entram no texto, #271).
    */
   public static final int TAMANHO_MAXIMO = 8000;
 
@@ -34,9 +34,10 @@ public final class NormalizacaoBusca {
    * Versão da regra do texto pesquisável da nota, gravada em {@code nota_fiscal.busca_versao}.
    * Mudou o que entra no texto, suba o número: o {@code BuscaNotasLegadoRunner} recalcula, em
    * segundo plano, toda nota de versão menor. 1 = número, destinatário e natureza (#174);
-   * 2 = mais documento do destinatário e descrição e NCM dos itens (#271).
+   * 2 = mais documento do destinatário e descrição e NCM dos itens (#271); 3 = sem o documento do
+   * destinatário, que a busca acha por igualdade na própria coluna (#399).
    */
-  public static final int VERSAO_REGRA = 2;
+  public static final int VERSAO_REGRA = 3;
 
   private NormalizacaoBusca() {
   }
@@ -85,27 +86,30 @@ public final class NormalizacaoBusca {
   public record TextoNota(String texto, int itensForaDaBusca) {}
 
   /**
-   * Monta o texto pesquisável da nota: número, destinatário, natureza e documento do destinatário
-   * (só dígitos) e, depois, "descrição NCM" de cada item. Regra única da gravação ({@code
-   * NotaFiscal}) e do backfill ({@code BuscaNotasLegadoRunner}).
+   * Monta o texto pesquisável da nota: número, nome do destinatário e natureza e, depois,
+   * "descrição NCM" de cada item. Regra única da gravação ({@code NotaFiscal}) e do backfill
+   * ({@code BuscaNotasLegadoRunner}).
+   *
+   * <p><strong>Sem o CPF/CNPJ do destinatário (issue #399).</strong> Ele entrou na regra 2 (#271)
+   * e deixava uma cópia a mais do documento em claro, inclusive no índice de trigrama. A busca por
+   * documento é por igualdade na coluna {@code destinatario_cpf_cnpj}
+   * ({@code NotaFiscalEspecificacoes.comDocumento}), que uma cifra futura das notas cobre do mesmo
+   * jeito que cobre as buscas por CPF da carteira.
    *
    * <p><strong>Regra do limite:</strong> o cabeçalho entra primeiro e inteiro; os itens entram na
    * ordem, um por vez e inteiros, e o que não couber em {@link #TAMANHO_MAXIMO} fica de fora e é
    * contado em {@link TextoNota#itensForaDaBusca()} (quem grava avisa no log). Itens com o mesmo
    * texto contam uma vez só. Nada é cortado no meio de uma palavra.
    *
-   * @param numero               número da nota
-   * @param destinatarioNome     nome do destinatário
-   * @param naturezaOperacao     natureza da operação
-   * @param destinatarioDocumento CPF/CNPJ do destinatário, com ou sem máscara
-   * @param itens                itens da nota, na ordem
+   * @param numero           número da nota
+   * @param destinatarioNome nome do destinatário
+   * @param naturezaOperacao natureza da operação
+   * @param itens            itens da nota, na ordem
    * @return o texto e a contagem dos itens que ficaram de fora
    */
   public static TextoNota montarTextoDaNota(Object numero, String destinatarioNome,
-      String naturezaOperacao, String destinatarioDocumento, List<ItemBusca> itens) {
-    String documento = destinatarioDocumento == null ? null
-        : destinatarioDocumento.replaceAll("\\D", "");
-    String cabecalho = juntar(numero, destinatarioNome, naturezaOperacao, documento);
+      String naturezaOperacao, List<ItemBusca> itens) {
+    String cabecalho = juntar(numero, destinatarioNome, naturezaOperacao);
     StringBuilder texto = new StringBuilder(cabecalho);
     Set<String> vistos = new LinkedHashSet<>();
     int fora = 0;

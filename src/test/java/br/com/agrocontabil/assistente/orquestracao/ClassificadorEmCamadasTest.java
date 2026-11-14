@@ -102,6 +102,45 @@ class ClassificadorEmCamadasTest {
   }
 
   @Test
+  @DisplayName("#497: marca de outra pessoa ou de ordem: o modelo decide, sem regra nem embeddings")
+  void marcaDeTerceiroVaiAoModelo() {
+    // A regra sozinha diria LEGISLACAO e o vizinho do treino, DADOS; o modelo le o contexto.
+    String lei = "Meu vizinho paga Funrural?";
+    String dados = "Minhas notas de terceiros ja entraram?";
+    when(llm.classificar(lei, contexto))
+        .thenReturn(new ClassificacaoIntencao(Intencao.FORA_DE_ESCOPO, 0.9));
+    when(llm.classificar(dados, contexto))
+        .thenReturn(new ClassificacaoIntencao(Intencao.DADOS, 0.9));
+
+    assertThat(classificador.classificar(lei, contexto))
+        .extracting(ClassificacaoIntencao::intencao, ClassificacaoIntencao::camada)
+        .containsExactly(Intencao.FORA_DE_ESCOPO, CamadaClassificacao.LLM);
+    assertThat(classificador.classificar(dados, contexto))
+        .extracting(ClassificacaoIntencao::intencao, ClassificacaoIntencao::camada)
+        .containsExactly(Intencao.DADOS, CamadaClassificacao.LLM);
+    verify(embeddings, never()).classificar(anyString());
+  }
+
+  @Test
+  @DisplayName("#497: marca de outra pessoa com o modelo em pausa: as camadas seguem decidindo")
+  void marcaDeTerceiroSemModelo() {
+    when(disponibilidade.disponivel()).thenReturn(false);
+
+    assertThat(classificador.classificar("Meu vizinho paga Funrural?", contexto))
+        .extracting(ClassificacaoIntencao::intencao, ClassificacaoIntencao::camada)
+        .containsExactly(Intencao.LEGISLACAO, CamadaClassificacao.REGRA);
+    verify(llm, never()).classificar(anyString(), any());
+  }
+
+  @Test
+  @DisplayName("#497: sem marca, a regra segue decidindo sem o modelo")
+  void semMarcaRegraDecide() {
+    assertThat(classificador.classificar("Qual a aliquota do IBS do produtor optante?", contexto)
+        .camada()).isEqualTo(CamadaClassificacao.REGRA);
+    verify(llm, never()).classificar(anyString(), any());
+  }
+
+  @Test
   @DisplayName("camadas desligadas: toda pergunta vai ao modelo (Fase 1)")
   void desligado() {
     propriedades.getClassificacao().setCamadas(false);

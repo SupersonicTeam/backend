@@ -18,9 +18,9 @@ import org.springframework.core.env.ConfigurableEnvironment;
  * dev depende de o profile estar certo; por isso o profile deixa de ter default e a ausência dele
  * vira erro de subida.
  *
- * <p>Profiles auxiliares ({@code ingestao}, {@code avaliacao}) somam-se a um de ambiente, nunca o
- * substituem. Dois de ambiente juntos também são recusados: {@code prod,dev} ligaria o mock de
- * identidade sobre a configuração de produção.
+ * <p>Profiles auxiliares ({@code ingestao}, {@code avaliacao}, {@code verificacao-cnpj}) somam-se a
+ * um de ambiente, nunca o substituem. Dois de ambiente juntos também são recusados:
+ * {@code prod,dev} ligaria o mock de identidade sobre a configuração de produção.
  *
  * <p>É um {@code EnvironmentPostProcessor}, e não um bean, para falhar antes de qualquer bean ser
  * criado — um bean de checagem chegaria tarde, depois de o filtro de identidade e o seed já terem

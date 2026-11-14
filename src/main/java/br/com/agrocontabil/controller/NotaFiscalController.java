@@ -8,6 +8,8 @@ import br.com.agrocontabil.dto.FiltroNotasRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
 import br.com.agrocontabil.dto.NotaFiscalValidacaoResponse;
+import br.com.agrocontabil.dto.ProximoNumeroRequest;
+import br.com.agrocontabil.dto.ProximoNumeroResponse;
 import br.com.agrocontabil.dto.SefazEnvioResponse;
 import br.com.agrocontabil.dto.SefazStatusResponse;
 import br.com.agrocontabil.service.ImportacaoNotaFiscalService;
@@ -99,6 +101,32 @@ public class NotaFiscalController {
       @Valid @ParameterObject FiltroNotasRequest filtro,
       @ParameterObject Pageable pageable) {
     return ResponseEntity.ok(notaFiscalService.findAll(filtro, pageable));
+  }
+
+  /**
+   * Sugere o próximo número da nota própria numa série (issue #539). Rota literal: o Spring a
+   * prefere a {@code /{id}}.
+   */
+  @GetMapping("/proximo-numero")
+  @Operation(
+      summary = "Sugere o próximo número da nota própria numa série",
+      description = "Maior número das notas próprias do produtor autenticado na série (modelo 55, "
+          + "qualquer status; NF-e e NFA dividem a sequência) mais 1; sem nota, 1. Compras "
+          + "importadas, outras séries e outros produtores não contam. É só sugestão, sem "
+          + "reserva: duas abas recebem o mesmo número e o POST seguinte recusa o repetido com "
+          + "409 pelo índice único. Série ausente vale 1; de 0 a 999.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Número sugerido"),
+      @ApiResponse(responseCode = "400",
+          description = "Série fora de 0 a 999 (VALIDATION_ERROR)",
+          content = @Content(schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "409",
+          description = "Série no último número possível (SERIE_ESGOTADA)",
+          content = @Content(schema = @Schema(implementation = ApiError.class)))
+  })
+  public ResponseEntity<ProximoNumeroResponse> proximoNumero(
+      @Valid @ParameterObject ProximoNumeroRequest request) {
+    return ResponseEntity.ok(notaFiscalService.proximoNumero(request.serieOuPadrao()));
   }
 
   /**

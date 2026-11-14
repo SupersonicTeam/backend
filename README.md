@@ -94,7 +94,7 @@ Os testes rodam no profile `test` com banco H2 em memória — não dependem de 
 SPRING_PROFILES_ACTIVE=prod java -jar target/backend-tcc-0.0.1-SNAPSHOT.jar
 ```
 
-Sem `SPRING_PROFILES_ACTIVE`, o JAR (e a imagem Docker) recusa a subida com `Nenhum profile de ambiente ativo`.
+Sem `SPRING_PROFILES_ACTIVE`, o JAR (e a imagem Docker) recusa a subida com `Nenhum profile de ambiente ativo`. Em `prod` ele também recusa o mock da SEFAZ, que dá toda NF-e como autorizada (#263): defina `NFE_SEFAZ_MOCK_ENABLED=false` e configure o transporte real ([`docs/sefaz-transporte-soap.md`](docs/sefaz-transporte-soap.md)), além dos segredos de produção (`JWT_SECRET`, `CRIPTO_CHAVE`).
 
 ## Profiles e configuração
 

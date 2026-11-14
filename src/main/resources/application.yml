@@ -202,10 +202,13 @@ spring:
           thinking:
             type: ${AI_ANTHROPIC_THINKING:disabled}
     # Retry curto: a pergunta do usuario esta esperando. Erro 4xx (chave invalida, requisicao
-    # malformada) nao melhora repetindo.
+    # malformada) nao melhora repetindo. A excecao e o 429 (limite de taxa do provedor por API),
+    # que e transitorio: on-http-codes vale antes de on-client-errors. Esgotadas as tentativas, o
+    # 429 nao abre o disjuntor do modo fallback (ModeloLinguagem.abreDisjuntor).
     retry:
       max-attempts: ${AI_RETRY_MAX_ATTEMPTS:2}
       on-client-errors: false
+      on-http-codes: 429
       backoff:
         initial-interval: 1s
         multiplier: 2
@@ -404,7 +407,16 @@ app:
   lgpd:
     controlador: ${LGPD_CONTROLADOR:GWNext}
     contato-encarregado: ${LGPD_CONTATO_ENCARREGADO:contato@gwnext.com.br}
-    versao-politica: 2026-11-09
+    versao-politica: 2026-11-11
+  # Cadastro de conta (#519). exigir-aceite-termos: sem o campo aceiteTermos, o cadastro e 400.
+  # Desligado ate a tela nova mandar o campo; liga por env, sem mudar codigo.
+  cadastro:
+    exigir-aceite-termos: ${CADASTRO_EXIGIR_ACEITE_TERMOS:false}
+  # Termos de uso (#519): versao gravada na credencial com o aceite. Texto e pagina com a GWNext
+  # e o juridico (#498); mudou o texto, mude a versao. 2026-11-11 e PROVISORIA: o texto ainda nao
+  # existe, e os aceites com ela sao anteriores a ele.
+  termos:
+    versao: ${TERMOS_VERSAO:2026-11-11}
   # Autenticacao (Sprint 8).
   seguranca:
     senha:
@@ -471,9 +483,10 @@ app:
       path: ${NFE_CERT_PATH:}
       password: ${NFE_CERT_PASSWORD:}
       alias: ${NFE_CERT_ALIAS:}
-    # Integracao SEFAZ (issue #15). Sprint 3 usa transporte mock (sandbox).
-    # O envio SOAP+mTLS real com certificado ICP-Brasil e debito da Sprint 7:
-    # basta definir mock.enabled=false e plugar a implementacao real de SefazTransport.
+    # Integracao SEFAZ (issue #15). Mock por padrao (dev, test e a demonstracao em homolog); o
+    # profile prod recusa o mock e nao sobe com ele (#263). Em producao: mock.enabled=false e o
+    # transporte real SOAP+mTLS (#128, docs/sefaz-transporte-soap.md). O padrao false e a etapa 2
+    # da #263, depois da banca.
     sefaz:
       ambiente: ${NFE_SEFAZ_AMBIENTE:HOMOLOGACAO}   # HOMOLOGACAO | PRODUCAO
       mock:
@@ -547,18 +560,21 @@ app:
       timeout-embedding: ${AI_CLASSIFICACAO_TIMEOUT_EMBEDDING:500ms}
       pausa-apos-falha: ${AI_CLASSIFICACAO_PAUSA_APOS_FALHA:30s}
     # Cota semanal de creditos (issue #166). creditos = ceil((entrada x peso-entrada + saida x
-    # peso-saida) x fator do modelo / tokens-por-credito). Semana de segunda a domingo (Brasilia),
-    # sem acumulo. Antes de cada pergunta reserva-se o teto dela; no fim, o consumo real. Teto = 3
-    # chamadas (classificacao, funcoes, lei; o pior caso e o MISTO com desempate), cada uma com o
-    # teto de entrada abaixo e o proprio teto de saida de app.assistente.tetos (#270).
+    # peso-saida) x fator do modelo / tokens-por-credito). Desde a #511, 1 credito por token
+    # ponderado (tokens-por-credito = 1) e as cotas em milhares de vezes as de antes. Semana de
+    # segunda a domingo (Brasilia), sem acumulo. Antes de cada pergunta reserva-se o teto dela; no
+    # fim, o consumo real. Teto = 3 chamadas (classificacao, funcoes, lei; o pior caso e o MISTO com
+    # desempate), cada uma com o teto de entrada abaixo e o proprio teto de saida de
+    # app.assistente.tetos (#270). Toda pergunta tem custo (#511): a que nao chama o modelo (atalho,
+    # conversa leve, recusa pelo filtro, fallback) paga a leitura da mensagem.
     cota:
       habilitada: ${AI_COTA_HABILITADA:true}
       plano: ${AI_COTA_PLANO:padrao}
-      creditos-por-semana-produtor: ${AI_COTA_CREDITOS_PRODUTOR:1000}
-      creditos-por-semana-escritorio: ${AI_COTA_CREDITOS_ESCRITORIO:5000}
+      creditos-por-semana-produtor: ${AI_COTA_CREDITOS_PRODUTOR:1000000}
+      creditos-por-semana-escritorio: ${AI_COTA_CREDITOS_ESCRITORIO:5000000}
       peso-entrada: ${AI_COTA_PESO_ENTRADA:1.0}
       peso-saida: ${AI_COTA_PESO_SAIDA:4.0}
-      tokens-por-credito: ${AI_COTA_TOKENS_POR_CREDITO:1000}
+      tokens-por-credito: ${AI_COTA_TOKENS_POR_CREDITO:1}
       fator-padrao: ${AI_COTA_FATOR_PADRAO:1.0}
       # Padrao = a janela do Ollama (o maior prompt que ele aceita); abaixo dela nao sobe.
       teto-tokens-entrada-por-chamada: ${AI_COTA_TETO_ENTRADA:${spring.ai.ollama.chat.options.num-ctx:8192}}
@@ -568,10 +584,18 @@ app:
     tetos:
       # Escolha das funcoes de dados: so o JSON das chamadas.
       funcoes: ${AI_TETO_FUNCOES:512}
+      # Explicacao depois da resposta de dados (#268): 2 ou 3 frases. Reserva propria na cota.
+      explicacao: ${AI_TETO_EXPLICACAO:256}
       # JSON da classificacao, inclusive a perguntaLei do MISTO (mesma chamada).
       classificacao: ${AI_TETO_CLASSIFICACAO:256}
       # Resposta de lei. Padrao = o teto unico de antes; 512 e o recomendado a confirmar na VPS.
       legislacao: ${AI_TETO_LEGISLACAO:1024}
+      # Juiz da fidelidade da lei (#269, camada 2): um veredito por frase; so com o juiz ativo.
+      juiz: ${AI_TETO_JUIZ:128}
+      # O juiz na configuracao justificativa: uma justificativa curta antes de cada veredito.
+      juiz-com-justificativa: ${AI_TETO_JUIZ_JUSTIFICATIVA:1024}
+      # Nas configuracoes adaptativas do juiz: raciocinio do provedor + vereditos.
+      juiz-com-raciocinio: ${AI_TETO_JUIZ_RACIOCINIO:3072}
       # A janela do Ollama (mesma propriedade do num-ctx), so para validar os tetos.
       contexto: ${spring.ai.ollama.chat.options.num-ctx:8192}
     # Modo fallback (issue #146): com o modelo fora, trechos de lei por busca textual (tsvector) e
@@ -580,6 +604,48 @@ app:
       pausa-apos-falha: ${AI_FALLBACK_PAUSA_APOS_FALHA:30s}
       max-trechos: ${AI_FALLBACK_MAX_TRECHOS:3}
       tamanho-maximo-trecho: ${AI_FALLBACK_TAMANHO_MAXIMO_TRECHO:600}
+    # Explicacao do modelo depois da resposta de dados (#268, com a #415): 2 ou 3 frases conferidas
+    # em codigo (VerificadorFidelidade); qualquer falha descarta e o template sai sozinho. Desligada,
+    # a Ceres responde como antes. Ligar exige medicao com o modelo real e o OK do Murillo. Ligada com
+    # o provedor por API, o texto da resposta de dados vai ao provedor (docs/lgpd.md).
+    explicacao:
+      enabled: ${AI_EXPLICACAO_HABILITADA:false}
+      # Prazo da explicacao; nunca passa do que resta da pergunta (timeout-pergunta).
+      timeout: ${AI_EXPLICACAO_TIMEOUT:8s}
+      min-frases: 2
+      max-frases: 3
+      min-caracteres: 40
+      max-caracteres: 480
+    # Conferencia de fidelidade da rota de lei (#269): o modelo responde em JSON com a passagem do
+    # trecho que sustenta cada frase, e o backend confere copia, numero, negacao e cobertura e cita
+    # o nivel do dispositivo em que a passagem esta. Reprovada, ficam so os trechos. Desligada, a
+    # rota de lei e a de antes. Ligar exige a medicao no conjunto novo e o OK do Murillo.
+    fidelidade-lei:
+      enabled: ${AI_FIDELIDADE_LEI_HABILITADA:false}
+      cobertura-minima: ${AI_FIDELIDADE_LEI_COBERTURA_MINIMA:0.7}
+      # Camada 2, o juiz: uma chamada ao modelo por resposta aprovada pela camada 1; qualquer frase
+      # sem SUSTENTA reprova, e a falha dele fecha. So tem efeito com a camada 1 ligada; ligado, a
+      # cobertura exigida em codigo cai para cobertura-minima-com-juiz e a reserva da pergunta
+      # inclui a chamada dele (tetos.juiz).
+      cobertura-minima-com-juiz: ${AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ:0.3}
+      juiz:
+        enabled: ${AI_FIDELIDADE_LEI_JUIZ_HABILITADO:false}
+        # Configuracao do juiz, pelo nome: atual (padrao: so o veredito por frase, teto
+        # tetos.juiz), justificativa (uma justificativa curta antes de cada veredito, teto
+        # tetos.juiz-com-justificativa) ou adaptativo-baixo/-medio/-alto (raciocinio do provedor so
+        # na chamada do juiz, so com AI_CHAT_PROVIDER=anthropic, teto tetos.juiz-com-raciocinio).
+        configuracao: ${AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO:atual}
+        # Veto: o juiz confere as respostas aprovadas pela camada 1 (padrao). Desligado, "so
+        # resgate": o juiz so roda nas respostas a resgatar, e a cobertura volta a cobertura-minima.
+        veto: ${AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO:true}
+        # Resgate: a frase reprovada em codigo por numero (e, com polaridade e cobertura, por
+        # polaridade e por cobertura) vai ao juiz na mesma chamada; so o SUSTENTA de todas as
+        # frases aceita. Sem efeito sem o juiz. Polaridade desligada: o juiz aprovou uma inversao
+        # real no diagnostico de 2026-11-13.
+        resgate:
+          enabled: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO:false}
+          polaridade: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE:false}
+          cobertura: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA:false}
     # Isolamento de recursos (issue #157). Tempo total de uma pergunta (tambem o timeout do SSE) e
     # de cada consulta de funcao ao banco (vira timeout de transacao, resolucao de segundos).
     timeout-pergunta: ${AI_TIMEOUT_PERGUNTA:5m}

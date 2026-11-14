@@ -19,6 +19,23 @@ class AssistentePropertiesTest {
   }
 
   @Test
+  @DisplayName("#511: 1 credito por token, planos de 1.000.000 e 5.000.000, sempre inteiro")
+  void umCreditoPorToken() {
+    AssistenteProperties.Cota cota = new AssistenteProperties().getCota();
+
+    assertThat(cota.getTokensPorCredito()).isEqualTo(1);
+    assertThat(cota.getCreditosPorSemanaProdutor()).isEqualTo(1_000_000);
+    assertThat(cota.getCreditosPorSemanaEscritorio()).isEqualTo(5_000_000);
+    // Leitura de um "ola" (1 token) e de "quanto imposto devo?" (5 tokens): os dois custam.
+    assertThat(cota.creditos(1, 0, 1.0)).isEqualTo(1);
+    assertThat(cota.creditos(5, 0, 1.0)).isEqualTo(5);
+    // Fator fracionario arredonda para cima, no total: 3 x 1,5 = 4,5 -> 5.
+    assertThat(cota.creditos(3, 0, 1.5)).isEqualTo(5);
+    // Saida pesa 4.
+    assertThat(cota.creditos(10, 2, 1.0)).isEqualTo(18);
+  }
+
+  @Test
   @DisplayName("timeout-funcao abaixo de 1s e recusado (resolucao do timeout de transacao)")
   void timeoutFuncaoSubSegundo() {
     AssistenteProperties p = new AssistenteProperties();
@@ -55,10 +72,10 @@ class AssistentePropertiesTest {
   @DisplayName("#166: teto de uma pergunta maior que o plano e recusado na subida")
   void tetoMaiorQueOPlano() {
     AssistenteProperties p = new AssistenteProperties();
-    // Lei com teto de 4.096: 3 x 8.192 + (256 + 512 + 4.096) x 4 = 44.032 -> 45 creditos, plano
-    // de 40.
+    // Lei com teto de 4.096: 3 x 8.192 + (256 + 512 + 4.096) x 4 = 44.032 creditos (1 por token,
+    // #511), plano de 40.000.
     p.getTetos().setLegislacao(4096);
-    p.getCota().setCreditosPorSemanaProdutor(40);
+    p.getCota().setCreditosPorSemanaProdutor(40_000);
 
     assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("teto de uma pergunta");
@@ -94,19 +111,19 @@ class AssistentePropertiesTest {
     AssistenteProperties p = new AssistenteProperties();
     AssistenteProperties.Cota cota = p.getCota();
 
-    // 3 x 8.192 de entrada + (256 + 512 + 1.024) de saida x 4 = 31.744 ponderados -> 32.
-    // A formula antiga (2 + 1 + 3 rodadas = 6 chamadas x 1.024 de saida) dava 73.
+    // 3 x 8.192 de entrada + (256 + 512 + 1.024) de saida x 4 = 31.744 ponderados = 31.744
+    // creditos (1 por token desde a #511; eram 32 com 1.000 tokens por credito).
     assertThat(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA).isEqualTo(3);
-    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(32);
-    assertThat(cota.tetoDaPergunta(p.getTetos(), 2.0)).isEqualTo(64);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(31_744);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 2.0)).isEqualTo(63_488);
 
     // Cada teto entra uma vez, com o peso da saida: +250 tokens na lei = +1.000 ponderados.
     p.getTetos().setLegislacao(1274);
-    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(33);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(32_744);
     p.getTetos().setClassificacao(506);
-    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(34);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(33_744);
     p.getTetos().setFuncoes(762);
-    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(35);
+    assertThat(cota.tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(34_744);
   }
 
   @Test
@@ -118,7 +135,8 @@ class AssistentePropertiesTest {
     p.getTetos().setLegislacao(2048);
 
     assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
-    assertThat(p.getCota().tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(36);
+    // 3 x 8.192 + (256 + 512 + 2.048) x 4 = 35.840.
+    assertThat(p.getCota().tetoDaPergunta(p.getTetos(), 1.0)).isEqualTo(35_840);
   }
 
   @Test
@@ -144,5 +162,100 @@ class AssistentePropertiesTest {
 
     assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("app.assistente.tetos.contexto");
+  }
+
+  @Test
+  @DisplayName("#269: conferencia de fidelidade da lei desligada por padrao, cobertura entre 0 e 1")
+  void fidelidadeLei() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(p.getFidelidadeLei().isEnabled()).isFalse();
+    assertThat(p.getFidelidadeLei().getCoberturaMinima()).isEqualTo(0.7);
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+
+    p.getFidelidadeLei().setCoberturaMinima(1.0);
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+    for (double invalida : new double[] {0.0, -0.1, 1.01, Double.NaN}) {
+      p.getFidelidadeLei().setCoberturaMinima(invalida);
+      assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("app.assistente.fidelidade-lei.cobertura-minima");
+    }
+  }
+
+  @Test
+  @DisplayName("#269: juiz desligado por padrao, cobertura com juiz 0,3, teto do juiz 128")
+  void juizDaFidelidadeLei() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(p.getFidelidadeLei().getJuiz().isEnabled()).isFalse();
+    assertThat(p.juizDaLeiAtivo()).isFalse();
+    assertThat(p.getFidelidadeLei().getCoberturaMinimaComJuiz()).isEqualTo(0.3);
+    assertThat(p.getTetos().getJuiz()).isEqualTo(128);
+    p.getFidelidadeLei().getJuiz().setEnabled(true);
+    // O juiz so roda com a camada 1.
+    assertThat(p.juizDaLeiAtivo()).isFalse();
+    p.getFidelidadeLei().setEnabled(true);
+    assertThat(p.juizDaLeiAtivo()).isTrue();
+    assertThatCode(p::afterPropertiesSet).doesNotThrowAnyException();
+
+    p.getFidelidadeLei().setCoberturaMinimaComJuiz(0);
+    assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("cobertura-minima-com-juiz");
+    p.getFidelidadeLei().setCoberturaMinimaComJuiz(0.3);
+    p.getTetos().setJuiz(AssistenteProperties.Tetos.MINIMO - 1);
+    assertThatThrownBy(p::afterPropertiesSet).isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("app.assistente.tetos.juiz");
+  }
+  @Test
+  void resgateDaFidelidadeLei() {
+    AssistenteProperties p = new AssistenteProperties();
+    AssistenteProperties.FidelidadeLei.Juiz.Resgate resgate =
+        p.getFidelidadeLei().getJuiz().getResgate();
+    assertThat(resgate.isEnabled()).isFalse();
+    assertThat(resgate.isCobertura()).isFalse();
+    assertThat(resgate.isPolaridade()).isFalse();
+    // O veto vem ligado: o comportamento de antes do modo so resgate.
+    assertThat(p.getFidelidadeLei().getJuiz().isVeto()).isTrue();
+    resgate.setEnabled(true);
+    // O resgate so roda com o juiz, que so roda com a camada 1.
+    assertThat(p.resgateDaLeiAtivo()).isFalse();
+    p.getFidelidadeLei().getJuiz().setEnabled(true);
+    assertThat(p.resgateDaLeiAtivo()).isFalse();
+    p.getFidelidadeLei().setEnabled(true);
+    assertThat(p.resgateDaLeiAtivo()).isTrue();
+    resgate.setEnabled(false);
+    assertThat(p.resgateDaLeiAtivo()).isFalse();
+  }
+  @Test
+  void configuracaoDoJuizPeloNome() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(p.getFidelidadeLei().getJuiz().getConfiguracao())
+        .isEqualTo(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ATUAL);
+    assertThat(p.tetoSaidaDoJuiz()).isEqualTo(128);
+    for (AssistenteProperties.FidelidadeLei.Juiz.Configuracao c
+        : AssistenteProperties.FidelidadeLei.Juiz.Configuracao.values()) {
+      assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome(c.nome())).isEqualTo(c);
+    }
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA.nome())
+        .isEqualTo("justificativa");
+    assertThatThrownBy(() -> AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome("veredito"))
+        .isInstanceOf(IllegalArgumentException.class);
+    p.getFidelidadeLei().getJuiz()
+        .setConfiguracao(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA);
+    assertThat(p.tetoSaidaDoJuiz()).isEqualTo(1024);
+  }
+  @Test
+  void configuracoesAdaptativas() {
+    AssistenteProperties p = new AssistenteProperties();
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome("adaptativo-baixo")
+        .esforco()).isEqualTo("low");
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome("adaptativo-medio")
+        .esforco()).isEqualTo("medium");
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.deNome("adaptativo-alto")
+        .esforco()).isEqualTo("high");
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.ATUAL.raciocina()).isFalse();
+    assertThat(AssistenteProperties.FidelidadeLei.Juiz.Configuracao.JUSTIFICATIVA.raciocina())
+        .isFalse();
+    assertThat(p.getTetos().getJuizComRaciocinio()).isEqualTo(3072);
+    assertThat(p.tetoSaidaDoJuiz(AssistenteProperties.FidelidadeLei.Juiz.Configuracao
+        .ADAPTATIVO_MEDIO)).isEqualTo(3072);
   }
 }

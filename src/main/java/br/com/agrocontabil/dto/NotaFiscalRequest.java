@@ -2,6 +2,7 @@ package br.com.agrocontabil.dto;
 
 import br.com.agrocontabil.model.TipoDocumentoFiscal;
 import br.com.agrocontabil.validation.CodigoIbgeCoerenteComUf;
+import br.com.agrocontabil.validation.EnderecoComCodigoIbge;
 import br.com.agrocontabil.validation.ValidCpfCnpj;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
@@ -122,5 +123,5 @@ public record NotaFiscalRequest(
       @Schema(description = "CEP sem formatacao (8 digitos)", example = "78000000")
       @Pattern(regexp = "\\d{8}", message = "cep deve ter exatamente 8 dígitos numéricos")
       String cep
-  ) {}
+  ) implements EnderecoComCodigoIbge {}
 }

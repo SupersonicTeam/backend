@@ -65,6 +65,11 @@ app:
   sem diferenciar maiúsculas, porque o Spring a entrega em minúsculas).
 - **A aplicação não sobe** com o mock desligado se o ambiente não tiver endereço, ou se algum não
   for `https://`.
+- **O mock nunca sobe em produção (#263).** Com o profile `prod`, mesmo junto de outro, o
+  `MockSefazTransport` recusa a subida: ele dá toda NF-e como autorizada sem passar pelo fisco. Em
+  produção, `NFE_SEFAZ_MOCK_ENABLED=false` e o transporte real configurado. `dev`, `test` e
+  `homolog` (a VPS da demonstração) seguem com o mock; o padrão `false` é a etapa 2 da #263, depois
+  da banca.
 - **mTLS:** o certificado do cliente é o mesmo A1 que assina a NF-e (`NFE_CERT_*`).
 - **Truststore:** o padrão da JVM não traz a AC raiz ICP-Brasil; em homologação real é preciso
   configurá-lo. Só TLS 1.2 e 1.3; redirecionamento desligado.

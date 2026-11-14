@@ -1,0 +1,1460 @@
+{
+  "versao": "2026-11-13.v2",
+  "regra": "2026-11-12.4",
+  "descricao": "Conjunto v2 da medição de fidelidade da rota de lei da Ceres (#269): 36 perguntas de lei na linguagem do produtor rural, 6 por classe, escritas depois da primeira rodada por uma sessão que não viu o conjunto v1, os conjuntos anteriores nem o código da correção. O gabarito foi tirado do texto de legislacao_trecho e conferido por um subagente independente.",
+  "normas": [
+    "LC 214/2025",
+    "EC 132/2023",
+    "LC 227/2026",
+    "Lei 8.212/1991",
+    "Lei 9.528/1997"
+  ],
+  "perguntas": [
+    {
+      "id": "F2-01",
+      "classe": "CAPUT",
+      "pergunta": "Se eu não apresentar a minha defesa de um auto de infração do IBS dentro do prazo, o que acontece com o meu processo?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Se não for cumprida a exigência ou apresentada defesa no prazo legal, o sujeito passivo é considerado revel.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 73"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O prazo para impugnação é de vinte dias, contado da intimação do lançamento de ofício.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 67, § 1º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o processo é arquivado, que o auto de infração é cancelado ou que a falta de defesa equivale a concordar com o pagamento com desconto.",
+        "Afirmar para a impugnação um prazo diferente de vinte dias."
+      ],
+      "permitidos": [
+        "Dizer que os prazos processuais contam-se em dias úteis (art. 62).",
+        "Dizer que a impugnação ou o recurso intempestivos não suspendem a exigibilidade do crédito tributário (art. 68, § 2º)."
+      ],
+      "observacaoDoGabarito": "A pergunta trata do IBS (processo do Comitê Gestor, LC 227/2026, arts. 54 a 102); a CBS segue o processo federal, que o gabarito não avalia."
+    },
+    {
+      "id": "F2-02",
+      "classe": "CAPUT",
+      "pergunta": "Se a fiscalização me apontar como responsável por um imposto de outra pessoa, eu respondo só pelo imposto ou também por multa e juros?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "As responsabilidades previstas na lei compreendem o pagamento do IBS e da CBS acrescidos de correção e atualização monetária, multa de mora, multas punitivas e demais encargos.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 25"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o responsável responde só pelo imposto, sem multa nem correção.",
+        "Dizer que o responsável nunca responde por multa punitiva."
+      ],
+      "permitidos": [
+        "Dizer que a responsabilidade pode ser solidária ou por substituição, conforme o caso, se o trecho citado trouxer."
+      ]
+    },
+    {
+      "id": "F2-06",
+      "classe": "CAPUT",
+      "pergunta": "Perdi a primeira decisão de um processo do IBS e não concordo com ela. Existe recurso, ou tenho que aceitar?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Das decisões de primeira instância contrárias ao sujeito passivo cabe recurso voluntário ao colegiado de segunda instância.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 78"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O prazo do recurso, salvo disposição expressa em contrário, é de vinte dias, contado da intimação do ato recorrido.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 75, § 1º"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 75, inciso II"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que nunca cabe recurso contra a decisão de primeira instância contrária ao sujeito passivo.",
+        "Dizer que o recurso é dirigido ao Poder Judiciário ou à Receita Federal.",
+        "Afirmar para o recurso voluntário um prazo diferente de vinte dias."
+      ],
+      "permitidos": [
+        "Dizer que, no rito sumário, a decisão de primeira instância é considerada definitiva, ressalvados o pedido de retificação, o recurso especial do art. 323-G da LC 214 e, só no caso do inciso I do art. 76 (valor de alçada), o recurso de uniformização do art. 79 (art. 76, parágrafo único).",
+        "Dizer que, depois da segunda instância, pode caber recurso de uniformização em caso de interpretação divergente (art. 79).",
+        "Dizer que recurso interposto de parte da decisão implica reconhecimento da parte não recorrida (art. 78, § 2º)."
+      ],
+      "observacaoDoGabarito": "A pergunta trata do IBS (processo do Comitê Gestor); a CBS segue o processo federal, que o gabarito não avalia."
+    },
+    {
+      "id": "F2-07",
+      "classe": "CAPUT",
+      "pergunta": "Tenho uma empresa de transporte de grãos com funcionários registrados. Que percentual a empresa paga de contribuição patronal sobre a folha de salários?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "A contribuição a cargo da empresa é de vinte por cento sobre o total das remunerações pagas, devidas ou creditadas durante o mês aos segurados empregados e trabalhadores avulsos que lhe prestem serviços.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 22, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "A agroindústria contribui sobre a receita bruta da comercialização da produção, em substituição às contribuições dos incisos I e II do art. 22.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 22-A"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Afirmar percentual diferente de vinte por cento para a contribuição do inciso I.",
+        "Dizer que essa contribuição incide sobre o faturamento ou a receita bruta em vez da folha de pagamento, para a empresa em geral."
+      ],
+      "permitidos": [
+        "Dizer que há contribuição adicional para o financiamento dos benefícios por incapacidade, conforme o grau de risco (art. 22, inciso II).",
+        "Dizer que há vinte por cento sobre o que se paga a contribuintes individuais (art. 22, inciso III), com a ressalva de que o dispositivo teve a execução suspensa pelo Senado, se o trecho trouxer."
+      ]
+    },
+    {
+      "id": "F2-08",
+      "classe": "CAPUT",
+      "pergunta": "O meu estado me deu um benefício de ICMS por prazo certo e com condição. Quando o ICMS acabar, eu perco esse benefício sem nada em troca?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Fica instituído o Fundo de Compensação de Benefícios Fiscais ou Financeiro-Fiscais do ICMS, para compensar, entre 1º de janeiro de 2029 e 31 de dezembro de 2032, as pessoas físicas ou jurídicas beneficiárias de isenções, incentivos e benefícios do imposto concedidos por prazo certo e sob condição.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "EC 132/2023",
+              "dispositivo": "art. 12"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 384"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "A compensação vale para os benefícios onerosos regularmente concedidos até 31 de maio de 2023, sem prejuízo de prorrogações ou renovações, observado o prazo do caput e, se aplicável, a exigência de registro e depósito da LC 160.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "EC 132/2023",
+              "dispositivo": "art. 12, § 4º, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 384, parágrafo único, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Perde o direito à compensação quem deixa de cumprir tempestivamente as condições exigidas pela norma concessiva do benefício.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "EC 132/2023",
+              "dispositivo": "art. 12, § 5º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o fundo compensa qualquer benefício, inclusive os sem prazo certo ou sem condição.",
+        "Dizer que a compensação vale para benefícios concedidos depois de 31 de maio de 2023, sem a ressalva dos que migraram de benefício entre 31 de maio de 2023 e a promulgação da emenda (EC 132, art. 12, § 10, e LC 214, art. 384, parágrafo único, inciso II).",
+        "Afirmar que a compensação mantém o direito mesmo que o beneficiário descumpra as condições do benefício.",
+        "Afirmar que a compensação ocorre fora do período de 2029 a 2032."
+      ],
+      "permitidos": [
+        "Dizer que os recursos do fundo vêm da União, em valores fixados por ano (art. 12, § 1º).",
+        "Dizer que o fundo compensa a redução do nível dos benefícios onerosos, e não o benefício inteiro (art. 12, § 2º).",
+        "Dizer que a compensação não se aplica aos benefícios do art. 3º, § 2º-A, da LC 160 (art. 12, § 4º, inciso II).",
+        "Dizer que a compensação vale também para quem migrou para outros programas ou benefícios entre 31 de maio de 2023 e a promulgação da emenda (EC 132, art. 12, § 10), desde que, pela LC 214, art. 384, parágrafo único, inciso II, o ato concessivo seja emitido pela unidade federada em até noventa dias após a publicação da LC 214.",
+        "Dizer que o IBS de 2026 compõe o fundo (LC 214, art. 343, parágrafo único, inciso II)."
+      ]
+    },
+    {
+      "id": "F2-09",
+      "classe": "CAPUT",
+      "pergunta": "O INSS pode mandar a minha empresa descontar do salário de um funcionário uma dívida que ele tem com a Previdência?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Mediante requisição da Seguridade Social, a empresa é obrigada a descontar da remuneração paga aos segurados a seu serviço a importância proveniente de dívida ou responsabilidade que eles contraíram junto à Seguridade Social, relativa a benefícios pagos indevidamente.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 91"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que a empresa pode descontar do empregado qualquer dívida, como empréstimo pessoal, sem requisição da Seguridade Social.",
+        "Dizer que o desconto é automático, sem requisição.",
+        "Dizer que o desconto alcança dívidas de outra natureza, que não sejam de benefícios pagos indevidamente."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F2-10",
+      "classe": "PARAGRAFO",
+      "pergunta": "Coloquei placas solares na fazenda e jogo o que sobra na rede da distribuidora. Pago imposto de novo sobre a energia que eu mesmo gerei quando ela volta como crédito na minha conta?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Exclui-se da base de cálculo do IBS e da CBS a energia elétrica fornecida pela distribuidora à unidade consumidora, na quantidade correspondente à energia injetada na rede pela mesma unidade, acrescida dos créditos de energia originados na própria unidade no mesmo mês, em meses anteriores ou em outra unidade do mesmo titular.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 28, § 3º"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "A exclusão vale só para consumidores participantes do Sistema de Compensação de Energia Elétrica e só para a energia produzida por microgeração e minigeração (potência instalada até 75 kW, e acima de 75 kW até 1 MW).",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 28, § 4º, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 28, § 4º, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "A exclusão não se aplica ao custo de disponibilidade, à energia reativa, à demanda de potência, aos encargos de conexão ou de uso do sistema de distribuição, aos componentes tarifários não associados ao custo da energia nem a outros valores cobrados pela distribuidora.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 28, § 4º, inciso III"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que toda a energia gerada na fazenda fica livre de IBS e CBS, sem as condições do Sistema de Compensação.",
+        "Dizer que a exclusão vale para qualquer potência de geração.",
+        "Dizer que a exclusão alcança o custo de disponibilidade e os demais valores cobrados pela distribuidora."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F2-11",
+      "classe": "PARAGRAFO",
+      "pergunta": "Sou segurado especial e, na colheita, contrato gente por pouco tempo. Tem limite de quantas pessoas posso usar por ano sem perder a condição de segurado especial?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O grupo familiar pode usar empregados contratados por prazo determinado, à razão de no máximo cento e vinte pessoas por dia no ano civil, em períodos corridos ou intercalados ou por tempo equivalente em horas de trabalho.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 8º"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Não se computa nesse prazo o período de afastamento em decorrência da percepção de auxílio-doença.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 8º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Afirmar limite diferente de cento e vinte pessoas por dia no ano civil.",
+        "Dizer que o grupo familiar não pode contratar ninguém.",
+        "Dizer que o limite é de cento e vinte dias por trabalhador, em vez de pessoas por dia no ano civil."
+      ],
+      "permitidos": [
+        "Dizer que exceder o limite exclui o segurado especial a contar do primeiro dia do mês seguinte ao da ocorrência (art. 12, § 11, inciso II, alínea a)."
+      ]
+    },
+    {
+      "id": "F2-12",
+      "classe": "PARAGRAFO",
+      "pergunta": "Sou produtor rural pessoa física. O banco e um comprador da minha produção pedem o meu CNPJ, mas eu não tenho. Existe outro documento que vale no lugar?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "A matrícula atribuída pela Receita Federal ao produtor rural pessoa física ou ao segurado especial é o documento de inscrição do contribuinte, em substituição ao CNPJ, a ser apresentado nas relações com o Poder Público, com as instituições financeiras para contratação de crédito e com os adquirentes da produção e fornecedores de insumos.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 49, § 5º"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Isso não se aplica ao licenciamento sanitário de produtos sujeitos ao IPI nem ao contribuinte cuja inscrição no CNPJ seja obrigatória.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 49, § 6º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o produtor rural pessoa física precisa abrir CNPJ para vender a produção ou pedir crédito.",
+        "Dizer que a matrícula vale para quem tem inscrição no CNPJ obrigatória."
+      ],
+      "permitidos": [
+        "Dizer que a matrícula também vale para o licenciamento sanitário de produtos de origem animal ou vegetal de beneficiamento ou industrialização artesanal (art. 49, § 5º)."
+      ]
+    },
+    {
+      "id": "F2-13",
+      "classe": "PARAGRAFO",
+      "pergunta": "Minha fazenda fica metade num estado e metade em outro, e vou doá-la para o meu filho. Para qual estado eu pago o imposto da doação?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Sendo o imóvel situado em mais de um Estado, o ITCMD é devido a cada ente federativo segundo o valor de mercado da área do imóvel situada em seu território.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 158, § 1º"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Em regra, o imposto sobre imóvel situado no Brasil é do Estado, ou do Distrito Federal, da situação do bem.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 158, inciso I"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o imposto é devido só ao Estado onde mora o doador ou o donatário.",
+        "Dizer que o imposto vai inteiro para o Estado em que está a sede ou a maior parte da área.",
+        "Dizer que a divisão entre os Estados é em partes iguais."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F2-16",
+      "classe": "PARAGRAFO",
+      "pergunta": "Soube que vão cobrar IPVA de avião e de barco. O meu trator, a colheitadeira e o avião de pulverização da fazenda entram nessa cobrança?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O IPVA incide sobre a propriedade de veículos automotores terrestres, aquáticos e aéreos, excetuados os tratores e as máquinas agrícolas.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "EC 132/2023",
+              "dispositivo": "art. 1º (redação do art. 155, § 6º, inciso III, alínea d)"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Também ficam excetuadas as aeronaves agrícolas e as de operador certificado para prestar serviços aéreos a terceiros.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "EC 132/2023",
+              "dispositivo": "art. 1º (redação do art. 155, § 6º, inciso III, alínea a)"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que tratores e máquinas agrícolas pagam IPVA.",
+        "Dizer que aeronaves agrícolas pagam IPVA.",
+        "Afirmar alíquota, valor ou data de início da cobrança do IPVA sobre aeronaves e embarcações."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F2-18",
+      "classe": "PARAGRAFO",
+      "pergunta": "Sou segurado especial e montei com meus vizinhos uma microempresa rural. Perco a condição de segurado especial por causa disso?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "A participação do segurado especial em sociedade empresária, sociedade simples, como empresário individual ou titular de empresa individual de responsabilidade limitada, de objeto agrícola, agroindustrial ou agroturístico, considerada microempresa, não o exclui da categoria.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 14"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Isso vale desde que mantido o exercício da atividade rural, a pessoa jurídica componha-se apenas de segurados de igual natureza e se sedie no mesmo Município, ou em Município limítrofe, em que eles desenvolvem suas atividades.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 14"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que participar de qualquer empresa faz o segurado perder a condição de especial.",
+        "Dizer que a condição se mantém com sócios que não sejam segurados especiais ou com a empresa sediada em Município distante."
+      ],
+      "permitidos": [
+        "Dizer que participar da sociedade em desacordo com as limitações do § 14 leva à exclusão da categoria (art. 12, § 11, inciso I, alínea d)."
+      ]
+    },
+    {
+      "id": "F2-20",
+      "classe": "EXCECAO",
+      "pergunta": "Vou pegar um financiamento rural no banco. O banco pode exigir certidão negativa de débito da Previdência para me dar o crédito?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Independe de prova de inexistência de débito a constituição de garantia para concessão de crédito rural, em qualquer de suas modalidades, por instituição de crédito pública ou privada, desde que o contribuinte do art. 25 não seja responsável direto pelo recolhimento de contribuições sobre a sua produção.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 47, § 6º"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Em regra, a certidão negativa de débito é exigida da empresa na alienação ou oneração, a qualquer título, de bem imóvel ou direito a ele relativo.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 47, inciso I, alínea b"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que a certidão nunca pode ser exigida do produtor.",
+        "Dizer que a dispensa vale sem a condição de o contribuinte não ser responsável direto pelo recolhimento sobre a sua produção.",
+        "Dizer que a dispensa vale para qualquer financiamento ou garantia, e não só para a garantia de crédito rural.",
+        "Dizer que a dispensa alcança o crédito em si, e não só a prova de inexistência de débito na constituição da garantia."
+      ],
+      "permitidos": [
+        "Dizer que a certidão é exigida da empresa no recebimento de benefício ou incentivo fiscal ou creditício concedido pelo Poder Público (art. 47, inciso I, alínea a)."
+      ]
+    },
+    {
+      "id": "F2-21",
+      "classe": "EXCECAO",
+      "pergunta": "Meu irmão quer renunciar à parte dele na herança da fazenda. Isso conta como doação e paga imposto?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O ITCMD não incide sobre a renúncia à herança ou ao legado, desde que cumpridas as condições da lei.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 150, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "A renúncia deve ser feita sem ressalva ou condição, em benefício do monte.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 150, inciso I, alínea a"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "O renunciante não pode ter praticado ato que demonstre aceitação da herança ou do legado.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 150, inciso I, alínea b"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "A renúncia à herança ou ao legado em favor de pessoa determinada é tratada como transmissão por doação.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 151, inciso II, alínea d"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que toda renúncia à herança é tributada como doação.",
+        "Dizer que a renúncia dirigida a um herdeiro determinado está sempre fora do imposto, sem a condição de ser em benefício do monte.",
+        "Dizer que a renúncia vale mesmo que o renunciante já tenha aceitado a herança."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F2-22",
+      "classe": "EXCECAO",
+      "pergunta": "Todo ano passo uma parte das terras para o mesmo filho em doação. Cada doação paga imposto separado ou a lei soma tudo?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Nas doações sucessivas entre o mesmo doador e o mesmo donatário, consideram-se todas as transmissões realizadas a esse título no prazo definido na legislação tributária estadual ou distrital.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 155, inciso I"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O imposto devido é recalculado a cada nova doação, somando à base de cálculo os valores dos bens anteriormente transmitidos.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 155, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "O valor a recolher é o imposto devido pelo cálculo somado, deduzidos os valores já recolhidos, observada a progressividade da alíquota prevista na legislação estadual ou distrital, com base no valor total das doações no período.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 155, inciso III"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que cada doação é tributada isoladamente, sem somar as anteriores.",
+        "Dizer que o prazo para somar as doações é fixado por lei federal ou afirmar um número de anos (o prazo é o da legislação estadual ou distrital).",
+        "Dizer que o imposto já recolhido nas doações anteriores não é deduzido."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F2-23",
+      "classe": "EXCECAO",
+      "pergunta": "Alugo a casa da sede da fazenda para turistas por temporada, de 30 dias. O imposto segue as regras de aluguel comum ou as de hotel?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "A locação, cessão onerosa ou arrendamento de bem imóvel residencial por contribuinte sujeito ao regime regular do IBS e da CBS, com período não superior a noventa dias ininterruptos, é tributada pelas mesmas regras aplicáveis aos serviços de hotelaria.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 253"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que a locação por temporada segue sempre as regras da locação comum.",
+        "Dizer que o tratamento de hotelaria vale para períodos superiores a noventa dias.",
+        "Dizer que o tratamento de hotelaria vale para quem não é contribuinte do regime regular."
+      ],
+      "permitidos": [
+        "Dizer que, para esse fim, são do regime regular as pessoas físicas que atendem ao art. 251, § 1º, inciso I, e § 2º, inciso II (art. 253, § 1º).",
+        "Dizer que essas operações entram nos limites do art. 251 (art. 253, § 2º)."
+      ]
+    },
+    {
+      "id": "F2-24",
+      "classe": "EXCECAO",
+      "pergunta": "Perdi o recurso na segunda instância do processo do IBS, mas ela decidiu diferente de um caso igual. Dá para recorrer de novo? Em quanto tempo?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Cabe recurso de uniformização, dirigido à Câmara Superior do IBS, no prazo de dez dias.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 79"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O recurso cabe contra decisão de segunda instância, ou proferida no rito sumário do art. 76, inciso I, que confira à legislação específica do IBS interpretação divergente da dada por outra decisão de segunda instância ou da própria Câmara Superior.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 79"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "O recurso de uniformização não cabe quando a divergência é sobre a legislação comum do IBS e da CBS; nesse caso observa-se o recurso especial do art. 323-G da LC 214.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 79, § 6º"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 323-G"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o recurso de uniformização cabe contra qualquer decisão desfavorável, sem divergência de interpretação.",
+        "Afirmar prazo diferente de dez dias para o recurso de uniformização.",
+        "Dizer que, no recurso de uniformização do art. 79, a divergência pode ser com decisão de primeira instância (o art. 79 exige divergência com outra decisão de segunda instância ou da própria Câmara Superior).",
+        "Dizer que o recurso de uniformização serve para a divergência sobre a legislação comum do IBS e da CBS."
+      ],
+      "permitidos": [
+        "Dizer que os prazos processuais contam-se em dias úteis (art. 62).",
+        "Dizer que o recorrente deve comprovar a divergência, sob pena de o recurso não ser conhecido (art. 79, § 2º).",
+        "Dizer que o recurso especial do art. 323-G cabe no prazo de dez dias úteis."
+      ]
+    },
+    {
+      "id": "F2-25",
+      "classe": "EXCECAO",
+      "pergunta": "Paguei contribuição do INSS a mais. Posso pedir de volta ou usar como desconto nas próximas?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "As contribuições previstas no artigo só podem ser restituídas ou compensadas nas hipóteses de pagamento ou recolhimento indevido ou maior que o devido, nos termos e condições estabelecidos pela Receita Federal.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 89"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O valor restituído ou compensado é acrescido de juros pela taxa Selic acumulada mensalmente, a partir do mês seguinte ao do pagamento indevido ou a maior até o mês anterior ao da compensação ou restituição, e de um por cento no mês em que for efetuada.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 89, § 4º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que é possível restituir ou compensar qualquer contribuição, mesmo a que foi paga corretamente.",
+        "Dizer que o valor é devolvido sem juros ou apenas com correção por outro índice.",
+        "Dizer que a compensação independe dos termos e condições da Receita Federal."
+      ],
+      "permitidos": [
+        "Dizer que os valores compensados indevidamente são exigidos com os acréscimos moratórios (art. 89, § 9º).",
+        "Dizer que, havendo débito, o valor a restituir é usado para extingui-lo por compensação (art. 89, § 8º)."
+      ]
+    },
+    {
+      "id": "F2-29",
+      "classe": "AMPLA",
+      "pergunta": "Vendo mercadoria por preço bem abaixo do mercado para a empresa do meu cunhado. O imposto muda por ser parente? O que a lei chama de parte relacionada?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O IBS e a CBS também incidem sobre os demais fornecimentos não onerosos ou a valor inferior ao de mercado feitos por contribuinte a parte relacionada.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 5º, inciso IV"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Consideram-se partes relacionadas aquelas em que ao menos uma esteja sujeita a influência, direta ou indireta, que possa levar a termos e condições diferentes dos que seriam estabelecidos entre partes não relacionadas em transações comparáveis.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 5º, § 2º"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "Entre as hipóteses de parte relacionada está a entidade e a pessoa física que for cônjuge, companheiro ou parente, consanguíneo ou afim, até o terceiro grau, de conselheiro, de diretor ou de controlador dela; o cunhado (afim de segundo grau) só entra nessa hipótese se for conselheiro, diretor ou controlador da empresa.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 5º, § 3º, inciso VII"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "Na operação entre partes relacionadas, a base de cálculo corresponde ao valor de mercado, entendido como o valor praticado em operações comparáveis entre partes não relacionadas.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 12, § 4º, inciso IV"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o preço abaixo do mercado entre partes relacionadas não é tributado.",
+        "Dizer que a base de cálculo continua sendo o preço efetivamente cobrado, ignorando o valor de mercado.",
+        "Dizer que só são partes relacionadas empresas do mesmo grupo, sem incluir parentes até o terceiro grau de diretores, conselheiros ou controladores."
+      ],
+      "permitidos": [
+        "Dizer que a lista de partes relacionadas do § 3º não é exaustiva, pois vale sem prejuízo de outras hipóteses que se enquadrem no § 2º.",
+        "Dizer que o regulamento pode flexibilizar a verificação do valor de mercado nessas operações, nas condições do art. 5º, § 7º.",
+        "Dizer que também são partes relacionadas as entidades em que os mesmos sócios, ou seus cônjuges e parentes até o terceiro grau, detêm ao menos 20% do capital de cada uma (art. 5º, § 3º, inciso VI)."
+      ]
+    },
+    {
+      "id": "F2-33",
+      "classe": "AMPLA",
+      "pergunta": "O que entra e o que não entra no salário que serve de base da contribuição do INSS do meu funcionário? Por exemplo, benefícios da Previdência e alimentação dada pela empresa?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Os benefícios da previdência social, nos termos e limites legais, não integram o salário de contribuição, salvo o salário-maternidade.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 28, § 9º"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "A parcela in natura recebida de acordo com os programas de alimentação aprovados pelo Ministério do Trabalho não integra o salário de contribuição.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 28, § 9º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o salário-maternidade não integra o salário de contribuição.",
+        "Dizer que qualquer alimentação paga pela empresa, inclusive em dinheiro, fica fora do salário de contribuição.",
+        "Dizer que a lista de parcelas que não integram é exemplificativa (o texto diz \"exclusivamente\")."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F2-34",
+      "classe": "AMPLA",
+      "pergunta": "Quero organizar a sucessão da fazenda. Em linhas gerais, como funciona o imposto sobre herança e doação: sobre o que incide, como se calcula e quem paga?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O ITCMD incide sobre a transmissão de quaisquer bens ou direitos a que se possa atribuir valor econômico, havidos por sucessão causa mortis ou por doação.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 148"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 148, inciso I"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 148, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "A base de cálculo é o valor de mercado do bem ou do direito transmitido.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 152"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "As alíquotas são progressivas em razão do valor do quinhão, do legado ou da doação e observam a alíquota máxima fixada pelo Senado Federal.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 156, inciso I"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 156, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "Contribuinte é o sucessor, na transmissão causa mortis, e o donatário, na doação.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 157, inciso I"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 157, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F5",
+          "afirmacao": "O fato gerador na transmissão causa mortis ocorre independentemente de inventário ou arrolamento, judicial ou extrajudicial.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 148, § 3º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que a base de cálculo é o valor declarado no cartório ou o valor venal, e não o valor de mercado.",
+        "Afirmar uma alíquota fixa ou única, ou um percentual específico (as alíquotas são progressivas e o máximo é fixado pelo Senado).",
+        "Dizer que o contribuinte é o doador ou o espólio.",
+        "Dizer que o imposto só incide depois de aberto o inventário."
+      ],
+      "permitidos": [
+        "Dizer que há tantos fatos geradores quantos forem os sucessores ou donatários (art. 148, § 2º).",
+        "Dizer que a alíquota é a vigente no momento da abertura da sucessão ou da doação (art. 156, § 1º)."
+      ]
+    },
+    {
+      "id": "F2-55",
+      "classe": "AMPLA",
+      "pergunta": "Tenho uma deficiência física e preciso de um carro para ir até a fazenda todo dia. Existe alguma redução de imposto para comprar carro, com que limite de preço e de quanto em quanto tempo posso usar de novo?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Ficam reduzidas a zero as alíquotas de IBS e CBS na venda de automóveis de passageiros de fabricação nacional de no mínimo quatro portas, inclusive a de acesso ao bagageiro, quando adquiridos por pessoas com deficiência física, visual ou auditiva, deficiência mental severa ou profunda, ou transtorno do espectro autista com prejuízos de nível moderado ou grave.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 149"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 149, inciso II"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 149, inciso II, alínea a"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Nessa hipótese vale para automóvel com preço de venda ao consumidor de até R$ 200.000,00, limitado o benefício ao valor da operação de até R$ 100.000,00.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 149, § 2º, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "A redução pode ser usufruída em intervalos não inferiores a três anos.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 152, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "O direito é reconhecido pela administração tributária estadual ou distrital de domicílio do requerente e pela Receita Federal, depois de verificar se o adquirente preenche os requisitos.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 153"
+            }
+          ]
+        },
+        {
+          "id": "F5",
+          "afirmacao": "A alienação do automóvel em intervalo inferior ao do art. 152, a pessoa sem o direito reconhecido, obriga o alienante (o beneficiário que revende) a pagar os tributos dispensados, atualizados.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 155"
+            }
+          ]
+        },
+        {
+          "id": "F6",
+          "afirmacao": "Para o reconhecimento do direito, a deficiência física, visual ou auditiva conta se for de grau moderado ou grave, com incapacidade total ou parcial para dirigir (as deformidades estéticas não contam).",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 150, § 1º"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 150, § 2º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que a redução vale para qualquer carro, sem limite de preço ou sem a exigência de fabricação nacional.",
+        "Dizer que o benefício pode ser usado todo ano, ou a cada dois anos (dois anos é o intervalo do táxi, art. 152, inciso I).",
+        "Dizer que basta declarar a deficiência, sem reconhecimento do direito pela administração tributária."
+      ],
+      "permitidos": [
+        "Dizer que os limites de R$ 200.000,00 e R$ 100.000,00 são atualizados todo ano, só para ampliação, com base na Tabela Fipe (art. 149, § 6º).",
+        "Dizer que, em caso de perda total ou de desaparecimento por furto ou roubo, a redução pode ser usada a qualquer tempo, sem esperar o intervalo (art. 152, parágrafo único).",
+        "Dizer que a deficiência é comprovada por laudo de avaliação emitido por fornecedor de serviço público de saúde, por fornecedor privado contratado ou conveniado que integre o SUS ou pelo Detran ou suas clínicas credenciadas (art. 151, incisos I a III).",
+        "Dizer que os acessórios opcionais que não sejam equipamentos originais são tributados normalmente (art. 154)."
+      ]
+    },
+    {
+      "id": "F2-57",
+      "classe": "AMPLA",
+      "pergunta": "Estou pensando em investir num fundo de investimento do agronegócio, o Fiagro, que tem fazendas arrendadas. O fundo paga IBS e CBS? Em que casos ele passa a pagar?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Os Fiagro que realizam operações com bens imóveis não são contribuintes do IBS e da CBS quando, cumulativamente, têm cotas negociadas exclusivamente em bolsa ou mercado de balcão organizado, com no mínimo cem cotistas, e não possuem cotista pessoa física titular de 20% ou mais das cotas (ou com direito a mais de 20% dos rendimentos), entre outras condições.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 26, § 5º-A, inciso I"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 26, § 5º-A, inciso I, alínea a"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 26, § 5º-A, inciso I, alínea b"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Também não são contribuintes os que não atendem a essas condições, mas cujas cotas sejam detidas em mais de 95% por determinados cotistas (como FII ou Fiagro que as atendam, fundos de previdência ou de seguros de pessoas, entidades de previdência e fundos de pensão).",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 26, § 5º-A, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "São contribuintes no regime regular os Fiagro que realizam operações com bens imóveis e não atendem às condições do inciso I nem do inciso II do § 5º-A, ou que estejam sujeitos à tributação aplicável às pessoas jurídicas.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 26, § 6º-A, inciso I, alínea a"
+            },
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 26, § 6º-A, inciso I, alínea b"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "Os Fiagro enquadrados como não contribuintes podem optar a qualquer momento, de forma irretratável, pelo regime regular.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 26, § 7º-A"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que todo fundo de investimento, inclusive o Fiagro, é sempre contribuinte do IBS e da CBS.",
+        "Dizer que o Fiagro nunca paga IBS e CBS, sem as condições de negociação, número de cotistas e limite de participação.",
+        "Dizer que a opção pelo regime regular pode ser desfeita depois."
+      ],
+      "permitidos": [
+        "Dizer que a alínea b do inciso I também veda pessoas físicas ligadas (parentes até o segundo grau) com 40% ou mais das cotas e pessoa jurídica com mais de 50% (art. 26, § 5º-A, inciso I, alínea b, itens 2 e 3).",
+        "Dizer que o fundo que passar a fazer novas operações com bens ou serviços sujeitas ao IBS e à CBS é considerado contribuinte no regime regular (art. 26, § 8º-A)."
+      ]
+    },
+    {
+      "id": "F2-58",
+      "classe": "AMPLA",
+      "pergunta": "No fim de 2032 vou ter mercadoria em estoque que comprei com o ICMS já retido na fonte, por substituição tributária. Esse imposto vira crédito para mim? Como isso é feito?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "O contribuinte que possuir em estoque, ao final do dia 31 de dezembro de 2032, mercadoria sujeita ao regime de substituição tributária do ICMS pode creditar-se do valor do imposto retido.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 142"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "O valor corresponde ao ICMS retido por substituição tributária, se a compra foi direto de quem reteve; ao recolhido por substituição, se o próprio contribuinte apurou o imposto na entrada; ou ao incidido nas operações e informado nos campos do documento fiscal, se comprou de contribuinte substituído.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 143, inciso I"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 143, inciso II"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 143, inciso III"
+            }
+          ]
+        },
+        {
+          "id": "F3",
+          "afirmacao": "O contribuinte deve inventariar o estoque existente em 31 de dezembro de 2032 em cada estabelecimento, apurar o ICMS e encaminhar o inventário e o demonstrativo ao Estado ou ao Distrito Federal e ao CGIBS.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 144, inciso I, alínea a"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 144, inciso I, alínea b"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 144, inciso I, alínea c"
+            }
+          ]
+        },
+        {
+          "id": "F4",
+          "afirmacao": "O valor é compensado com o IBS devido nos meses seguintes, em doze parcelas mensais, iguais e sucessivas.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 144, inciso II"
+            }
+          ]
+        },
+        {
+          "id": "F5",
+          "afirmacao": "A compensação com o IBS não se aplica ao contribuinte optante pelo Simples Nacional, que inventaria as mercadorias, encaminha o inventário ao Estado ou ao Distrito Federal e solicita a restituição nos termos da legislação de cada ente.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 145"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 145, parágrafo único"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o ICMS retido por substituição tributária sobre o estoque se perde.",
+        "Dizer que o crédito é aproveitado de uma vez só, ou em número de parcelas diferente de doze.",
+        "Dizer que o optante do Simples Nacional compensa o valor com o IBS."
+      ],
+      "permitidos": [
+        "Dizer que o Estado ou o Distrito Federal informa o valor ao CGIBS em até sessenta dias e que, sem a informação, o CGIBS usa o valor do demonstrativo do contribuinte (art. 144, incisos II e III).",
+        "Dizer que, sem correspondência entre estoque e entradas, usa-se a média do ICMS retido nas entradas dos últimos três meses, até a quantidade do inventário (art. 143, § 1º).",
+        "Dizer que a mercadoria em trânsito na virada do ano, com saída até 31/12/2032 e entrada depois, conta como estoque (art. 143, § 2º)."
+      ]
+    },
+    {
+      "id": "F2-37",
+      "classe": "AUSENTE",
+      "pergunta": "Qual a taxa de juros do Pronaf para eu financiar um trator, e até quanto posso pegar de financiamento?",
+      "temBaseLegal": false,
+      "fatos": [],
+      "assuntoAusente": "Programa de crédito da agricultura familiar (Pronaf).",
+      "naoPodeAfirmar": [
+        "Taxa de juros do Pronaf.",
+        "Limite de financiamento ou valor máximo por produtor.",
+        "Condições, prazos ou requisitos de enquadramento no programa."
+      ],
+      "comportamentoCorreto": "Dizer que não encontrou fundamento na legislação disponível para esse assunto, sem afirmar regra, valor, prazo ou percentual; pode sugerir procurar o contador ou o órgão competente.",
+      "observacaoDoGabarito": "Falar da tributação da compra de trator (LC 214/2025, art. 110, inciso I) ou do IPVA (EC 132/2023, redação do art. 155, § 6º, inciso III, alínea d) não viola o gabarito, desde que não afirme taxa, limite ou condição do Pronaf."
+    },
+    {
+      "id": "F2-38",
+      "classe": "AUSENTE",
+      "pergunta": "Se eu perder a lavoura por causa da seca, o Garantia-Safra paga quanto para mim?",
+      "temBaseLegal": false,
+      "fatos": [],
+      "assuntoAusente": "Benefício de garantia de renda do agricultor familiar (Garantia-Safra).",
+      "naoPodeAfirmar": [
+        "Valor do benefício do Garantia-Safra.",
+        "Requisitos para receber (perda mínima, região, enquadramento).",
+        "Prazos de adesão ou de pagamento."
+      ],
+      "comportamentoCorreto": "Dizer que não encontrou fundamento na legislação disponível para esse assunto, sem afirmar regra, valor, prazo ou percentual; pode sugerir procurar o contador ou o órgão competente.",
+      "observacaoDoGabarito": "Os trechos que falam em seca tratam de secagem de produto; o estorno de crédito do bem que perece (LC 214/2025, art. 47, § 6º) não sustenta benefício."
+    },
+    {
+      "id": "F2-39",
+      "classe": "AUSENTE",
+      "pergunta": "Que parte da minha propriedade eu preciso deixar como reserva legal, e qual a multa se eu desmatar além do permitido?",
+      "temBaseLegal": false,
+      "fatos": [],
+      "assuntoAusente": "Regras ambientais de reserva legal e multas por desmatamento.",
+      "naoPodeAfirmar": [
+        "Percentual de reserva legal da propriedade.",
+        "Valor ou regra de multa por desmatamento.",
+        "Qualquer obrigação ambiental sobre áreas de preservação."
+      ],
+      "comportamentoCorreto": "Dizer que não encontrou fundamento na legislação disponível para esse assunto, sem afirmar regra, valor, prazo ou percentual; pode sugerir procurar o contador ou o órgão competente.",
+      "observacaoDoGabarito": "O art. 137, § 3º, da LC 214/2025 trata serviços ambientais de conservação da vegetação nativa como produto florestal só para a redução de alíquota; isso não sustenta percentual de reserva nem multa ambiental."
+    },
+    {
+      "id": "F2-40",
+      "classe": "AUSENTE",
+      "pergunta": "Contratei um trabalhador só para a safra. Quando a safra acabar, quanto de aviso prévio e rescisão eu preciso pagar?",
+      "temBaseLegal": false,
+      "fatos": [],
+      "assuntoAusente": "Direito do trabalho: contrato de safra, aviso prévio e verbas rescisórias.",
+      "naoPodeAfirmar": [
+        "Valor ou prazo de aviso prévio.",
+        "Verbas rescisórias devidas ao trabalhador de safra.",
+        "Regras do contrato de safra."
+      ],
+      "comportamentoCorreto": "Dizer que não encontrou fundamento na legislação disponível para esse assunto, sem afirmar regra, valor, prazo ou percentual; pode sugerir procurar o contador ou o órgão competente.",
+      "observacaoDoGabarito": "A base trata de empregados por prazo determinado só no que toca à Previdência (Lei 8.212/1991, art. 12, § 8º). O art. 28, § 9º, alínea e, item 4, cita a indenização do art. 14 da Lei 5.889/1973 apenas como parcela que não integra o salário de contribuição: citá-la assim não é erro; afirmar valor, prazo ou regra dessa indenização ou do aviso prévio é."
+    },
+    {
+      "id": "F2-41",
+      "classe": "AUSENTE",
+      "pergunta": "O meu município cobra IPTU de uma chácara de lazer que eu tenho. Qual é a alíquota e quem pode isentar?",
+      "temBaseLegal": false,
+      "fatos": [],
+      "assuntoAusente": "Imposto sobre a propriedade predial e territorial urbana (IPTU).",
+      "naoPodeAfirmar": [
+        "Alíquota do IPTU.",
+        "Regras de isenção do IPTU ou quem pode concedê-la.",
+        "Valor venal, critérios de avaliação do imóvel ou base de cálculo do IPTU além da regra constitucional de que a base é atualizada pelo Poder Executivo conforme critérios de lei municipal."
+      ],
+      "comportamentoCorreto": "Dizer que não encontrou fundamento na legislação disponível para esse assunto, sem afirmar regra, valor, prazo ou percentual; pode sugerir procurar o contador ou o órgão competente.",
+      "observacaoDoGabarito": "A EC 132/2023 (redação do art. 156, § 1º, inciso III, da Constituição) traz só a regra de que a base de cálculo é atualizada pelo Poder Executivo conforme critérios de lei municipal; citá-la não é erro. O art. 38 do CTN, na redação da LC 227/2026, art. 165, trata do valor venal do ITBI, não do IPTU."
+    },
+    {
+      "id": "F2-42",
+      "classe": "AUSENTE",
+      "pergunta": "Qual é o prazo mínimo de um contrato de arrendamento rural e quanto posso cobrar no máximo de arrendamento pela terra?",
+      "temBaseLegal": false,
+      "fatos": [],
+      "assuntoAusente": "Contrato de arrendamento rural: prazos e preço máximo.",
+      "naoPodeAfirmar": [
+        "Prazo mínimo do contrato de arrendamento rural.",
+        "Teto ou percentual máximo do preço do arrendamento.",
+        "Qualquer regra contratual do arrendamento rural."
+      ],
+      "comportamentoCorreto": "Dizer que não encontrou fundamento na legislação disponível para esse assunto, sem afirmar regra, valor, prazo ou percentual; pode sugerir procurar o contador ou o órgão competente.",
+      "observacaoDoGabarito": "A base trata o arrendamento só como operação tributável (por exemplo, LC 214/2025, art. 252, inciso III, art. 253, art. 261, parágrafo único, e art. 487); isso não sustenta regra contratual de prazo mínimo ou de preço. O art. 12, § 9º, inciso I, da Lei 8.212/1991 é previdenciário."
+    },
+    {
+      "id": "F2-46",
+      "classe": "SIMPLES",
+      "pergunta": "Meu filho de 16 anos quer contribuir para o INSS por conta própria, sem trabalhar de carteira assinada. Ele pode?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "É segurado facultativo o maior de quatorze anos que se filiar ao Regime Geral de Previdência Social mediante contribuição, desde que não incluído entre os segurados obrigatórios do art. 12.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 14"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que é preciso ter dezoito anos para contribuir como facultativo.",
+        "Dizer que quem já é segurado obrigatório pelo art. 12 pode se filiar como segurado facultativo do art. 14 pela mesma situação."
+      ],
+      "permitidos": [
+        "Dizer que a alíquota do segurado facultativo é de vinte por cento do salário de contribuição, com as reduções do art. 21, § 2º, se o trecho for citado.",
+        "Dizer que o segurado especial, além da contribuição obrigatória, pode contribuir facultativamente na forma do art. 21 (art. 25, § 1º).",
+        "Dizer que o filho maior de dezesseis anos que trabalha com o grupo familiar do segurado especial é segurado obrigatório (art. 12, inciso VII, alínea c), não segurado facultativo do art. 14."
+      ]
+    },
+    {
+      "id": "F2-48",
+      "classe": "SIMPLES",
+      "pergunta": "Quem confere e homologa o cálculo do imposto da herança e da doação?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "A homologação do cálculo do ITCMD compete privativamente à administração tributária dos Estados e do Distrito Federal, por meio de seus servidores efetivos competentes para efetuar o lançamento de ofício.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 160"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que a homologação é feita pelo cartório, pelo tabelião ou pelo juiz do inventário.",
+        "Dizer que a homologação é da Receita Federal ou do Comitê Gestor."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F2-51",
+      "classe": "SIMPLES",
+      "pergunta": "Posso contratar um MEI para trabalhar como empregada doméstica na casa da sede da fazenda?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Presentes os elementos da relação de emprego doméstico, o empregador doméstico não pode contratar microempreendedor individual, sob pena de ficar sujeito a todas as obrigações da relação de emprego, inclusive trabalhistas, tributárias e previdenciárias.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 24, parágrafo único"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o empregador doméstico pode contratar MEI livremente quando há relação de emprego doméstico.",
+        "Dizer que a consequência se limita a multa ou a obrigações só previdenciárias."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F2-52",
+      "classe": "SIMPLES",
+      "pergunta": "Minha esposa e meus filhos maiores de 16 anos têm que trabalhar na lavoura comigo para serem considerados segurados especiais?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Para serem considerados segurados especiais, o cônjuge ou companheiro e os filhos maiores de dezesseis anos, ou a eles equiparados, devem ter participação ativa nas atividades rurais do grupo familiar.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "Lei 8.212/1991",
+              "dispositivo": "art. 12, § 7º"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que basta morar na propriedade, sem participação nas atividades rurais.",
+        "Dizer que a idade mínima é catorze ou dezoito anos."
+      ],
+      "permitidos": []
+    },
+    {
+      "id": "F2-53",
+      "classe": "SIMPLES",
+      "pergunta": "Minha fazenda pega terra de dois municípios. Para o imposto, qual município vale como o local da operação?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Quando o bem imóvel está situado em mais de um Município, considera-se local do imóvel o Município onde está situada a maior parte da sua área.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 11, § 2º"
+            }
+          ]
+        },
+        {
+          "id": "F2",
+          "afirmacao": "Na operação com bem imóvel, o local da operação é onde o imóvel estiver situado.",
+          "essencial": false,
+          "dispositivos": [
+            {
+              "norma": "LC 214/2025",
+              "dispositivo": "art. 11, inciso II"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que vale o município da sede da fazenda ou o da residência do proprietário.",
+        "Dizer que a operação é dividida entre os dois municípios.",
+        "Aplicar a regra da maior área à venda da produção (grãos, gado), que não é operação com o imóvel."
+      ],
+      "permitidos": [
+        "Dizer que na venda de bem móvel material, como a produção, o local da operação é o da entrega ou disponibilização ao destinatário (art. 11, inciso I).",
+        "Dizer que, no ITCMD, imóvel situado em mais de um Estado é tributado por cada ente segundo o valor de mercado da área situada em seu território (LC 227/2026, art. 158, § 1º)."
+      ]
+    },
+    {
+      "id": "F2-54",
+      "classe": "SIMPLES",
+      "pergunta": "O cartório e o tabelionato precisam informar ao governo quando registram uma doação de terra?",
+      "temBaseLegal": true,
+      "fatos": [
+        {
+          "id": "F1",
+          "afirmacao": "Os órgãos ou entidades de direito público ou privado perante os quais se processe o registro de transmissão sujeita ao ITCMD são obrigados a prestar às administrações tributárias dos Estados e do Distrito Federal as informações relacionadas aos referidos atos.",
+          "essencial": true,
+          "dispositivos": [
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 163"
+            },
+            {
+              "norma": "LC 227/2026",
+              "dispositivo": "art. 163, inciso II"
+            }
+          ]
+        }
+      ],
+      "armadilhas": [
+        "Dizer que o cartório não precisa informar o governo.",
+        "Dizer que as informações da doação vão só à Receita Federal e não às administrações tributárias dos Estados e do Distrito Federal."
+      ],
+      "permitidos": [
+        "Dizer que há outras obrigações de informação dos cartórios, como o compartilhamento com a administração tributária pelo Sinter (LC 214/2025, art. 256, § 4º) ou com os Municípios (CTN, art. 38, § 4º, na redação da LC 227/2026, art. 165)."
+      ]
+    }
+  ]
+}

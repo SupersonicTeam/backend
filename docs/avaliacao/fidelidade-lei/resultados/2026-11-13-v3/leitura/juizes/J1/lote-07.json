@@ -1,0 +1,139 @@
+{
+  "juiz": "J1",
+  "lote": "lote-07",
+  "itens": [
+    {
+      "id": "R073",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Posso ajudar a organizar a pergunta, mas os trechos de lei que tenho aqui tratam de importação de bens e da venda", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece que os trechos não tratam de consulta formal."},
+        {"n": 2, "texto": "o IBS e a CBS incidem sobre a importação de bens ou serviços do exterior, qualquer que seja a finalidade", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 63", "fato": null, "nota": ""},
+        {"n": 3, "texto": "o pagamento do IBS e da CBS na importação de bens materiais deve ser feito até a entrega dos bens submetidos a despacho", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 76, § 1º", "fato": null, "nota": ""},
+        {"n": 4, "texto": "Na venda de máquinas, veículos e equipamentos usados adquiridos até 31 de dezembro de 2032, a partir de 1º de janeiro de 2027", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 406, § 2º, inciso II", "fato": null, "nota": ""},
+        {"n": 5, "texto": "Para a sua pergunta por escrito, você pode descrever: o tipo de bem ou serviço que vende, se é novo ou usado", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugestão prática, sem afirmar requisito legal; não cobre os requisitos do gabarito."},
+        {"n": 6, "texto": "Quanto ao canal e ao formato exato da consulta, confirme diretamente no site da Receita Federal ou com seu contador", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Encaminha ao contador e reconhece limite."}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "As frases jurídicas são fiéis aos trechos, mas tratam de importação e bens usados, fora do assunto perguntado; não afirma o direito de consulta."
+    },
+    {
+      "id": "R074",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O IBS e a CBS das obras de construção civil são apurados separadamente, para cada empreendimento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Cada obra de construção civil é considerada um centro de custo distinto", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270", "fato": "F2", "nota": ""},
+        {"n": 3, "texto": "Nas aquisições de bens e serviços usados em uma obra, o documento fiscal deve indicar o número do cadastro da obra", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R075",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Na intermediação de serviços turísticos feita por agência de turismo, a base de cálculo do IBS e da CBS é o valor da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Os serviços de agências de turismo ficam sujeitos a regime específico de incidência do IBS e da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 288", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Não responde se a comissão paga pelo hotel entra na base."
+    },
+    {
+      "id": "R076",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Pelos trechos disponíveis, na intermediação feita por agência de turismo a base de cálculo do IBS e da CBS é o valor da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I; art. 288", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Ou seja, a regra não é a comissão pura, mas o valor da operação menos o que é repassado aos fornecedores.", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1", "nota": ""},
+        {"n": 3, "texto": "Sobre a comissão que o hotel paga à agência: os trechos que tenho não tratam diretamente desse ponto", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite."},
+        {"n": 4, "texto": "Já a hospedagem em fazenda, quando tratada como serviço de hotelaria, tem base de cálculo sendo o valor da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 280; art. 280, parágrafo único", "fato": null, "nota": ""},
+        {"n": 5, "texto": "Os trechos também dizem que incidem sobre qualquer operação onerosa com serviços realizada pelo contribuinte", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 4º, § 4º", "fato": null, "nota": ""},
+        {"n": 6, "texto": "Para a parte da comissão e para definir se a fazenda se enquadra como hotelaria, vale confirmar com um contador", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugere o contador."}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": ""
+    },
+    {
+      "id": "R077",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Se a sua empresa estiver no regime regular do IBS e da CBS e comprar um título de capitalização, poderá apropriar créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 225, § 5º", "fato": "F1", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": "A frase cobre F1 e F2."
+    },
+    {
+      "id": "R078",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Na intermediação de serviços turísticos realizada por agências de turismo, a base de cálculo do IBS e da CBS é o valor", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Os serviços de agências de turismo ficam sujeitos a regime específico de incidência do IBS e da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 288", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Não responde se a comissão paga pelo hotel entra na base."
+    },
+    {
+      "id": "R079",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Se a empresa estava no regime cumulativo do PIS/Pasep e da COFINS em 31 de dezembro de 2026, e passa ao regime regular", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso I", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Esse direito ao crédito presumido não se aplica aos produtos cuja aquisição foi contemplada por alíquota zero, isenção", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, § 1º, inciso II", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F2", "F3", "F4", "F5"],
+      "observacao": "Não diz o valor (9,25%), o prazo de apropriação, as 12 parcelas nem a restrição de uso."
+    },
+    {
+      "id": "R080",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, serão exigidas a Contribuição para o PIS/Pasep e a Cofins no momento", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": "Generaliza; o trecho vale só quando as contribuições são exigidas pelo regime de caixa."},
+        {"n": 2, "texto": "Para situações que configurem fato gerador até 31 de dezembro de 2026 e fato gerador da CBS a partir de 1º de janeiro", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 1º, inciso II, alínea a", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não responde sobre a dispensa do recolhimento do IBS e da CBS em 2026."
+    },
+    {
+      "id": "R081",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Pela omissão de informação relativa a operações de importação ou exportação, ou sua prestação de forma inexata", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIX", "fato": null, "nota": ""},
+        {"n": 2, "texto": "Pela falsificação, adulteração, extravio ou inutilização de documento fiscal, a multa é de 100% do valor do tributo", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIV", "fato": null, "nota": ""},
+        {"n": 3, "texto": "As penalidades são majoradas em 50% no caso de reincidência específica", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 341-G, § 1º", "fato": null, "nota": "Vale só para multas de obrigação acessória; na pergunta sugere reincidência da multa de ofício (gabarito: 150%)."}
+      ],
+      "omiteEssencial": ["F1", "F3", "F4", "F5"],
+      "observacao": "Responde com multas de obrigação acessória (art. 341-G), não com a multa de ofício do art. 341-F perguntada."
+    },
+    {
+      "id": "R082",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, o percentual da receita do IBS dos Estados destinado ao Fundo de Combate à Pobreza pode ser estabelecido por lei", "rotulo": "SUPORTADA", "dispositivoCitado": "LC 227/2026, art. 129", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "O limite superior desse percentual é de 1% (um por cento)", "rotulo": "SUPORTADA", "dispositivoCitado": "LC 227/2026, art. 129", "fato": "F2", "nota": ""},
+        {"n": 3, "texto": "Essa possibilidade passa a valer a partir de 1º de janeiro de 2033", "rotulo": "SUPORTADA", "dispositivoCitado": "LC 227/2026, art. 129", "fato": "F3", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R083",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, serão exigidas a Contribuição para o PIS/Pasep e a Cofins no momento", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": "Generaliza; o trecho vale só quando as contribuições são exigidas pelo regime de caixa."},
+        {"n": 2, "texto": "Caso a situação configure, até 31 de dezembro de 2026, fato gerador da Contribuição para o PIS/Pasep e da Cofins, serão", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 408, § 1º; § 1º, inciso II, alíneas a e b", "fato": null, "nota": "Omite a condição de a mesma situação ser fato gerador da CBS a partir de 2027."}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não responde sobre a dispensa do recolhimento do IBS e da CBS em 2026."
+    },
+    {
+      "id": "R084",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Cada obra é apurada separadamente.", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "A apuração do IBS e da CBS é feita para cada empreendimento de construção civil, vinculada a um CNPJ ou CPF específico", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único; art. 270", "fato": "F2", "nota": ""},
+        {"n": 3, "texto": "Além disso, o documento fiscal deve indicar o número do cadastro da obra nas aquisições de bens e serviços", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único", "fato": null, "nota": ""},
+        {"n": 4, "texto": "Já a regra geral para os demais estabelecimentos é outra: a apuração consolida as operações de todos os estabelecimentos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 42", "fato": null, "nota": ""},
+        {"n": 5, "texto": "Como a fazenda e a construtora têm atividades diferentes, vale verificar com seu contador como separar cada uma.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugere o contador."}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    }
+  ]
+}

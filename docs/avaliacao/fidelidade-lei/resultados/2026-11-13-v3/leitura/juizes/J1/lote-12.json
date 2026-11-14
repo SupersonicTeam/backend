@@ -1,0 +1,17 @@
+{
+  "juiz": "J1",
+  "lote": "lote-12",
+  "itens": [
+    {
+      "id": "R133",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A folha de tabaco tratada e destalada só pode ser vendida ou remetida a empresa industrializadora de charutos, cigarros", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 429", "fato": "F1"},
+        {"n": 2, "texto": "Há uma exceção: o caso de exportação (LC 214/2025, art. 429).", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 429", "fato": "F2"},
+        {"n": 3, "texto": "Também é admitida a comercialização desses produtos entre estabelecimentos que exerçam a atividade de beneficiamento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 429, § 1º", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    }
+  ]
+}

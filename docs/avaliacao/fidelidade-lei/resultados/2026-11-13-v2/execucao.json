@@ -1,0 +1,76 @@
+{
+  "regra": {
+    "versao": "2026-11-12.4",
+    "parametros": {
+      "defeitosMinimosNaBase": 8,
+      "melhoraRelativaMinima": 0.25,
+      "melhoraAbsolutaMinima": 4,
+      "icConfianca": 0.8,
+      "bootstrapReamostragens": 10000,
+      "bootstrapSemente": 20261112,
+      "pioraMaximaPorTipo": 1,
+      "falsoDescarteMaximo": 3,
+      "recusaFalsaAltaMaxima": 0.05,
+      "ausenteInfielAltaMaxima": 1,
+      "p50Fator": 2.0,
+      "p95Fator": 2.0,
+      "p95TetoMs": 10000,
+      "tokensFator": 2.0,
+      "regressoesPorPerguntaMaximas": 1,
+      "falhaTecnicaMaxima": 0.1,
+      "kappaMinimo": 0.4,
+      "kappaAviso": 0.6,
+      "desacordoMaximo": 0.3,
+      "minimoDeExecucoesValidasPorBraco": 2
+    }
+  },
+  "conjunto": {
+    "versao": "2026-11-13.v2",
+    "arquivo": "perguntas-fidelidade-lei-v2.json",
+    "sha256": "c222063a67810f214532e922f803a999359c79894405e23d7aa7ccba71c8e8af",
+    "perguntas": 36
+  },
+  "commit": "d79b57a9f4ae75eacf3d301bb6c44633839c103d",
+  "jarSha256": "9d53e477dba6871383205a4e526411f8bf3bccd095b25f11fdc1159ceb8f72c4",
+  "modelo": "claude-haiku-5-5",
+  "repeticoes": 3,
+  "semente": 20261112,
+  "bancoDaRodada": "fidelidade_lei",
+  "execucoesPlanejadas": 324,
+  "bracos": [
+    "desligada",
+    "camada1",
+    "camada1+juiz"
+  ],
+  "ambientes": {
+    "desligada": {},
+    "camada1": {
+      "AI_FIDELIDADE_LEI_HABILITADA": "true"
+    },
+    "camada1+juiz": {
+      "AI_FIDELIDADE_LEI_HABILITADA": "true",
+      "AI_FIDELIDADE_LEI_JUIZ_HABILITADO": "true"
+    }
+  },
+  "iniciadoEm": "2026-11-13T00:56:17.343908-03:00",
+  "terminadoEm": "2026-11-13T01:15:07.648192-03:00",
+  "contagemPorBraco": {
+    "desligada": {
+      "recusa": 48,
+      "aceita": 36,
+      "descartada": 24
+    },
+    "camada1": {
+      "recusa": 48,
+      "descartada": 41,
+      "aceita": 19
+    },
+    "camada1+juiz": {
+      "recusa": 48,
+      "descartada": 42,
+      "aceita": 18
+    }
+  },
+  "interrompida": null,
+  "observacao": "A URL, as contas e as senhas da rodada nunca entram neste arquivo."
+}

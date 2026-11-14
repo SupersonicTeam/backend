@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Predicate;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -30,13 +32,34 @@ import java.util.regex.Pattern;
  * grudado em letra, sem separador ({@code cpf52998224725}), não é mascarado; qualquer outro
  * separador ({@code _ : = ( " -} espaço) basta.
  *
+ * <p><strong>CNPJ alfanumérico da RFB (issue #313):</strong> 12 posições com dígito ou letra
+ * maiúscula e 2 dígitos verificadores ({@code 12.ABC.345/01DE-35}), com e sem pontuação, viram
+ * {@code [CNPJ]} só quando os dígitos verificadores conferem
+ * ({@link DocumentoFiscalValidator#isCnpjAlfanumericoValido}). Sem essa conferência, todo token
+ * de 14 caracteres terminado em 2 dígitos (hash, base64) sairia {@code [CNPJ]}, o mesmo tipo de
+ * falso positivo que o PR #310 corrigiu no CPF. Só maiúsculas, que é o formato da RFB e do XML: o
+ * log carrega hash em hex minúsculo, e com minúscula cerca de um em cada cem desses tokens viraria
+ * {@code [CNPJ]}. O {@code DataSanitizer} da Ceres ganha a sua regra, em qualquer caixa, depois
+ * da rodada do benchmark.
+ *
  * <p>Diferente do {@code DataSanitizer} da Ceres, que mascara também a chave: lá o destino é o
  * provedor do modelo, onde nada fiscal precisa chegar.
  */
 public final class MascaraDadosPessoais {
 
-  private record Regra(Pattern padrao, String marcador) {
+  /**
+   * Uma regra: o padrão, o marcador e a conferência do trecho achado (o que não confere fica
+   * como está).
+   */
+  private record Regra(Pattern padrao, String marcador, Predicate<String> confere) {
+
+    Regra(Pattern padrao, String marcador) {
+      this(padrao, marcador, trecho -> true);
+    }
   }
+
+  /** Pontuação do CNPJ, tirada antes de conferir o DV do alfanumérico. */
+  private static final Pattern PONTUACAO_CNPJ = Pattern.compile("[./-]");
 
   /** Só caracteres de IP literal: o parse nunca vira consulta DNS. */
   private static final Pattern IP_LITERAL = Pattern.compile("[0-9A-Fa-f:.]+");
@@ -46,6 +69,12 @@ public final class MascaraDadosPessoais {
       new Regra(Pattern.compile(
           "(?<![A-Za-z0-9.])\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}(?![A-Za-z0-9])"),
           "[CNPJ]"),
+      // CNPJ alfanumerico (#313): so com o DV conferido e so com maiusculas (o log carrega hash em
+      // hex minusculo). Depois do numerico, que ja trocou os so de digitos, e antes do CPF.
+      new Regra(Pattern.compile("(?<![A-Za-z0-9.])[0-9A-Z]{2}\\.?[0-9A-Z]{3}\\.?[0-9A-Z]{3}"
+          + "/?[0-9A-Z]{4}-?\\d{2}(?![A-Za-z0-9])"), "[CNPJ]",
+          trecho -> DocumentoFiscalValidator.isCnpjAlfanumericoValido(
+              PONTUACAO_CNPJ.matcher(trecho).replaceAll(""))),
       new Regra(Pattern.compile(
           "(?<![A-Za-z0-9.])\\d{3}[.\\s]?\\d{3}[.\\s]?\\d{3}-?\\d{2}(?![A-Za-z0-9])"),
           "[CPF]"),
@@ -71,7 +100,12 @@ public final class MascaraDadosPessoais {
     }
     String resultado = texto;
     for (Regra regra : REGRAS) {
-      resultado = regra.padrao().matcher(resultado).replaceAll(regra.marcador());
+      // O trecho que nao confere volta como veio, protegido: um "$" ou uma "\" nele seriam lidos
+      // como referencia de grupo pela troca.
+      resultado = regra.padrao().matcher(resultado).replaceAll(achado ->
+          regra.confere().test(achado.group())
+              ? regra.marcador()
+              : Matcher.quoteReplacement(achado.group()));
     }
     return resultado;
   }

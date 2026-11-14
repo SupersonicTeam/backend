@@ -56,6 +56,32 @@ class PoliticaRetryModeloTest {
   }
 
   @Test
+  @DisplayName("429 (limite de taxa) e re-tentado ate o limite; 400 e 401 nao")
+  void limiteDeTaxaRetentaDemaisErrosDoClienteNao() {
+    assertThat(tentativasAte(new LimiteTaxaProvedorException("HTTP 429 - rate limit")))
+        .isEqualTo(3);
+    assertThat(tentativasAte(new NonTransientAiException("HTTP 400 - bad request"))).isEqualTo(1);
+    assertThat(tentativasAte(new NonTransientAiException("HTTP 401 - invalid api key")))
+        .isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("429 que passa na nova tentativa devolve a resposta, sem falha")
+  void limiteDeTaxaPassaNaSegundaTentativa() {
+    AtomicInteger tentativas = new AtomicInteger();
+
+    String resposta = retry.execute(contexto -> {
+      if (tentativas.incrementAndGet() == 1) {
+        throw new LimiteTaxaProvedorException("HTTP 429 - rate limit");
+      }
+      return "ok";
+    });
+
+    assertThat(resposta).isEqualTo("ok");
+    assertThat(tentativas).hasValue(2);
+  }
+
+  @Test
   @DisplayName("Falha inesperada (bug local) nao e re-tentada")
   void falhaInesperadaNaoRetenta() {
     assertThat(tentativasAte(new IllegalStateException("bug"))).isEqualTo(1);

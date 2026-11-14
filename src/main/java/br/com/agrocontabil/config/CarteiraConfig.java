@@ -49,13 +49,13 @@ public class CarteiraConfig {
     return switch (redefinicao.modoEmail()) {
       case SMTP -> {
         ConferenciaEmail.conferirSmtp(ambiente, mailSender, redefinicao.remetente(), email);
-        yield (destinatario, escritorio, link, validade) -> smtp.enviar(
+        yield (destinatario, escritorio, link, expiraEm) -> smtp.enviar(
             TipoEmail.CONVITE_CARTEIRA, destinatario,
-            MensagensEmail.conviteCarteira(escritorio, link, validade));
+            MensagensEmail.conviteCarteira(escritorio, link, expiraEm, email.replyTo()));
       }
-      case LOG -> (destinatario, escritorio, link, validade) ->
+      case LOG -> (destinatario, escritorio, link, expiraEm) ->
           log.warn("[DEV] E-mail de convite da carteira NAO enviado (modo LOG).");
-      case DESLIGADO -> (destinatario, escritorio, link, validade) ->
+      case DESLIGADO -> (destinatario, escritorio, link, expiraEm) ->
           log.info("Convite da carteira sem envio de e-mail (modo-email=DESLIGADO).");
     };
   }
@@ -82,13 +82,13 @@ public class CarteiraConfig {
     return switch (redefinicao.modoEmail()) {
       case SMTP -> {
         ConferenciaEmail.conferirSmtp(ambiente, mailSender, redefinicao.remetente(), email);
-        yield (destinatario, escritorio, link, validade) -> smtp.enviar(
+        yield (destinatario, escritorio, link, expiraEm) -> smtp.enviar(
             TipoEmail.CONVITE_EQUIPE, destinatario,
-            MensagensEmail.conviteEquipe(escritorio, link, validade));
+            MensagensEmail.conviteEquipe(escritorio, link, expiraEm, email.replyTo()));
       }
-      case LOG -> (destinatario, escritorio, link, validade) ->
+      case LOG -> (destinatario, escritorio, link, expiraEm) ->
           log.warn("[DEV] E-mail de convite de equipe NAO enviado (modo LOG).");
-      case DESLIGADO -> (destinatario, escritorio, link, validade) ->
+      case DESLIGADO -> (destinatario, escritorio, link, expiraEm) ->
           log.info("Convite de equipe sem envio de e-mail (modo-email=DESLIGADO).");
     };
   }

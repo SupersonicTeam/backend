@@ -34,6 +34,7 @@ public class ChatModelSimulado implements ChatModel {
   private final List<Prompt> prompts = new CopyOnWriteArrayList<>();
   private final List<Prompt> classificacoes = new CopyOnWriteArrayList<>();
   private volatile String classificacao;
+  private volatile boolean recusaFirme;
   private final Deque<ChatResponse> fila = new ArrayDeque<>();
   private Function<Prompt, ChatResponse> responder = prompt -> texto(RESPOSTA_PADRAO);
 
@@ -50,6 +51,7 @@ public class ChatModelSimulado implements ChatModel {
     prompts.clear();
     classificacoes.clear();
     classificacao = null;
+    recusaFirme = false;
     fila.clear();
     responder = prompt -> texto(RESPOSTA_PADRAO);
   }
@@ -89,6 +91,18 @@ public class ChatModelSimulado implements ChatModel {
    * @param intencao nome da intenção (DADOS, LEGISLACAO, MISTO, FORA_DE_ESCOPO)
    */
   public void classificarComo(String intencao) {
+    classificarComo(intencao, false);
+  }
+
+  /**
+   * Como {@link #classificarComo(String)}, com o {@code "recusaFirme": true} do fora de escopo por
+   * pedido de dados de outra pessoa ou ordem ao sistema (#497).
+   *
+   * @param intencao    nome da intenção
+   * @param recusaFirme se o JSON leva {@code "recusaFirme": true}
+   */
+  public void classificarComo(String intencao, boolean recusaFirme) {
+    this.recusaFirme = recusaFirme;
     this.classificacao = intencao;
   }
 
@@ -107,7 +121,8 @@ public class ChatModelSimulado implements ChatModel {
     String intencao = classificacao;
     if (intencao != null && ehClassificacao(prompt)) {
       classificacoes.add(prompt);
-      return texto("{\"intencao\": \"" + intencao + "\", \"confianca\": 0.95}");
+      return texto("{\"intencao\": \"" + intencao + "\", \"confianca\": 0.95"
+          + (recusaFirme ? ", \"recusaFirme\": true}" : "}"));
     }
     prompts.add(prompt);
     Function<Prompt, ChatResponse> comportamento;

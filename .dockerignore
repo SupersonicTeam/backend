@@ -16,3 +16,5 @@ README.md
 !.env.example
 deploy/
 .specs/
+# Suite E2E (#321): node_modules, relatorios e o .env de teste nao vao ao daemon.
+e2e/

@@ -1,0 +1,132 @@
+{
+  "juiz": "J1",
+  "lote": "lote-06",
+  "itens": [
+    {
+      "id": "R061",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Cada obra de construção civil é apurada separadamente, pois cada uma é considerada um centro de custo distinto", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Nas aquisições de bens e serviços usados na obra, o documento fiscal deve indicar o número do cadastro da obra", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1"],
+      "observacao": "Não menciona a apuração por empreendimento vinculada a CNPJ ou CPF específico."
+    },
+    {
+      "id": "R062",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, em princípio você pode ser cobrado.", "rotulo": "CITACAO_ERRADA", "dispositivoCitado": "art. 177, § 2º", "fato": "F1", "nota": "Conclusão apoiada no caput do art. 177, mas ligada ao § 2º."},
+        {"n": 2, "texto": "Nas operações realizadas diretamente com contribuintes do regime de que trata o art. 176, o adquirente fica solidariamente", "rotulo": "CITACAO_ERRADA", "dispositivoCitado": "art. 177, § 2º", "fato": "F1", "nota": "Conteúdo é do caput do art. 177; o § 2º trata da ordem cronológica."},
+        {"n": 3, "texto": "O trecho que recebi trata desse regime especificamente para o Etanol Anidro Combustível (EAC), e não consigo confirmar", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": null, "fato": null, "nota": "Trecho não restringe o regime do art. 176 ao EAC; leitura do título seguinte."},
+        {"n": 4, "texto": "Sobre o pagamento eletrônico: os trechos disponíveis não tratam de liquidação eletrônica com recolhimento na hora.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhecimento de limite."},
+        {"n": 5, "texto": "Eles falam de energia elétrica, onde o recolhimento ocorre no fornecimento para consumo e, em certos casos de aquisição", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 28, § 1º, inciso I; art. 28, inciso III, alínea b", "fato": null, "nota": ""},
+        {"n": 6, "texto": "Por isso não posso afirmar que o pagamento eletrônico elimina sua responsabilidade solidária.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhecimento de limite."},
+        {"n": 7, "texto": "Recomendo confirmar com seu contador se a usina vende etanol dentro desse regime", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugestão de falar com o contador."}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Não traz a exceção do pagamento liquidado por instrumento eletrônico nem o limite da responsabilidade ao valor não extinto."
+    },
+    {
+      "id": "R063",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Pelos trechos disponíveis, a multa por falsificar, adulterar, extraviar ou inutilizar documento fiscal é de 100%", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 341-G, inciso XIV", "fato": null, "nota": "Correta no trecho, mas apresentada como resposta à multa de ofício; induz a erro."},
+        {"n": 2, "texto": "As penalidades serão majoradas em 50% no caso de reincidência específica", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 341-G, § 1º", "fato": null, "nota": "Vale para multas acessórias; omite 100%/150% de fraude e reincidência."}
+      ],
+      "omiteEssencial": ["F1", "F3", "F4", "F5"],
+      "observacao": "Responde com as multas por obrigação acessória (art. 341-G) em vez das de lançamento de ofício (art. 341-F), sem avisar."
+    },
+    {
+      "id": "R064",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Cada obra de construção civil é apurada separadamente, como um centro de custo distinto", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Nas aquisições de bens e serviços usados em cada obra, o documento fiscal deve indicar o número do cadastro da obra", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1"],
+      "observacao": "Não menciona a apuração por empreendimento vinculada a CNPJ ou CPF específico."
+    },
+    {
+      "id": "R065",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A primeira instância do contencioso administrativo do IBS julga o lançamento tributário realizado pelas administrações", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 91, inciso I", "fato": null, "nota": ""},
+        {"n": 2, "texto": "O contencioso administrativo do IBS é decidido de forma integrada e exclusivamente por meio do CGIBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 88", "fato": null, "nota": ""},
+        {"n": 3, "texto": "As partes devem ser intimadas da inclusão do processo administrativo em pauta de julgamento com, no mínimo, 10 dias", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 88, § 2º", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Frases fiéis aos trechos, mas não respondem à pergunta sobre a desistência tácita pela ação judicial."
+    },
+    {
+      "id": "R066",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O prestador de serviço de pagamento ou a instituição operadora do sistema de pagamento pode impugnar a penalidade", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F", "fato": null, "nota": ""},
+        {"n": 2, "texto": "A impugnação é dirigida à RFB, relativamente à CBS, e ao CGIBS, relativamente ao IBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F", "fato": null, "nota": ""},
+        {"n": 3, "texto": "Da decisão do órgão revisor cabe recurso hierárquico uma única vez, no prazo de 10 dias úteis", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F, § 1º", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1", "F2", "F3"],
+      "observacao": "Trata da impugnação de penalidade por prestador de serviço de pagamento; não responde sobre o rito sumário."
+    },
+    {
+      "id": "R067",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, a Contribuição para o PIS/Pasep e a Cofins serão exigidas no momento", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": "Omite a condição do trecho: só quando exigidas pelo regime de caixa."},
+        {"n": 2, "texto": "Nas situações que configurem fato gerador de PIS/Pasep e Cofins até 31 de dezembro de 2026 e de CBS a partir de 2027", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 1º, inciso II, alíneas a e b", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não responde sobre a dispensa do recolhimento do IBS e da CBS em 2026."
+    },
+    {
+      "id": "R068",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A gorjeta incidente no fornecimento de alimentação fica excluída da base de cálculo do IBS e da CBS, desde que seja repassada", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea a", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Além disso, o valor da gorjeta não pode exceder 15% do valor total do fornecimento de alimento e bebidas", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea b", "fato": "F3", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R069",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O contribuinte do IBS e da CBS sujeito ao regime regular que adquira títulos de capitalização poderá apropriar créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 225, § 5º", "fato": "F1", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R070",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Na intermediação de serviços turísticos feita por agência de turismo, a base de cálculo do IBS e da CBS é o valor da", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Os serviços de agências de turismo ficam sujeitos a regime específico de incidência do IBS e da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 288", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Não diz o que compõe o valor da operação nem que comissões pagas por terceiros (o hotel) integram a base."
+    },
+    {
+      "id": "R071",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, a gorjeta pode ficar de fora da base de cálculo, desde que atenda a duas condições: repassada integralmente", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alíneas a e b", "fato": "F1", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Uma frase cobre F1, F2 e F3."
+    },
+    {
+      "id": "R072",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "As multas por descumprimento de obrigações tributárias acessórias do IBS ou da CBS estão previstas no art. 341-G, mas", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G", "fato": null, "nota": ""},
+        {"n": 2, "texto": "Se houver falsificação, adulteração, extravio ou inutilização de documento fiscal, a multa é de 100% do valor do tributo", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIV", "fato": null, "nota": ""},
+        {"n": 3, "texto": "As penalidades são aumentadas em 50% no caso de reincidência específica", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, § 1º", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1", "F3", "F4", "F5"],
+      "observacao": "Avisa que os trechos não tratam do tributo não declarado e traz só multas acessórias; não cobre a multa de ofício."
+    }
+  ]
+}

@@ -90,7 +90,7 @@ public class EmailConfig {
       case SMTP -> {
         ConferenciaEmail.conferirSmtp(ambiente, mailSender, propriedades.remetente(), email);
         yield (destinatario, link, validade) -> smtp.enviar(TipoEmail.REDEFINICAO_SENHA,
-            destinatario, MensagensEmail.redefinicaoSenha(link, validade));
+            destinatario, MensagensEmail.redefinicaoSenha(link, validade, email.replyTo()));
       }
       case LOG -> (destinatario, link, validade) ->
           log.warn("[DEV] E-mail de redefinicao de senha NAO enviado (modo LOG). Link: {}", link);

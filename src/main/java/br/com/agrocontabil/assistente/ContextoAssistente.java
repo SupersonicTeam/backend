@@ -1,6 +1,8 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.dto.AssistenteChatResponse.OrigemFonte;
+import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -42,6 +44,11 @@ import org.springframework.ai.tool.definition.ToolDefinition;
  * <p>Carrega ainda o sinal de <strong>interrupção</strong> (issue #157): quando a pergunta estoura
  * o tempo total ou o cliente do streaming desconecta, quem espera marca o contexto e as rotas param
  * antes da próxima chamada ao modelo ou às funções ({@link #verificarAtiva()}).
+ *
+ * <p>E é o <strong>ponto único das chamadas ao modelo</strong> ({@link #chamar}, #499): confere a
+ * reserva da cota, avisa quem transmite (o comentário SSE que percebe o cliente que saiu antes de
+ * gastar), guarda a estimativa da entrada da chamada em curso e registra o uso. O
+ * {@code TetoDaCotaCobreChamadasTest} trava que só ele chama {@link ModeloLinguagem#chamar}.
  */
 public final class ContextoAssistente {
 
@@ -67,11 +74,17 @@ public final class ContextoAssistente {
   private final AtomicReference<DesfechoInteracao> desfechoLegislacao = new AtomicReference<>();
   private final AtomicReference<Boolean> perguntaLeiReescrita = new AtomicReference<>();
   private final AtomicReference<String> camadaClassificacao = new AtomicReference<>();
+  private final AtomicReference<DesfechoFidelidadeLei> fidelidadeLei = new AtomicReference<>();
+  private final AtomicReference<JuizLei> juizLei = new AtomicReference<>();
   private final AtomicBoolean trechosRelacionados = new AtomicBoolean();
   private final AtomicBoolean classificacaoCortada = new AtomicBoolean();
   private final List<TextoDoBackend> textosDoBackend =
       Collections.synchronizedList(new ArrayList<>());
   private final List<SecaoResposta> secoes = Collections.synchronizedList(new ArrayList<>());
+  /** Tokens de entrada estimados da chamada ao modelo em curso; zero entre as chamadas (#499). */
+  private final AtomicInteger entradaEmCurso = new AtomicInteger();
+  private volatile AvisoAntesDaChamada aviso = () -> { };
+  private volatile boolean semReservaParaOModelo;
 
   /**
    * Cria o contexto de uma pergunta.
@@ -139,6 +152,59 @@ public final class ContextoAssistente {
   /** Camada que decidiu a rota; nula se a pergunta acabou antes da classificação. */
   public String camadaClassificacao() {
     return camadaClassificacao.get();
+  }
+
+  /**
+   * Registra o desfecho da conferência de fidelidade da resposta de lei (#269, flag
+   * {@code app.assistente.fidelidade-lei.enabled}). Vai à auditoria, só o enum.
+   *
+   * @param desfecho aprovada ou o motivo da reprovação
+   */
+  public void registrarFidelidadeLei(DesfechoFidelidadeLei desfecho) {
+    fidelidadeLei.set(desfecho);
+  }
+
+  /** Desfecho da conferência de fidelidade; nulo se ela não rodou (flag desligada, outra rota...). */
+  public DesfechoFidelidadeLei fidelidadeLei() {
+    return fidelidadeLei.get();
+  }
+
+  /**
+   * Tempo e tokens da chamada do juiz da fidelidade da lei (#269, camada 2). Os tokens também
+   * estão nos totais da pergunta ({@link #tokensEntrada}), que a cota acerta; a auditoria os grava
+   * à parte e tira do total da pergunta, para a soma das colunas ser o total.
+   *
+   * @param latenciaMs    duração da chamada
+   * @param tokensEntrada tokens de entrada da chamada (0 se ela não terminou)
+   * @param tokensSaida   tokens de saída da chamada, raciocínio do provedor incluído (0 se ela não
+   *                      terminou)
+   * @param tokensRaciocinio parte de {@code tokensSaida} que foi raciocínio, quando o provedor a
+   *                      informa ({@code usage.output_tokens_details.thinking_tokens}); nulo sem
+   *                      raciocínio ou sem a informação. Só detalhe: não vai à auditoria nem soma
+   */
+  public record JuizLei(long latenciaMs, int tokensEntrada, int tokensSaida,
+      Integer tokensRaciocinio) {
+
+    /** Sem o detalhe do raciocínio. */
+    public JuizLei(long latenciaMs, int tokensEntrada, int tokensSaida) {
+      this(latenciaMs, tokensEntrada, tokensSaida, null);
+    }
+  }
+
+  /** Registra o tempo e os tokens do juiz (#269); uma vez por pergunta, a última vale. */
+  public void registrarJuizLei(long latenciaMs, int tokensEntrada, int tokensSaida) {
+    registrarJuizLei(latenciaMs, tokensEntrada, tokensSaida, null);
+  }
+
+  /** Registra o tempo, os tokens e os de raciocínio do juiz (#269). */
+  public void registrarJuizLei(long latenciaMs, int tokensEntrada, int tokensSaida,
+      Integer tokensRaciocinio) {
+    juizLei.set(new JuizLei(latenciaMs, tokensEntrada, tokensSaida, tokensRaciocinio));
+  }
+
+  /** Tempo e tokens do juiz; nulo se ele não rodou. */
+  public JuizLei juizLei() {
+    return juizLei.get();
   }
 
   /**
@@ -236,9 +302,103 @@ public final class ContextoAssistente {
     usoInformado.set(true);
   }
 
+  /**
+   * Avisado antes de cada chamada ao modelo (#499). No streaming, manda um comentário SSE: é a
+   * única escrita que percebe o cliente que saiu antes de a chamada gastar. Quem avisa pode
+   * interromper a pergunta lançando {@link PerguntaInterrompidaException}.
+   */
+  @FunctionalInterface
+  public interface AvisoAntesDaChamada {
+
+    /** Roda antes de cada chamada ao modelo, na thread da pergunta. */
+    void antesDaChamada();
+  }
+
+  /**
+   * Define o aviso antes de cada chamada ao modelo (#499).
+   *
+   * @param aviso o que fazer antes de cada chamada
+   */
+  public void aoChamarOModelo(AvisoAntesDaChamada aviso) {
+    this.aviso = Objects.requireNonNull(aviso, "aviso");
+  }
+
+  /**
+   * A pergunta não reservou cota para o modelo (#499): atalho fixo da tela (#343), conversa leve
+   * (#493) e recusa pelo filtro ou antes do classificador (#497), que reservam só a leitura da
+   * mensagem (#511). {@link #chamar} recusa a chamada: chamar o modelo sem a reserva gastaria
+   * fora da cota.
+   */
+  public void semReservaParaOModelo() {
+    this.semReservaParaOModelo = true;
+  }
+
+  /**
+   * Chama o modelo pela porta única (#499): confere a reserva, avisa ({@link #aoChamarOModelo}),
+   * guarda a estimativa da entrada (cobrada se o cliente sair no meio da chamada), chama e
+   * registra o uso.
+   *
+   * @param modelo porta do modelo
+   * @param prompt prompt completo
+   * @return resposta do modelo
+   * @throws IllegalStateException se a pergunta não reservou cota para o modelo
+   * @throws PerguntaInterrompidaException se a pergunta foi interrompida antes da chamada
+   */
+  public ChatResponse chamar(ModeloLinguagem modelo, Prompt prompt) {
+    if (semReservaParaOModelo) {
+      throw new IllegalStateException("Chamada ao modelo sem reserva da cota");
+    }
+    verificarAtiva();
+    aviso.antesDaChamada();
+    verificarAtiva();
+    entradaEmCurso.set(estimarTokens(caracteresDoPrompt(prompt)));
+    // Se a chamada falhar (inclusive pela interrupcao do cliente que saiu), a estimativa fica:
+    // so o cancelamento pelo cliente a cobra; qualquer outra falha estorna a reserva inteira.
+    ChatResponse resposta = modelo.chamar(prompt);
+    registrarUso(prompt, resposta);
+    entradaEmCurso.set(0);
+    return resposta;
+  }
+
+  /**
+   * O que a pergunta gastou até agora (#499), para cobrar o cancelamento pelo cliente: os tokens
+   * das chamadas concluídas (informados ou estimados) e, de uma chamada interrompida no meio, a
+   * entrada estimada, sem saída.
+   */
+  public Gasto gasto() {
+    return new Gasto(tokensEntrada.get() + entradaEmCurso.get(), tokensSaida.get());
+  }
+
+  /**
+   * Tokens gastos por uma pergunta (#499).
+   *
+   * @param entrada tokens de entrada
+   * @param saida   tokens de saída
+   */
+  public record Gasto(int entrada, int saida) {
+
+    /** {@code true} se nenhuma chamada ao modelo gastou. */
+    public boolean nada() {
+      return entrada == 0 && saida == 0;
+    }
+  }
+
   /** {@code true} se algum token desta pergunta foi estimado, não informado pelo provedor. */
   public boolean tokensEstimados() {
     return tokensEstimados.get();
+  }
+
+  /**
+   * Tokens da leitura de uma mensagem (#511), para a pergunta que não chama o modelo: a mesma
+   * estimativa local e determinística do uso não informado ({@value #CARACTERES_POR_TOKEN}
+   * caracteres por token, no mínimo 1), sem chamar o provedor. "Olá" é 1 token; "quanto imposto
+   * devo?" são 5.
+   *
+   * @param mensagem mensagem do usuário
+   * @return tokens estimados
+   */
+  public static int tokensDaLeitura(String mensagem) {
+    return estimarTokens(mensagem == null ? 0 : mensagem.length());
   }
 
   /** Tokens para uma quantidade de caracteres, arredondando para cima (no mínimo 1). */
@@ -291,6 +451,15 @@ public final class ContextoAssistente {
   /** {@code true} se nenhuma consulta aos dados encontrou algo (inclusive se nenhuma rodou). */
   public boolean nenhumDadoEncontrado() {
     return consultasComResultado.get() == 0;
+  }
+
+  /**
+   * {@code true} se a pergunta reservou cota para o modelo, ou seja, não é atalho, conversa leve
+   * nem recusa sem modelo ({@link #semReservaParaOModelo()}). A explicação depois da resposta de
+   * dados (#268) só vale para ela: o atalho fixo da tela não chama o modelo (#343).
+   */
+  public boolean reservouParaOModelo() {
+    return !semReservaParaOModelo;
   }
 
   /**

@@ -167,6 +167,74 @@ class MascaraDadosPessoaisTest {
             + " cnpj_[CNPJ] [[CNPJ]]");
   }
 
+  // --- CNPJ alfanumerico da RFB (#313) ---
+
+  @Test
+  @DisplayName("CNPJ alfanumerico valido, com e sem pontuacao, vira [CNPJ] (#313)")
+  void cnpjAlfanumerico() {
+    assertThat(MascaraDadosPessoais.mascarar(
+        "fornecedor 12.ABC.345/01DE-35 raw=12ABC34501DE35 (12ABC34501DE35)."))
+        .isEqualTo("fornecedor [CNPJ] raw=[CNPJ] ([CNPJ]).");
+  }
+
+  @Test
+  @DisplayName("a mensagem do XSD com o CNPJ do XML importado sai sem ele, pelos dois conversores")
+  void mensagemDoXsd() {
+    String xerces = "cvc-pattern-valid: Value '12ABC34501DE35' is not facet-valid with respect"
+        + " to pattern '[0-9]{14}' for type 'TCnpj'.";
+    LoggerContext contexto = new LoggerContext();
+    LoggingEvent mensagem = new LoggingEvent("fqcn", contexto.getLogger("teste"), Level.WARN,
+        "XML da NF-e invalido contra o XSD: {}", null, new Object[] {xerces});
+    assertThat(new MensagemLogMascaradaConverter().convert(mensagem))
+        .contains("Value '[CNPJ]'").doesNotContain("12ABC34501DE35");
+
+    LoggingEvent excecao = new LoggingEvent("fqcn", contexto.getLogger("teste"), Level.ERROR,
+        "falhou", new IllegalStateException("XSD", new RuntimeException(xerces)), null);
+    ExcecaoLogMascaradaConverter conversor = new ExcecaoLogMascaradaConverter();
+    conversor.setContext(contexto);
+    conversor.start();
+    assertThat(conversor.convert(excecao)).contains("Value '[CNPJ]'")
+        .doesNotContain("12ABC34501DE35");
+  }
+
+  @Test
+  @DisplayName("token de 14 caracteres com DV invalido, em minusculas ou colado fica intacto")
+  void tokenAlfanumericoSemDvValidoFicaIntacto() {
+    // DV trocado, hash em hex maiusculo terminado em 2 digitos, minusculas (decisao: so maiusculas
+    // no log, porque o log carrega hash em hex minusculo) e o CNPJ colado em letra.
+    String texto = "a=12ABC34501DE36 b=ABCDEF01234567 c=12abc34501de35 d=x12ABC34501DE35";
+    assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoValido("ABCDEF01234567")).isFalse();
+
+    assertThat(MascaraDadosPessoais.mascarar(texto)).isEqualTo(texto);
+  }
+
+  @Test
+  @DisplayName("propriedade: um token de 14 maiusculas vira [CNPJ] se, e so se, o DV confere")
+  void soComDvValido() throws Exception {
+    java.security.MessageDigest sha = java.security.MessageDigest.getInstance("SHA-256");
+    String alfabeto = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    int validos = 0;
+    // Sequencia fixa (derivada do SHA-256 do indice): uma falha se repete localmente.
+    for (int i = 0; i < 5_000; i++) {
+      byte[] h = sha.digest(("cnpj-" + i).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      StringBuilder token = new StringBuilder();
+      for (int p = 0; p < 12; p++) {
+        token.append(alfabeto.charAt(Math.floorMod(h[p], alfabeto.length())));
+      }
+      token.append(Math.floorMod(h[12], 10)).append(Math.floorMod(h[13], 10));
+      if (token.chars().allMatch(Character::isDigit)) {
+        continue; // so de digitos e a regra numerica, que mascara sem conferir o DV
+      }
+      boolean valido = DocumentoFiscalValidator.isCnpjAlfanumericoValido(token.toString());
+      validos += valido ? 1 : 0;
+      String linha = "doc " + token + " fim";
+      assertThat(MascaraDadosPessoais.mascarar(linha)).as(token.toString())
+          .isEqualTo(valido ? "doc [CNPJ] fim" : linha);
+    }
+    // Cerca de 1 em 100 tem DV valido: o teste passa pelos dois lados.
+    assertThat(validos).isBetween(10, 200);
+  }
+
   @Test
   @DisplayName("limite aceito: documento colado em letra ou digito nao e mascarado")
   void documentoColadoEmLetraNaoEMascarado() {

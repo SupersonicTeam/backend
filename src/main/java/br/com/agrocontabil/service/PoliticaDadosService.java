@@ -32,8 +32,16 @@ public class PoliticaDadosService {
         propriedades.controlador(),
         propriedades.contatoEncarregado(),
         List.of(
-            "Identificacao: nome, CPF ou CNPJ, inscricao estadual.",
-            "Contato e acesso: e-mail (login) e telefone; a senha e guardada so como hash.",
+            "Identificacao: nome, CPF ou CNPJ, inscricao estadual; do contador, o CPF e o "
+                + "registro no CRC, informados no cadastro.",
+            "Contato e acesso: e-mail (login) e telefone, que pode ser informado no cadastro; a "
+                + "senha e guardada so como hash.",
+            "Escritorio de contabilidade: o nome e o CNPJ, o telefone e o endereco, "
+                + "obrigatorios na conta empresarial e opcionais na pessoal, informados no "
+                + "cadastro do contador ou depois, pelo administrador. Na conta pessoal, o nome "
+                + "do escritorio e o do proprio contador.",
+            "Aceite dos termos de uso: quando foi dado e a versao aceita, registrados no "
+                + "cadastro.",
             "CPF/CNPJ, e-mail e telefone ficam cifrados no banco (AES-256).",
             "Endereco do produtor (emitente das notas fiscais).",
             "Dados fiscais: notas fiscais emitidas e importadas, guias, apuracoes de IBS/CBS.",

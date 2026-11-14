@@ -1,0 +1,138 @@
+{
+  "juiz": "J1",
+  "lote": "lote-03",
+  "itens": [
+    {
+      "id": "R025",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Cada obra de construção civil é apurada separadamente, como um centro de custo distinto", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270", "fato": "F2"},
+        {"n": 2, "texto": "No caso dessa apuração por obra, o documento fiscal deve indicar o número do cadastro da obra nas aquisições", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único", "fato": null}
+      ],
+      "omiteEssencial": ["F1"],
+      "observacao": "Não menciona a apuração por empreendimento vinculada a CNPJ ou CPF específico."
+    },
+    {
+      "id": "R026",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, serão exigidas a Contribuição para o PIS/Pasep e a Cofins no momento do recebimento", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": "Omite a condição do trecho: só quando exigidas pelo regime de caixa; generaliza a regra."},
+        {"n": 2, "texto": "Caso a mesma situação configure, até 31 de dezembro de 2026, fato gerador da Contribuição para o PIS/Pasep e da Cofins, serão exigidas", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 1º, inciso II, alíneas a e b", "fato": null}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não responde sobre a dispensa do recolhimento do IBS e da CBS em 2026 (art. 348)."
+    },
+    {
+      "id": "R027",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Na intermediação de serviços turísticos realizada por agências de turismo, a base de cálculo do IBS e da CBS é o valor da operação, deduzidos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 289, inciso I", "fato": "F1"},
+        {"n": 2, "texto": "Os serviços de agências de turismo ficam sujeitos a regime específico de incidência do IBS e da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 288", "fato": null}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Não responde se a comissão paga pelo hotel entra na base."
+    },
+    {
+      "id": "R028",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, em parte. Pelo trecho disponível, o contribuinte sujeito ao regime regular da CBS pode apropriar crédito presumido sobre o estoque", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso I", "fato": "F1"},
+        {"n": 2, "texto": "Há uma restrição importante: o direito não se aplica a produtos cuja aquisição teve alíquota zero, isenção, suspensão", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, § 1º, inciso II", "fato": null},
+        {"n": 3, "texto": "Muitos insumos agropecuários são adquiridos com alíquota zero ou suspensão, então esses itens ficam de fora.", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": null, "fato": null, "nota": "Afirma que muitos insumos agropecuários têm alíquota zero ou suspensão; nenhum trecho diz isso."},
+        {"n": 4, "texto": "Já os bens sujeitos à substituição tributária ou à incidência monofásica também podem gerar crédito presumido", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso II, alíneas a e b", "fato": null},
+        {"n": 5, "texto": "Sobre valor, prazo de apropriação e forma de uso, os trechos que tenho não trazem percentuais", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite."},
+        {"n": 6, "texto": "Para isso, será preciso consultar o texto integral do artigo 381 e sua regulamentação, ou um contador", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugere consultar profissional."}
+      ],
+      "omiteEssencial": ["F2", "F3", "F4", "F5"],
+      "observacao": "Não traz percentual, prazo, parcelamento nem forma de uso do crédito."
+    },
+    {
+      "id": "R029",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Com os trechos disponíveis, não consigo responder com segurança a essa pergunta", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite."},
+        {"n": 2, "texto": "Os trechos que tenho tratam de incidentes de uniformização e do efeito vinculante, da competência do contencioso", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Descreve os trechos."},
+        {"n": 3, "texto": "O contencioso administrativo do IBS é decidido de forma integrada pelos entes federados, por meio do CGIBS, e as partes devem", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 88, § 2º", "fato": null},
+        {"n": 4, "texto": "A primeira instância julga o lançamento tributário feito pelas administrações estaduais, distritais ou municipais", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 91, inciso I", "fato": null},
+        {"n": 5, "texto": "Existe incidente de uniformização, cujo efeito vinculante alcança também impugnações e recursos pendentes ou futuros", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 81, § 2º", "fato": null},
+        {"n": 6, "texto": "Isso sugere que a discussão judicial sobre a mesma questão de direito pode ter reflexos no processo administrativo", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 81, § 2º", "fato": null, "nota": "O trecho trata de uniformização administrativa, não de ação judicial."},
+        {"n": 7, "texto": "Para saber se a ação judicial prejudica o processo administrativo, recomendo consultar um advogado tributarista", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugere consultar profissional."}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não encontrou a regra da desistência tácita (art. 72)."
+    },
+    {
+      "id": "R030",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "a impugnação de penalidade aplicada ao prestador de serviço de pagamento ou à instituição operadora do sistema de pagamento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F", "fato": null},
+        {"n": 2, "texto": "Da decisão cabe recurso hierárquico uma única vez, em 10 dias úteis, à autoridade superior", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F, § 1º", "fato": null},
+        {"n": 3, "texto": "Porém, os trechos que tenho não trazem um rito \"mais rápido e simples\" para contestar uma cobrança pequena", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhece limite."},
+        {"n": 4, "texto": "A impugnação descrita é de penalidade aplicada a prestador de serviço de pagamento ou operadora de pagamento", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Esclarece o alcance do trecho."},
+        {"n": 5, "texto": "O que os trechos dizem sobre o procedimento simplificado do split payment é que ele é opcional", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 33, § 3º, inciso II; art. 33, § 7º, inciso I", "fato": null},
+        {"n": 6, "texto": "Recomendo confirmar com um contador ou advogado tributarista qual é o instrumento adequado", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugere consultar profissional."}
+      ],
+      "omiteEssencial": ["F1", "F2", "F3"],
+      "observacao": "Não encontrou o rito sumário (LC 227/2026, art. 76); trechos citados são de outro assunto."
+    },
+    {
+      "id": "R031",
+      "tipoResposta": "RECUSA",
+      "frases": [
+        {"n": 1, "texto": "Eles não tratam de contribuição previdenciária de produtor rural pessoa física ou de fazenda, então não consigo afirmar", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Diz que não encontrou fundamento; não afirma parcelas nem juros do parcelamento."}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Cita juros e multa de outros contextos, mas diz que não se aplicam ao caso."
+    },
+    {
+      "id": "R032",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Se você deixar de informar operações de importação ou exportação, ou informá-las de forma inexata ou incompleta, a multa é de 100 UPF", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 341-G, inciso XIX", "fato": null, "nota": "Omite a condição de ser necessária ao controle fiscal; é obrigação acessória, não o tributo não declarado."},
+        {"n": 2, "texto": "Se você falsificar, adulterar, extraviar ou inutilizar documento fiscal, a multa é de 100% do valor do tributo de referência", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIV", "fato": null},
+        {"n": 3, "texto": "No caso de reincidência específica, as penalidades são majoradas em 50%", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 341-G, § 1º", "fato": null, "nota": "Vale só para obrigações acessórias; induz a crer que é a regra da reincidência do tributo não declarado."}
+      ],
+      "omiteEssencial": ["F1", "F3", "F4", "F5"],
+      "observacao": "Responde com multas de obrigação acessória (art. 341-G) em vez da multa de ofício do art. 341-F."
+    },
+    {
+      "id": "R033",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A gorjeta incidente no fornecimento de alimentação fica excluída da base de cálculo do IBS e da CBS, desde que seja repassada", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea a", "fato": "F2"},
+        {"n": 2, "texto": "Também é condição que o valor da gorjeta não exceda a 15% (quinze por cento) do valor total do fornecimento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea b", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R034",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, nas hipóteses em que PIS/Pasep e Cofins são exigidos conforme a receita", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": "F2"},
+        {"n": 2, "texto": "Nesse caso, não será exigida a CBS sobre o recebimento da receita decorrente da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso III", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Omite a ressalva do § 2º (regimes opcionais), de pouca relevância ao caso."
+    },
+    {
+      "id": "R035",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim. Contribuinte do IBS e da CBS no regime regular que adquire título de capitalização pode apropriar créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 225, § 5º", "fato": "F1"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "A frase cobre F1 e F2 (crédito pelo valor dos tributos pagos)."
+    },
+    {
+      "id": "R036",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, a Contribuição para o PIS/Pasep e a Cofins serão exigidas no momento do recebimento", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": "Omite a condição do trecho: só quando exigidas pelo regime de caixa; generaliza a regra."},
+        {"n": 2, "texto": "Caso a mesma situação configure, até 31 de dezembro de 2026, fato gerador da Cofins, esta será exigida", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 1º, inciso II, alínea a", "fato": null}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não responde sobre a dispensa do recolhimento do IBS e da CBS em 2026 (art. 348)."
+    }
+  ]
+}

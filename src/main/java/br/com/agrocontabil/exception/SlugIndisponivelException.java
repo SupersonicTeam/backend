@@ -15,11 +15,20 @@ public class SlugIndisponivelException extends DomainException {
 
   private static final String MENSAGEM = "Este endereço não está disponível.";
 
-  /** Cria a exceção. */
+  /** Cria a exceção, no campo {@code slug} do {@code PUT /api/escritorio/endereco}. */
   public SlugIndisponivelException() {
+    this("slug");
+  }
+
+  /**
+   * Cria a exceção num campo dado: no cadastro empresarial (#519) é {@code escritorio.slug}.
+   *
+   * @param campo campo do request que levou o slug
+   */
+  public SlugIndisponivelException(String campo) {
     super(HttpStatus.CONFLICT, MENSAGEM, List.of(new ErrorDetail(
         ErrorCode.SLUG_INDISPONIVEL.code(),
-        "slug",
+        campo,
         MENSAGEM,
         "Escolha outro endereço, por exemplo com o nome da cidade ou da região.",
         null,

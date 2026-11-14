@@ -61,9 +61,7 @@ public class LlmClassificadorIntencao implements ClassificadorIntencao {
     Prompt prompt = new Prompt(List.<Message>of(
         new SystemMessage(PromptsCeres.CLASSIFICACAO),
         new UserMessage(DataSanitizer.mascarar(pergunta))), ModeloLinguagem.comTeto(tetoSaida));
-    contexto.verificarAtiva();
-    ChatResponse resposta = modelo.chamar(prompt);
-    contexto.registrarUso(prompt, resposta);
+    ChatResponse resposta = contexto.chamar(modelo, prompt);
     ClassificacaoIntencao classificacao = interpretar(resposta.getResult().getOutput().getText());
     if (ModeloLinguagem.cortadaPeloTeto(resposta, tetoSaida)) {
       // Cortada no teto (#270). Se o JSON fechou antes do corte (o modelo seguiu escrevendo depois
@@ -79,7 +77,8 @@ public class LlmClassificadorIntencao implements ClassificadorIntencao {
 
   /**
    * Lê {@code {"intencao": "...", "confianca": 0.9}} com tolerância; no MISTO, também o
-   * {@code perguntaLei} (conferido depois pelo orquestrador).
+   * {@code perguntaLei} (conferido depois pelo orquestrador); no FORA_DE_ESCOPO, o
+   * {@code recusaFirme} (#497: pedido sobre outra pessoa ou ordem ao sistema).
    */
   ClassificacaoIntencao interpretar(String texto) {
     if (texto == null) {
@@ -100,7 +99,9 @@ public class LlmClassificadorIntencao implements ClassificadorIntencao {
       String perguntaLei = intencao == Intencao.MISTO && json.path("perguntaLei").isTextual()
           ? json.path("perguntaLei").asText()
           : null;
-      return new ClassificacaoIntencao(intencao, json.path("confianca").asDouble(0), perguntaLei);
+      // So o booleano (ou o texto "true"); o record descarta a marca fora do FORA_DE_ESCOPO.
+      return new ClassificacaoIntencao(intencao, json.path("confianca").asDouble(0), perguntaLei,
+          CamadaClassificacao.LLM, json.path("recusaFirme").asBoolean(false));
     } catch (Exception e) {
       log.info("Classificador de intencao devolveu JSON invalido: {}", e.getClass().getSimpleName());
       return ClassificacaoIntencao.indeterminada();

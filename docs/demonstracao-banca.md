@@ -45,6 +45,16 @@ um escritório que já existe. O subdomínio só abre depois do registro `A *` e
 (`deploy/README.md`). As contas do `DataLoader` (João, Maria e o Escritório Campo Certo) continuam
 existindo, num escritório à parte.
 
+O escritório é **empresarial** (#519): tem equipe, CNPJ, telefone e endereço postal (Rua Parana,
+1200, Sala 3, Centro, Cascavel/PR). Na VPS já semeada, o changeSet 0062 o marca como empresarial
+(tem CNPJ), mas o telefone e o endereço postal só chegam com o reset, como o endereço próprio.
+
+O escritório tem três **modelos de pedido de documento** (#517): extrato bancário do mês,
+comprovante de pagamento do Funrural e contrato de arrendamento. Ao contrário do resto do seed, eles
+chegam à VPS na subida, sem reset: o seed cria os três quando o escritório da demonstração não tem
+nenhum modelo (um ensaio que apague só alguns fica como está). Só a Patrícia (`ADMINISTRADOR`) cria,
+edita e apaga modelo; o Rafael e a Juliana usam.
+
 ## Roteiro sugerido
 
 1. **Contador (Patrícia): a carteira.** Ordenar por urgência: o Carlos sobe por causa da guia
@@ -93,18 +103,24 @@ existindo, num escritório à parte.
    fertilizante, semente e defensivo, porque o sistema não modela o diferimento (premissas, seção
    1). Não apontar esses créditos junto com o atalho; se a banca perguntar, é essa a resposta. Com o Carlos: "quanto eu comprei de fertilizante?", "qual foi minha apuração de
    IBS e CBS do mês passado?", "a soja tem redução de alíquota?" (lei com citação). Com o **Rogério**, digitando perguntas que não sejam as três da tela (o
-   texto exato de um atalho, clicado ou digitado, fica fora da cota e não leva 429): a primeira pergunta responde e a segunda recebe **429 `LIMITE_USO_ASSISTENTE`** com o
+   texto exato de um atalho, clicado ou digitado, paga só a leitura da mensagem, coberta pela folga
+   de 1.000 créditos, e não leva 429): a primeira pergunta responde e a segunda recebe **429 `LIMITE_USO_ASSISTENTE`** com o
    `Retry-After` da virada da semana (`GET /api/assistente/uso` mostra o saldo). O job
    `CotaDemonstracaoCeres` repõe esse cenário toda segunda-feira às 00:05 e o seed o repõe na
    subida.
    **Conferência local (#435):** as perguntas dos passos 4 e 7 foram rodadas com o
-   `qwen3:4b-instruct` em 2026-11-07, no SHA `4a0b3a8`; o resultado, com as divergências, está em
-   [`docs/demonstracao/conferencia-ceres-2026-11-07.md`](demonstracao/conferencia-ceres-2026-11-07.md).
-   A conferência **se refaz no SHA congelado** se mudar, depois do SHA `4a0b3a8`, qualquer um destes:
+   `qwen3:4b-instruct` em 2026-11-07, no SHA `4a0b3a8`
+   ([`conferencia-ceres-2026-11-07.md`](demonstracao/conferencia-ceres-2026-11-07.md)), e de novo com o
+   **Claude Haiku 5.5 pela API da Anthropic** em 2026-11-10, no SHA `21bc2de`, com a conversa leve e a
+   recusa da Ceres e as frases de fora do roteiro
+   ([`conferencia-ceres-2026-11-10.md`](demonstracao/conferencia-ceres-2026-11-10.md)): o roteiro passou,
+   salvo a pergunta geral de ICMS, que segue fora (o passo 4 usa a pergunta com o número da nota).
+   A conferência **se refaz no SHA congelado** se mudar, depois do SHA `21bc2de`, qualquer um destes:
    `assistente/**` (inclusive os adaptadores e os services e recursos que eles usam, como
    `SinaisNotaConferirService` e `src/main/resources/sinais-nota/`), o treino do classificador
    (`src/main/resources/ceres/treino/`), o seed da demonstração, o `application.yml`, a base de lei
-   (os 8.304 trechos) e o modelo ou a versão do Ollama.
+   (os 8.304 trechos), o provedor ou o modelo do chat (`AI_CHAT_PROVIDER`, `AI_ANTHROPIC_MODEL`) e a versão do
+   Ollama (embedding).
 8. **Notificação (#182).** "Próximas obrigações" da Granja Toledo: o DARF que vence amanhã sai como
    **urgente**; na Helena, a GPS de daqui a 3 dias sai como **próximo**.
 
@@ -163,7 +179,8 @@ O que é da demonstração: o escritório "Contabilidade Rural Oeste" (nome **e*
 contadores da equipe do seed (no escritório ou removidos dele num ensaio) e os produtores da
 carteira do `CenarioDemonstracao` (nome na lista **e** vínculo com esse escritório: CPF/CNPJ vão
 cifrados ao banco), com notas, itens, validações, revisões, alertas, apurações, guias, pendências e
-anexos, notificações, vínculos e etiquetas, convites, obrigações do escritório, créditos e
+anexos, notificações, vínculos e etiquetas, convites, obrigações e modelos de pedido do
+escritório, créditos e
 interações da Ceres, credenciais, sessões e links de senha, e os endereços anteriores do escritório
 em carência (#464). Contador de fora da equipe que entrou no
 escritório (convite de equipe) **não** é apagado: sai do escritório, como na remoção pela tela, e a
@@ -174,6 +191,13 @@ entram `legislacao_trecho`, `shedlock`, `databasechangelog*`, as tabelas de refe
 **Ordem (#464):** os scripts consultam a carência dos endereços (`escritorio_slug_anterior`,
 changeSet 0059). Rode-os **depois** do deploy da versão que traz esse changeSet; antes dele, o
 passo 1 falha com "relation does not exist" e nada é apagado.
+
+**Endereço da banca e a verificação do CNPJ (#520):** o `ruraloeste.agroconia.com.br` só é servido
+com o CNPJ do escritório verificado. O seed cria a Rural Oeste já verificada (método
+`DEMONSTRACAO`) e, no banco já semeado, a marca na subida do backend; o reset não muda isso. Sem o
+seed ligado (`DEMONSTRACAO_HABILITADA`), use o comando de verificação do `deploy/README.md`. O CNPJ
+não é único: um cadastro de teste com o nome **e** o CNPJ do seed também entraria no reset. Por
+isso a linha `escritorio` do passo 1 tem de dar **1** antes do passo 2.
 
 Os dois scripts são os de `docs/demonstracao/` (os mesmos que o
 `ResetDemonstracaoPostgresIntegrationTest` roda contra o PostgreSQL 16: seed → ensaio com membro

@@ -36,6 +36,11 @@ public enum AcaoAuditada {
   ESCRITORIO_ALTERADO,
   // Endereco proprio do escritorio (issue #464): definir, trocar ou remover o slug
   ESCRITORIO_ENDERECO_ALTERADO,
+  // Conta pessoal que vira empresarial (issue #519)
+  ESCRITORIO_TORNADO_EMPRESARIAL,
+  // Verificacao do CNPJ do escritorio (issue #520), pelo comando manual ou pelo seed da banca
+  ESCRITORIO_CNPJ_VERIFICADO,
+  ESCRITORIO_CNPJ_VERIFICACAO_REVOGADA,
   // Revisao da nota pelo contador (issue #178)
   NOTA_ENVIADA_REVISAO,
   NOTA_RETIRADA_REVISAO,
@@ -51,5 +56,9 @@ public enum AcaoAuditada {
   // Antivirus dos anexos (issue #227): ameaca achada no envio ou pelo job
   PENDENCIA_ANEXO_INFECTADO,
   // Notificacao por WhatsApp (issue #182): disparo do produtor ou do escritorio
-  NOTIFICACAO_REGISTRADA
+  NOTIFICACAO_REGISTRADA,
+  // Modelos de pedido de documento do escritorio (issue #517): o catalogo, nunca o texto
+  MODELO_PEDIDO_CRIADO,
+  MODELO_PEDIDO_ALTERADO,
+  MODELO_PEDIDO_APAGADO
 }

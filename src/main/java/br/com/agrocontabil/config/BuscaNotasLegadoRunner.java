@@ -18,8 +18,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * Preenche e recalcula a {@code busca_normalizada} das notas gravadas com uma regra anterior à
- * atual ({@link NormalizacaoBusca#VERSAO_REGRA}): as de antes do changeSet 0037 (sem texto) e as
- * da regra 1, sem descrição e NCM dos itens nem documento do destinatário (issues #174 e #271).
+ * atual ({@link NormalizacaoBusca#VERSAO_REGRA}): as de antes do changeSet 0037 (sem texto), as
+ * da regra 1, sem descrição e NCM dos itens (issues #174 e #271), e as da regra 2, que ainda
+ * guardam o CPF/CNPJ do destinatário no texto (#399): reescritas, elas deixam de tê-lo.
  *
  * <p><strong>Na aplicação, não no SQL.</strong> A coluna é gravada pela {@link NormalizacaoBusca}
  * (NFD sem marcas + NFC), e um backfill em SQL com {@code translate} só cobriria as letras do mapa
@@ -30,7 +31,7 @@ import org.springframework.stereotype.Component;
  * antes de o Tomcat aceitar conexões, o que era barato com poucas notas sem texto. Recalcular
  * todas as notas da regra 1 alongaria o boot, e o healthcheck do deploy pode fazer rollback de um
  * boot lento. Uma nota que ainda não foi recalculada só deixa de ser achada pelos termos novos
- * (produto, documento) até a vez dela; nada quebra. Roda numa thread própria, em lotes por
+ * (produto) até a vez dela; nada quebra (a busca por documento já é pela coluna, #399). Roda numa thread própria, em lotes por
  * {@code id} (keyset: uma nota que falha não trava o laço), com a atualização condicionada à
  * versão ({@code AND (busca_versao IS NULL OR busca_versao < ?)}): idempotente, segura entre
  * réplicas e incapaz de sobrescrever o texto que a própria aplicação gravou entretanto. Erro numa
@@ -51,9 +52,8 @@ public class BuscaNotasLegadoRunner {
 
   private static final UUID MENOR_ID = new UUID(0L, 0L);
 
-  private static final String SELECAO = "SELECT id, numero, destinatario_nome, natureza_operacao,"
-      + " destinatario_cpf_cnpj FROM nota_fiscal"
-      + " WHERE (busca_versao IS NULL OR busca_versao < ?) AND id > ? ORDER BY id LIMIT ?";
+  private static final String SELECAO = "SELECT id, numero, destinatario_nome, natureza_operacao"
+      + " FROM nota_fiscal WHERE (busca_versao IS NULL OR busca_versao < ?) AND id > ? ORDER BY id LIMIT ?";
 
   private static final String ATUALIZACAO = "UPDATE nota_fiscal SET busca_normalizada = ?,"
       + " busca_versao = ? WHERE id = ? AND (busca_versao IS NULL OR busca_versao < ?)";
@@ -146,7 +146,7 @@ public class BuscaNotasLegadoRunner {
       try {
         NormalizacaoBusca.TextoNota texto = NormalizacaoBusca.montarTextoDaNota(
             linha.get("numero"), (String) linha.get("destinatario_nome"),
-            (String) linha.get("natureza_operacao"), (String) linha.get("destinatario_cpf_cnpj"),
+            (String) linha.get("natureza_operacao"),
             itens.getOrDefault(linha.get("id"), List.of()));
         if (texto.itensForaDaBusca() > 0) {
           log.warn("Busca da nota {}: {} item(ns) nao couberam em {} caracteres", linha.get("id"),

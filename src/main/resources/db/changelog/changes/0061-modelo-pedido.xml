@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0061-modelo-pedido.xml
+         Issue #517 (modelos de pedido de documento do escritorio).
+
+         Catalogo de modelos que preenchem o formulario do pedido de
+         documento (pendencia, #180). O pedido criado nao guarda referencia
+         ao modelo: editar ou apagar um modelo nunca muda pedido enviado.
+
+         Sem modelo do sistema: toda linha e de um escritorio, e sai junto
+         com ele (CASCADE). Titulo unico por escritorio pelo
+         titulo_normalizado (minusculas, sem acento, espacos colapsados:
+         NormalizacaoBusca.normalizar, a mesma regra das etiquetas).
+         tipos_documento e lista separada por virgula, como na pendencia.
+         prazo_em_dias opcional, de 1 a 365: o frontend soma a data do dia.
+
+         Os textos sao do escritorio e podem citar o cliente: nunca vao a
+         log nem a auditoria.
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0061-create-modelo-pedido" author="supersonic-team">
+        <comment>Cria modelo_pedido (catalogo de modelos de pedido de documento do escritorio).</comment>
+
+        <createTable tableName="modelo_pedido"
+                     remarks="Modelo de pedido de documento do escritorio (#517)">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="escritorio_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="titulo" type="VARCHAR(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="titulo_normalizado" type="VARCHAR(120)"
+                    remarks="Titulo sem acento nem caixa: unico por escritorio">
+                <constraints nullable="false"/>
+            </column>
+            <column name="descricao" type="VARCHAR(1000)"/>
+            <column name="tipos_documento" type="VARCHAR(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="prazo_em_dias" type="INTEGER"
+                    remarks="Prazo sugerido, em dias a partir do pedido; nulo = sem prazo"/>
+            <column name="observacoes" type="VARCHAR(1000)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="modelo_pedido" baseColumnNames="escritorio_id"
+                constraintName="fk_modelo_pedido_escritorio"
+                referencedTableName="escritorio" referencedColumnNames="id" onDelete="CASCADE"/>
+
+        <!-- O indice unico tambem serve a lista do escritorio, na ordem do titulo normalizado. -->
+        <addUniqueConstraint tableName="modelo_pedido"
+                             columnNames="escritorio_id, titulo_normalizado"
+                             constraintName="uk_modelo_pedido_escritorio_titulo"/>
+
+        <sql>
+            ALTER TABLE modelo_pedido ADD CONSTRAINT ck_modelo_pedido_prazo
+                CHECK (prazo_em_dias IS NULL OR prazo_em_dias BETWEEN 1 AND 365);
+        </sql>
+
+        <rollback>
+            <dropTable tableName="modelo_pedido"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

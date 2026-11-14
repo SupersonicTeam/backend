@@ -37,17 +37,18 @@ class NormalizacaoBuscaTest {
   }
 
   @Test
-  @DisplayName("#271: texto da nota leva documento so com digitos e descricao e NCM dos itens")
-  void textoDaNotaLevaDocumentoEItens() {
+  @DisplayName("#271/#399: texto da nota leva descricao e NCM dos itens, sem o documento")
+  void textoDaNotaLevaItensSemDocumento() {
     NormalizacaoBusca.TextoNota nota = NormalizacaoBusca.montarTextoDaNota(7L, "Cooperativa",
-        "Venda", "12.345.678/0001-95", List.of(
+        "Venda", List.of(
             new NormalizacaoBusca.ItemBusca("Soja em grãos", "12019000"),
             new NormalizacaoBusca.ItemBusca("Soja em grãos", "12019000"),
             new NormalizacaoBusca.ItemBusca("Milho", "10059010")));
 
-    // Item repetido conta uma vez; o documento entra sem a mascara.
+    // Item repetido conta uma vez; o CPF/CNPJ do destinatario nao entra (#399).
     assertThat(nota.texto()).isEqualTo(
-        "7 cooperativa venda 12345678000195 soja em graos 12019000 milho 10059010");
+        "7 cooperativa venda soja em graos 12019000 milho 10059010");
+    assertThat(NormalizacaoBusca.VERSAO_REGRA).isEqualTo(3);
     assertThat(nota.itensForaDaBusca()).isZero();
   }
 
@@ -60,7 +61,7 @@ class NormalizacaoBuscaTest {
     }
 
     NormalizacaoBusca.TextoNota nota = NormalizacaoBusca.montarTextoDaNota(1L, "A", "Venda",
-        "12345678901", itens);
+        itens);
 
     assertThat(nota.texto().length()).isLessThanOrEqualTo(NormalizacaoBusca.TAMANHO_MAXIMO);
     assertThat(nota.itensForaDaBusca()).isPositive();
@@ -79,7 +80,7 @@ class NormalizacaoBuscaTest {
     itens.add(new NormalizacaoBusca.ItemBusca("Milho", "10059010"));
 
     NormalizacaoBusca.TextoNota nota = NormalizacaoBusca.montarTextoDaNota(1L, "A", "Venda",
-        "12345678901", itens);
+        itens);
 
     assertThat(nota.itensForaDaBusca()).isPositive();
     assertThat(nota.texto().length()).isLessThanOrEqualTo(NormalizacaoBusca.TAMANHO_MAXIMO);

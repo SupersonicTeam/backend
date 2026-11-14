@@ -1,0 +1,144 @@
+{
+  "juiz": "J1",
+  "lote": "lote-05",
+  "itens": [
+    {
+      "id": "R049",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Não. Os créditos do IBS e da CBS são apropriados e compensados ou ressarcidos pelo valor nominal, sendo vedadas correção", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1"},
+        {"n": 2, "texto": "Além disso, se o crédito for um crédito presumido, ele só pode ser usado para compensar IBS e CBS devidos, sem compensação", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 452, parágrafo único; art. 468, parágrafo único", "fato": null, "nota": "Generaliza a todo crédito presumido; os trechos tratam só dos créditos presumidos de artigos específicos."}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R050",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, nas hipóteses em que o PIS/Pasep e a Cofins são exigidos à medida", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": "F2"},
+        {"n": 2, "texto": "Nessas mesmas hipóteses, não será exigida a CBS sobre o recebimento da receita decorrente da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso III", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "A frase 2 omite a ressalva do § 2º (regimes opcionais), presente no próprio trecho."
+    },
+    {
+      "id": "R051",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Se a empresa estava no regime cumulativo de PIS/Pasep e COFINS em 31 de dezembro de 2026 e passa ao regime regular da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso I", "fato": "F1"},
+        {"n": 2, "texto": "Esse crédito presumido não se aplica aos produtos cuja aquisição foi contemplada por alíquota zero, isenção, suspensão", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, § 1º, inciso II", "fato": null}
+      ],
+      "omiteEssencial": ["F2", "F3", "F4", "F5"],
+      "observacao": "Não responde de quanto, até quando nem como usar, sem dizer que não encontrou."
+    },
+    {
+      "id": "R052",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Contribuintes no regime regular que tomam operações de crédito podem apropriar créditos do IBS e da CBS sobre as despesas", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194", "fato": "F1"},
+        {"n": 2, "texto": "O crédito é calculado sobre as despesas financeiras pagas, deduzindo-se do valor de cada parcela o montante referente ao", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso I", "fato": "F2"},
+        {"n": 3, "texto": "Também é deduzido o montante correspondente à aplicação da taxa Selic sobre o principal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso II", "fato": "F2"},
+        {"n": 4, "texto": "A base de cálculo do IBS e da CBS inclui o valor dos juros e das variações monetárias, em função da taxa de câmbio", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 255, § 1º, inciso I", "fato": null, "nota": "Como resposta à dívida em dólar, sugere crédito normal; omite a vedação para operação em moeda estrangeira."},
+        {"n": 5, "texto": "Se o valor da operação estiver expresso em moeda estrangeira, ele é convertido em moeda nacional pela taxa de câmbio", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 12, § 5º", "fato": null, "nota": "Induz a crer que a dívida em dólar gera crédito; omite a vedação (F3)."}
+      ],
+      "omiteEssencial": ["F3", "F4"],
+      "observacao": "Não responde sobre tarifas bancárias."
+    },
+    {
+      "id": "R053",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "A gorjeta incidente no fornecimento de alimentação fica excluída da base de cálculo do IBS e da CBS, desde que seja repassada", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea a", "fato": "F2"},
+        {"n": 2, "texto": "Há um limite: o valor da gorjeta não pode exceder 15% (quinze por cento) do valor total do fornecimento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 274, parágrafo único, inciso I, alínea b", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R054",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Se a sua empresa estiver no regime regular do IBS e da CBS e comprar um título de capitalização, ela pode apropriar créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 225, § 5º", "fato": "F1"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "A frase cobre F1 e F2."
+    },
+    {
+      "id": "R055",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Os trechos disponíveis tratam de multas por descumprimento de obrigações acessórias", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhecimento de limite."},
+        {"n": 2, "texto": "Por isso não consigo dizer qual é a multa para esse caso específico.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhecimento de limite."},
+        {"n": 3, "texto": "Falsificar, adulterar, extraviar ou inutilizar documento fiscal: multa de 100% do valor do tributo de referência", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIV", "fato": null},
+        {"n": 4, "texto": "Omitir ou prestar de forma inexata ou incompleta informação sobre operações de importação ou exportação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIX", "fato": null},
+        {"n": 5, "texto": "Não comunicar venda ou transferência de estabelecimento, nem encerramento ou paralisação temporária de atividades: 10 UPF", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso III", "fato": null},
+        {"n": 6, "texto": "Deixar de confirmar operação com documento emitido por terceiro, ou de informar desconhecimento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso IX", "fato": null},
+        {"n": 7, "texto": "Reincidência específica: as penalidades desse artigo são aumentadas em 50%", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, § 1º", "fato": null},
+        {"n": 8, "texto": "Sobre a sua segunda pergunta: a reincidência aumenta em 50% as penalidades do artigo", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 341-G, § 1º", "fato": null, "nota": "Responde à reincidência na multa de ofício com regra de obrigação acessória; induz a erro."},
+        {"n": 9, "texto": "Sobre fraude, o trecho sobre falsificação ou adulteração de documento fiscal prevê multa de 100% do tributo de referência", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIV", "fato": null},
+        {"n": 10, "texto": "Para saber a multa exata numa autuação por diferença de IBS ou CBS, você precisa da lei que trata da penalidade", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhecimento de limite."},
+        {"n": 11, "texto": "Um contador ou advogado tributarista pode confirmar com a legislação completa.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugestão de profissional."}
+      ],
+      "omiteEssencial": ["F1", "F3", "F4", "F5"],
+      "observacao": "Recusa a pergunta principal, mas afirma as multas acessórias dos trechos."
+    },
+    {
+      "id": "R056",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O contribuinte do IBS e da CBS sujeito ao regime regular que adquira títulos de capitalização poderá apropriar créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 225, § 5º", "fato": "F1"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "A frase cobre F1 e F2."
+    },
+    {
+      "id": "R057",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O prestador de serviço de pagamento ou a instituição operadora do sistema de pagamento pode impugnar a penalidade aplicada", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F", "fato": null},
+        {"n": 2, "texto": "Essa impugnação é dirigida à RFB, relativamente à CBS, e ao CGIBS, relativamente ao IBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F", "fato": null},
+        {"n": 3, "texto": "Da decisão do órgão revisor cabe recurso hierárquico uma única vez, no prazo de 10 dias úteis", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F, § 1º", "fato": null}
+      ],
+      "omiteEssencial": ["F1", "F2", "F3"],
+      "observacao": "Frases fiéis ao trecho, mas tratam da impugnação do prestador de serviço de pagamento, não do rito sumário perguntado."
+    },
+    {
+      "id": "R058",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Juros: Sim, no regime regular você pode apropriar créditos de IBS e CBS sobre as despesas financeiras do financiamento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso II; art. 194", "fato": "F1"},
+        {"n": 2, "texto": "A base é a despesa financeira paga, após deduzir o principal da parcela, que é a parte de amortização prevista no contrato", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 194, inciso I; art. 194, inciso II", "fato": "F2", "nota": "Omite a dedução da Selic sobre o principal, que o inciso II citado traz."},
+        {"n": 3, "texto": "O crédito é calculado pela mesma alíquota devida sobre a operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso II; art. 194", "fato": "F1"},
+        {"n": 4, "texto": "Se eu tiver o contrato e as parcelas, posso orientar os números, mas não calculo valores aqui", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhecimento de limite."},
+        {"n": 5, "texto": "Dívida em dólar: O valor da operação inclui a variação monetária em função da taxa de câmbio", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 255, § 1º, inciso I", "fato": null, "nota": "Sugere crédito normal na dívida em dólar; omite a vedação (F3)."},
+        {"n": 6, "texto": "Se o valor estiver em moeda estrangeira, ele é convertido para real pela taxa de câmbio apurada pelo Banco Central", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 12, § 5º", "fato": null, "nota": "Induz a crer que a dívida em dólar gera crédito; omite a vedação."},
+        {"n": 7, "texto": "Ou seja, a variação cambial entra na base de cálculo da operação, e a conversão deve seguir a taxa do BC.", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": null, "fato": null, "nota": "Conclui, para o financiamento em dólar, regra que os trechos não sustentam; aproxima-se da armadilha."},
+        {"n": 8, "texto": "Tarifas do banco: Os trechos que tenho não tratam de tarifas bancárias. Não consigo afirmar se elas geram crédito.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhecimento de limite."},
+        {"n": 9, "texto": "Recomendo confirmar com um contador ou com a legislação completa.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugestão de contador."}
+      ],
+      "omiteEssencial": ["F3", "F4"],
+      "observacao": ""
+    },
+    {
+      "id": "R059",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Se a empresa estava no regime cumulativo de PIS/Pasep e Cofins em 31 de dezembro de 2026 e passa ao regime regular da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso I", "fato": "F1"},
+        {"n": 2, "texto": "O direito ao crédito presumido não se aplica aos produtos cuja aquisição foi contemplada por alíquota zero, isenção", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, § 1º, inciso II", "fato": null}
+      ],
+      "omiteEssencial": ["F2", "F3", "F4", "F5"],
+      "observacao": "Não responde de quanto, até quando nem como usar."
+    },
+    {
+      "id": "R060",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Os créditos do IBS e da CBS são apropriados e compensados ou ressarcidos pelo seu valor nominal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1"},
+        {"n": 2, "texto": "A lei veda a correção ou a atualização monetária desses créditos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    }
+  ]
+}

@@ -21,10 +21,10 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.HeaderWriter;
 import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
-import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
@@ -45,7 +45,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
  *   <tr><td>{@code /api/v1/health}, Swagger, Actuator</td><td>publico</td></tr>
  *   <tr><td>{@code POST /api/auth/cadastro}, {@code /login}, {@code /refresh}, {@code /logout}
  *   </td><td>publico</td></tr>
- *   <tr><td>{@code PATCH /api/contador/guias/&#42;/pagar}</td><td>somente PRODUTOR</td></tr>
+ *   <tr><td>{@code PATCH /api/contador/guias/&#42;/pagar}, {@code /api/guias/**} (#273)</td>
+ *   <td>somente PRODUTOR</td></tr>
  *   <tr><td>demais {@code /api/**}</td><td>PRODUTOR ou CONTADOR</td></tr>
  * </table>
  *
@@ -95,6 +96,9 @@ public class SecurityConfig {
       "/actuator/info",
       "/error"
   };
+
+  /** CSP das respostas da API (#150): nada a carregar, nada a enquadrar. */
+  static final String CSP_API = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'";
 
   private final CorsConfigurationSource corsConfigurationSource;
   private final SecurityErrorResponder errorResponder;
@@ -155,6 +159,9 @@ public class SecurityConfig {
                     // Quitar a guia e ato do produtor: e ele quem paga o que o escritorio anexou.
                     .requestMatchers(HttpMethod.PATCH, "/api/contador/guias/*/pagar")
                     .hasRole(PapelUsuario.PRODUTOR.name())
+                    // Guias do produtor (#273): rota sem produtorId, so do produtor.
+                    .requestMatchers("/api/guias", "/api/guias/**")
+                    .hasRole(PapelUsuario.PRODUTOR.name())
                     .requestMatchers("/api/**")
                     .hasAnyRole(PapelUsuario.PRODUTOR.name(), PapelUsuario.CONTADOR.name())
                     .anyRequest()
@@ -190,13 +197,27 @@ public class SecurityConfig {
         .referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.NO_REFERRER))
         .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy",
             "camera=(), microphone=(), geolocation=(), payment=()"))
-        // CSP so na API: respostas JSON/PDF nao carregam nada. O Swagger UI (fora de /api) precisa
-        // de script e estilo, e uma CSP global o quebraria.
-        .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
-            PathPatternRequestMatcher.withDefaults().matcher("/api/**"),
-            new StaticHeadersWriter("Content-Security-Policy",
-                "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"))));
+        .addHeaderWriter(escritorCsp()));
 
     return http.build();
+  }
+
+  /**
+   * CSP só na API: respostas JSON/PDF não carregam nada, e o Swagger UI (fora de {@code /api})
+   * precisa de script e estilo, que uma CSP global quebraria.
+   *
+   * <p><strong>O matcher não pode ler atributo da requisição (issue #345).</strong> O
+   * {@code HeaderWriterFilter} roda este escritor na thread que faz o commit da resposta, que no
+   * streaming pode ser de um pool fora do container. O {@code PathPatternRequestMatcher} lia o
+   * caminho analisado ({@code ServletRequestPathUtils.PATH_ATTRIBUTE}) em dois passos, e o
+   * {@code finally} do {@code DispatcherServlet} o remove no meio: o envio falhava depois de
+   * escrever metade do evento (#335). O {@link RotasAutenticacao#ehApi} só lê a URI, decodificada
+   * como o roteamento ({@code /%61pi/...} também leva a CSP).
+   *
+   * @return o escritor do cabeçalho {@code Content-Security-Policy}
+   */
+  static HeaderWriter escritorCsp() {
+    return new DelegatingRequestMatcherHeaderWriter(RotasAutenticacao::ehApi,
+        new StaticHeadersWriter("Content-Security-Policy", CSP_API));
   }
 }

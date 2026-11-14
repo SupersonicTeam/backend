@@ -144,12 +144,16 @@ class AssistenteStreamingIntegrationTest {
     assertThat(contrato.has("fontesDados")).isTrue();
     assertThat(contrato.path("fontesDados").path(0).path("origem").asText())
         .isEqualTo("PRODUTOR");
+    // Explicacao desligada (#268, padrao): nenhum evento, campo ou chamada ao modelo a mais.
+    assertThat(contrato.has("explicacao")).isFalse();
+    assertThat(modelo.promptsRecebidos()).hasSize(1);
 
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
         .singleElement()
         .satisfies(i -> {
           assertThat(i.getRota()).isEqualTo("DADOS");
           assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+          assertThat(i.getDesfechoExplicacao()).isNull();
         });
   }
 
@@ -162,13 +166,30 @@ class AssistenteStreamingIntegrationTest {
 
     assertThat(eventos).extracting(Evento::nome).containsExactly("rota", "resposta", "fim");
     assertThat(eventos.get(1).dados().path("resposta").asText())
-        .isEqualTo(PromptsCeres.FORA_DE_ESCOPO);
+        .isEqualTo(PromptsCeres.RECUSA_GENTIL);
     assertThat(eventos.get(1).dados().path("fontesDados")).isEmpty();
     assertThat(modelo.classificacoesRecebidas()).hasSize(1);
     assertThat(modelo.promptsRecebidos()).isEmpty();
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
         .singleElement()
         .satisfies(i -> assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.FORA_DE_ESCOPO));
+  }
+
+  @Test
+  @DisplayName("#493: despedida no SSE: rota, resposta e fim, sem o modelo")
+  void despedidaNoStreaming() throws Exception {
+    List<Evento> eventos = eventos(stream(produtorA, "tchau").body());
+
+    assertThat(eventos).extracting(Evento::nome).containsExactly("rota", "resposta", "fim");
+    assertThat(eventos.get(0).dados().path("rota").asText()).isEqualTo("FORA_DE_ESCOPO");
+    assertThat(eventos.get(1).dados().path("resposta").asText()).isNotBlank()
+        .doesNotContain("�");
+    assertThat(eventos.get(1).dados().path("atalhos")).isEmpty();
+    assertThat(modelo.classificacoesRecebidas()).isEmpty();
+    assertThat(modelo.promptsRecebidos()).isEmpty();
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .singleElement()
+        .satisfies(i -> assertThat(i.getDesfecho()).isEqualTo(DesfechoInteracao.CONVERSA_LEVE));
   }
 
   @Test

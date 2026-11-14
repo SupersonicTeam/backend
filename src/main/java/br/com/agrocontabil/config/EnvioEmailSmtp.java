@@ -6,6 +6,8 @@ import br.com.agrocontabil.service.MensagensEmail.Mensagem;
 import br.com.agrocontabil.service.TetoEnvioEmail;
 import br.com.agrocontabil.service.TipoEmail;
 import jakarta.mail.SendFailedException;
+import jakarta.mail.internet.MimeBodyPart;
+import jakarta.mail.internet.MimeMultipart;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -17,8 +19,9 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.MailParseException;
 import org.springframework.mail.MailPreparationException;
 import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.util.StringUtils;
 
 /**
@@ -37,6 +40,8 @@ class EnvioEmailSmtp {
 
   /** Falhas seguidas de conexão ou autenticação que disparam o primeiro WARN. */
   static final int FALHAS_PARA_AVISO = 3;
+
+  private static final String UTF_8 = "UTF-8";
 
   /** Categorias que apontam o provedor (e contam nas falhas seguidas). */
   private static final List<String> PROVEDOR = List.of("conexao", "autenticacao");
@@ -73,16 +78,8 @@ class EnvioEmailSmtp {
     if (!teto.reservar(tipo)) {
       return;
     }
-    SimpleMailMessage email = new SimpleMailMessage();
-    email.setFrom(remetente);
-    if (StringUtils.hasText(replyTo)) {
-      email.setReplyTo(replyTo);
-    }
-    email.setTo(destinatario);
-    email.setSubject(mensagem.assunto());
-    email.setText(mensagem.texto());
     try {
-      mailSender.getObject().send(email);
+      mailSender.getObject().send(preparo(destinatario, mensagem));
       falhasSeguidas.set(0);
     } catch (MailException e) {
       String categoria = categoria(e);
@@ -96,6 +93,33 @@ class EnvioEmailSmtp {
       throw new EnvioEmailFalhouException("Falha no envio do e-mail de " + tipo + " (" + categoria
           + ": " + causas(e) + ").");
     }
+  }
+
+  /**
+   * A mensagem em {@code multipart/alternative}: o texto puro primeiro e o HTML depois (o cliente
+   * mostra a última parte que sabe exibir), as duas em UTF-8. {@code Auto-Submitted} (RFC 3834)
+   * avisa que é automática: resposta automática de férias não volta para ela.
+   */
+  MimeMessagePreparator preparo(String destinatario, Mensagem mensagem) {
+    return mime -> {
+      MimeMessageHelper ajudante =
+          new MimeMessageHelper(mime, MimeMessageHelper.MULTIPART_MODE_NO, UTF_8);
+      ajudante.setFrom(remetente);
+      if (StringUtils.hasText(replyTo)) {
+        ajudante.setReplyTo(replyTo);
+      }
+      ajudante.setTo(destinatario);
+      ajudante.setSubject(mensagem.assunto());
+      MimeBodyPart texto = new MimeBodyPart();
+      texto.setText(mensagem.texto(), UTF_8);
+      MimeBodyPart html = new MimeBodyPart();
+      html.setContent(mensagem.html(), "text/html; charset=UTF-8");
+      MimeMultipart alternativa = new MimeMultipart("alternative");
+      alternativa.addBodyPart(texto);
+      alternativa.addBodyPart(html);
+      mime.setContent(alternativa);
+      mime.setHeader("Auto-Submitted", "auto-generated");
+    };
   }
 
   /**

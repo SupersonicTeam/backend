@@ -15,5 +15,5 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record LgpdProperties(
     @DefaultValue("GWNext") String controlador,
     @DefaultValue("contato@gwnext.com.br") String contatoEncarregado,
-    @DefaultValue("2026-11-09") String versaoPolitica) {
+    @DefaultValue("2026-11-11") String versaoPolitica) {
 }

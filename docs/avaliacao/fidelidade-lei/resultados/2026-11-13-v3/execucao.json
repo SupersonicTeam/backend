@@ -1,0 +1,93 @@
+{
+  "regra": {
+    "versao": "2026-11-13.6",
+    "parametros": {
+      "defeitosMinimosNaBase": 8,
+      "melhoraRelativaMinima": 0.25,
+      "melhoraAbsolutaMinima": 4,
+      "icConfianca": 0.8,
+      "bootstrapReamostragens": 10000,
+      "bootstrapSemente": 20261112,
+      "pioraMaximaPorTipo": 1,
+      "falsoDescarteMaximo": 3,
+      "recusaFalsaAltaMaxima": 0.05,
+      "ausenteInfielAltaMaxima": 1,
+      "p50Fator": 2.0,
+      "p95Fator": 2.0,
+      "p95TetoMs": 10000,
+      "tokensFator": 2.0,
+      "regressoesPorPerguntaMaximas": 1,
+      "falhaTecnicaMaxima": 0.1,
+      "kappaMinimo": 0.4,
+      "kappaAviso": 0.6,
+      "desacordoMaximo": 0.3,
+      "minimoDeExecucoesValidasPorBraco": 2
+    }
+  },
+  "conjunto": {
+    "versao": "2026-11-13.v3",
+    "arquivo": "perguntas-fidelidade-lei-v3.json",
+    "sha256": "b62880b3ebc129b8c7b5c5ff35031915bcad0feaff9443b1e7fa70539b159568",
+    "perguntas": 36
+  },
+  "commit": "a91f32ef",
+  "jarSha256": "eb6b90d0c43a421a8db827249ec6fa807a4320c516d5b40cc9d86b6303fe3e3e",
+  "modelo": "claude-haiku-5-5",
+  "repeticoes": 3,
+  "semente": 20261112,
+  "bancoDaRodada": "fidelidade_lei",
+  "execucoesPlanejadas": 432,
+  "bracos": [
+    "desligada",
+    "camada1",
+    "camada1+juiz+resgate",
+    "camada1+resgate"
+  ],
+  "ambientes": {
+    "desligada": {},
+    "camada1": {
+      "AI_FIDELIDADE_LEI_HABILITADA": "true"
+    },
+    "camada1+juiz+resgate": {
+      "AI_FIDELIDADE_LEI_HABILITADA": "true",
+      "AI_FIDELIDADE_LEI_JUIZ_HABILITADO": "true",
+      "AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO": "justificativa",
+      "AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO": "true",
+      "AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE": "true"
+    },
+    "camada1+resgate": {
+      "AI_FIDELIDADE_LEI_HABILITADA": "true",
+      "AI_FIDELIDADE_LEI_JUIZ_HABILITADO": "true",
+      "AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO": "justificativa",
+      "AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO": "true",
+      "AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE": "true",
+      "AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO": "false"
+    }
+  },
+  "iniciadoEm": "2026-11-13T12:00:22.226970-03:00",
+  "terminadoEm": "2026-11-13T12:24:57.867116-03:00",
+  "contagemPorBraco": {
+    "desligada": {
+      "descartada": 56,
+      "recusa": 10,
+      "aceita": 42
+    },
+    "camada1": {
+      "descartada": 71,
+      "recusa": 10,
+      "aceita": 27
+    },
+    "camada1+juiz+resgate": {
+      "descartada": 67,
+      "recusa": 10,
+      "aceita": 31
+    },
+    "camada1+resgate": {
+      "descartada": 66,
+      "aceita": 33,
+      "recusa": 9
+    }
+  },
+  "interrompida": null,
+  "observacao": "A URL, as contas e as senhas da rodada nunca entram neste arquivo."
+}

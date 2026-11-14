@@ -48,6 +48,19 @@ public interface NotaFiscalRepository
   Optional<NotaFiscal> findByIdAndProdutorId(UUID id, UUID produtorId);
 
   /**
+   * Maior número das notas <strong>próprias</strong> do produtor na série, no modelo 55, em
+   * qualquer status (issue #539). O filtro espelha o índice parcial
+   * {@code uk_nota_fiscal_propria_numero_serie_modelo}; compras importadas não entram.
+   */
+  @Query("""
+      select max(n.numero) from NotaFiscal n
+      where n.produtor.id = :produtorId and n.serie = :serie and n.modelo = '55'
+        and n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+      """)
+  Optional<Long> findMaiorNumeroPropria(
+      @Param("produtorId") UUID produtorId, @Param("serie") Integer serie);
+
+  /**
    * Igual a {@link #findByIdAndProdutorId(UUID, UUID)}, porém carregando de uma vez o grafo que os
    * pipelines de NF-e e DANFE consomem: os <strong>itens</strong> e o <strong>produtor</strong>
    * (issue #99).

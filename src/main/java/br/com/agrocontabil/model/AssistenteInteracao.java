@@ -78,6 +78,31 @@ public class AssistenteInteracao {
   @Column(name = "camada_classificacao", length = 20, updatable = false)
   private String camadaClassificacao;
 
+  /**
+   * Desfecho da conferência de fidelidade da resposta de lei (#269, changeSet 0065): aprovada,
+   * aprovada com a citação corrigida ou o motivo da reprovação. Só o enum, nunca o texto (#144).
+   * Nulo quando a conferência não rodou (flag desligada, outra rota, sem trecho, resposta cortada).
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "fidelidade_lei", length = 40, updatable = false,
+      columnDefinition = "VARCHAR(40)")
+  private DesfechoFidelidadeLei fidelidadeLei;
+
+  /**
+   * Tempo da chamada do juiz da fidelidade da lei (#269, camada 2, changeSet 0065); nulo se ele não
+   * rodou. Com ele, {@code latenciaMs} é o da pergunta sem o juiz: a soma é o total.
+   */
+  @Column(name = "latencia_juiz_ms", updatable = false)
+  private Long latenciaJuizMs;
+
+  /** Tokens de entrada do juiz (#269); nulo se ele não rodou. Fora de {@code tokensEntrada}. */
+  @Column(name = "tokens_entrada_juiz", updatable = false)
+  private Integer tokensEntradaJuiz;
+
+  /** Tokens de saída do juiz (#269); nulo se ele não rodou. Fora de {@code tokensSaida}. */
+  @Column(name = "tokens_saida_juiz", updatable = false)
+  private Integer tokensSaidaJuiz;
+
   /** Funções usadas e parâmetros (JSON), já sanitizados. */
   @Column(name = "funcoes", columnDefinition = "TEXT", updatable = false)
   private String funcoes;
@@ -113,4 +138,26 @@ public class AssistenteInteracao {
 
   @Column(name = "criado_em", nullable = false, updatable = false)
   private OffsetDateTime criadoEm;
+
+  /**
+   * Desfecho da explicação depois da resposta de dados (#268, changeSet 0064); nulo quando ela não
+   * se aplica. Gravado depois, pelo {@code AssistenteInteracaoRepository.registrarExplicacao}: a
+   * pergunta é auditada antes de a resposta sair, e a explicação vem depois.
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "desfecho_explicacao", length = 60, insertable = false, updatable = false,
+      columnDefinition = "VARCHAR(60)")
+  private DesfechoExplicacao desfechoExplicacao;
+
+  /** Tempo da explicação, do começo dela ao desfecho (#268). */
+  @Column(name = "latencia_explicacao_ms", insertable = false, updatable = false)
+  private Long latenciaExplicacaoMs;
+
+  /** Tokens de entrada da chamada da explicação; nulo se a chamada não terminou (#268). */
+  @Column(name = "tokens_entrada_explicacao", insertable = false, updatable = false)
+  private Integer tokensEntradaExplicacao;
+
+  /** Tokens de saída da chamada da explicação; nulo se a chamada não terminou (#268). */
+  @Column(name = "tokens_saida_explicacao", insertable = false, updatable = false)
+  private Integer tokensSaidaExplicacao;
 }

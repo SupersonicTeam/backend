@@ -61,6 +61,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * hash rodam fora de transação (o BCrypt não segura conexão), e a gravação reconfere o token sob
  * lock antes de marcá-lo usado — dois envios simultâneos do mesmo link nunca passam ambos, e uma
  * senha fraca não queima o link.
+ *
+ * <p>A política recebe, além do e-mail e do documento, o telefone do titular e, no contador, o CNPJ
+ * e o telefone do escritório, lidos na hora pelo {@link DadosDoTitularSenha} (issue #521).
  */
 @Service
 @ConditionalOnWebApplication
@@ -83,6 +86,7 @@ public class SenhaService {
   private final RedefinicaoSenhaRepository redefinicaoRepository;
   private final PasswordEncoder passwordEncoder;
   private final PoliticaSenha politicaSenha;
+  private final DadosDoTitularSenha dadosDoTitular;
   private final SessaoService sessaoService;
   private final BloqueioContaService bloqueioConta;
   private final EnvioEmail envioEmail;
@@ -99,6 +103,7 @@ public class SenhaService {
       RedefinicaoSenhaRepository redefinicaoRepository,
       PasswordEncoder passwordEncoder,
       PoliticaSenha politicaSenha,
+      DadosDoTitularSenha dadosDoTitular,
       SessaoService sessaoService,
       BloqueioContaService bloqueioConta,
       EnvioEmail envioEmail,
@@ -111,6 +116,7 @@ public class SenhaService {
     this.redefinicaoRepository = redefinicaoRepository;
     this.passwordEncoder = passwordEncoder;
     this.politicaSenha = politicaSenha;
+    this.dadosDoTitular = dadosDoTitular;
     this.sessaoService = sessaoService;
     this.bloqueioConta = bloqueioConta;
     this.envioEmail = envioEmail;
@@ -228,7 +234,7 @@ public class SenhaService {
         .orElseThrow(TokenRedefinicaoInvalidoException::new);
 
     String senha = PoliticaSenha.normalizar(novaSenha);
-    politicaSenha.validar(senha, credencial.getEmail(), credencial.getCpfCnpj(), CAMPO_NOVA_SENHA);
+    politicaSenha.validar(senha, dadosDoTitular.de(credencial), CAMPO_NOVA_SENHA);
     String hash = passwordEncoder.encode(senha);
 
     transacao.executeWithoutResult(status -> {
@@ -255,7 +261,7 @@ public class SenhaService {
     CredencialUsuario credencial = confirmarSenhaAtual(senhaAtual);
 
     String senha = PoliticaSenha.normalizar(novaSenha);
-    politicaSenha.validar(senha, credencial.getEmail(), credencial.getCpfCnpj(), CAMPO_NOVA_SENHA);
+    politicaSenha.validar(senha, dadosDoTitular.de(credencial), CAMPO_NOVA_SENHA);
     String hash = passwordEncoder.encode(senha);
     transacao.executeWithoutResult(status -> gravarSenhaNova(credencial.getId(), hash));
     log.info("Senha alterada pelo titular: credencial={}",

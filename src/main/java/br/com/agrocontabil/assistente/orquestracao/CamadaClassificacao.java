@@ -10,8 +10,19 @@ public enum CamadaClassificacao {
    * {@code VARCHAR(20)} da coluna (changeSet 0050), sem changeSet novo.
    */
   ATALHO_FIXO,
+  /**
+   * {@link ConversaLeve}: saudação, agradecimento, despedida, reconhecimento, apresentação ou
+   * seguimento, pela lista fechada (#493). Cabe no {@code VARCHAR(20)}, sem changeSet.
+   */
+  CONVERSA_LEVE,
   /** {@link FiltroInjecao}: forma de prompt injection → fora de escopo. */
   FILTRO_INJECAO,
+  /**
+   * {@link br.com.agrocontabil.assistente.SinalRecusaFirme#inequivoco}: ataque ou dado de outra
+   * pessoa sem leitura legítima → fora de escopo, com a recusa firme (#497). Cabe no
+   * {@code VARCHAR(20)}, sem changeSet.
+   */
+  SINAL_RECUSA_FIRME,
   /** {@link RegrasClassificacao}: termo inequívoco de um lado só. */
   REGRA,
   /** {@link EmbeddingClassificadorIntencao}: vizinhos no conjunto de treino. */

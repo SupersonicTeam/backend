@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.agrocontabil.common.ErrorDetail;
 import br.com.agrocontabil.exception.SenhaFracaException;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -66,7 +67,96 @@ class PoliticaSenhaTest {
   @DisplayName("senha com o e-mail, a parte local ou o CPF e recusada")
   void dadoDoTitular(String senha) {
     assertThat(violacoes(senha))
-        .anySatisfy(e -> assertThat(e.message()).contains("e-mail nem seu CPF/CNPJ"));
+        .anySatisfy(e -> assertThat(e.message()).contains("e-mail, CPF/CNPJ, telefone"));
+  }
+
+  // --- Telefone, escritorio e documento com mascara (#521) ---
+
+  private static final String TELEFONE = "45999990000";
+  private static final String CNPJ_ESCRITORIO = "48315276000195";
+  private static final String TELEFONE_ESCRITORIO = "4533330000";
+
+  private static final PoliticaSenha.DadosDoTitular CONTADOR = new PoliticaSenha.DadosDoTitular(
+      EMAIL, List.of(CPF, CNPJ_ESCRITORIO), List.of(TELEFONE, TELEFONE_ESCRITORIO));
+
+  private List<ErrorDetail> violacoes(String senha, PoliticaSenha.DadosDoTitular titular) {
+    try {
+      politica.validar(PoliticaSenha.normalizar(senha), titular, "senha");
+      return List.of();
+    } catch (SenhaFracaException e) {
+      return e.getErrors();
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+      "minha45999990000", "(45) 99999-0000 casa", "+55 45 99999-0000 roça", "x999990000y",
+      "casa 99999-0000 roça", "escritorio48315276000195", "48.315.276/0001-95 rural",
+      "fixo 4533330000 x", "ramal 3333-0000 sítio", "cpf 529.982.247-25 lavoura",
+      "529 982 247 25 colheita"})
+  @DisplayName("senha com o telefone (com e sem DDD), o CNPJ ou o telefone do escritorio ou o"
+      + " documento com mascara e recusada, sem ecoar o dado (#521)")
+  void dadoDeContextoDoTitular(String senha) {
+    assertThat(violacoes(senha, CONTADOR)).anySatisfy(e -> {
+      assertThat(e.code()).isEqualTo("SENHA_FRACA");
+      assertThat(e.message()).isEqualTo(PoliticaSenha.MENSAGEM_DADO_DO_TITULAR)
+          .doesNotContain(TELEFONE).doesNotContain(CNPJ_ESCRITORIO).doesNotContain("99999");
+      assertThat(e.rejectedValue()).isNull();
+    });
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {
+      "cavalo bateria grampo correto", "safra 2026 com 4599 sacas", "colheita9999-0000x",
+      "lote 52998 de 2026 rural", "fazenda 33330 mais 0000 talhoes"})
+  @DisplayName("frase sem o dado inteiro passa: trecho curto do telefone ou do documento nao conta")
+  void trechoCurtoDoDadoPassa(String senha) {
+    assertThat(violacoes(senha, CONTADOR)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("nulo, vazio e valor com menos de 8 caracteres ficam fora da regra (#521)")
+  void dadoAusenteOuCurtoNaoConta() {
+    PoliticaSenha.DadosDoTitular semDados = new PoliticaSenha.DadosDoTitular(
+        null, Arrays.asList(null, "", "  "), Arrays.asList(null, "", "1357246"));
+    assertThat(violacoes("lavoura 1357246 boa", semDados)).isEmpty();
+    PoliticaSenha.DadosDoTitular listasNulas = new PoliticaSenha.DadosDoTitular(null, null, null);
+    assertThat(listasNulas.documentos()).isEmpty();
+    assertThat(listasNulas.telefones()).isEmpty();
+    assertThat(violacoes("cavalo bateria grampo correto", listasNulas)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("formas do telefone: com DDD, sem DDD e sem o codigo do pais")
+  void formasDoTelefone() {
+    assertThat(PoliticaSenha.formasDoTelefone("45999990000"))
+        .containsExactly("45999990000", "999990000");
+    assertThat(PoliticaSenha.formasDoTelefone("(65) 3333-0001"))
+        .containsExactly("6533330001", "33330001");
+    assertThat(PoliticaSenha.formasDoTelefone("+55 (45) 99999-0000"))
+        .containsExactly("45999990000", "999990000");
+    // DDD 55 (RS) com 10 ou 11 digitos nao e confundido com o codigo do pais.
+    assertThat(PoliticaSenha.formasDoTelefone("5533330000"))
+        .containsExactly("5533330000", "33330000");
+    assertThat(PoliticaSenha.formasDoTelefone("123")).containsExactly("123");
+  }
+
+  @Test
+  @DisplayName("toString dos dados do titular nao mostra nenhum dado (LGPD)")
+  void toStringSemDados() {
+    assertThat(CONTADOR.toString()).doesNotContain(EMAIL).doesNotContain(CPF)
+        .doesNotContain(TELEFONE).doesNotContain(CNPJ_ESCRITORIO)
+        .isEqualTo("DadosDoTitular[documentos=2, telefones=2]");
+  }
+
+  @Test
+  @DisplayName("validar de 4 argumentos (seed): CPF com mascara recusado, telefone nao conferido")
+  void sobrecargaDoSeed() {
+    assertThat(violacoes("cpf 529.982.247-25 lavoura"))
+        .anySatisfy(e -> assertThat(e.message()).isEqualTo(PoliticaSenha.MENSAGEM_DADO_DO_TITULAR));
+    assertThat(violacoes("minha45999990000")).isEmpty();
+    assertThatCode(() -> politica.validar("cavalo bateria grampo correto", null, null, "SEED"))
+        .doesNotThrowAnyException();
   }
 
   @ParameterizedTest

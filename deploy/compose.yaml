@@ -139,6 +139,10 @@ services:
       # Ja vem desligado na imagem da #460; repetido aqui para a imagem anterior nao cair em DOWN com
       # o SPRING_MAIL_HOST vazio, se este compose chegar antes dela.
       MANAGEMENT_HEALTH_MAIL_ENABLED: 'false'
+      # Aceite dos termos no cadastro (#519): ligue o exigir quando a tela nova mandar o campo;
+      # mude a versao quando o texto dos termos mudar (#498).
+      CADASTRO_EXIGIR_ACEITE_TERMOS: ${CADASTRO_EXIGIR_ACEITE_TERMOS:-false}
+      TERMOS_VERSAO: ${TERMOS_VERSAO:-2026-11-11}
       SEED_SENHA: ${SEED_SENHA:-}
       # Escritorio, carteira e notas da banca (#315), com as contas na SEED_SENHA. Idempotente.
       DEMONSTRACAO_HABILITADA: 'true'
@@ -165,12 +169,31 @@ services:
       AI_ANTHROPIC_MODEL: ${AI_ANTHROPIC_MODEL:-claude-haiku-5-5}
       # Sem os dois-pontos: vazio no .env chega vazio (= nao enviar o campo de raciocinio).
       AI_ANTHROPIC_THINKING: ${AI_ANTHROPIC_THINKING-disabled}
+      # Explicacao depois da resposta de dados (#268), desligada por padrao: ligar so com a medicao
+      # do modelo real e o OK do Murillo (docs/avaliacao/explicacao/README.md).
+      AI_EXPLICACAO_HABILITADA: ${AI_EXPLICACAO_HABILITADA:-false}
+      AI_EXPLICACAO_TIMEOUT: ${AI_EXPLICACAO_TIMEOUT:-8s}
       # Janela de contexto, teto geral e tetos por tipo de chamada (#270); padroes = os do yml.
       AI_OLLAMA_NUM_CTX: ${AI_OLLAMA_NUM_CTX:-8192}
       AI_MAX_TOKENS: ${AI_MAX_TOKENS:-1024}
       AI_TETO_FUNCOES: ${AI_TETO_FUNCOES:-512}
+      AI_TETO_EXPLICACAO: ${AI_TETO_EXPLICACAO:-256}
       AI_TETO_CLASSIFICACAO: ${AI_TETO_CLASSIFICACAO:-256}
       AI_TETO_LEGISLACAO: ${AI_TETO_LEGISLACAO:-1024}
+      # Fidelidade da rota de lei (#269), tudo desligado por padrao (= o do application.yml): copiar este
+      # compose nao liga nada. Ligar e so no .env, com os valores de deploy/README.md ("Fidelidade da
+      # rota de lei"); booleanos em minusculas.
+      AI_FIDELIDADE_LEI_HABILITADA: ${AI_FIDELIDADE_LEI_HABILITADA:-false}
+      AI_FIDELIDADE_LEI_COBERTURA_MINIMA: ${AI_FIDELIDADE_LEI_COBERTURA_MINIMA:-0.7}
+      AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ: ${AI_FIDELIDADE_LEI_COBERTURA_MINIMA_COM_JUIZ:-0.3}
+      AI_FIDELIDADE_LEI_JUIZ_HABILITADO: ${AI_FIDELIDADE_LEI_JUIZ_HABILITADO:-false}
+      AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO: ${AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO:-atual}
+      AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO: ${AI_FIDELIDADE_LEI_JUIZ_VETO_HABILITADO:-true}
+      AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO:-false}
+      AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE:-false}
+      AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA: ${AI_FIDELIDADE_LEI_JUIZ_RESGATE_COBERTURA:-false}
+      AI_TETO_JUIZ: ${AI_TETO_JUIZ:-128}
+      AI_TETO_JUIZ_JUSTIFICATIVA: ${AI_TETO_JUIZ_JUSTIFICATIVA:-1024}
       ANTIVIRUS_MODO: CLAMAV
       ANTIVIRUS_HOST: clamav
       # Atras do Caddy: sem isto o backend ve todo cliente com o IP do Caddy e o limite por IP de
@@ -226,6 +249,9 @@ services:
       TLS_ASK_CHAVE: ${TLS_ASK_CHAVE:?defina TLS_ASK_CHAVE no .env (deploy/README.md, Endereco proprio do escritorio)}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Quadros da jornada 3D da landing (frontend#174), servidos em /jornada/* pelo Caddyfile. Crie a
+      # pasta antes do up: se faltar, o Docker a cria vazia e do root (deploy/README.md, Jornada da landing).
+      - ./jornada:/srv/jornada:ro
       - caddy_data:/data
       - caddy_config:/config
     networks: [interna]

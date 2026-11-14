@@ -4,7 +4,9 @@ import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.DataSanitizer;
 import br.com.agrocontabil.assistente.FonteDado;
 import br.com.agrocontabil.assistente.porta.AuditoriaPorta;
+import br.com.agrocontabil.assistente.porta.AuditoriaPorta.RegistroExplicacao;
 import br.com.agrocontabil.assistente.porta.AuditoriaPorta.RegistroInteracao;
+import br.com.agrocontabil.model.DesfechoExplicacao;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,6 +15,7 @@ import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
@@ -50,10 +53,24 @@ public class AuditoriaAssistente {
    * @param modelo          {@code provedor/modelo}
    * @param latenciaMs      duração total da pergunta
    * @param tamanhoPergunta tamanho da pergunta, em caracteres
+   * @return id do registro, para completá-lo com a explicação (#268); nulo se a porta não o deu
    */
-  public void registrar(ContextoAssistente contexto, String rota, DesfechoInteracao desfecho,
+  public UUID registrar(ContextoAssistente contexto, String rota, DesfechoInteracao desfecho,
       String modelo, long latenciaMs, int tamanhoPergunta) {
-    porta.registrar(new RegistroInteracao(
+    // Juiz da fidelidade da lei (#269): os tokens e o tempo dele estao nos totais da pergunta (a
+    // cota acerta pelo total); aqui saem dos da pergunta e vao a colunas proprias, para a soma das
+    // colunas ser o total, como na explicacao (#268).
+    ContextoAssistente.JuizLei juiz = contexto.juizLei();
+    Integer tokensEntrada = contexto.tokensEntrada();
+    Integer tokensSaida = contexto.tokensSaida();
+    long latencia = latenciaMs;
+    if (juiz != null) {
+      tokensEntrada = tokensEntrada == null ? null
+          : Math.max(0, tokensEntrada - juiz.tokensEntrada());
+      tokensSaida = tokensSaida == null ? null : Math.max(0, tokensSaida - juiz.tokensSaida());
+      latencia = Math.max(0, latenciaMs - juiz.latenciaMs());
+    }
+    return porta.registrar(new RegistroInteracao(
         contexto.produtorId(),
         rota,
         desfecho,
@@ -65,12 +82,33 @@ public class AuditoriaAssistente {
         contexto.chamadasDeFuncao(),
         contexto.trechosCitados().isEmpty() ? null : json(contexto.trechosCitados()),
         modelo,
-        latenciaMs,
-        contexto.tokensEntrada(),
-        contexto.tokensSaida(),
+        latencia,
+        tokensEntrada,
+        tokensSaida,
         contexto.tokensEstimados(),
         tamanhoPergunta,
-        OffsetDateTime.now(clock)));
+        OffsetDateTime.now(clock),
+        contexto.fidelidadeLei(),
+        juiz == null ? null : juiz.latenciaMs(),
+        juiz == null ? null : juiz.tokensEntrada(),
+        juiz == null ? null : juiz.tokensSaida()));
+  }
+
+  /**
+   * Completa o registro da pergunta com o desfecho da explicação depois da resposta de dados
+   * (#268): só o desfecho, o tempo e os tokens da chamada, nunca o texto (#144).
+   *
+   * @param interacaoId   registro da pergunta
+   * @param desfecho      aceita ou o motivo do descarte
+   * @param latenciaMs    tempo da explicação
+   * @param tokensEntrada tokens de entrada da chamada; nulo se ela não terminou
+   * @param tokensSaida   tokens de saída da chamada; nulo se ela não terminou
+   * @throws RuntimeException se não gravar — quem chama não entrega a explicação
+   */
+  public void registrarExplicacao(UUID interacaoId, DesfechoExplicacao desfecho, long latenciaMs,
+      Integer tokensEntrada, Integer tokensSaida) {
+    porta.registrarExplicacao(new RegistroExplicacao(
+        interacaoId, desfecho, latenciaMs, tokensEntrada, tokensSaida));
   }
 
   private String funcoesJson(List<FonteDado> fontes) {

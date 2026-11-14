@@ -36,6 +36,22 @@ jobs:
       - name: Medicao da #452 (testes do executor e da pontuacao)
         run: python3 -m unittest discover -s docs/avaliacao/ceres-452 -p "test_*.py"
 
+      # Linha de base da rota e da recusa com o Haiku (#497): executor e leitura, so biblioteca padrao.
+      - name: Medicao da #497 (testes do executor e da leitura)
+        run: python3 -m unittest discover -s docs/avaliacao/ceres-497 -p "test_*.py"
+
+      # Conjunto e decisao da medicao da #516 (falso positivo da recusa firme): so biblioteca padrao.
+      - name: Medicao da #516 (testes do conjunto e da decisao)
+        run: python3 -m unittest discover -s docs/avaliacao/ceres-516 -p "test_*.py"
+
+      # Conjunto de conversas da continuidade da Ceres (#499): forma, tokens e sha256.
+      - name: Continuidade da #499 (testes do conjunto)
+        run: python3 -m unittest discover -s docs/avaliacao/continuidade -p "test_*.py"
+
+      # Conjunto, regra e executor da medicao de fidelidade da rota de lei (#269): so biblioteca padrao.
+      - name: Fidelidade da rota de lei (#269, testes do conjunto, do executor e da decisao)
+        run: python3 -m unittest discover -s docs/avaliacao/fidelidade-lei -p "test_*.py"
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()

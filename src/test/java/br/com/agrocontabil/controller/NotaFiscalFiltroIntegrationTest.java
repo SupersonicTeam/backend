@@ -1,5 +1,6 @@
 package br.com.agrocontabil.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -8,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.agrocontabil.common.NormalizacaoBusca;
 import br.com.agrocontabil.config.MockIdentidadeFilter;
 import br.com.agrocontabil.model.EnderecoDestinatario;
 import br.com.agrocontabil.model.NotaFiscal;
@@ -21,6 +23,7 @@ import br.com.agrocontabil.support.TestDatabaseCleaner;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -254,6 +257,36 @@ class NotaFiscalFiltroIntegrationTest {
         .andExpect(jsonPath("$.content[*].numero", contains(2)));
     mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "234.567.890-12"))
         .andExpect(jsonPath("$.content[*].numero", contains(2)));
+  }
+
+  @Test
+  @DisplayName("#399: o CPF/CNPJ do destinatario nao fica no texto de busca, so na propria coluna")
+  void documentoNaoFicaNoTextoDeBusca() {
+    NotaFiscal nota =
+        notaComItem(produtorA, 1L, "Cooperativa A", "12345678000195", "Soja", "12019000");
+
+    NotaFiscal gravada = notaFiscalRepository.findById(nota.getId()).orElseThrow();
+    assertThat(gravada.getBuscaNormalizada()).isEqualTo("1 cooperativa a venda de producao rural soja 12019000")
+        .doesNotContain("12345678000195");
+    assertThat(gravada.getBuscaVersao()).isEqualTo(NormalizacaoBusca.VERSAO_REGRA);
+    assertThat(gravada.getDestinatarioCpfCnpj()).isEqualTo("12345678000195");
+  }
+
+  @Test
+  @DisplayName("#399: trecho do documento (raiz do CNPJ, digitos do meio) nao casa mais")
+  void trechoDoDocumentoNaoCasa() throws Exception {
+    notaComItem(produtorA, 1L, "Cooperativa A", "12345678000195", "Soja", "12019000");
+
+    // A raiz do CNPJ (8 digitos) e um trecho do meio: so digitos, sem aparecer no numero, no
+    // nome, na natureza nem no NCM. Ate a #399 os dois casavam o documento dentro do texto.
+    for (String trecho : List.of("12345678", "5678000", "000195")) {
+      mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", trecho))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.totalElements").value(0));
+    }
+    // O documento inteiro segue achando a nota.
+    mockMvc.perform(como(produtorA, get("/api/notas")).param("busca", "12345678000195"))
+        .andExpect(jsonPath("$.content[*].numero", contains(1)));
   }
 
   @Test

@@ -14,6 +14,8 @@ import java.util.UUID;
  * @param id          vínculo
  * @param escritorioId escritório (issue #228)
  * @param escritorio  nome do escritório
+ * @param escritorioVerificado o CNPJ do escritório foi verificado pelo AgroConIA (#520)?
+ * @param escritorioCnpj CNPJ do escritório, só quando verificado; nulo sem verificação
  * @param responsavel nome do contador responsável pelo produtor no escritório
  * @param crc         registro do responsável no conselho regional
  * @param situacao   situação do vínculo
@@ -31,6 +33,12 @@ public record VinculoProdutorResponse(
     UUID escritorioId,
     @Schema(description = "Nome do escritório", example = "Escritório Campo Verde")
     String escritorio,
+    @Schema(description = "O CNPJ do escritório foi verificado pelo AgroConIA (#520)? O nome é "
+        + "texto livre: o selo mostra o CNPJ verificado ao lado dele", example = "true")
+    boolean escritorioVerificado,
+    @Schema(description = "CNPJ do escritório, só dígitos, só quando verificado. Nulo sem "
+        + "verificação ou com o escritório apagado", example = "11444777000161", nullable = true)
+    String escritorioCnpj,
     @Schema(description = "Nome do contador responsável pelo produtor", example = "Ana Souza")
     String responsavel,
     @Schema(description = "Registro do responsável no conselho regional", example = "MT-12345")

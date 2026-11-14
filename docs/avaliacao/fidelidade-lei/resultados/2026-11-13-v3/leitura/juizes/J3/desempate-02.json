@@ -1,0 +1,144 @@
+{
+  "juiz": "J3",
+  "lote": "desempate-02",
+  "itens": [
+    {
+      "id": "R073",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Posso ajudar a organizar a pergunta, mas os trechos de lei que tenho aqui tratam de importação de bens", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhece que os trechos não tratam do assunto"},
+        {"n": 2, "texto": "Eles não dizem nada sobre consulta formal ao fisco, prazos de resposta nem como fazer esse pedido", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhecimento de limite"},
+        {"n": 3, "texto": "o IBS e a CBS incidem sobre a importação de bens ou serviços do exterior, qualquer que seja a finalidade", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 63", "fato": null, "nota": ""},
+        {"n": 4, "texto": "o pagamento do IBS e da CBS na importação de bens materiais deve ser feito até a entrega dos bens", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 76, § 1º", "fato": null, "nota": ""},
+        {"n": 5, "texto": "Na venda de máquinas, veículos e equipamentos usados adquiridos até 31 de dezembro de 2032, a partir de 1º de janeiro", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 406, § 2º, inciso II", "fato": null, "nota": ""},
+        {"n": 6, "texto": "Para a sua pergunta por escrito, você pode descrever: o tipo de bem ou serviço que vende, se é novo ou usado", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "sugestão prática, sem apresentar como exigência legal"},
+        {"n": 7, "texto": "Quanto ao canal e ao formato exato da consulta, confirme diretamente no site da Receita Federal ou com seu contador", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "remete ao contador"}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não responde à pergunta; afirma só regras de importação e bens usados, fiéis aos trechos mas fora do assunto."
+    },
+    {
+      "id": "R080",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, serão exigidas a Contribuição para o PIS/Pasep e a Cofins no momento", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": "omite a condição do trecho: só quando exigidas pelo regime de caixa"},
+        {"n": 2, "texto": "Para situações que configurem fato gerador até 31 de dezembro de 2026 e fato gerador da CBS a partir de 1º de janeiro", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 1º, inciso II, alínea a", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não trata da dispensa do recolhimento de IBS/CBS em 2026 (art. 348)."
+    },
+    {
+      "id": "R083",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, serão exigidas a Contribuição para o PIS/Pasep e a Cofins no momento", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": "omite a condição do trecho: só quando exigidas pelo regime de caixa"},
+        {"n": 2, "texto": "Caso a situação configure, até 31 de dezembro de 2026, fato gerador da Contribuição para o PIS/Pasep e da Cofins", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 408, § 1º; § 1º, inciso II, alíneas a e b", "fato": null, "nota": "omite a condição de a mesma situação ser fato gerador da CBS a partir de 2027"}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não trata da dispensa do recolhimento de IBS/CBS em 2026 (art. 348)."
+    },
+    {
+      "id": "R090",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Os trechos disponíveis não respondem diretamente se, em 2026, você deve pagar IBS e CBS destacados nas suas notas", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhecimento de limite"},
+        {"n": 2, "texto": "O que eles tratam é o regime de transição: para situações que configuram fato gerador de PIS/Pasep e Cofins até 31 de", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 408, § 1º, inciso II, alíneas a, b e c", "fato": null, "nota": "\"e não a CBS, que passa a valer em 2027\" não está nos trechos citados"},
+        {"n": 3, "texto": "Ou seja, o PIS e a Cofins continuam sendo exigidos para operações ocorridas até essa data", "rotulo": "CITACAO_ERRADA", "dispositivoCitado": "art. 408, § 1º, inciso II, alíneas a e b", "fato": "F2", "nota": "conteúdo vale pelo gabarito (art. 348, § 2º), não pelo art. 408 citado"},
+        {"n": 4, "texto": "Também há regra para receitas recebidas em regime de caixa: para operações até 31 de dezembro de 2026, o PIS/Pasep", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": ""},
+        {"n": 5, "texto": "Sobre o IBS e a CBS destacados nas notas de 2026, os trechos não dizem se há cobrança. Para essa dúvida, consulte", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhecimento de limite e remessa ao contador"}
+      ],
+      "omiteEssencial": ["F1"],
+      "observacao": ""
+    },
+    {
+      "id": "R095",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Nas operações feitas diretamente com os contribuintes do art. 176, o adquirente fica solidariamente responsável", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 177", "fato": "F1", "nota": "pergunta cita split payment; omite a exceção essencial do pagamento eletrônico e o limite ao não extinto"}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Frase fiel ao caput, mas deixa o leitor supor responsabilidade mesmo com split payment."
+    },
+    {
+      "id": "R096",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Não. Os créditos de IBS e CBS são apropriados e compensados ou ressarcidos pelo valor nominal, sendo vedadas correção", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "Além disso, se o crédito for um crédito presumido, ele só pode ser usado para compensação com o IBS e a CBS devidos", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 452, parágrafo único; art. 468, parágrafo único", "fato": null, "nota": "trechos valem só para créditos presumidos de artigos específicos; resposta generaliza a todo crédito presumido"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R099",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Com base nos trechos disponíveis, não há como afirmar que você deva pagar IBS e CBS sobre as notas de 2026", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhecimento de limite"},
+        {"n": 2, "texto": "O que os trechos tratam é o período de transição: para situações que configurem fato gerador até 31 de dezembro de 2026", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 408, § 1º, inciso II, alíneas a e b", "fato": null, "nota": "\"e não a CBS\" não está nos trechos; omite a condição do fato gerador da CBS em 2027"},
+        {"n": 3, "texto": "Já para o PIS/Pasep e a Cofins-Importação, o regime de transição também prevê a exigência dessas contribuições", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 408, § 1º, inciso II", "fato": null, "nota": "trecho do inciso II não lista as contribuições exigidas"},
+        {"n": 4, "texto": "Sobre operações com recebimento de receita pelo regime de caixa, em 2026 ou com fato gerador pendente na publicação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": ""},
+        {"n": 5, "texto": "Os trechos disponíveis não tratam de IBS nem de cobrança de IBS nas notas de 2026, então não tenho base", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhecimento de limite e remessa ao contador"}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": ""
+    },
+    {
+      "id": "R101",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O prestador de serviço de pagamento ou a instituição operadora do sistema de pagamento pode impugnar a penalidade", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F", "fato": null, "nota": ""},
+        {"n": 2, "texto": "A impugnação é dirigida à RFB, relativamente à CBS, e ao CGIBS, relativamente ao IBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F", "fato": null, "nota": ""},
+        {"n": 3, "texto": "Da decisão do órgão revisor cabe recurso hierárquico uma única vez, no prazo de 10 dias úteis", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F, § 1º", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1", "F2", "F3"],
+      "observacao": "Frases fiéis ao trecho, mas tratam de penalidade do prestador de pagamento, não do rito sumário perguntado."
+    },
+    {
+      "id": "R106",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Contribuintes no regime regular que sejam tomadores de operações de crédito podem apropriar créditos do IBS e da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194", "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "O crédito é aplicado sobre as despesas financeiras relativas a essas operações efetivamente pagas, pelo regime de caixa", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194", "fato": "F2", "nota": ""},
+        {"n": 3, "texto": "Entre as deduções do cálculo está o montante correspondente à aplicação da taxa Selic sobre o principal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso II", "fato": "F2", "nota": ""},
+        {"n": 4, "texto": "Também é deduzido o montante referente ao valor do principal contido em cada parcela, obedecidas as regras de amortização", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso I", "fato": "F2", "nota": ""},
+        {"n": 5, "texto": "Se a dívida for em moeda estrangeira, o valor da operação é convertido em moeda nacional por taxa de câmbio", "rotulo": "CONTRARIO", "dispositivoCitado": "art. 12, § 5º", "fato": "F3", "nota": "responde à dívida em dólar como se gerasse crédito com conversão; gabarito veda o crédito (art. 197, II)"}
+      ],
+      "omiteEssencial": ["F3", "F4"],
+      "observacao": "Tarifas bancárias não tratadas."
+    },
+    {
+      "id": "R108",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, em tese você pode apropriar crédito sobre os juros, desde que o financiamento seja um tomador de operação de crédito", "rotulo": "SUPORTADA", "dispositivoCitado": null, "fato": "F1", "nota": ""},
+        {"n": 2, "texto": "O crédito incide sobre as despesas financeiras efetivamente pagas, pelo regime de caixa, e é calculado sobre cada parcela", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, incisos I e II", "fato": "F2", "nota": ""},
+        {"n": 3, "texto": "Os trechos não trazem a fórmula numérica completa, então não consigo calcular o valor para você", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhecimento de limite"},
+        {"n": 4, "texto": "Sobre dólar: a base de cálculo inclui os juros e as variações monetárias decorrentes da taxa de câmbio", "rotulo": "CONTRARIO", "dispositivoCitado": "art. 255, § 1º, inciso I", "fato": "F3", "nota": "apresenta dívida em dólar como geradora de crédito; gabarito veda (art. 197, II)"},
+        {"n": 5, "texto": "Quando o valor da operação está em moeda estrangeira, a conversão para real é feita pela taxa de câmbio apurada pelo Banco", "rotulo": "CONTRARIO", "dispositivoCitado": "art. 12, § 5º", "fato": "F3", "nota": "reforça crédito na dívida em dólar, contra a vedação do art. 197, II"},
+        {"n": 6, "texto": "Sobre as tarifas bancárias: os trechos disponíveis não tratam de tarifas, então não consigo afirmar se elas geram crédito", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "reconhecimento de limite e remessa ao contador"}
+      ],
+      "omiteEssencial": ["F3", "F4"],
+      "observacao": ""
+    },
+    {
+      "id": "R111",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026 em que o PIS/Pasep e a Cofins são exigidos conforme o recebimento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": "F2", "nota": ""},
+        {"n": 2, "texto": "Nesse mesmo caso, a CBS não será exigida sobre o recebimento da receita decorrente da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso III", "fato": "F3", "nota": ""}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Omite a ressalva do § 2º (regimes opcionais), de pouca relevância para o caso."
+    },
+    {
+      "id": "R113",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para contestar a penalidade, o prestador de serviço de pagamento ou a instituição operadora do sistema de pagamento pode", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F", "fato": null, "nota": ""},
+        {"n": 2, "texto": "A impugnação é dirigida à RFB, relativamente à CBS, e ao CGIBS, relativamente ao IBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F", "fato": null, "nota": ""}
+      ],
+      "omiteEssencial": ["F1", "F2", "F3"],
+      "observacao": "Frases fiéis ao trecho, mas tratam de penalidade do prestador de pagamento, não do rito sumário perguntado."
+    }
+  ]
+}

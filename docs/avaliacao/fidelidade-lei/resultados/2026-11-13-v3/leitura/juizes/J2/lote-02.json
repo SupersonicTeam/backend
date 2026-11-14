@@ -1,0 +1,133 @@
+{
+  "juiz": "J2",
+  "lote": "lote-02",
+  "itens": [
+    {
+      "id": "R013",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Contribuintes no regime regular que tomam operações de crédito podem apropriar créditos do IBS e da CBS sobre as despesas financeiras", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194", "fato": "F1"},
+        {"n": 2, "texto": "O crédito é calculado a partir de deduções sobre o valor de cada parcela, após a data de seu pagamento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194", "fato": "F2"},
+        {"n": 3, "texto": "Uma das deduções é o valor do principal contido em cada parcela, obedecidas as regras de amortização previstas no contrato", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso I", "fato": "F2"},
+        {"n": 4, "texto": "Outra dedução é o montante correspondente à aplicação da taxa Selic sobre o principal", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso II", "fato": "F2"},
+        {"n": 5, "texto": "Se o valor da operação estiver expresso em moeda estrangeira, ele é convertido em moeda nacional pela taxa de câmbio apurada pelo Banco Central", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 12, § 5º", "fato": null, "nota": "Verdadeira, mas responde 'dívida em dólar' sem dizer que o crédito do art. 194 não vale para operação em moeda estrangeira (F3); induz a erro."},
+        {"n": 6, "texto": "A base de cálculo do IBS e da CBS inclui o valor dos juros e das variações monetárias, em função da taxa de câmbio ou de índice", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 255, § 1º, inciso I", "fato": null}
+      ],
+      "omiteEssencial": ["F3", "F4"],
+      "observacao": "Não responde às tarifas do banco nem informa a vedação para moeda estrangeira."
+    },
+    {
+      "id": "R014",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Se a sua empresa estava no regime cumulativo de PIS/Pasep e Cofins em 31 de dezembro de 2026, pode apropriar crédito presumido da CBS sobre o estoque", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso I", "fato": "F1"},
+        {"n": 2, "texto": "O direito ao crédito presumido não se aplica aos produtos cuja aquisição foi contemplada por alíquota zero, isenção, suspensão", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, § 1º, inciso II", "fato": null},
+        {"n": 3, "texto": "Também há crédito presumido sobre bens em estoque sujeitos, na aquisição, à substituição tributária ou à incidência monofásica", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso II, alínea b; art. 381, inciso II, alínea a", "fato": null}
+      ],
+      "omiteEssencial": ["F2", "F3", "F4", "F5"],
+      "observacao": "Não diz o percentual, o prazo de apropriação, as 12 parcelas nem a restrição de uso."
+    },
+    {
+      "id": "R015",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, em 2026 o PIS/Pasep e a Cofins continuam sendo exigidos para situações que configuram fato gerador até 31 de dezembro de 2026", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 1º, inciso II, alínea a; art. 408, § 1º, inciso II, alínea b", "fato": "F2"},
+        {"n": 2, "texto": "Para operações ocorridas até essa data, o PIS/Pasep e a Cofins são exigidos no momento do recebimento da receita, mesmo que esse recebimento ocorra depois", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": "Omite a condição do trecho: só nas hipóteses em que as contribuições são exigidas pelo regime de caixa; generaliza a todas as operações."},
+        {"n": 3, "texto": "Sobre o IBS e a CBS, os trechos que tenho disponíveis tratam da transição a partir de 1º de janeiro de 2027, quando a CBS passa a ser o fato gerador", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 1º, inciso II, alínea a", "fato": null},
+        {"n": 4, "texto": "Não encontrei nos trechos disponíveis uma regra específica sobre cobrança de IBS e CBS destacada em notas fiscais de 2026", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null},
+        {"n": 5, "texto": "Para isso, vale consultar um contador ou a legislação completa.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null}
+      ],
+      "omiteEssencial": ["F1"],
+      "observacao": "Não traz a dispensa do IBS/CBS de 2026 (art. 348); diz que não consegue confirmar."
+    },
+    {
+      "id": "R016",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, serão exigidas a Contribuição para o PIS/Pasep e a Cofins no momento do recebimento da receita", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null, "nota": "Omite a condição do trecho (hipóteses de exigência pelo regime de caixa); apresenta como regra de todas as operações."},
+        {"n": 2, "texto": "Caso a mesma situação configure, até 31 de dezembro de 2026, fato gerador da Contribuição para o PIS/Pasep e da Cofins, serão exigidas, conforme o caso, a Cofins e a Contribuição para o PIS/Pasep", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 1º; art. 408, § 1º, inciso II, alínea a; art. 408, § 1º, inciso II, alínea b", "fato": "F2"}
+      ],
+      "omiteEssencial": ["F1"],
+      "observacao": "Não responde sobre IBS e CBS em 2026 (dispensa do art. 348)."
+    },
+    {
+      "id": "R017",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim. Se sua empresa está no regime regular, pode apropriar créditos de IBS e CBS pelo valor dos tributos pagos sobre esse serviço", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 225, § 5º", "fato": "F1"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Cobre também F2 (crédito pelo valor dos tributos pagos)."
+    },
+    {
+      "id": "R018",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim. O percentual da receita do IBS dos Estados, do Distrito Federal e dos Municípios destinado ao Fundo de Combate à Pobreza pode ser fixado por lei específica do próprio ente federativo, com teto de 1% e vigência a partir de 1º de janeiro de 2033", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 129, § 1º, inciso I; art. 129", "fato": "F1"},
+        {"n": 2, "texto": "Para os entes que já tinham esse fundo na data da Emenda Constitucional nº 132, a lei é apurada com base em uma relação percentual entre receitas médias do período de 2019 a 2026", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 129, § 1º, inciso I; art. 129, § 1º", "fato": "F4", "nota": "Diz que 'a lei é apurada'; o trecho apura a relação percentual (por Estado, adicional/ICMS), e a frase é vaga sobre o efeito de limite."}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Frase 1 cobre F1, F2 e F3."
+    },
+    {
+      "id": "R019",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Pela omissão de informação sobre operações de importação ou exportação, a multa é de 100 UPF por informação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIX", "fato": null},
+        {"n": 2, "texto": "Para falsificar, adulterar, extraviar ou inutilizar documento fiscal, a multa é de 100% do valor do tributo de referência", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIV", "fato": null},
+        {"n": 3, "texto": "As penalidades são majoradas em 50% no caso de reincidência específica", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, § 1º", "fato": null}
+      ],
+      "omiteEssencial": ["F1", "F3", "F4", "F5"],
+      "observacao": "Frases fiéis ao art. 341-G (multas acessórias), mas não respondem à autuação por tributo não declarado (art. 341-F: 75%, 50%, 100%, 150%); não diz que são multas acessórias."
+    },
+    {
+      "id": "R020",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, o percentual da receita do IBS dos Estados destinado ao Fundo de Combate à Pobreza pode ser estabelecido por lei específica do respectivo ente federativo", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 129", "fato": "F1"},
+        {"n": 2, "texto": "O limite superior desse percentual é de 1% (um por cento), com vigência a partir de 1º de janeiro de 2033", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 129", "fato": "F2"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Cobre também F3."
+    },
+    {
+      "id": "R021",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Pela omissão de informação sobre operações de importação ou exportação, a multa é de 100 UPF por informação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIX", "fato": null},
+        {"n": 2, "texto": "Pela falsificação, adulteração, extravio ou inutilização de documento fiscal, a multa é de 100% do valor do tributo de referência", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, inciso XIV", "fato": null},
+        {"n": 3, "texto": "As penalidades são majoradas em 50% no caso de reincidência específica", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 341-G, § 1º", "fato": null}
+      ],
+      "omiteEssencial": ["F1", "F3", "F4", "F5"],
+      "observacao": "Frases fiéis ao art. 341-G (multas acessórias), mas não respondem à autuação por tributo não declarado (art. 341-F); não diz que são multas acessórias."
+    },
+    {
+      "id": "R022",
+      "tipoResposta": "RECUSA",
+      "frases": [
+        {"n": 1, "texto": "Por isso não consigo afirmar, com base neles, que você pode parcelar sua dívida nem em quantas parcelas.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Recusa o parcelamento e apresenta multa de mora (0,33%/dia) e redução de 20% como trechos relacionados, com ressalva expressa de que não se aplicam à situação."
+    },
+    {
+      "id": "R023",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Nas operações realizadas diretamente com os contribuintes de que trata o art. 176, o adquirente fica solidariamente responsável pelo pagamento do IBS e da CBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 177", "fato": "F1"}
+      ],
+      "omiteEssencial": ["F2", "F3"],
+      "observacao": "Não responde se muda com liquidação por meio eletrônico (split payment) nem limita a responsabilidade ao valor não extinto."
+    },
+    {
+      "id": "R024",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, nas hipóteses em que o PIS/Pasep e a Cofins são exigidos conforme a receita é efetivamente recebida pelo regime de caixa, serão exigidos no momento do recebimento", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": "F2"},
+        {"n": 2, "texto": "Nessa mesma situação, não será exigida a CBS sobre o recebimento da receita decorrente da operação, salvo no caso previsto no § 2º", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso III", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    }
+  ]
+}

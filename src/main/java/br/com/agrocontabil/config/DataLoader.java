@@ -3,6 +3,7 @@ package br.com.agrocontabil.config;
 import br.com.agrocontabil.exception.SenhaFracaException;
 import br.com.agrocontabil.model.Contador;
 import br.com.agrocontabil.model.CredencialUsuario;
+import br.com.agrocontabil.model.EnderecoPostal;
 import br.com.agrocontabil.model.EnderecoProdutor;
 import br.com.agrocontabil.model.Escritorio;
 import br.com.agrocontabil.model.FuncaoEscritorio;
@@ -10,6 +11,7 @@ import br.com.agrocontabil.model.PorteEmpresa;
 import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.model.RegimeTributario;
 import br.com.agrocontabil.model.SituacaoVinculo;
+import br.com.agrocontabil.model.TipoEscritorio;
 import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.model.VinculoCarteira;
 import br.com.agrocontabil.repository.ContadorRepository;
@@ -30,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -55,7 +58,16 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile({"dev", "homolog"})
+@Order(DataLoader.ORDEM)
 public class DataLoader implements CommandLineRunner {
+
+  /**
+   * Posição entre os {@code CommandLineRunner}: <strong>antes</strong> do seed da demonstração
+   * (issue #470). O seed fecha os meses antigos de todos os produtores que existem no banco; sem
+   * ordem declarada, os produtores deste loader entravam no fechamento ou não conforme a ordem de
+   * registro dos beans. É o estado que a VPS tem depois do reset da demonstração.
+   */
+  public static final int ORDEM = 10;
 
   private static final Logger log = LoggerFactory.getLogger(DataLoader.class);
 
@@ -230,9 +242,26 @@ public class DataLoader implements CommandLineRunner {
       return existente.get();
     }
 
-    // Escritorio do seed com o contador como administrador (issue #228).
-    Escritorio escritorio = escritorioRepository.save(
-        Escritorio.builder().nome("Escritorio Contabil Campo Certo").build());
+    // Escritorio do seed com o contador como administrador (issue #228). Empresarial, como o da
+    // demonstracao (#519): com CNPJ, telefone e endereco postal, convida equipe e grava endereco
+    // proprio. So em banco novo: no ja semeado o metodo volta antes, e o escritorio fica com a
+    // classificacao do changeSet 0062 (sem CNPJ e com um membro, PESSOAL). O documento do
+    // contador semeado segue o CNPJ de antes da #519 (conta existente).
+    Escritorio escritorio = escritorioRepository.save(Escritorio.builder()
+        .tipo(TipoEscritorio.EMPRESARIAL)
+        .nome("Escritorio Contabil Campo Certo")
+        .cnpj(CNPJ_CONTADOR.replaceAll("\\D", ""))
+        .telefone("6533330001")
+        .endereco(EnderecoPostal.builder()
+            .cep("78005000")
+            .logradouro("Avenida Getulio Vargas")
+            .numero("500")
+            .bairro("Centro")
+            .codigoMunicipioIbge("5103403")
+            .municipio("Cuiaba")
+            .uf("MT")
+            .build())
+        .build());
     Contador contador =
         Contador.builder()
             .escritorioId(escritorio.getId())

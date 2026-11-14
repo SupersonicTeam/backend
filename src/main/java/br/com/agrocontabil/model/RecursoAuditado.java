@@ -20,5 +20,7 @@ public enum RecursoAuditado {
   /** Pendencia (pedido de documento, #180). */
   PENDENCIA,
   /** Notificacao ao produtor (#182): o recurso_id e a notificacao (ou o produtor, sem item). */
-  NOTIFICACAO
+  NOTIFICACAO,
+  /** Modelo de pedido de documento do escritorio (#517): o recurso_id e o modelo. */
+  MODELO_PEDIDO
 }

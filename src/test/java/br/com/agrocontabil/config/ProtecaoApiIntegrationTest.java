@@ -11,6 +11,7 @@ import br.com.agrocontabil.model.Produtor;
 import br.com.agrocontabil.repository.ProdutorRepository;
 import br.com.agrocontabil.support.IdentidadeMockadaConfig;
 import br.com.agrocontabil.support.TestDatabaseCleaner;
+import java.net.URI;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -139,6 +140,15 @@ class ProtecaoApiIntegrationTest {
         .andExpect(header().string("Strict-Transport-Security",
             Matchers.allOf(Matchers.containsString("max-age=31536000"),
                 Matchers.containsString("includeSubDomains"))));
+  }
+
+  @Test
+  @DisplayName("caminho codificado (/%61pi) e roteado como /api e tambem leva a CSP (#345)")
+  void cspComCaminhoCodificado() throws Exception {
+    // get(URI), nao get(String): o String recodificaria o % como %25.
+    mockMvc.perform(doIp(get(URI.create("/%61pi/v1/health")), ipNovo()))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Content-Security-Policy", SecurityConfig.CSP_API));
   }
 
   @Test

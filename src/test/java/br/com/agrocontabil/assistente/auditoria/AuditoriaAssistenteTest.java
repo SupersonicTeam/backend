@@ -61,6 +61,58 @@ class AuditoriaAssistenteTest {
     assertThat(r.desfechoDados()).isNull();
     assertThat(r.desfechoLegislacao()).isNull();
     assertThat(r.perguntaLeiReescrita()).isNull();
+    assertThat(r.fidelidadeLei()).isNull();
+  }
+
+  @Test
+  @DisplayName("#269: o desfecho da conferencia de fidelidade da lei vai ao registro, so o enum")
+  void fidelidadeDaLeiVaiAoRegistro() {
+    contexto.registrarFidelidadeLei(
+        br.com.agrocontabil.model.DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+
+    auditoria.registrar(contexto, "LEGISLACAO", DesfechoInteracao.FIDELIDADE_REPROVADA,
+        "anthropic/simulado", 10, 80);
+
+    RegistroInteracao r = capturar();
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.FIDELIDADE_REPROVADA);
+    assertThat(r.fidelidadeLei())
+        .isEqualTo(br.com.agrocontabil.model.DesfechoFidelidadeLei.REPROVADA_COBERTURA);
+  }
+
+  @Test
+  @DisplayName("#269: com o juiz, tokens e tempo dele vao a colunas proprias e saem dos da pergunta")
+  void juizDaLeiSaiDoTotalDaPergunta() {
+    contexto.registrarUso(new org.springframework.ai.chat.prompt.Prompt("x".repeat(4000)),
+        null);
+    int entradaTotal = contexto.tokensEntrada();
+    int saidaTotal = contexto.tokensSaida();
+    contexto.registrarJuizLei(300, 400, 0);
+
+    auditoria.registrar(contexto, "LEGISLACAO", DesfechoInteracao.RESPONDIDA,
+        "anthropic/simulado", 1000, 80);
+
+    RegistroInteracao r = capturar();
+    assertThat(r.latenciaJuizMs()).isEqualTo(300L);
+    assertThat(r.tokensEntradaJuiz()).isEqualTo(400);
+    assertThat(r.tokensSaidaJuiz()).isZero();
+    assertThat(r.latenciaMs()).isEqualTo(700L);
+    assertThat(r.tokensEntrada()).isEqualTo(entradaTotal - 400);
+    assertThat(r.tokensSaida()).isEqualTo(saidaTotal);
+    // A soma das colunas e o total da pergunta.
+    assertThat(r.tokensEntrada() + r.tokensEntradaJuiz()).isEqualTo(entradaTotal);
+  }
+
+  @Test
+  @DisplayName("#269: sem o juiz, as colunas dele ficam nulas e os totais nao mudam")
+  void semJuizColunasNulas() {
+    auditoria.registrar(contexto, "LEGISLACAO", DesfechoInteracao.RESPONDIDA,
+        "anthropic/simulado", 1000, 80);
+
+    RegistroInteracao r = capturar();
+    assertThat(r.latenciaJuizMs()).isNull();
+    assertThat(r.tokensEntradaJuiz()).isNull();
+    assertThat(r.tokensSaidaJuiz()).isNull();
+    assertThat(r.latenciaMs()).isEqualTo(1000L);
   }
 
   private RegistroInteracao capturar() {

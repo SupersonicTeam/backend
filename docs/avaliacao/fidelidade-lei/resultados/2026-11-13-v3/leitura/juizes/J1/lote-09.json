@@ -1,0 +1,144 @@
+{
+  "juiz": "J1",
+  "lote": "lote-09",
+  "itens": [
+    {
+      "id": "R097",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Cada obra é apurada separadamente.", "rotulo": "SUPORTADA", "dispositivoCitado": null, "fato": "F2"},
+        {"n": 2, "texto": "A apuração do IBS e da CBS é feita para cada empreendimento de construção civil, vinculada a um CNPJ ou CPF específico, e cada obra", "rotulo": "CITACAO_ERRADA", "dispositivoCitado": "art. 270, parágrafo único", "fato": "F1", "nota": "Conteúdo está no caput do art. 270, não no parágrafo único."},
+        {"n": 3, "texto": "Além disso, o documento fiscal deve indicar o número do cadastro da obra nas aquisições de bens e serviços usados em cada uma", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único", "fato": null},
+        {"n": 4, "texto": "Já a regra geral para os demais estabelecimentos é a consolidação: a apuração consolida as operações de todos os estabelecimentos", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 42", "fato": null},
+        {"n": 5, "texto": "Por isso, a fazenda e a construtora podem ter apurações diferentes, mas a construtora deve tratar cada obra à parte.", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": null, "fato": null, "nota": "Apurações diferentes para fazenda e construtora não decorre dos trechos; art. 42 consolida estabelecimentos."}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R098",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, nas hipóteses em que o PIS/Pasep e a Cofins são exigidos à medida que", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": "F2"},
+        {"n": 2, "texto": "Nesse mesmo caso, não será exigida a CBS sobre o recebimento da receita decorrente da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso III", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Omite a ressalva do § 2º no inciso III, sem relevância aparente para o caso."
+    },
+    {
+      "id": "R099",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Com base nos trechos disponíveis, não há como afirmar que você deva pagar IBS e CBS sobre as notas de 2026 de forma geral.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhecimento de limite."},
+        {"n": 2, "texto": "O que os trechos tratam é o período de transição: para situações que configurem fato gerador até 31 de dezembro de 2026, são exigidos", "rotulo": "ALEM_DO_TRECHO", "dispositivoCitado": "art. 408, § 1º, inciso II, alíneas a e b", "fato": null, "nota": "'e não a CBS' não consta dos trechos citados; inciso II só exige PIS e Cofins."},
+        {"n": 3, "texto": "Já para o PIS/Pasep e a Cofins-Importação, o regime de transição também prevê a exigência dessas contribuições para operações", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 1º, inciso II", "fato": null},
+        {"n": 4, "texto": "Sobre operações com recebimento de receita pelo regime de caixa, em 2026 ou com fato gerador pendente na publicação da lei, o PIS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": null},
+        {"n": 5, "texto": "Os trechos disponíveis não tratam de IBS nem de cobrança de IBS nas notas de 2026, então não tenho base para afirmar isso.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhecimento de limite."},
+        {"n": 6, "texto": "Para confirmar o tratamento da sua operação, consulte um contador ou advogado tributarista.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugestão de contador."}
+      ],
+      "omiteEssencial": ["F1", "F2"],
+      "observacao": "Não traz a dispensa do art. 348; responde com a transição do art. 408."
+    },
+    {
+      "id": "R100",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Conectivo de resposta."},
+        {"n": 2, "texto": "O percentual da receita do IBS dos Estados, do DF e dos Municípios destinado ao Fundo de Combate à Pobreza pode ser fixado por lei", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 129", "fato": "F1"},
+        {"n": 3, "texto": "Quanto ao cálculo do percentual para entes que já tinham o fundo na data da Emenda 132, a lei define apurações com base em média", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 129, § 1º, incisos I, II e III", "fato": "F4"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R101",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O prestador de serviço de pagamento ou a instituição operadora do sistema de pagamento pode impugnar a penalidade aplicada, no prazo", "rotulo": "OUTRA_RESSALVA", "dispositivoCitado": "art. 471-F", "fato": null, "nota": "Fiel ao trecho, mas trata de outro sujeito; apresentado como resposta ao rito sumário do contribuinte."},
+        {"n": 2, "texto": "A impugnação é dirigida à RFB, relativamente à CBS, e ao CGIBS, relativamente ao IBS", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F", "fato": null},
+        {"n": 3, "texto": "Da decisão do órgão revisor cabe recurso hierárquico uma única vez, no prazo de 10 dias úteis, contado da ciência da decisão", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 471-F, § 1º", "fato": null}
+      ],
+      "omiteEssencial": ["F1", "F2", "F3"],
+      "observacao": "Não trata do rito sumário do art. 76 da LC 227/2026."
+    },
+    {
+      "id": "R102",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O contribuinte do IBS e da CBS sujeito ao regime regular que adquira títulos de capitalização poderá apropriar créditos de IBS e", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 225, § 5º", "fato": "F1"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R103",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "O contribuinte sujeito ao regime regular da CBS pode apropriar crédito presumido sobre o estoque de bens materiais existente em 1º", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381", "fato": "F1"},
+        {"n": 2, "texto": "Esse crédito vale se, em 31 de dezembro de 2026, o contribuinte estava sujeito ao regime de apuração cumulativa da Contribuição", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, inciso I", "fato": "F1"},
+        {"n": 3, "texto": "O direito ao crédito presumido não se aplica aos produtos cuja aquisição foi contemplada por alíquota zero, isenção, suspensão", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 381, § 1º, inciso II", "fato": null},
+        {"n": 4, "texto": "Os trechos disponíveis não informam o valor do crédito presumido, o prazo para apropriá-lo nem a forma de utilização", "rotulo": "NAO_JURIDICA", "dispositivoCitado": "art. 381", "fato": null, "nota": "Reconhecimento de limite."}
+      ],
+      "omiteEssencial": ["F2", "F3", "F4", "F5"],
+      "observacao": ""
+    },
+    {
+      "id": "R104",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Para operações ocorridas até 31 de dezembro de 2026, nas hipóteses em que o PIS/Pasep e a Cofins são exigidos conforme a receita", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso II", "fato": "F2"},
+        {"n": 2, "texto": "Nesse caso, não será exigida a CBS sobre o recebimento da receita decorrente da operação", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 408, § 3º, inciso III", "fato": "F3"}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Omite a ressalva do § 2º no inciso III, sem relevância aparente para o caso."
+    },
+    {
+      "id": "R105",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Cada obra de construção civil é apurada separadamente, pois é considerada um centro de custo distinto", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270", "fato": "F2"},
+        {"n": 2, "texto": "Nas aquisições de bens e serviços usados em uma obra, o documento fiscal deve indicar o número do cadastro da obra a que se destinam", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 270, parágrafo único", "fato": null}
+      ],
+      "omiteEssencial": [],
+      "observacao": "Não menciona a vinculação a CNPJ ou CPF específico (F1), mas cobre a apuração por obra."
+    },
+    {
+      "id": "R106",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Contribuintes no regime regular que sejam tomadores de operações de crédito podem apropriar créditos do IBS e da CBS pela mesma alíquota", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194", "fato": "F1"},
+        {"n": 2, "texto": "O crédito é aplicado sobre as despesas financeiras relativas a essas operações efetivamente pagas, pelo regime de caixa", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194", "fato": "F2"},
+        {"n": 3, "texto": "Entre as deduções do cálculo está o montante correspondente à aplicação da taxa Selic sobre o principal, calculada com base na taxa", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso II", "fato": "F2"},
+        {"n": 4, "texto": "Também é deduzido o montante referente ao valor do principal contido em cada parcela, obedecidas as regras de amortização", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, inciso I", "fato": "F2"},
+        {"n": 5, "texto": "Se a dívida for em moeda estrangeira, o valor da operação é convertido em moeda nacional por taxa de câmbio apurada pelo Banco Central", "rotulo": "CONTRARIO", "dispositivoCitado": "art. 12, § 5º", "fato": "F3", "nota": "Responde como se dívida em dólar gerasse crédito; gabarito veda crédito nessa operação (armadilha)."}
+      ],
+      "omiteEssencial": ["F3", "F4"],
+      "observacao": "Não responde sobre tarifas."
+    },
+    {
+      "id": "R107",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Os créditos do IBS e da CBS são apropriados e compensados ou ressarcidos pelo seu valor nominal, sendo vedadas correção ou", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F1"},
+        {"n": 2, "texto": "A única exceção são os acréscimos de juros relativos a ressarcimento expressamente previstos na lei", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 53, § 2º", "fato": "F2"}
+      ],
+      "omiteEssencial": [],
+      "observacao": ""
+    },
+    {
+      "id": "R108",
+      "tipoResposta": "AFIRMA",
+      "frases": [
+        {"n": 1, "texto": "Sim, em tese você pode apropriar crédito sobre os juros, desde que o financiamento seja um tomador de operação de crédito do regime", "rotulo": "SUPORTADA", "dispositivoCitado": null, "fato": "F1"},
+        {"n": 2, "texto": "O crédito incide sobre as despesas financeiras efetivamente pagas, pelo regime de caixa, e é calculado sobre cada parcela, deduzindo", "rotulo": "SUPORTADA", "dispositivoCitado": "art. 194, incisos I e II", "fato": "F2"},
+        {"n": 3, "texto": "Os trechos não trazem a fórmula numérica completa, então não consigo calcular o valor para você.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhecimento de limite."},
+        {"n": 4, "texto": "Sobre dólar: a base de cálculo inclui os juros e as variações monetárias decorrentes da taxa de câmbio", "rotulo": "CONTRARIO", "dispositivoCitado": "art. 255, § 1º, inciso I", "fato": "F3", "nota": "Sugere crédito normal na dívida em dólar; gabarito veda o crédito (armadilha)."},
+        {"n": 5, "texto": "Quando o valor da operação está em moeda estrangeira, a conversão para real é feita pela taxa de câmbio apurada pelo Banco Central", "rotulo": "CONTRARIO", "dispositivoCitado": "art. 12, § 5º", "fato": "F3", "nota": "Trata a dívida em dólar como apta ao crédito; gabarito veda."},
+        {"n": 6, "texto": "Sobre as tarifas bancárias: os trechos disponíveis não tratam de tarifas, então não consigo afirmar se elas geram crédito.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Reconhecimento de limite."},
+        {"n": 7, "texto": "Recomendo confirmar isso com seu contador.", "rotulo": "NAO_JURIDICA", "dispositivoCitado": null, "fato": null, "nota": "Sugestão de contador."}
+      ],
+      "omiteEssencial": ["F3", "F4"],
+      "observacao": ""
+    }
+  ]
+}

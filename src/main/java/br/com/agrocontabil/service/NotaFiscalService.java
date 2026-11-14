@@ -6,6 +6,7 @@ import br.com.agrocontabil.dto.FiltroNotasRequest;
 import br.com.agrocontabil.dto.NotaFiscalRequest;
 import br.com.agrocontabil.dto.AvisoNotaResponse;
 import br.com.agrocontabil.dto.NotaFiscalResponse;
+import br.com.agrocontabil.dto.ProximoNumeroResponse;
 import br.com.agrocontabil.exception.AprovacaoExigidaException;
 import br.com.agrocontabil.exception.DanfeIndisponivelException;
 import br.com.agrocontabil.exception.DanfePreviewIndisponivelException;
@@ -14,8 +15,10 @@ import br.com.agrocontabil.exception.NfaInvalidaParaEmissaoException;
 import br.com.agrocontabil.exception.NotaFiscalInvalidaParaEmissaoException;
 import br.com.agrocontabil.exception.NotaFiscalNaoEditavelException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
+import br.com.agrocontabil.exception.SerieEsgotadaException;
 import br.com.agrocontabil.exception.XmlGenerationException;
 import br.com.agrocontabil.exception.XmlIndisponivelException;
+import br.com.agrocontabil.nfe.FiscalRulesValidator;
 import br.com.agrocontabil.mapper.NotaFiscalMapper;
 import br.com.agrocontabil.model.AcaoAuditada;
 import br.com.agrocontabil.model.NotaFiscal;
@@ -187,6 +190,26 @@ public class NotaFiscalService {
   }
 
   /**
+   * Número sugerido para a próxima nota própria da série (issue #539): o maior número das notas
+   * próprias do produtor autenticado na série (modelo 55, qualquer status e tipo de documento)
+   * mais 1; sem nota, 1. Só sugestão, sem reserva: o índice único recusa o número repetido no
+   * {@code POST}.
+   *
+   * @param serie série de 0 a 999
+   * @return série e número sugerido
+   * @throws SerieEsgotadaException se o maior número já é o limite do layout (409)
+   */
+  @Transactional(readOnly = true)
+  public ProximoNumeroResponse proximoNumero(int serie) {
+    UUID produtorId = produtorProvider.get().getId();
+    long maior = notaFiscalRepository.findMaiorNumeroPropria(produtorId, serie).orElse(0L);
+    if (maior >= FiscalRulesValidator.NUMERO_MAXIMO) {
+      throw new SerieEsgotadaException(serie);
+    }
+    return new ProximoNumeroResponse(serie, maior + 1);
+  }
+
+  /**
    * Lista as notas do produtor autenticado, paginadas e filtradas (issue #174).
    *
    * <p>O {@code totalElements} da página reflete o filtro. O produtor vem sempre do token: nenhum
@@ -270,9 +293,10 @@ public class NotaFiscalService {
   }
 
   /**
-   * Termo de 3+ caracteres casa o texto pesquisável (número, destinatário, natureza, documento do
-   * destinatário e descrição e NCM dos itens, #271); termo de CPF/CNPJ (11 ou 14 dígitos, com ou
-   * sem máscara) casa o documento; termo só de dígitos mais curto casa o número
+   * Termo de 3+ caracteres casa o texto pesquisável (número, destinatário, natureza e descrição e
+   * NCM dos itens, #271); termo de CPF/CNPJ (11 ou 14 dígitos, com ou sem máscara) casa o
+   * documento do destinatário por igualdade (#399: trecho do documento não casa); termo só de
+   * dígitos mais curto casa o número
    * da nota por prefixo; texto mais curto é ignorado (o trigrama não ajuda abaixo de 3). Dígitos
    * com zero à esquerda não são prefixo de número de nota: ignorados como o texto curto, em vez de
    * zerar a lista.
@@ -280,7 +304,7 @@ public class NotaFiscalService {
   private static Specification<NotaFiscal> busca(String termoBruto) {
     String termo = NormalizacaoBusca.normalizar(termoBruto);
     // CPF/CNPJ (11 ou 14 digitos, com ou sem mascara: "12.345.678/0001-95") casa o documento do
-    // destinatario como palavra inteira, que o texto guarda so com digitos (#271).
+    // destinatario por igualdade na coluna, que guarda so digitos (#399).
     String semMascara = termo.replaceAll("[.\\-/\\s]", "");
     if (semMascara.matches("\\d{11}|\\d{14}")) {
       return NotaFiscalEspecificacoes.comDocumento(semMascara);

@@ -184,11 +184,12 @@ public class ConviteCarteiraService {
           .criadoEm(agora)
           .expiraEm(agora.plus(propriedades.validade()))
           .build());
-      String nomeEscritorio = nomeParaEmail(escritorio.getNome());
+      EscritorioDoConvite remetente =
+          EscritorioDoConvite.de(escritorio, nomeParaEmail(escritorio.getNome()));
       TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
         @Override
         public void afterCommit() {
-          enviarEmSegundoPlano(normalizado, nomeEscritorio);
+          enviarEmSegundoPlano(normalizado, remetente, salvo.getExpiraEm());
         }
       });
       return salvo;
@@ -295,12 +296,12 @@ public class ConviteCarteiraService {
         .orElse(null);
   }
 
-  private void enviarEmSegundoPlano(String email, String escritorio) {
+  private void enviarEmSegundoPlano(String email, EscritorioDoConvite escritorio,
+      OffsetDateTime expiraEm) {
     try {
       executor.execute(() -> {
         try {
-          envio.enviarConvite(email, escritorio, propriedades.urlFrontend(),
-              propriedades.validade());
+          envio.enviarConvite(email, escritorio, propriedades.urlFrontend(), expiraEm);
         } catch (RuntimeException e) {
           // Sem o e-mail no log (LGPD); o convite ja existe e aparece para o produtor no login.
           log.warn("Falha ao enviar o e-mail do convite da carteira: {}",
@@ -339,9 +340,12 @@ public class ConviteCarteiraService {
 
   private static ConviteRecebidoResponse recebido(ConviteCarteira convite, Escritorio escritorio,
       Contador contador) {
+    boolean verificado = escritorio != null && escritorio.cnpjVerificado();
     return new ConviteRecebidoResponse(
         convite.getId(),
         escritorio == null ? null : escritorio.getNome(),
+        verificado,
+        verificado ? escritorio.getCnpj() : null,
         contador == null ? null : contador.getNomeCompleto(),
         contador == null ? null : contador.getCrc(),
         convite.getSituacao(),

@@ -9,6 +9,7 @@ import br.com.agrocontabil.dto.ResultadoAuditavel;
 import br.com.agrocontabil.exception.EnderecoExigeCnpjException;
 import br.com.agrocontabil.exception.EnderecoNaoEncontradoException;
 import br.com.agrocontabil.exception.EnderecoTrocaRecenteException;
+import br.com.agrocontabil.exception.EscritorioPessoalException;
 import br.com.agrocontabil.exception.ResourceNotFoundException;
 import br.com.agrocontabil.exception.SlugIndisponivelException;
 import br.com.agrocontabil.mapper.EscritorioMapper;
@@ -19,6 +20,7 @@ import br.com.agrocontabil.model.Escritorio;
 import br.com.agrocontabil.model.EscritorioSlugAnterior;
 import br.com.agrocontabil.model.FuncaoEscritorio;
 import br.com.agrocontabil.model.RecursoAuditado;
+import br.com.agrocontabil.model.TipoEscritorio;
 import br.com.agrocontabil.repository.ContadorRepository;
 import br.com.agrocontabil.repository.EscritorioRepository;
 import br.com.agrocontabil.repository.EscritorioSlugAnteriorRepository;
@@ -49,10 +51,16 @@ import org.springframework.transaction.support.TransactionTemplate;
  * decidido pelo {@link MembroEscritorioProvider} e pelo vínculo {@code ATIVO}; o slug só identifica
  * o escritório.
  *
- * <p><strong>Regras.</strong> Só o {@code ADMINISTRADOR}; só escritório com CNPJ (o unipessoal
- * nasce com o nome do contador, e o endereço fica público); uma gravação a cada intervalo (30
+ * <p><strong>Regras.</strong> Só o {@code ADMINISTRADOR}; só escritório empresarial (#519) e com
+ * CNPJ (o pessoal usa o nome do contador, e o endereço fica público); uma gravação a cada intervalo (30
  * dias), mas remover é sempre permitido; o slug que sai fica em carência (90 dias) e ninguém mais o
  * registra; reservado, em uso e em carência recebem a mesma resposta.
+ *
+ * <p><strong>Reservado não é servido (#520).</strong> O slug gravado (no {@code PUT} ou no cadastro
+ * empresarial) fica reservado para o escritório, mas o ask do Caddy, a página pública e o login
+ * pelo subdomínio só valem depois que o CNPJ é verificado ({@link VerificacaoCnpjService}). Sem
+ * isso, cadastros com CNPJ de dígito válido esgotavam a cota de certificados do Let's Encrypt. O
+ * que não é servido recebe a mesma resposta do slug inexistente.
  *
  * <p><strong>Dado pessoal.</strong> O slug pode carregar o nome de uma pessoa: nunca vai a log nem
  * à auditoria, que registra só {@code COM_ENDERECO}/{@code SEM_ENDERECO}.
@@ -106,11 +114,13 @@ public class EnderecoEscritorioService {
    * Define ou troca o endereço do escritório (só administrador). Reenviar o slug atual não muda
    * nada e não conta como troca.
    *
-   * <p>Ordem das recusas: sem CNPJ (422), troca recente (409) e, por último, indisponível (409).
-   * Assim quem ainda não pode trocar não descobre se um slug está livre.
+   * <p>Ordem das recusas: escritório pessoal (409, #519), sem CNPJ (422), troca recente (409) e,
+   * por último, indisponível (409). Assim quem ainda não pode trocar não descobre se um slug está
+   * livre.
    *
    * @param request slug e a ciência da exposição pública (já validados no controller)
    * @return o escritório e o estado do endereço antes e depois, para a auditoria
+   * @throws EscritorioPessoalException escritório pessoal, sem endereço próprio (409, #519)
    * @throws EnderecoExigeCnpjException escritório sem CNPJ (422)
    * @throws EnderecoTrocaRecenteException gravação dentro do intervalo (409)
    * @throws SlugIndisponivelException reservado, em uso ou em carência de outro escritório (409)
@@ -123,6 +133,11 @@ public class EnderecoEscritorioService {
     try {
       return transacao.execute(status -> {
         Escritorio escritorio = travado(admin.getEscritorioId());
+        if (escritorio.getTipo() == TipoEscritorio.PESSOAL) {
+          // A conta pessoal e de um usuario so, sem endereco proprio (#519). Remover segue livre.
+          throw new EscritorioPessoalException(
+              "O escritório pessoal não tem endereço próprio.");
+        }
         String anterior = escritorio.getSlug();
         String antes = anterior == null ? SEM_ENDERECO : COM_ENDERECO;
         if (slug.equals(anterior)) {
@@ -155,6 +170,37 @@ public class EnderecoEscritorioService {
       // recebe a mesma resposta de um slug em uso.
       throw new SlugIndisponivelException();
     }
+  }
+
+  /**
+   * Grava o endereço do escritório empresarial criado no cadastro do contador (issue #519). Roda na
+   * transação do cadastro, com o escritório já gravado: slug indisponível desfaz o cadastro
+   * inteiro.
+   *
+   * <p>Mesma regra do {@link #definir}: o slug é normalizado e recusado se reservado, em uso ou em
+   * carência de outro escritório, com a mesma resposta. A forma e a ciência da exposição pública
+   * já foram conferidas no request. A diferença: o {@code slugAlteradoEm} fica nulo, e o slug do
+   * cadastro não conta para o intervalo entre trocas (um erro de digitação logo no início se
+   * corrige na hora). O slug fica reservado, mas só é servido depois da verificação do CNPJ
+   * (#520): o cadastro é público, e o CNPJ dele só tem o dígito conferido.
+   *
+   * @param escritorio  escritório recém-gravado, com CNPJ
+   * @param informado   slug como veio no request
+   * @param campo       campo do request, para o erro
+   * @throws SlugIndisponivelException reservado, em uso ou em carência de outro escritório (409)
+   */
+  void gravarNoCadastro(Escritorio escritorio, String informado, String campo) {
+    String slug = FormatoSlug.normalizar(informado);
+    OffsetDateTime agora = OffsetDateTime.now(clock);
+    if (reservados.reservado(slug)
+        || escritorioRepository.slugIndisponivel(slug, escritorio.getId(), agora)) {
+      throw new SlugIndisponivelException(campo);
+    }
+    // A linha que sobrar do slug (carencia vencida) sai antes, como no definir.
+    anteriorRepository.apagarPorSlug(slug);
+    escritorio.setSlug(slug);
+    escritorioRepository.saveAndFlush(escritorio);
+    log.info("Endereco do escritorio gravado no cadastro: escritorio={}", escritorio.getId());
   }
 
   /**
@@ -198,7 +244,8 @@ public class EnderecoEscritorioService {
 
   /**
    * O Caddy pode emitir certificado para este domínio? É o "ask" do On-Demand TLS (#464): só com
-   * a chave certa e um endereço servido (ativo, ou em carência com redirecionamento).
+   * a chave certa e um endereço servido (ativo, ou em carência com redirecionamento) de escritório
+   * com o CNPJ verificado (#520). Cada certificado gasta a cota semanal do Let's Encrypt.
    *
    * @param chave   segredo compartilhado com o Caddy
    * @param dominio domínio pedido no TLS, como o Caddy o mandou
@@ -217,8 +264,8 @@ public class EnderecoEscritorioService {
   }
 
   /**
-   * A credencial é de um contador membro do escritório que tem este endereço ativo (com CNPJ)?
-   * Regra única do login e do refresh pelo subdomínio (#464).
+   * A credencial é de um contador membro do escritório que tem este endereço ativo (com o CNPJ
+   * verificado, #520)? Regra única do login e do refresh pelo subdomínio (#464).
    *
    * @param credencial credencial que provou a senha, ou a do refresh
    * @param rotulo     rótulo do host

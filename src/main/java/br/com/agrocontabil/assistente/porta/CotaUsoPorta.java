@@ -2,6 +2,7 @@ package br.com.agrocontabil.assistente.porta;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -25,11 +26,43 @@ public interface CotaUsoPorta {
   ReservaCota reservar(UUID produtorId, String modelo);
 
   /**
+   * Reserva o custo de leitura de uma pergunta que não chama o modelo (#511): toda pergunta tem
+   * custo, e sem saldo para a leitura o 429 vale como nas outras. Sem implementação padrão de
+   * propósito: uma porta que esquecesse a leitura deixaria a pergunta de graça em silêncio.
+   *
+   * @param produtorId    produtor autenticado
+   * @param modelo        identificação do modelo em uso (fator)
+   * @param tokensLeitura tokens estimados da mensagem
+   * @return a reserva
+   */
+  ReservaCota reservarLeitura(UUID produtorId, String modelo, long tokensLeitura);
+
+  /**
+   * Reserva o teto da explicação depois da resposta de dados (#268), à parte da reserva da
+   * pergunta, que a essa altura já foi acertada. <strong>Sem saldo, não há 429:</strong> devolve
+   * vazio, e a resposta do template sai sozinha. Sem implementação padrão de propósito, como a
+   * {@link #reservarLeitura}.
+   *
+   * @param produtorId produtor autenticado
+   * @param modelo     identificação do modelo em uso (fator)
+   * @return a reserva, a ser acertada ou estornada exatamente uma vez; vazio sem saldo
+   */
+  Optional<ReservaCota> reservarExplicacao(UUID produtorId, String modelo);
+
+  /**
    * Acerta pelo consumo real (tokens informados pelo provedor ou estimados).
    *
    * @return créditos consumidos
    */
   long acertar(ReservaCota reserva, long tokensEntrada, long tokensSaida, String modelo);
+
+  /**
+   * Acerta a reserva da explicação ({@link #reservarExplicacao}) pelo consumo real, sem contar
+   * outra pergunta na semana (#268).
+   *
+   * @return créditos consumidos
+   */
+  long acertarExplicacao(ReservaCota reserva, long tokensEntrada, long tokensSaida, String modelo);
 
   /** Devolve a reserva inteira (falha, timeout, interrupção). */
   void estornar(ReservaCota reserva);
@@ -58,7 +91,8 @@ public interface CotaUsoPorta {
    * @param consumidos     gastos
    * @param restantes      ainda disponíveis
    * @param renovaEm       próxima segunda 00:00 (Brasília)
+   * @param percentualUsado percentual da semana usado, de 0 a 100 (#511)
    */
   record UsoCota(String plano, boolean habilitada, long creditosSemana, long consumidos,
-      long restantes, OffsetDateTime renovaEm) {}
+      long restantes, OffsetDateTime renovaEm, int percentualUsado) {}
 }

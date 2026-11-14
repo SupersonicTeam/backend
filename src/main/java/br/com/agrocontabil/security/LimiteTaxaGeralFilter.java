@@ -36,8 +36,6 @@ public class LimiteTaxaGeralFilter extends OncePerRequestFilter {
 
   private static final Duration MINUTO = Duration.ofMinutes(1);
 
-  private static final String PREFIXO_API = "/api/";
-
   private static final String PREFIXO_CHAT = "/api/assistente/chat";
 
   private final LimitadorTaxa geral;
@@ -58,7 +56,8 @@ public class LimiteTaxaGeralFilter extends OncePerRequestFilter {
     String caminho = RotasAutenticacao.caminho(request);
     // Rotas publicas de autenticacao ja tem limite proprio por IP (#208/#209): conta-las aqui de
     // novo faria quem divide IP (CGNAT de operadora movel) perder o refresh por trafego alheio.
-    if (!caminho.startsWith(PREFIXO_API) || RotasAutenticacao.ehPublicaPost(request)) {
+    if (!caminho.startsWith(RotasAutenticacao.PREFIXO_API)
+        || RotasAutenticacao.ehPublicaPost(request)) {
       filterChain.doFilter(request, response);
       return;
     }

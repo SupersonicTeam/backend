@@ -1,0 +1,22 @@
+# Profile VERIFICACAO-CNPJ — comando da verificacao manual do CNPJ do escritorio (issue #520).
+# Usar junto com o profile do ambiente (ex.: dev,verificacao-cnpj ou homolog,verificacao-cnpj).
+# Sobe sem servidor web, sem os jobs e sem o seed da demonstracao, roda o VerificacaoCnpjRunner e
+# encerra. Nunca exposto como endpoint.
+spring:
+  main:
+    web-application-type: none
+
+app:
+  # O seed da banca roda na subida do backend, nao no comando: aqui so atrasaria a marca.
+  demonstracao:
+    habilitada: false
+  nfe:
+    sefaz:
+      sync:
+        enabled: false
+  apuracao:
+    fechamento:
+      enabled: false
+  guia-fiscal:
+    sync:
+      enabled: false

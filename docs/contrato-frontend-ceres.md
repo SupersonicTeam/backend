@@ -20,7 +20,7 @@ A cada pergunta o backend classifica a intenção e escolhe uma **rota**:
 | `DADOS` | Pergunta sobre os dados do produtor no sistema (compras, notas, apuração de IBS/CBS, créditos, guias e vencimentos) | Texto + `fontesDados` (as consultas feitas) |
 | `LEGISLACAO` | Pergunta sobre a lei (EC 132/2023, LC 214/2025, LC 227/2026) | Texto + `citacoes` (dispositivo, link oficial e trecho) |
 | `MISTO` | Precisa dos dados **e** da regra ("tenho direito à redução nessas compras?") | As duas coisas |
-| `FORA_DE_ESCOPO` | Qualquer outro assunto, ou intenção incerta | Texto fixo de apresentação da Ceres |
+| `FORA_DE_ESCOPO` | Qualquer outro assunto, ou intenção incerta; e, desde a #493, a conversa leve (saudação, agradecimento, despedida, "ok", "quem é você?", "tem certeza?"), respondida pelo backend sem modelo, pagando só a leitura da mensagem (#511) | Texto fixo de recusa (desde a #494: a gentil, que diz o que a Ceres faz e dá exemplos, ou a firme, sem exemplo, para tentativa de injeção e pedido sobre outra pessoa), ou a resposta da conversa leve (com `atalhos`, `citacoes` e `fontesDados` vazios e `modoFallback: false`) |
 
 Garantias do backend que a tela deve **mostrar**, não esconder:
 
@@ -79,6 +79,7 @@ X-Usuario-Id: <uuid do produtor>
 | `citacoes` | `Citacao[]` | Trechos de lei citados, na ordem da resposta. Vazio fora de `LEGISLACAO`/`MISTO` |
 | `fontesDados` | `FonteDado[]` | Consultas usadas. **Vazio quando a resposta foi descartada**: sem selo. Cada item traz `origem` (abaixo), que decide o selo |
 | `modoFallback` | `boolean` | `true` quando o modelo estava fora e a resposta foi montada **sem ele** (#146). Exiba um aviso ("assistente em modo limitado") |
+| `explicacao` | `string`, **ausente** quando nula | Explicação curta da resposta de dados, gerada pelo modelo e conferida em código (#268). **Ausente** com a função desligada (padrão), na resposta descartada, fora do prazo e fora da rota de dados. Detalhes abaixo |
 | `atalhos` | `("NOTAS" \| "APURACAO" \| "CREDITOS" \| "CALENDARIO")[]` | Telas onde o dado está, para perguntas de dados: no modo fallback e, desde a #266, quando a Ceres não identificou qual dado consultar (`modoFallback: false`). Mapeie cada valor para a rota do Angular e mostre como botões. Vazio nos outros casos |
 
 #### Origem do dado: `fontesDados[].origem` (#342)
@@ -110,6 +111,24 @@ Na rota `DADOS` (e na parte de dados do `MISTO`), o texto é montado pelo backen
   preenchidos e `modoFallback: false`. Mostre os botões das telas também nesse caso.
 - Siglas (IBS, CBS, Funrural, SEFAZ, NCM, CFOP, NF-e) vêm explicadas entre parênteses na primeira
   vez.
+
+#### Explicação depois da resposta de dados (#268, desligada por padrão)
+
+Nas perguntas de **dados**, com `app.assistente.explicacao.enabled` ligada (só depois da medição
+com o modelo real e do OK do Murillo), a Ceres manda, depois do número, 2 ou 3 frases que dizem o
+que ele quer dizer. Ela é conferida em código (números iguais aos da resposta, tamanho, siglas,
+nenhuma conclusão legal, nada do prompt) e, se falhar em qualquer conferência, simplesmente **não
+vem**. A `resposta` continua completa e correta sozinha.
+
+- **Síncrono:** campo `explicacao` no mesmo JSON; **ausente** quando não há explicação (o JSON é o
+  de antes). Mostre abaixo da resposta, com estilo secundário (por exemplo "Entenda:").
+- **Streaming:** evento `explicacao` entre a `resposta` e o `fim` (seção 4); o evento `resposta`
+  nunca traz o campo.
+- **Rota de lei:** não muda.
+- **Uso:** a explicação gasta créditos (#511), somados ao uso da semana; o `percentualUsado` já os
+  inclui. Sem saldo para ela, a resposta sai sem a explicação, **sem 429**.
+
+Contrato publicado para o frontend em SupersonicTeam/frontend#187 (opcional).
 
 #### Modo fallback (#146)
 
@@ -172,12 +191,14 @@ próprio: não troque `/chat` por `Accept: text/event-stream`.
 |---|---|---|
 | `rota` | `{"rota":"DADOS"}` | Assim que a intenção é decidida (em segundos): troque "pensando…" por "consultando suas notas…" / "consultando a legislação…" |
 | `resposta` | o mesmo JSON do `POST /chat` | Resposta final, já validada |
+| `explicacao` | `{"explicacao":"..."}` | **Opcional** (#268, desligada por padrão): explicação curta da resposta de dados, já conferida. Acrescente abaixo da resposta, sem mexer no texto já mostrado. Descartada ou fora do prazo, não vem |
 | `fim` | `{}` | O stream termina |
 | `erro` | envelope `ApiError` (seção 5) | Falha depois de o stream abrir (modelo fora, tempo esgotado). Encerra o stream |
 
 Sequência real (a primeira linha é um comentário SSE, `:ceres`, que **não é evento**: ignore
 toda linha que começa com `:`; o exemplo de consumo abaixo já faz isso, porque só trata blocos com
-`event:`):
+`event:`). Desde a #499 o mesmo comentário pode vir **também antes de cada chamada ao modelo**,
+entre os eventos, quantas vezes a pergunta chamar o modelo:
 
 ```text
 :ceres
@@ -202,14 +223,28 @@ que, de vez em quando, fechava o stream depois da `rota` sem `resposta`, `fim` n
 acontecer de o stream terminar sem `fim` nem `erro`, trate como falha de conexão e mostre o botão
 de tentar de novo.
 
+**Explicação e erro depois da resposta (#268):** com a explicação ligada, o `fim` pode demorar
+alguns segundos depois da `resposta` (o tempo da explicação, nunca mais que o prazo dela). Encerre o
+"pensando…" ao receber a `resposta`. O `fim` sempre vem, com ou sem `explicacao`; `fim` sem
+`explicacao` não é erro. Um `erro` depois da `resposta` (o prazo da pergunta venceu durante a
+explicação) **não apaga** a resposta já mostrada: só encerra o stream. A vaga da pergunta (#157) só
+volta depois do `fim` ou do `erro`.
+
 **Erros antes de o stream abrir** (400, 401, 403, 413 e 503 `ASSISTENTE_OCUPADO`) vêm como resposta
 HTTP comum, **em JSON**, mesmo com `Accept: text/event-stream`. Confira `response.ok` antes de ler o
 stream.
 
 **Cancelar:** abortar o `fetch` (`AbortController`) fecha a conexão. O backend percebe a saída na
-próxima escrita do stream (ou no limite de 5 min), interrompe a pergunta e libera a vaga (desfecho
-`CANCELADA` na auditoria). Até lá, uma nova pergunta do mesmo usuário pode receber
-`503 ASSISTENTE_OCUPADO`: trate com o `Retry-After`.
+próxima escrita do stream (desde a #499, também no comentário antes de cada chamada ao modelo; ou
+no limite de 5 min), interrompe a pergunta e libera a vaga (desfecho `CANCELADA` na auditoria). Até
+lá, uma nova pergunta do mesmo usuário pode receber `503 ASSISTENTE_OCUPADO`: trate com o
+`Retry-After`.
+
+**Crédito de uma pergunta cancelada (#499):** ela paga o que já gastou (as chamadas ao modelo
+concluídas e a entrada da que estava em curso), nunca mais que o reservado; sem nenhuma chamada,
+não paga nada. Falha do servidor (tempo esgotado, modelo fora, erro) não cobra. O acerto acontece
+quando a Ceres para, depois de o `fetch` ser abortado: **recarregue o `GET /api/assistente/uso` uns
+5 s depois de cancelar**, e não logo em seguida.
 
 ### Exemplo de consumo (Angular / TypeScript)
 
@@ -301,17 +336,28 @@ envelope.
 ### Barra de uso: `GET /api/assistente/uso` (#166)
 
 ```json
-{ "plano": "padrao", "habilitada": true, "creditosSemana": 1000, "consumidos": 120,
-  "restantes": 880, "renovaEm": "2026-10-19T00:00:00-03:00" }
+{ "plano": "padrao", "habilitada": true, "creditosSemana": 1000000, "consumidos": 120000,
+  "restantes": 880000, "renovaEm": "2026-10-19T00:00:00-03:00", "percentualUsado": 12 }
 ```
 
+- **Mostre só o `percentualUsado` (#511)**, um inteiro de 0 a 100, como o Claude e outras IAs
+  mostram o uso: nunca créditos nem tokens. A regra é do backend: ⌈consumidos ÷ creditosSemana ×
+  100⌉, então qualquer uso aparece como pelo menos 1%; no máximo **99** enquanto houver saldo;
+  **100** só sem saldo (`restantes` = 0); **0** só sem uso nenhum. Os campos em créditos seguem no
+  JSON para compatibilidade e suporte.
+
 - A semana vai de **segunda 00:00 a domingo 23:59** (Brasília) e a sobra **não acumula**.
-- Mostre **créditos**, nunca tokens. Uma pergunta simples custa poucos créditos; uma que consulta
-  várias funções e trechos de lei custa mais.
-- `restantes` já desconta as perguntas em andamento. Uma pergunta só começa se houver saldo para
-  o teto dela (hoje 32 créditos com os padrões; eram 73 até a revisão da #166 depois da #270); o
-  que sobra do teto volta no fim. Uma pergunta que
-  falha não custa nada, e no modo fallback (sem modelo) também não.
+- Desde a #511 a unidade dos créditos é **1 crédito por token** (números inteiros maiores,
+  mesmos campos, sem quebra de contrato): um "olá" custa poucos créditos, uma pergunta que consulta
+  funções e trechos de lei custa milhares. Mensagens ao usuário, como a do 429, não citam número de
+  créditos.
+- **Toda pergunta tem custo (#511):** os atalhos da tela, a conversa leve, a recusa pelo filtro, a
+  recusa firme de pedido sobre outra pessoa ou ataque (#497) e o modo fallback pagam a leitura da
+  mensagem; sem saldo para ela, também recebem **429 `LIMITE_USO_ASSISTENTE`**. Os quatro
+  primeiros não precisam de saldo para o teto de uma pergunta de modelo.
+- `restantes` já desconta as perguntas em andamento. Uma pergunta de modelo só começa se houver
+  saldo para o teto dela (hoje 31.744 créditos com os padrões); o que sobra do teto volta no fim.
+  Uma pergunta que falha por erro do servidor não custa nada.
 - `habilitada: false`: a cota está desligada (demonstração) e nada é bloqueado.
 
 ---
@@ -388,6 +434,7 @@ export interface CeresResposta {
   fontesDados: CeresFonteDado[];
   modoFallback: boolean;
   atalhos: ('NOTAS' | 'APURACAO' | 'CREDITOS' | 'CALENDARIO')[];  // modo fallback e pergunta de dados sem dado identificado (#266)
+  explicacao?: string; // #268: ausente quando nula (desligada, descartada, fora do prazo, outra rota)
 }
 
 export interface ApiErrorDetail {
@@ -411,6 +458,7 @@ export interface ApiError {
 export type CeresEvento =
   | { evento: 'rota'; dado: { rota: RotaCeres } }
   | { evento: 'resposta'; dado: CeresResposta }
+  | { evento: 'explicacao'; dado: { explicacao: string } } // #268, opcional
   | { evento: 'fim'; dado: Record<string, never> }
   | { evento: 'erro'; dado: ApiError };
 ```

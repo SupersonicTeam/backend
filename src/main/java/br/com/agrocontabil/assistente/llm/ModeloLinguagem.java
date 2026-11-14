@@ -2,9 +2,11 @@ package br.com.agrocontabil.assistente.llm;
 
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
@@ -33,12 +35,16 @@ import org.springframework.stereotype.Component;
  * aplicação sobe e só a Ceres responde 503 — o restante do sistema não depende do modelo.
  *
  * <p>Timeout e retry vêm da configuração do Spring AI e do Boot ({@code spring.ai.retry.*},
- * {@code spring.http.client.*}); ver o {@code application.yml}.
+ * {@code spring.http.client.*}); ver o {@code application.yml}. O HTTP 429 do provedor por API é
+ * re-tentado e, esgotadas as tentativas, não abre o disjuntor ({@link #abreDisjuntor}).
  */
 @Component
 public class ModeloLinguagem {
 
   private static final Logger log = LoggerFactory.getLogger(ModeloLinguagem.class);
+
+  /** Profundidade máxima percorrida na cadeia de causas (defesa contra ciclo). */
+  private static final int PROFUNDIDADE_MAXIMA = 16;
 
   /** Motivo do fim quando a geração parou no teto: Ollama e API da OpenAI; API da Anthropic. */
   private static final Set<String> MOTIVOS_DE_CORTE = Set.of("length", "max_tokens");
@@ -117,6 +123,35 @@ public class ModeloLinguagem {
   }
 
   /**
+   * {@code true} se o provedor ativo aceita o raciocínio por chamada ({@link #comRaciocinio}): só a
+   * API da Anthropic (#269).
+   */
+  public boolean aceitaRaciocinioPorChamada() {
+    return "anthropic".equals(provedor);
+  }
+
+  /**
+   * Opções de uma chamada com o raciocínio adaptativo do provedor ligado (#269, juiz da fidelidade
+   * da lei): o teto, como no {@link #comTeto}, e a marca {@link RaciocinioPorChamada#CABECALHO} com
+   * o esforço, que o {@link InterceptorRaciocinioAnthropic} troca no corpo por
+   * {@code thinking: {"type": "adaptive"}} e {@code output_config.effort}. O teto cobre o raciocínio
+   * e a resposta: o raciocínio é cobrado como saída e entra no {@code max_tokens}.
+   *
+   * @param maxTokens teto de tokens gerados, raciocínio incluído
+   * @param esforco   {@code low}, {@code medium} ou {@code high}
+   * @return opções da chamada
+   * @throws IllegalStateException se o provedor não é a API da Anthropic
+   */
+  public ChatOptions comRaciocinio(int maxTokens, String esforco) {
+    if (!aceitaRaciocinioPorChamada()) {
+      throw new IllegalStateException("Raciocínio por chamada só na API da Anthropic; provedor: "
+          + provedor);
+    }
+    return AnthropicChatOptions.builder().maxTokens(maxTokens)
+        .httpHeaders(Map.of(RaciocinioPorChamada.CABECALHO, esforco)).build();
+  }
+
+  /**
    * {@code true} se a geração parou pelo teto de tokens, não porque o modelo terminou (#270). O
    * texto cortado pode ainda parecer válido para os validadores: uma resposta de lei com a marca
    * certa e a frase pela metade, a primeira de duas chamadas de função. Por isso quem chama
@@ -156,10 +191,29 @@ public class ModeloLinguagem {
    * uma pergunta feita para ser recusada, deixaria a Ceres em fallback para todo mundo. Chave de
    * API inválida também é 4xx e também não abre — mas falha rápido, sem esperar timeout.
    *
+   * <p>Limite de taxa do provedor por API (HTTP 429, {@link LimiteTaxaProvedorException}) que
+   * esgotou as tentativas também não abre: o provedor está no ar e só recusou esta chamada. Abrir
+   * deixaria todos os produtores em fallback pela pausa inteira por causa de um limite por minuto.
+   * Erro 5xx e falha de conexão seguem abrindo.
+   *
    * <p>Thread interrompida (tempo esgotado ou cliente que saiu) também não: a falha é da pergunta.
    */
   static boolean abreDisjuntor(RuntimeException falha) {
-    return !(falha instanceof NonTransientAiException) && !Thread.currentThread().isInterrupted();
+    return !(falha instanceof NonTransientAiException)
+        && !limiteDeTaxa(falha)
+        && !Thread.currentThread().isInterrupted();
+  }
+
+  /** Procura o limite de taxa na falha e nas causas dela (o chamador pode tê-la embrulhado). */
+  private static boolean limiteDeTaxa(Throwable falha) {
+    Throwable atual = falha;
+    for (int i = 0; atual != null && i < PROFUNDIDADE_MAXIMA; i++) {
+      if (atual instanceof LimiteTaxaProvedorException) {
+        return true;
+      }
+      atual = atual.getCause() == atual ? null : atual.getCause();
+    }
+    return false;
   }
 
   /**

@@ -53,7 +53,8 @@ class EstadoRecursoLeitor {
       // O vinculo e auditado pelo id do produtor; a situacao anterior vai no "depois" da
       // operacao anterior.
       case PENDENCIA -> pendenciaRepository.findStatusById(id);
-      case CONTA, VINCULO_CARTEIRA, MEMBRO_ESCRITORIO, ESCRITORIO, NOTIFICACAO -> Optional.empty();
+      case CONTA, VINCULO_CARTEIRA, MEMBRO_ESCRITORIO, ESCRITORIO, NOTIFICACAO, MODELO_PEDIDO ->
+          Optional.empty();
     };
     return status.map(Object::toString);
   }

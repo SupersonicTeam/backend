@@ -353,7 +353,9 @@ public class NotaFiscal {
    *
    * <p>Guarda o nome do destinatário em claro, como a própria coluna {@code destinatario_nome}.
    * Se os dados das notas forem cifrados (débito da #147), esta coluna entra na mesma decisão:
-   * busca parcial e cifra determinística não convivem.
+   * busca parcial e cifra determinística não convivem. O CPF/CNPJ do destinatário <strong>não
+   * entra</strong> desde a regra 3 (#399): a busca por ele é por igualdade em
+   * {@code destinatario_cpf_cnpj}.
    */
   @Column(name = "busca_normalizada", length = NormalizacaoBusca.TAMANHO_MAXIMO)
   private String buscaNormalizada;
@@ -385,8 +387,8 @@ public class NotaFiscal {
   }
 
   /**
-   * Recalcula {@link #buscaNormalizada}: número, destinatário, natureza, documento do destinatário
-   * e descrição e NCM dos itens (issues #174 e #271).
+   * Recalcula {@link #buscaNormalizada}: número, destinatário, natureza e descrição e NCM dos
+   * itens (issues #174 e #271), sem o documento do destinatário (#399).
    *
    * <p>Os itens são {@code LAZY}, e o {@code @PreUpdate} só dispara quando a própria nota está suja:
    * quem troca os itens chama este método depois de trocá-los ({@code NotaFiscalService.update}),
@@ -401,7 +403,7 @@ public class NotaFiscal {
     List<NormalizacaoBusca.ItemBusca> paraBusca = itens.stream()
         .map(i -> new NormalizacaoBusca.ItemBusca(i.getDescricao(), i.getNcm())).toList();
     NormalizacaoBusca.TextoNota montado = NormalizacaoBusca.montarTextoDaNota(numero,
-        destinatarioNome, naturezaOperacao, destinatarioCpfCnpj, paraBusca);
+        destinatarioNome, naturezaOperacao, paraBusca);
     if (montado.itensForaDaBusca() > 0) {
       // Sem o texto da nota: so o que falta e quanto.
       log.warn("Busca da nota {}: {} item(ns) nao couberam em {} caracteres e nao serao achados",

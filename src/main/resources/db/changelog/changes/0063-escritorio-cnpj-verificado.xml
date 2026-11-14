@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0063-escritorio-cnpj-verificado.xml
+         Issue #520 (CNPJ do escritorio sem verificacao).
+
+         escritorio.cnpj_verificado_em: quando a GWNext conferiu que o CNPJ
+         gravado e do escritorio. Nulo = nao verificado. So o escritorio
+         verificado tem o endereco proprio servido (ask do Caddy, pagina
+         publica e login pelo subdominio): sem isso, um cadastro com CNPJ de
+         DV valido gastava a cota de certificados do Let's Encrypt.
+
+         escritorio.cnpj_verificacao_metodo: como foi conferido. MANUAL (o
+         comando do profile verificacao-cnpj, na v1) ou DEMONSTRACAO (o
+         escritorio ficticio do seed da banca). Verificacao automatica
+         (e-mail no dominio, Receita) entra depois, com changeSet proprio
+         para o CHECK.
+
+         Trocar o CNPJ limpa os dois (regra da entidade Escritorio). Os
+         escritorios que ja existem nascem nao verificados: nenhum UPDATE
+         aqui. O escritorio da demonstracao e verificado pelo seed na subida.
+
+         uq_escritorio_cnpj_verificado: um CNPJ verificado em um escritorio
+         so. O CNPJ nao verificado continua sem unicidade (o cadastro e o
+         PATCH nunca recusam CNPJ repetido, para nao virar oraculo). Indice
+         parcial so no PostgreSQL; no H2 a regra fica no servico.
+
+         NAO editar changesets anteriores.
+         ================================================================ -->
+
+    <changeSet id="0063-escritorio-cnpj-verificado" author="supersonic-team">
+        <comment>Verificacao do CNPJ do escritorio: quando e como.</comment>
+
+        <addColumn tableName="escritorio">
+            <column name="cnpj_verificado_em" type="TIMESTAMP WITH TIME ZONE"
+                    remarks="Quando o CNPJ foi verificado (#520); nulo = nao verificado"/>
+            <column name="cnpj_verificacao_metodo" type="VARCHAR(20)"
+                    remarks="MANUAL ou DEMONSTRACAO (#520); nulo = nao verificado"/>
+        </addColumn>
+
+        <sql>
+            ALTER TABLE escritorio ADD CONSTRAINT ck_escritorio_cnpj_verificacao
+                CHECK ((cnpj_verificado_em IS NULL AND cnpj_verificacao_metodo IS NULL)
+                    OR (cnpj_verificado_em IS NOT NULL AND cnpj IS NOT NULL
+                        AND cnpj_verificacao_metodo IN ('MANUAL', 'DEMONSTRACAO')))
+        </sql>
+
+        <rollback>
+            <sql>ALTER TABLE escritorio DROP CONSTRAINT ck_escritorio_cnpj_verificacao</sql>
+            <dropColumn tableName="escritorio" columnName="cnpj_verificacao_metodo"/>
+            <dropColumn tableName="escritorio" columnName="cnpj_verificado_em"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="0063-escritorio-cnpj-verificado-unico" author="supersonic-team" dbms="postgresql">
+        <comment>
+            Um CNPJ verificado em um escritorio so. Indice parcial: o H2 nao tem, e la a regra
+            fica so no servico.
+        </comment>
+        <sql>
+            CREATE UNIQUE INDEX uq_escritorio_cnpj_verificado
+                ON escritorio (cnpj)
+                WHERE cnpj_verificado_em IS NOT NULL
+        </sql>
+        <rollback>
+            <sql>DROP INDEX uq_escritorio_cnpj_verificado</sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

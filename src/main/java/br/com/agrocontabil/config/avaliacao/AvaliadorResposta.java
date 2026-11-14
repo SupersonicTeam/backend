@@ -33,7 +33,8 @@ public final class AvaliadorResposta {
       DesfechoInteracao.CITACAO_INVALIDA, DesfechoInteracao.NUMERO_SEM_FONTE,
       DesfechoInteracao.SEM_CONCLUSAO, DesfechoInteracao.FUNCAO_NAO_PERMITIDA,
       DesfechoInteracao.AFIRMACAO_SOBRE_DADOS, DesfechoInteracao.SEM_RESPOSTA,
-      DesfechoInteracao.RESPOSTA_CORTADA, DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
+      DesfechoInteracao.RESPOSTA_CORTADA, DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR,
+      DesfechoInteracao.FIDELIDADE_REPROVADA);
 
   /**
    * Desfechos em que o texto do modelo foi descartado, mesmo que a resposta mostre trechos. A lei
@@ -42,7 +43,8 @@ public final class AvaliadorResposta {
    */
   static final Set<DesfechoInteracao> RESPOSTA_DESCARTADA = EnumSet.of(
       DesfechoInteracao.NUMERO_SEM_FONTE, DesfechoInteracao.CITACAO_INVALIDA,
-      DesfechoInteracao.RESPOSTA_CORTADA, DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR);
+      DesfechoInteracao.RESPOSTA_CORTADA, DesfechoInteracao.REGIME_ESPECIFICO_SEM_SETOR,
+      DesfechoInteracao.FIDELIDADE_REPROVADA);
 
   /**
    * Funções que, quando rodam, são o sinal (nos campos gravados) de que o backend pode ter juntado
