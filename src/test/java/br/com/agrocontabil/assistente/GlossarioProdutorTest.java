@@ -26,6 +26,50 @@ class GlossarioProdutorTest {
   }
 
   @Test
+  @DisplayName("#269: traz os termos da linguagem da lei, nenhum deles como sigla")
+  void termosDaLinguagemDaLei() {
+    List<String> daLei = List.of("alíquota", "base de cálculo", "fato gerador", "contribuinte",
+        "crédito presumido", "isenção", "imunidade", "diferimento", "responsável tributário",
+        "não cumulatividade", "regime regular");
+
+    assertThat(GLOSSARIO.termos()).extracting(Termo::termo).containsAll(daLei);
+    // Sigla não: senão entrariam na acomodação "sigla = nome por extenso" da conferência de
+    // fidelidade (ConferenciaFidelidadeLei) e na régua de clareza, que são de siglas.
+    assertThat(GLOSSARIO.termos().stream().filter(t -> daLei.contains(t.termo())))
+        .allSatisfy(t -> {
+          assertThat(t.sigla()).as(t.termo()).isFalse();
+          assertThat(t.nome()).as(t.termo()).isNull();
+          // emLinha é das respostas de dados: termo novo não muda o texto que já é entregue lá.
+          assertThat(t.emLinha()).as(t.termo()).isFalse();
+        });
+  }
+
+  @Test
+  @DisplayName("#269: os termos da lei são achados nas formas que a lei usa, e não em outra palavra")
+  void padroesDosTermosDaLei() {
+    assertThat(GLOSSARIO.semExplicacao("as alíquotas do imposto")).extracting(Termo::termo)
+        .contains("alíquota");
+    assertThat(GLOSSARIO.semExplicacao("a aliquota sem acento")).extracting(Termo::termo)
+        .contains("alíquota");
+    assertThat(GLOSSARIO.semExplicacao("os fatos geradores")).extracting(Termo::termo)
+        .contains("fato gerador");
+    assertThat(GLOSSARIO.semExplicacao("as bases de cálculo do imposto")).extracting(Termo::termo)
+        .contains("base de cálculo");
+    assertThat(GLOSSARIO.semExplicacao("o regime não cumulativo")).extracting(Termo::termo)
+        .contains("não cumulatividade");
+    assertThat(GLOSSARIO.semExplicacao("os responsáveis tributários")).extracting(Termo::termo)
+        .contains("responsável tributário");
+    assertThat(GLOSSARIO.semExplicacao("as isenções da lei")).extracting(Termo::termo)
+        .contains("isenção");
+    // O crédito presumido é outro conceito: quem aparece é ele, nunca o 'crédito' do glossário.
+    assertThat(GLOSSARIO.semExplicacao("pode apropriar crédito presumido")).extracting(Termo::termo)
+        .containsExactly("crédito presumido");
+    // Pedaço de outra palavra não vale.
+    assertThat(GLOSSARIO.semExplicacao("o regime regulamentado e a contribuinteira"))
+        .extracting(Termo::termo).doesNotContain("regime regular", "contribuinte");
+  }
+
+  @Test
   @DisplayName("Definição em linguagem de produtor: curta, sem número e sem artigo de lei")
   void definicoesCurtasSemNumeroNemArtigo() {
     for (Termo t : GLOSSARIO.termos()) {
@@ -69,7 +113,9 @@ class GlossarioProdutorTest {
         .containsExactly("EC");
     assertThat(GLOSSARIO.semExplicacao("conforme a LC 214/2025")).extracting(Termo::termo)
         .containsExactly("LC");
-    assertThat(GLOSSARIO.semExplicacao("pode apropriar crédito presumido")).isEmpty();
+    // Desde a #269 o 'crédito presumido' tem termo próprio: quem aparece é ele, nunca o 'crédito'.
+    assertThat(GLOSSARIO.semExplicacao("pode apropriar crédito presumido")).extracting(Termo::termo)
+        .containsExactly("crédito presumido");
     assertThat(GLOSSARIO.semExplicacao("pode virar crédito")).extracting(Termo::termo)
         .containsExactly("crédito");
   }

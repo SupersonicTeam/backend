@@ -320,7 +320,13 @@ br.com.agrocontabil
 │                  #   régua da clareza, ClarezaTexto));
 │                  # LinhaGlossario (#424: linha "O que isso quer dizer" ao fim da resposta de lei aceita, montada
 │                  #   pelo backend depois de todas as conferências, com a definição de cada termo do glossário que o
-│                  #   texto usa sem explicar; resposta descartada não leva);
+│                  #   texto usa sem explicar; resposta descartada não leva; teto de 3 termos comuns por resposta,
+│                  #   MAXIMO_COMUNS, na ordem do glossário — sigla fora do teto, porque cortá-la seria regressão na
+│                  #   régua de clareza. Desde a #269 (item 2) o glossário tem os termos da lei — alíquota, base de
+│                  #   cálculo, fato gerador, contribuinte, crédito presumido, isenção, imunidade, diferimento,
+│                  #   responsável tributário, não cumulatividade, regime regular —, todos `sigla: false` e
+│                  #   `emLinha: false`: ficam fora da acomodação sigla↔nome da fidelidade, da régua de clareza e da
+│                  #   composição de dados, e o prompt de lei não muda (a diretriz do PR #425 foi reprovada no Haiku));
 │                  # explicacao/ (#268, com a #415; flag app.assistente.explicacao.enabled, DESLIGADA por padrão):
 │                  #   ExplicacaoDaResposta (3 fases: reserva própria da cota, sem 429 sem saldo; chamada na janela de
 │                  #   interrupção; acerto/estorno e o desfecho na auditoria, changeSet 0064), ExplicadorResposta
