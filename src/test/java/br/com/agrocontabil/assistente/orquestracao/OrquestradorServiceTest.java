@@ -51,6 +51,12 @@ class OrquestradorServiceTest {
       "LC 214/2025", "art. 138", "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
       "Ficam reduzidas em 60% as aliquotas do IBS e da CBS incidentes sobre os insumos.", 0.4);
 
+  /** O dispositivo que institui o IBS, como o atalho de definição o cita (#269). */
+  private static final TrechoRecuperado TRECHO_DEFINICAO = new TrechoRecuperado(null, "id-ibs",
+      "LC 214/2025", "art. 1º, inciso I",
+      "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
+      "Art. 1º Ficam instituídos: I - o Imposto sobre Bens e Serviços (IBS)...", 0);
+
   @Mock private ClassificadorIntencao classificador;
   @Mock private RotaDados rotaDados;
   @Mock private RotaLegislacao rotaLegislacao;
@@ -173,6 +179,48 @@ class OrquestradorServiceTest {
     assertThat(rotasAvisadas).containsExactly(Intencao.FORA_DE_ESCOPO);
     assertThat(contexto.camadaClassificacao()).isEqualTo("CONVERSA_LEVE");
     verifyNoInteractions(classificador, rotaDados, rotaLegislacao);
+  }
+
+  @Test
+  @DisplayName("#269: pergunta de definição responde pelo glossário e pelo dispositivo, sem "
+      + "classificador nem rota, com o modelo fora do ar")
+  void definicaoSemModelo() {
+    disponibilidade.registrarFalha();
+    when(buscaTextual.buscarDispositivos(
+        List.of("LC 214/2025|art. 1º, inciso I"), contexto.hoje()))
+        .thenReturn(List.of(TRECHO_DEFINICAO));
+
+    ResultadoOrquestracao r = orquestrador.responder("oq é o imposto IBS?", contexto,
+        rotasAvisadas::add);
+
+    assertThat(r.rota()).isEqualTo(Intencao.LEGISLACAO);
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.DEFINICAO_DO_GLOSSARIO);
+    assertThat(r.texto()).startsWith("IBS (imposto sobre bens e serviços): ")
+        .contains(AtalhoDefinicao.COM_FONTE);
+    assertThat(r.citacoes()).singleElement().satisfies(c ->
+        assertThat(c.referencia()).isEqualTo("LC 214/2025, art. 1º, inciso I"));
+    assertThat(r.exibirFontes()).isFalse();
+    assertThat(r.modoFallback()).isFalse();
+    assertThat(rotasAvisadas).containsExactly(Intencao.LEGISLACAO);
+    assertThat(contexto.camadaClassificacao()).isEqualTo("ATALHO_DEFINICAO");
+    assertThat(contexto.trechosCitados()).containsExactly("id-ibs");
+    verifyNoInteractions(classificador, rotaDados, rotaLegislacao);
+  }
+
+  @Test
+  @DisplayName("#269: pergunta que só parece definição passa pelo classificador, como antes")
+  void definicaoComPalavraAMaisSegueOFluxo() {
+    when(classificador.classificar(anyString(), any())).thenReturn(
+        new ClassificacaoIntencao(Intencao.LEGISLACAO, 0.9, null, CamadaClassificacao.REGRA));
+    when(rotaLegislacao.responder(anyString(), any())).thenReturn(
+        new ResultadoRota("regra geral", DesfechoInteracao.RESPONDIDA, List.of(CITACAO)));
+
+    ResultadoOrquestracao r = orquestrador.responder("o que é a alíquota do IBS?", contexto,
+        rotasAvisadas::add);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+    assertThat(contexto.camadaClassificacao()).isEqualTo("REGRA");
+    verify(rotaLegislacao).responder(anyString(), any());
   }
 
   @Test
