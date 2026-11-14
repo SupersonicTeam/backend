@@ -90,10 +90,11 @@ public class AtalhoDefinicao {
    * tenta nessa ordem). Lista fechada: forma nova entra aqui.
    */
   static final List<String> FORMULAS = List.of(
-      "me explique o que e", "me explica o que e", "qual o significado de", "o que quer dizer",
-      "que quer dizer", "o que vem a ser", "me explica o que sao", "o que significa",
-      "que significa", "significado de", "o que seria", "o que sao", "oq sao", "o q sao",
-      "que sao", "o que e", "oq e", "o q e", "que e", "defina", "define").stream()
+      "me explique o que e", "me explica o que e", "me explique o que sao",
+      "me explica o que sao", "qual o significado de", "o que quer dizer", "que quer dizer",
+      "o que vem a ser", "o que significa", "que significa", "significado de", "o que seria",
+      "o que sao", "oq sao", "oque sao", "o q sao", "que sao",
+      "o que e", "oq e", "oque e", "o q e", "que e", "defina", "define").stream()
       .sorted(Comparator.comparingInt((String f) -> f.split(" ").length)
           .thenComparingInt(String::length).reversed())
       .toList();

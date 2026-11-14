@@ -64,6 +64,10 @@ class AtalhoDefinicaoTest {
     // O crédito presumido é outro conceito e tem termo próprio.
     assertThat(termoDe("o que é crédito presumido?")).isEqualTo("crédito presumido");
     assertThat(termoDe("o que é não cumulatividade?")).isEqualTo("não cumulatividade");
+    // "oque" junto: erro de digitação comum, e a rota de lei é onde a pergunta falha hoje.
+    assertThat(termoDe("oque é o IBS?")).isEqualTo("IBS");
+    assertThat(termoDe("oque sao creditos presumidos?")).isEqualTo("crédito presumido");
+    assertThat(termoDe("me explique o que são créditos")).isEqualTo("crédito");
   }
 
   @Test
