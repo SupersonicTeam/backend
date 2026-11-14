@@ -159,14 +159,24 @@ public class AtalhoDefinicao {
    * quer dizer" dos termos que a definição usa (a do IBS fala do ICMS e do ISS). Sem a base de
    * legislação, a citação sai vazia e o fecho não entra.
    *
-   * @param termo    termo reconhecido
+   * <p>Só para termo que o {@link #reconhecer} devolveu: o atalho existe para os termos com
+   * dispositivo curado, e um termo de fora não tem o que citar. O método é do pacote, como o
+   * {@code OrquestradorService} que o chama, e a conferência deixa isso explícito em vez de
+   * estourar num {@code List.of(null)} se um caminho novo o chamar errado.
+   *
+   * @param termo    termo reconhecido, do {@link #DISPOSITIVOS}
    * @param contexto contexto da pergunta ("hoje" da vigência, trechos da auditoria)
    * @return resposta de legislação aceita, sem fontes de dados
+   * @throws IllegalArgumentException se o termo não tem dispositivo curado
    */
-  public ResultadoOrquestracao responder(GlossarioProdutor.Termo termo,
-      ContextoAssistente contexto) {
+  ResultadoOrquestracao responder(GlossarioProdutor.Termo termo, ContextoAssistente contexto) {
+    String dispositivo = DISPOSITIVOS.get(termo.termo());
+    if (dispositivo == null) {
+      throw new IllegalArgumentException(
+          "Termo sem dispositivo curado no atalho de definicao: " + termo.termo());
+    }
     List<CitacaoLegal> citacoes = CitacoesFixas.buscar(busca,
-        List.of(DISPOSITIVOS.get(termo.termo())), contexto, "Atalho de definicao");
+        List.of(dispositivo), contexto, "Atalho de definicao");
     String texto = definicao(termo) + (citacoes.isEmpty() ? "" : "\n\n" + COM_FONTE);
     return new ResultadoOrquestracao(Intencao.LEGISLACAO,
         LinhaGlossario.acrescentadaA(texto), DesfechoInteracao.DEFINICAO_DO_GLOSSARIO,

@@ -1,9 +1,12 @@
 package br.com.agrocontabil.assistente.orquestracao;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
@@ -135,6 +138,16 @@ class AtalhoDefinicaoTest {
     assertThat(r.texto()).startsWith("CBS (contribuição sobre bens e serviços): ")
         .doesNotContain(AtalhoDefinicao.COM_FONTE);
     assertThat(r.citacoes()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("#269: termo sem dispositivo curado não é respondido pelo atalho")
+  void termoSemDispositivoRecusado() {
+    GlossarioProdutor.Termo nfe = termo("NF-e");
+
+    assertThatThrownBy(() -> atalho.responder(nfe, contexto))
+        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("NF-e");
+    verify(busca, never()).buscarDispositivos(anyList(), any());
   }
 
   @Test
