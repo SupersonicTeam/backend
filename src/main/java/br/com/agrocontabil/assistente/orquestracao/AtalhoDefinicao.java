@@ -77,6 +77,15 @@ public class AtalhoDefinicao {
           "EC 132/2023|art. 1º (redação do art. 156-A, § 1º, inciso VIII)"));
 
   /**
+   * Os termos do glossário que têm dispositivo curado, na ordem do glossário. Calculado uma vez: o
+   * reconhecimento roda a cada pergunta (duas vezes, com o {@code respondeSemModelo} da cota).
+   */
+  private static final List<GlossarioProdutor.Termo> TERMOS =
+      GlossarioProdutor.padrao().termos().stream()
+          .filter(t -> DISPOSITIVOS.containsKey(t.termo()))
+          .toList();
+
+  /**
    * Aberturas de pergunta de definição, normalizadas, da mais longa para a mais curta (a busca
    * tenta nessa ordem). Lista fechada: forma nova entra aqui.
    */
@@ -102,9 +111,10 @@ public class AtalhoDefinicao {
    * O padrão de cada termo do mapa, ignorando a caixa: a mensagem chega normalizada em minúsculas
    * e o padrão de uma sigla no glossário é escrito como ela aparece no texto da Ceres
    * ({@code \bIBS\b}), que não casaria "o que é o ibs?". As formas que o padrão aceita (plural, o
-   * {@code (?!\s+presumid)} do crédito) continuam valendo. Compilado uma vez.
+   * {@code (?!\s+presumid)} do crédito) continuam valendo. Compilado uma vez, depois do
+   * {@link #TERMOS}, de que depende (a ordem dos campos estáticos é a da inicialização).
    */
-  private static final Map<String, Pattern> PADROES_SEM_CAIXA = termosComDispositivo().stream()
+  private static final Map<String, Pattern> PADROES_SEM_CAIXA = TERMOS.stream()
       .collect(Collectors.toUnmodifiableMap(GlossarioProdutor.Termo::termo,
           t -> Pattern.compile(t.padrao().pattern(),
               Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE)));
@@ -227,9 +237,7 @@ public class AtalhoDefinicao {
 
   /** Os termos do glossário que têm dispositivo curado, na ordem do glossário. */
   static List<GlossarioProdutor.Termo> termosComDispositivo() {
-    return GlossarioProdutor.padrao().termos().stream()
-        .filter(t -> DISPOSITIVOS.containsKey(t.termo()))
-        .toList();
+    return TERMOS;
   }
 
   /**
