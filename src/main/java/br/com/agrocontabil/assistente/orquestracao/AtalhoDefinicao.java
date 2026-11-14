@@ -255,11 +255,4 @@ public class AtalhoDefinicao {
     termosComDispositivo().forEach(t -> textos.put("definicao " + t.termo(), definicao(t)));
     return textos;
   }
-
-  /** O mapa na ordem do glossário, para o relatório e os testes. */
-  static Map<String, String> dispositivosNaOrdemDoGlossario() {
-    Map<String, String> ordenado = new LinkedHashMap<>();
-    termosComDispositivo().forEach(t -> ordenado.put(t.termo(), DISPOSITIVOS.get(t.termo())));
-    return ordenado;
-  }
 }

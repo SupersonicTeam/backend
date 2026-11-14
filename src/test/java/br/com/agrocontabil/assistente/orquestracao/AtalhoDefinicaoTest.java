@@ -159,7 +159,8 @@ class AtalhoDefinicaoTest {
   void mapaCoerenteComOGlossario() {
     assertThat(AtalhoDefinicao.termosComDispositivo())
         .hasSameSizeAs(AtalhoDefinicao.DISPOSITIVOS.keySet());
-    assertThat(AtalhoDefinicao.dispositivosNaOrdemDoGlossario().keySet())
+    // A ordem é a do glossário, e é a prioridade com que o teto da LinhaGlossario corta.
+    assertThat(AtalhoDefinicao.termosComDispositivo()).extracting(GlossarioProdutor.Termo::termo)
         .containsExactly("IBS", "CBS", "Funrural", "crédito", "apuração", "split payment",
             "alíquota", "base de cálculo", "fato gerador", "contribuinte", "crédito presumido",
             "imunidade", "não cumulatividade", "regime regular");
