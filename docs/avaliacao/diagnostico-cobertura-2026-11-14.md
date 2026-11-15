@@ -117,10 +117,20 @@ barata e mais segura:
 - **dar ao `pedeDesempate` a mesma exceção de contraparte que o `inequivoco` já tem** — uma
   condição, no mesmo arquivo, alinhando dois limiares que hoje divergem sem motivo aparente.
 
-**Como isto foi apurado:** por leitura dos padrões do `SinalRecusaFirme` contra o texto das três
-perguntas, **não** por execução dos métodos (a máquina estava com o benchmark oficial). A camada
-`LLM` das três é dado medido, da auditoria; o caminho `pedeDesempate` → modelo é inferência a
-partir do código e deve ser confirmada rodando os dois métodos contra as três perguntas.
+**Como isto foi apurado.** A camada `LLM` das três é dado da auditoria da rodada de 14/11. O
+caminho pelo `pedeDesempate` era, no primeiro relato, inferência por leitura dos padrões, porque a
+máquina estava com o benchmark oficial; **em 15/11 ele foi medido**, executando os dois métodos
+contra o texto literal das três perguntas (`SinalRecusaFirme` é estático e puro: teste unitário,
+sem banco e sem modelo). Resultado: `inequivoco` devolve `false` nas três e `pedeDesempate`
+devolve `true` nas três, como as duas colunas acima registram. A assimetria entre os limiares é
+comportamento observado, não leitura de código.
+
+O teste que mediu isso **não está nesta branch**: ele é vermelho enquanto a condição não existir, e
+entra no PR da correção, junto da condição que o vira. Ele cobre os três ids, mas a correção pela
+contraparte alcança só a **70** e a **C4** — na **76** o `pedeDesempate` dispara por `POSSE +
+PARENTE` ("meu pai"), que não é contraparte de operação nenhuma, e nenhum verbo de `CONTRAPARTE`
+cobre "faleceu e deixou". A 76 pede o prompt ou um critério novo (marca de terceiro **sem** pedido
+de dado não deveria, sozinha, tirar a decisão das camadas), e isso é redesenho, não ajuste.
 
 ## 4. Fora do escopo: a Ceres quase não recusa, ela falha
 
@@ -165,11 +175,16 @@ quais impostos vou pagar?" e só os impostos foram respondidos.
 1. **Texto da recusa, com encaminhamento** (`recomendacao-recusa.md`, pronto para colar). É uma
    constante, sem modelo, sem risco para o que a banca mede. Resolve a metade "para onde mandar".
    Impacto medido: 44 perguntas hoje sem encaminhamento.
-2. **Prompt do classificador: pergunta sobre o produto é DADOS, não fora de escopo** (F1, 5
-   casos) e **contraparte não é pedido sobre terceiro** (F3, 3 casos). Os dois são a mesma
-   edição, no mesmo lugar, e valem 8 das 31 falhas. Exige medir antes do merge, pela trava do
-   projeto.
-3. **Quando a rota de lei não acha fundamento, recusar em vez de despejar trechos.** Hoje
+2. **A exceção de contraparte no `pedeDesempate`** (F3): uma condição em `SinalRecusaFirme`,
+   alinhando dois limiares que hoje divergem sem motivo aparente. Vale 2 das 3 falhas de F3 (70 e
+   C4; a 76 não, pelo motivo da seção 3) e é **verificável sem o modelo**, por teste unitário —
+   por isso vem antes da edição de prompt.
+3. **Prompt do classificador: pergunta sobre o produto é DADOS, não fora de escopo** (F1, 5
+   casos). Muda como o modelo decide, então exige medir antes do merge, pela trava do projeto. E
+   **não vai sozinho**: mandada para `DADOS`, "como corrijo uma nota?" encontra a rota de dados sem
+   nenhuma função que sirva e sai com "não identifiquei qual dado consultar" — troca a recusa por
+   outra mensagem vazia. Precisa vir junto do texto de saída da rota de dados.
+4. **Quando a rota de lei não acha fundamento, recusar em vez de despejar trechos.** Hoje
    "não consegui confirmar" sai com trechos soltos em 19 respostas, 12 delas fora do escopo. Uma
    resposta sem fundamento confirmado deveria virar a recusa com encaminhamento, não um texto que
    parece defeito.
