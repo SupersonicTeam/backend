@@ -104,8 +104,8 @@ public class RotaLegislacao {
    * respondem, e o {@link #SO_TRECHOS} diria o contrário. Sem dígitos, para não virar fonte.
    */
   public static final String TRECHOS_SEM_CONFIRMACAO =
-      "Não consegui confirmar uma resposta com a legislação. Estes são os trechos de lei mais "
-          + "próximos da pergunta, para consulta.";
+      "Não consegui confirmar uma resposta nos trechos de lei que encontrei. Estes são os mais "
+          + "próximos da sua pergunta; se não responderem, leve a dúvida ao seu contador.";
 
   /**
    * Trechos mostrados quando o modelo não marca nenhum válido (#343): os primeiros da busca, já
