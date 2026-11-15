@@ -76,12 +76,14 @@ class ConjuntoTest(unittest.TestCase):
         self.assertNotIn(b"\r\n", bruto)
         self.assertEqual(json.loads(bruto.decode("utf-8"))["versao"], comum.VERSAO_CONJUNTO)
 
-    def test_regra_e_readme_citam_a_versao_e_as_margens(self):
+    def test_regra_cita_a_versao_e_espelha_cada_margem(self):
         regra = (comum.DIR / "regra-de-decisao.md").read_text(encoding="utf-8")
         self.assertIn(comum.VERSAO_REGRA, regra)
         self.assertIn(comum.VERSAO_CONJUNTO, regra)
-        for margem in (comum.EFEITO_SOMA, comum.MINIMO_FALHAS_DA_BASE, comum.MINIMO_CONTROLES_QUALIFICADOS):
-            self.assertIn(str(margem), regra)
+        for nome in ("REPETICOES", "EFEITO_SOMA", "MINIMO_FALHAS_DA_BASE", "MINIMO_ACERTOS_DO_CONTROLE",
+                     "MINIMO_CONTROLES_QUALIFICADOS", "TETO_FALHAS_TECNICAS", "ALERTA_ESTRATO_B",
+                     "ALERTA_CONTROLE"):
+            self.assertIn(f"- `{nome} = {getattr(comum, nome)}`", regra, nome)
         self.assertIn("2026-11-15-comparacao-haiku-2bfb1ef3-main-fc58fa83.md", regra)
         self.assertIn("linha 51", regra)
 

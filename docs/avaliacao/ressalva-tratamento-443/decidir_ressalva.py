@@ -57,7 +57,7 @@ def decidir(conjunto, execucoes, base, candidato):
         if faltando:
             inconclusiva.append(f"braço {b}: execuções ausentes em {len(faltando)} perguntas")
         total = [e for e in execucoes if e["braco"] == b]
-        falhas = sum(1 for e in total if e.get("status") != 200)
+        falhas = sum(1 for e in total if comum.e_falha_tecnica(e))
         if total and falhas / len(total) > comum.TETO_FALHAS_TECNICAS:
             inconclusiva.append(f"braço {b}: {falhas} falhas técnicas em {len(total)} execuções")
 
@@ -86,6 +86,10 @@ def decidir(conjunto, execucoes, base, candidato):
     if falhas_da_base < comum.MINIMO_FALHAS_DA_BASE:  # Portão 2: o defeito se reproduz na base
         inconclusiva.append(f"o defeito não se reproduz na base: {falhas_da_base} falhas em "
                             f"{len(ids_a) * comum.REPETICOES} execuções (mínimo {comum.MINIMO_FALHAS_DA_BASE})")
+    perdas_a = [i for i in ids_a if i not in piorados
+                and _contagem(ac[base], i) - _contagem(ac[candidato], i) >= comum.ALERTA_CONTROLE]
+    if perdas_a:
+        alertas.append(f"estrato A com perda de 2 repetições ou mais: {perdas_a}")
     if delta_b <= -comum.ALERTA_ESTRATO_B:
         alertas.append(f"estrato B perdeu {-delta_b} acertos")
 
@@ -142,6 +146,13 @@ def decidir(conjunto, execucoes, base, candidato):
                                if e["braco"] == b and e["id"] == i and e["rep"] == 1), None)
                       for b in (base, candidato)}}
         for i in ids_a + ids_b if _contagem(ac[base], i) != _contagem(ac[candidato], i)]
+    # O detector é lexical: o que o candidato escreveu sobre o contador e ele não reconheceu como ressalva
+    # não aparece na lista acima quando a contagem não muda. A leitura confere esses também.
+    resultado["paraConferirDetector"] = [
+        {"id": e["id"], "rep": e["rep"], "resposta": e.get("resposta")}
+        for e in execucoes
+        if e["braco"] == candidato and e["id"] in ids_a + ids_b
+        and comum.classificar_defeito(e) == comum.DEFEITO and comum.menciona_contador_solto(e.get("resposta"))]
     return resultado
 
 
@@ -173,6 +184,11 @@ def para_markdown(r):
         linhas += [f"### {item['id']} — {item['pergunta']}", f"Acertos: {item['contagem']}", ""]
         for braco, resposta in item["resposta"].items():
             linhas += [f"**{braco}** (repetição 1):", "", f"> {(resposta or '(sem resposta)').replace(chr(10), chr(10) + '> ')}", ""]
+    if r["paraConferirDetector"]:
+        linhas += ["## O detector não reconheceu ressalva, mas a resposta do candidato fala do contador", ""]
+        for item in r["paraConferirDetector"]:
+            texto = (item["resposta"] or "").replace("\n", " ")
+            linhas += [f"- {item['id']} (repetição {item['rep']}): {texto}", ""]
     return "\n".join(linhas) + "\n"
 
 
@@ -186,10 +202,15 @@ def main(argv=None):
     conjunto = comum.carregar_conjunto()
     if manifesto["conjunto"]["sha256"] != comum.sha256_arquivo(comum.CONJUNTO):
         sys.exit("A rodada foi feita com outro conjunto: o sha256 do manifesto não confere.")
+    if manifesto.get("repeticoes") != comum.REPETICOES or manifesto.get("recorteDeIds"):
+        sys.exit("Rodada fora da regra (repetições diferentes de 3 ou só parte das perguntas): INCONCLUSIVA.")
     if manifesto.get("interrompida"):
         sys.exit("Rodada interrompida: " + manifesto["interrompida"] + " (INCONCLUSIVA).")
     base = args.base or manifesto["bracos"][0]
     candidato = args.candidato or manifesto["bracos"][1]
+    sem_commit = [b for b in (base, candidato) if not (manifesto.get("commits") or {}).get(b)]
+    if sem_commit:
+        sys.exit("O manifesto não traz o commit de: " + ", ".join(sem_commit) + " (INCONCLUSIVA).")
     execucoes = [json.loads(linha) for linha in
                  (args.rodada / "respostas-brutas.jsonl").read_text(encoding="utf-8").splitlines() if linha]
     resultado = decidir(conjunto, execucoes, base, candidato)

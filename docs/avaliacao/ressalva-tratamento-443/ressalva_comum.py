@@ -44,11 +44,17 @@ def normalizar(texto):
 
 # --- detectores (sobre o texto normalizado) -----------------------------------------------------
 
-_CONTADOR = re.compile(r"\b(contador|contadora|contabilista|escritorio de contabilidade)\b")
+_CONTADOR = re.compile(
+    r"\b(?:contador(?:a|es|as)?|contabilistas?"
+    r"|(?:escritorio|profissional|assessoria|consultoria)s? (?:de contabilidade|contabil))\b")
+# Qualquer menção solta, para a conferência humana do que o detector deixou passar.
+_MENCAO_SOLTA = re.compile(r"contador|contabil")
 _ACAO_DA_RESSALVA = re.compile(
     r"confir|enquadr|consult|valid|verific|orient|atende|condicao|procure|pergunt|fale com"
     r"|converse|decid|defin")
-_FRASE = re.compile(r"[.!?;\n]+")
+# Fim de frase = pontuação seguida de espaço: o ponto do NCM (0409.00.00) e o de "art. 137" não separam.
+_FRASE = re.compile(r"(?<=[.!?;])\s+")
+_ABREVIATURA = re.compile(r"\b(art|arts|inc|al|cap|n)\.")
 
 # Textos fixos de recusa da rota de lei: citam o contador, mas não são ressalva de enquadramento.
 _RECUSAS = (
@@ -73,7 +79,8 @@ def tem_ressalva(resposta):
     """Alguma frase manda confirmar o enquadramento, a condição ou a venda com o contador."""
     if e_recusa(resposta):
         return False
-    for frase in _FRASE.split(normalizar(resposta)):
+    texto = _ABREVIATURA.sub(r"\1", normalizar(resposta))
+    for frase in _FRASE.split(texto):
         if _CONTADOR.search(frase) and _ACAO_DA_RESSALVA.search(frase):
             return True
     return False
@@ -84,6 +91,10 @@ def tem_tratamento(resposta):
     if e_recusa(resposta):
         return False
     return bool(_TRATAMENTO.search(normalizar(resposta)))
+
+
+def menciona_contador_solto(resposta):
+    return bool(_MENCAO_SOLTA.search(normalizar(resposta)))
 
 
 def contaminada_por_tabela(resposta):
@@ -102,8 +113,13 @@ def _funcoes(execucao):
     return {f for f in (execucao.get("fontes") or []) if f}
 
 
+def e_falha_tecnica(execucao):
+    """HTTP diferente de 200 ou resposta montada sem o modelo (modoFallback): não mede a Ceres."""
+    return execucao.get("status") != 200 or bool(execucao.get("modoFallback"))
+
+
 def classificar_defeito(execucao):
-    if execucao.get("status") != 200:
+    if e_falha_tecnica(execucao):
         return FALHA_TECNICA
     resposta = execucao.get("resposta") or ""
     if not tem_tratamento(resposta):
@@ -112,7 +128,7 @@ def classificar_defeito(execucao):
 
 
 def acertou_controle_de_lei(execucao, esperado):
-    if execucao.get("status") != 200:
+    if e_falha_tecnica(execucao):
         return False
     resposta = execucao.get("resposta") or ""
     normas = {c.get("norma") for c in (execucao.get("citacoes") or [])}
@@ -123,7 +139,7 @@ def acertou_controle_de_lei(execucao, esperado):
 
 
 def acertou_controle_de_dados(execucao, esperado):
-    if execucao.get("status") != 200 or execucao.get("rota") != esperado["rota"]:
+    if e_falha_tecnica(execucao) or execucao.get("rota") != esperado["rota"]:
         return False
     resposta = execucao.get("resposta") or ""
     funcoes = _funcoes(execucao)

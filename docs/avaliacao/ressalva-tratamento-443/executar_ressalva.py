@@ -135,6 +135,20 @@ def ler_bracos(nomes):
     return bracos
 
 
+def ler_commits(valores, nomes):
+    """`NOME=SHA` por braço, obrigatório: a decisão precisa saber o que estava no ar."""
+    commits = {}
+    for valor in valores or []:
+        nome, separador, sha = valor.partition("=")
+        if not separador or nome not in nomes or not re.fullmatch(r"[0-9a-f]{7,40}", sha):
+            sys.exit(f"--commit inválido: {valor.split('=')[0]!r} (use NOME=SHA, com o nome de um braço e o SHA).")
+        commits[nome] = sha
+    faltando = [n for n in nomes if n not in commits]
+    if faltando:
+        sys.exit("Informe --commit NOME=SHA de cada braço; faltam: " + ", ".join(faltando))
+    return commits
+
+
 def rodar(args):
     conjunto = comum.carregar_conjunto()
     perguntas = {p["id"]: p for p in conjunto["perguntas"]}
@@ -142,14 +156,14 @@ def rodar(args):
     nomes = args.braco
     if len(nomes) < 2 or len(set(nomes)) != len(nomes):
         sys.exit("Informe pelo menos dois braços distintos (--braco base --braco candidato).")
-    execucoes_planejadas = plano(ids, nomes, args.repeticoes)
+    execucoes_planejadas = plano(ids, nomes)
     if args.so_verificar:
         print(f"Conjunto {conjunto['versao']} confere com o sha256. {len(ids)} perguntas x "
-              f"{args.repeticoes} repetições x {len(nomes)} braços = {len(execucoes_planejadas)} "
+              f"{comum.REPETICOES} repetições x {len(nomes)} braços = {len(execucoes_planejadas)} "
               "execuções.")
         return
+    commits = ler_commits(args.commit, nomes)
     bracos = ler_bracos(nomes)
-    commits = dict(c.split("=", 1) for c in (args.commit or []))
     agora = datetime.datetime.now(FUSO).strftime("%Y-%m-%d-%H%M")
     pasta = Path(args.saida) / f"{agora}-ressalva-443"
     pasta.mkdir(parents=True, exist_ok=True)
@@ -183,7 +197,8 @@ def rodar(args):
         "executadoEm": agora, "fuso": "America/Sao_Paulo", "issue": conjunto["issue"],
         "conjunto": {"arquivo": comum.CONJUNTO.name, "versao": conjunto["versao"],
                      "sha256": comum.sha256_arquivo(comum.CONJUNTO)},
-        "versaoRegra": comum.VERSAO_REGRA, "repeticoes": args.repeticoes, "semente": SEMENTE,
+        "versaoRegra": comum.VERSAO_REGRA, "repeticoes": comum.REPETICOES, "semente": SEMENTE,
+        "recorteDeIds": sorted(args.ids) if args.ids else None,
         "bracos": nomes, "commits": commits, "execucoes": len(resultados),
         "planejadas": len(execucoes_planejadas), "interrompida": interrompida}
     (pasta / "execucao.json").write_text(json.dumps(manifesto, ensure_ascii=False, indent=2) + "\n",
@@ -197,7 +212,7 @@ def refazer_falhas(pasta, resultados, executar):
     """Uma segunda tentativa das execuções com falha técnica; reescreve o arquivo com o que valeu."""
     try:
         for i, r in enumerate(resultados):
-            if r["status"] != 200:
+            if comum.e_falha_tecnica(r):
                 resultados[i] = executar(r["rep"], r["id"], r["braco"])
     except CotaEsgotada:
         return "Cota semanal da Ceres esgotada (429 LIMITE_USO_ASSISTENTE)"
@@ -213,8 +228,7 @@ def refazer_falhas(pasta, resultados, executar):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--braco", action="append", required=True, help="nome do braço (repetível)")
-    ap.add_argument("--commit", action="append", help="NOME=SHA do que está no ar em cada braço")
-    ap.add_argument("--repeticoes", type=int, default=comum.REPETICOES)
+    ap.add_argument("--commit", action="append", help="NOME=SHA do que está no ar em cada braço (obrigatório)")
     ap.add_argument("--ids", type=lambda s: {i for i in s.split(",") if i}, default=set())
     ap.add_argument("--saida", default=str(comum.DIR / "rodadas"))
     ap.add_argument("--so-verificar", action="store_true")

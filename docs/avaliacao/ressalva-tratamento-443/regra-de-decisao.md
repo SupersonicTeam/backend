@@ -23,7 +23,9 @@ semeada, o mesmo seed e a mesma base de lei:
 - **`candidato`:** o head do PR da correção.
 
 3 repetições por pergunta e braço (60 perguntas × 3 × 2 = 360 execuções), intercaladas pelo executor.
-Só a diferença de código separa os braços.
+Só a diferença de código separa os braços. O executor **exige** o SHA de cada braço (`--commit`) e grava
+no manifesto; a decisão recusa rodada sem eles, com outro número de repetições ou só com parte das
+perguntas.
 
 ## 2. O que conta como acerto em cada execução
 
@@ -51,8 +53,9 @@ Por isso há leitura humana (seção 6).
 
 ### Estratos do grupo de defeito
 
-- **Estrato A (30 perguntas, decide):** produtos para os quais o template da rota de dados escreve a
-  ressalva hoje (in natura e Anexos I e VII, que têm condição de destino).
+- **Estrato A (30 perguntas, decide):** produtos para os quais, **pela leitura do código** do
+  `TemplateTratamentoProduto` e do `TratamentoProdutoService` (nada foi executado), o template da rota
+  de dados escreve a ressalva hoje: in natura e Anexos I e VII, que têm condição de destino.
 - **Estrato B (6 perguntas, informa):** produtos do Anexo IX (insumos) e do Anexo XV (hortícolas, frutas,
   ovos), em que a condição do dado pode não existir e o template, **mesmo na rota de dados, pode não
   trazer a ressalva**. Se for assim, a ressalva ali não vem de um conserto da rota de lei, e sim de uma
@@ -76,7 +79,7 @@ Aplicação nesta regra (margens em `ressalva_comum.py`):
   inverso) **ou** uma mudança de **5** acertos na soma das repetições do grupo (`EFEITO_SOMA`).
 - Diferença menor que isso, sem id que mude nas 3, é ruído e **não** conta nem como melhora nem como piora.
 - Um id que perde 2 repetições (3 → 1, por exemplo) não é efeito real: gera **alerta** na leitura, não
-  bloqueio.
+  bloqueio (nos controles e no estrato A).
 
 A regra de bolso tem uma lacuna que esta regra assume: com 30 ids × 3 repetições no estrato A, 5
 acertos é pouco mais de 5% da soma. Um efeito de um id só (o caminho "muda nas 3 repetições") é
@@ -88,8 +91,9 @@ Murillo, com o resultado na mão; por isso o relatório sempre traz os ids corri
 Qualquer um falhando faz o veredito ser `INCONCLUSIVA`, nunca `ENTRA` ou `NAO_ENTRA`:
 
 1. **Rodada completa e sem falha técnica demais.** As 3 repetições de todo id em todo braço; cota ou
-   interrupção = inconclusiva. Falhas técnicas (HTTP diferente de 200 depois da repetição do executor)
-   acima de 5% das execuções de um braço (`TETO_FALHAS_TECNICAS`).
+   interrupção = inconclusiva. Falha técnica é HTTP diferente de 200 **ou resposta em `modoFallback`**
+   (montada sem o modelo, que não mede a Ceres), depois da repetição do executor; acima de 5% das
+   execuções de um braço (`TETO_FALHAS_TECNICAS`) a rodada é inconclusiva.
 2. **O defeito se reproduz na base.** No estrato A, a base tem de **falhar em pelo menos 15 das 90
    execuções** (`MINIMO_FALHAS_DA_BASE`). Menos que isso e o conjunto não mostra o defeito: o problema
    já não existe, ou o conjunto não o pega. A margem foi escolhida antes da rodada: com 15 falhas, a
@@ -123,8 +127,11 @@ do Murillo.
   1 de cada braço**. Quem lê **não** é quem escreveu a correção. Se a leitura discordar do detector em
   um id que decidiu o veredito (corrigido ou piorado nas 3 repetições), a decisão é inválida e o
   detector é corrigido antes de repetir a decisão (a rodada não se refaz: as respostas são as mesmas).
-- **Alertas** (aparecem, não bloqueiam): estrato B perdeu 3 acertos ou mais; controle com perda de 2
-  repetições ou mais; controles excluídos na qualificação.
+- O detector é lexical e a lista acima só traz os ids em que a **contagem** muda. Por isso o
+  `resultado.md` traz também as respostas do candidato que o detector **não** reconheceu como ressalva
+  mas que falam do contador ou da contabilidade: a leitura confere se há ressalva que ele deixou passar.
+- **Alertas** (aparecem, não bloqueiam): estrato B perdeu 3 acertos ou mais; id do estrato A ou de
+  controle com perda de 2 repetições ou mais; controles excluídos na qualificação.
 
 ## 7. Limites que esta regra declara
 
@@ -149,3 +156,14 @@ glossário, e recebe só os ids (`RS07`, `CL03`). O conjunto foi escrito por uma
 gabarito, o conjunto do benchmark, os conjuntos de fidelidade nem o conjunto da #447. Mudança da Ceres
 feita por quem leu uma pergunta a contamina. O `ConjuntoRessalvaTratamentoTest` confere que nenhuma
 pergunta está no treino nem no prompt do classificador.
+
+## 9. Margens (espelho de `ressalva_comum.py`, conferido por `test_conjunto.py`)
+
+- `REPETICOES = 3`
+- `EFEITO_SOMA = 5`
+- `MINIMO_FALHAS_DA_BASE = 15`
+- `MINIMO_ACERTOS_DO_CONTROLE = 2`
+- `MINIMO_CONTROLES_QUALIFICADOS = 8`
+- `TETO_FALHAS_TECNICAS = 0.05`
+- `ALERTA_ESTRATO_B = 3`
+- `ALERTA_CONTROLE = 2`

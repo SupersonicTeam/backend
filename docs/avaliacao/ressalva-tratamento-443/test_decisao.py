@@ -47,6 +47,22 @@ class DetectoresTest(unittest.TestCase):
         self.assertFalse(comum.tem_ressalva(TRECHOS_SEM_CONFIRMACAO))
         self.assertFalse(comum.tem_tratamento(TRECHOS_SEM_CONFIRMACAO))
 
+    def test_ponto_de_ncm_e_de_artigo_nao_separa_a_frase(self):
+        self.assertTrue(comum.tem_ressalva("Mel: redução de 60%. Confira o enquadramento do NCM 0409.00.00 "
+                                           "com o seu contador."))
+        self.assertTrue(comum.tem_ressalva("Redução de 60% (LC 214/2025, art. 138). Valide o art. 138 com o "
+                                           "seu contador antes de emitir."))
+
+    def test_plural_e_contabil_tambem_valem(self):
+        for frase in ("Confirme com um profissional contábil o enquadramento.",
+                      "Consulte o seu escritório contábil sobre a condição.",
+                      "Valide com os seus contadores a condição de venda."):
+            self.assertTrue(comum.tem_ressalva("Redução de 60%. " + frase), frase)
+
+    def test_mencao_solta_serve_a_conferencia_humana(self):
+        self.assertTrue(comum.menciona_contador_solto("Fale com a assessoria contábil."))
+        self.assertFalse(comum.menciona_contador_solto(LEI_SEM_RESSALVA))
+
     def test_contador_sem_pedir_conferencia_nao_conta(self):
         self.assertFalse(comum.tem_ressalva("A nota ficou aguardando aprovação do contador."))
         self.assertFalse(comum.tem_ressalva("Leve a dúvida ao seu contador."))
@@ -64,8 +80,8 @@ class DetectoresTest(unittest.TestCase):
         self.assertFalse(comum.contaminada_por_tabela(LEI_SEM_RESSALVA))
 
 
-def execucao(texto=None, rota="LEGISLACAO", status=200, normas=("LC 214/2025",), fontes=()):
-    return {"status": status, "resposta": texto, "rota": rota,
+def execucao(texto=None, rota="LEGISLACAO", status=200, normas=("LC 214/2025",), fontes=(), fallback=False):
+    return {"status": status, "resposta": texto, "rota": rota, "modoFallback": fallback,
             "citacoes": [{"norma": n, "dispositivo": "art. 1º"} for n in normas], "fontes": list(fontes)}
 
 
@@ -76,6 +92,12 @@ class ClassificacaoTest(unittest.TestCase):
         self.assertEqual(comum.classificar_defeito(execucao(LEI_SEM_RESSALVA)), comum.DEFEITO)
         self.assertEqual(comum.classificar_defeito(execucao(RECUSA_DE_LEI)), comum.SEM_TRATAMENTO)
         self.assertEqual(comum.classificar_defeito(execucao(None, status=503)), comum.FALHA_TECNICA)
+
+    def test_resposta_em_modo_fallback_e_falha_tecnica(self):
+        fallback = execucao(LEI_COM_RESSALVA, fallback=True)
+        self.assertEqual(comum.classificar_defeito(fallback), comum.FALHA_TECNICA)
+        self.assertFalse(comum.acertou_controle_de_lei(fallback, {"rota": "LEGISLACAO",
+                                                                   "normasAceitas": ["LC 214/2025"]}))
 
     def test_controle_de_lei(self):
         esperado = {"rota": "LEGISLACAO", "normasAceitas": ["LC 214/2025"]}
@@ -98,6 +120,51 @@ class ClassificacaoTest(unittest.TestCase):
         self.assertFalse(comum.acertou_controle_de_dados(bom, puro))
         self.assertFalse(comum.acertou_controle_de_dados(
             execucao("Você vendeu R$ 10,00. Confira com seu contador.", "DADOS", fontes=["totalVendas"]), puro))
+
+
+class ExecutorTest(unittest.TestCase):
+    def test_commit_de_cada_braco_e_obrigatorio_e_validado(self):
+        self.assertEqual(ex.ler_commits(["base=abc1234", "cand=" + "f" * 40], ["base", "cand"]),
+                         {"base": "abc1234", "cand": "f" * 40})
+        for invalido in (["base=abc1234"], ["base=abc1234", "cand=xyz"], ["base=abc1234", "outro=abc1234"],
+                         ["base=abc1234", "cand"]):
+            with self.assertRaises(SystemExit):
+                ex.ler_commits(invalido, ["base", "cand"])
+
+    def test_refazer_falhas_troca_so_a_falha_tecnica_e_reescreve_o_arquivo(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        resultados = [{"id": "A", "braco": "b", "rep": 1, "status": 200, "resposta": "ok", "modoFallback": False},
+                      {"id": "B", "braco": "b", "rep": 1, "status": 503, "resposta": None},
+                      {"id": "C", "braco": "b", "rep": 1, "status": 200, "resposta": "x", "modoFallback": True}]
+        chamadas = []
+
+        def executar(rep, pergunta_id, braco):
+            chamadas.append(pergunta_id)
+            return {"id": pergunta_id, "braco": braco, "rep": rep, "status": 200, "resposta": "refeita",
+                    "modoFallback": False}
+
+        with tempfile.TemporaryDirectory() as pasta:
+            self.assertIsNone(ex.refazer_falhas(Path(pasta), resultados, executar))
+            linhas = [json.loads(l) for l in (Path(pasta) / "respostas-brutas.jsonl").read_text("utf-8").splitlines()]
+        self.assertEqual(chamadas, ["B", "C"])
+        self.assertEqual([l["resposta"] for l in linhas], ["ok", "refeita", "refeita"])
+
+    def test_refazer_falhas_interrompido_grava_o_que_tem(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        resultados = [{"id": "B", "braco": "b", "rep": 1, "status": 503, "resposta": None}]
+
+        def cota(rep, pergunta_id, braco):
+            raise ex.CotaEsgotada()
+
+        with tempfile.TemporaryDirectory() as pasta:
+            motivo = ex.refazer_falhas(Path(pasta), resultados, cota)
+            linhas = (Path(pasta) / "respostas-brutas.jsonl").read_text("utf-8").splitlines()
+        self.assertIn("Cota", motivo)
+        self.assertEqual(json.loads(linhas[0])["status"], 503)
 
 
 class PlanoTest(unittest.TestCase):
@@ -247,6 +314,27 @@ class DecisaoTest(unittest.TestCase):
         r = self.decidir(self.base_com_defeito(), {i: 0 for i in self.ids_b[:2]})
         self.assertEqual(r["veredito"], dec.ENTRA, r["motivos"])
         self.assertTrue(any("estrato B" in a for a in r["alertas"]))
+
+    def test_ressalva_que_o_detector_nao_reconheceu_vai_para_a_conferencia(self):
+        execs = _execs(self.conjunto, "base", self.base_com_defeito())
+        cand = _execs(self.conjunto, "cand", self.base_com_defeito())
+        for e in cand:
+            if e["id"] == self.ids_a[0] and e["rep"] == 1:
+                e["resposta"] = "Redução de 60%. Vale conversar com a assessoria contábil."
+        r = dec.decidir(self.conjunto, execs + cand, "base", "cand")
+        conferir = r["paraConferirDetector"]
+        self.assertIn({"id": self.ids_a[0], "rep": 1,
+                       "resposta": "Redução de 60%. Vale conversar com a assessoria contábil."}, conferir)
+        self.assertIn("não reconheceu", dec.para_markdown(r))
+
+    def test_fallback_conta_como_falha_tecnica_no_portao(self):
+        execs = _execs(self.conjunto, "base", self.base_com_defeito()) + _execs(self.conjunto, "cand", {})
+        marcadas = 0
+        for e in execs:
+            if e["braco"] == "cand" and marcadas < 15:
+                e["modoFallback"] = True
+                marcadas += 1
+        self.assertEqual(dec.decidir(self.conjunto, execs, "base", "cand")["veredito"], dec.INCONCLUSIVA)
 
     def test_markdown_traz_leitura_humana(self):
         r = self.decidir(self.base_com_defeito(), {})

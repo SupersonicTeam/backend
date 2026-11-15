@@ -61,7 +61,9 @@ python3 -I docs/avaliacao/ressalva-tratamento-443/decidir_ressalva.py --rodada <
 ```
 
 360 execuções. O limite de 20 perguntas por minuto por usuário (#150) é por conta: o executor espera o
-`Retry-After`. A pasta `rodadas/` fica fora do git (respostas da conta de demonstração).
+`Retry-After`. Versione a pasta da rodada (`respostas-brutas.jsonl`, `execucao.json`, `resultado.*`) junto
+da decisão: as respostas são da conta de demonstração, sem segredo, e são o que torna a decisão auditável.
+O `--commit NOME=SHA` de cada braço é obrigatório.
 
 Se a correção for atrás de uma flag, os dois braços podem ser o **mesmo jar** com a flag desligada e
 ligada, como na fidelidade (`docs/avaliacao/fidelidade-lei/`).
