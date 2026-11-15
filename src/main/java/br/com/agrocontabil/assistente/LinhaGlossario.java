@@ -11,10 +11,10 @@ import java.util.List;
  * nunca pelo modelo: a definição vem do glossário revisado por humano, sem número nem artigo, então
  * a linha não vira fonte de número nem muda a lista de citações. Função pura, sem Spring.
  */
-final class LinhaGlossario {
+public final class LinhaGlossario {
 
   /** Título da linha. */
-  static final String TITULO = "O que isso quer dizer:";
+  public static final String TITULO = "O que isso quer dizer:";
 
   /**
    * Quantos termos comuns (não siglas) a linha explica, no máximo (#269, item 2). Os termos da
@@ -84,8 +84,14 @@ final class LinhaGlossario {
         ? t.termo() : t.termo() + " (" + t.nome() + ")";
   }
 
-  /** O texto seguido da linha, em outro parágrafo; o próprio texto se não há o que explicar. */
-  static String acrescentadaA(String texto) {
+  /**
+   * O texto seguido da linha, em outro parágrafo; o próprio texto se não há o que explicar. Usado
+   * pela {@code RotaLegislacao} na resposta de lei aceita e pelo {@code AtalhoDefinicao} (#269).
+   *
+   * @param texto texto já validado, com as referências legais montadas
+   * @return o texto, com a linha se houver termo a explicar
+   */
+  public static String acrescentadaA(String texto) {
     String linha = para(texto);
     return linha.isEmpty() ? texto : texto + "\n\n" + linha;
   }
