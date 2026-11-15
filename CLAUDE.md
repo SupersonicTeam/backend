@@ -130,13 +130,27 @@ o `AI_ANTHROPIC_MODEL`, não o `AI_CHAT_MODEL`. Isso **substitui** a decisão de
 compose em uso; **não copie o `deploy/compose.yaml` inteiro** enquanto o `.env` da VPS não tiver
 `SITE_DOMINIO` e `TLS_ASK_CHAVE`, #464 — passo a passo e reversão em `deploy/README.md`). O Haiku 5.5 **entra** na matriz do
 benchmark da banca (#348), só na Ceres 2.0: a Ceres 1 (`2463c27`) não tem o provedor Anthropic.
-- **Medição do #483** (gabarito 2026-11-05.3, 87 perguntas × 3 repetições; qwen3 de 06/11 em
-  `fcbb5b3` na VPS, Haiku em `3fe8a957` pela API): função 82,2% → 93,3%, parâmetros 76,3% →
-  92,1%, número 82,5% → 92,5%, citação 67,6% → 73,0%, rota 81,7% → 82,9%, p50 de 8,1 s para
-  1,4 s e p95 de 26,8 s para 4,2 s.
-- **Ressalva (sem investigação):** a recusa correta caiu de 100% para 92,9% e a rota nos casos
-  adversários de 76,2% para 66,7%. As duas rodadas não são do mesmo commit (o qwen3 não foi
-  rodado de novo na `main` de 2026-11-10).
+- **Medição do #483, de 10/11, sem relatório no repositório** (a #483 disse "Os relatórios não
+  entram neste PR"; por isso **não é auditável**) (gabarito 2026-11-05.3, 87 perguntas × 3
+  repetições; qwen3 de 06/11 em `fcbb5b3` na VPS, Haiku em `3fe8a957` pela API): função 82,2% →
+  93,3%, parâmetros 76,3% → 92,1%, número 82,5% → 92,5%, citação 67,6% → 73,0%, rota 81,7% →
+  82,9%, p50 de 8,1 s para 1,4 s e p95 de 26,8 s para 4,2 s.
+- **Medição auditável no `2bfb1ef3`** (o SHA da matriz oficial do benchmark; mesmo gabarito, seed
+  v4 e 3 repetições; relatório em
+  `docs/avaliacao/resultados/2026-11-15-0614-anthropic-claude-haiku-5-5.md`, PR #568): função
+  82,2% → **91,1%**, parâmetros 76,3% → **89,5%**, número 82,5% → **91,7%**, rota 81,7% →
+  **81,7%**, p50 **1,5 s** e p95 **4,5 s**, e a citação **67,6% → 66,7% (faixa 64,9–67,6%)**:
+  **a citação medida no SHA auditável não mostra ganho do Haiku sobre o qwen3**, ao contrário do
+  73,0% de 10/11, que não se reproduziu (pode ser o modelo ou o código que entrou entre
+  `3fe8a957` e `2bfb1ef3`; sem artefato de 10/11 não dá para separar). A decisão de modelo não
+  muda (o ganho em função, parâmetros e número é grande e a latência cai de 8,1 s para 1,5 s), mas
+  **o número da citação não vai à banca como ganho**.
+- **Ressalva, investigada no PR #568** (`docs/avaliacao/resultados/2026-11-15-comparacao-haiku-qwen-adversarios.md`):
+  recusa correta 100% → 95,2% (85,7–100%) e rota nos casos adversários 76,2% → 66,7%
+  (61,9–76,2%). O qwen dá o mesmo resultado nas 3 repetições; **o Haiku não** (temperatura 1,0):
+  na rota adversária, X01, X15 e X16 pioram nas 3 repetições e X09, X11 e X13 melhoram em 1 de 3;
+  a recusa falha só em X09 e X11, na repetição 2. A comparação mistura modelo e código (#459 e
+  #506 entraram entre as duas rodadas); diferença de um ou dois casos entre rodadas é ruído.
 - **Pendência de LGPD, do próprio #483:** com o provedor por API, a pergunta sanitizada e dados
   de negócio do produtor (valores, datas, números de nota, categorias de produto e NCM) saem do
   servidor; nome, documento, contato, endereço e o XML das notas não saem (`docs/lgpd.md`,
@@ -937,8 +951,9 @@ no cadastro (decisão do Murillo, 2026-10-19).
   no domínio do CNPJ, Receita/QSA) também fica para depois da banca.
 - **LGPD e o provedor da Ceres por API (#483):** política de dados e transferência internacional (art. 33) com o
   jurídico, junto da D7 do envio de e-mail (#460); antes de a Ceres atender produtores reais no Haiku.
-- **Haiku 5.5 sem investigação (#483):** recusa correta de 100% para 92,9% e rota nos casos adversários de 76,2%
-  para 66,7%, não investigadas (as duas rodadas não são do mesmo commit).
+- **Haiku 5.5 e os casos adversários (#483):** investigado no PR #568 (ver acima): X01, X15 e X16
+  são os casos estáveis que pioram; falta decidir se se corrige a regra ou o prompt do classificador.
+  Rodar o qwen no `2bfb1ef3` separaria o efeito do modelo do efeito do código.
 - **Ceres (Sprint 6):**
   - **Vigência por dispositivo:** cada norma entra com uma vigência só. Os dispositivos da LC 214 com redação dada pela LC 227/2026 aparecem vigentes desde 16/01/2025; pergunta sobre data anterior a 2026 receberia a redação atual. Derivar a vigência das anotações "(Redação dada pela...)" resolve.
   - **Anexo XVIII da LC 214** (tabelas do Simples Nacional, sem itens numerados) não vira trecho.
