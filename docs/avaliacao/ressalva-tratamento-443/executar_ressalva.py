@@ -65,9 +65,9 @@ def plano(ids, bracos, repeticoes=comum.REPETICOES, semente=SEMENTE):
 
 # --- HTTP ---------------------------------------------------------------------------------------
 
-def requisitar(url, corpo, cabecalhos):
-    dados = json.dumps(corpo).encode("utf-8")
-    req = urllib.request.Request(url, data=dados, method="POST", headers={
+def requisitar(url, corpo, cabecalhos, metodo="POST"):
+    dados = None if corpo is None else json.dumps(corpo).encode("utf-8")
+    req = urllib.request.Request(url, data=dados, method=metodo, headers={
         "Content-Type": "application/json", "Accept": "application/json", **cabecalhos})
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
