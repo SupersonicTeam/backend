@@ -165,8 +165,11 @@ benchmark da banca (#348), só na Ceres 2.0: a Ceres 1 (`2463c27`) não tem o pr
 (cópia adaptada para a Ceres 1),
 banco próprio por arquitetura e prova do pensamento desligado; o gerador (Python, só stdlib,
 testado na CI) monta o relatório com o recorte comum e o gabarito inteiro. Guia em
-`docs/avaliacao/benchmark/README.md`. **Rodada real pendente** (precisa de Ollama e da base de lei);
-o exemplo versionado é de dados fictícios. O comando de avaliação não mudou. **A célula por API**
+`docs/avaliacao/benchmark/README.md`. **Rodada oficial feita em 14/11/2026** (140 perguntas × 3
+repetições, Ceres 2.0 em `2bfb1ef3`); **resultados e como lê-los em
+`docs/avaliacao/benchmark/resultados-2026-11-14.md`** (capacidade comum de 118 perguntas × conjunto
+inteiro, régua de ruído, o que não vale e a célula da fidelidade); o relatório completo fica no cego
+privado e não entra no backend; o exemplo versionado é de dados fictícios. O comando de avaliação não mudou. **A célula por API**
 não usa Ollama para o chat, desliga o raciocínio e o prova na API, e lê `ANTHROPIC_API_KEY` só do
 ambiente (nunca em arquivo; oculta em log, erro e relatório; o executor recusa a rodada sem ela e
 faz uma prova antes de começar). A latência dela é de API pela rede: sai marcada **(API)** e fora da
