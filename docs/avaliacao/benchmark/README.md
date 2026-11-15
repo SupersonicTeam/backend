@@ -1,5 +1,7 @@
 # Benchmark da Ceres para a banca (issues #348 e #352)
 
+> **Resultados da rodada oficial de 14/11/2026:** [resultados-2026-11-14.md](resultados-2026-11-14.md).
+
 Explica com números reproduzíveis duas escolhas:
 
 1. **por que não usamos `qwen3:0.6b` nem `qwen3:1.7b`** e ficamos no `qwen3:4b-instruct`, na
