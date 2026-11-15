@@ -221,7 +221,7 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
                   for c in celulas]
     valores_tema = [[(pc[t].media, pc[t].total) if t in pc else (None, 0) for pc in por_celula]
                     for t in ordem]
-    colunas = [f"{c.rotulo_arquitetura}\n{c.modelo}" + (" (API)" if c.por_api else " (CPU)" if c.em_cpu else "")
+    colunas = [f"{c.rotulo_arquitetura}\n{c.modelo}" + (" (API)" if c.por_api else "")
                + (" (inválida)" if c.invalida else "") for c in celulas]
     rodadas_txt = f"média de {repeticoes} rodadas" if repeticoes else "média das rodadas"
     arquivo = destino / "acerto-por-tema.svg"
@@ -268,7 +268,8 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
     arquivo.write_text(barras_agrupadas("Latência p50 por pergunta",
                                         "Capacidade comum, todas as rodadas; latência LOCAL e relativa, não a da VPS "
                                         "(modelo por API: latência de rede)"
-                                        + ("; locais SÓ EM CPU (sem GPU): não mede a viabilidade do modelo"
+                                        + ("; células marcadas (CPU) no relatório rodaram só em CPU "
+                                           "(sem GPU): a latência delas não mede a viabilidade do modelo"
                                            if any(c.em_cpu for c in celulas) else ""),
                                         modelos, series, lat, "s", None, marca or False), encoding="utf-8")
     arquivos.append(arquivo)
