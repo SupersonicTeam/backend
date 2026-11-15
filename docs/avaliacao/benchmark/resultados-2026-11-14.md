@@ -89,7 +89,7 @@ e em `4b` difere do relatório, por 1 acerto em algumas repetições; **vale o r
 muda.
 
 Duas consequências: **"a Ceres 2.0 recusa melhor" (100% contra 92,9%) é uma pergunta só e não é achado**; e
-**o Haiku se separa do `qwen3:4b-instruct` de forma clara em função e número; na citação a leitura depende da medição (veja "O que não vale": duas medições do Haiku discordam quanto ao ganho).**
+**o Haiku se separa do `qwen3:4b-instruct` de forma clara em função e número; na citação o ganho existe, mas é pequeno (8 acertos de 111 nas herdadas, no mesmo commit; veja "O que não vale").**
 
 ## Resultados
 
@@ -251,22 +251,25 @@ pergunta. Resultado na capacidade comum (relatório, "Conclusão para a banca"):
 - **A tendência "o ganho de latência cresce com o tamanho do modelo"**, por duas razões: as medições
   discordam da ordem entre `0.6b` e `1.7b` (ensaio 1,11 contra 1,88; oficial 1,99 contra 1,29) e a
   barra de ruído medida na própria célula do `4b` (~44%) é maior que a diferença entre os tamanhos.
-- **Afirmar, num sentido ou no outro, que o Haiku tem (ou não tem) ganho de citação sobre o `qwen3`.**
-  Há **duas medições independentes, na mesma versão da Ceres (`2bfb1ef3`) e nas mesmas 87 herdadas, com
-  resultados opostos quanto ao ganho**, e a diferença **não foi investigada**:
-  - **A avaliação com gabarito** (comando `dev,avaliacao`, 3 repetições; relatório
-    `docs/avaliacao/resultados/2026-11-15-0614-anthropic-claude-haiku-5-5.md` e o comparativo citado acima):
-    Haiku **66,7%** (74 acertos de 111), contra os **67,6%** do `qwen3` do #483, **sem ganho**. O `qwen3`
-    dessa comparação é de outra rodada e de outro commit (`fcbb5b3`, 06/11).
-  - **A célula do benchmark** (esta rodada): Haiku **69,4%** (25, 26 e 26 acertos de 37 por repetição, 77 de 111)
-    contra **62,2%** do `qwen3:4b-instruct` rodado nesta mesma matriz, no mesmo commit (23 por repetição,
-    69 de 111), **com ganho** pela régua acima.
-  Duas observações, sem pretender explicar a diferença: os dois valores do Haiku diferem por **3 acertos**
-  (abaixo dos 5 da régua), e a diferença entre as conclusões vem, em boa parte, do `qwen3` de referência
-  (75 acertos no #483, 69 nesta matriz). A medição de 73,0% do #483 (Haiku em `3fe8a957`, sem relatório no
-  repositório) não é auditável e **não vale como referência**. Os 59,3% do conjunto inteiro misturam as
-  herdadas (69,4%) com as inéditas (50,0%, ou 48,7% sem a E03): é **composição do conjunto**, não
-  regressão. Nas inéditas (sem outra medição para confrontar) o Haiku fica em 48,7% contra 33,3%.
+- **Comparar a citação do Haiku com a de um `qwen3` de outro commit.** Há duas medições do Haiku em
+  `2bfb1ef3`, nas mesmas 87 herdadas (111 respostas = 37 × 3), e duas referências do `qwen3`; **só uma
+  delas é do mesmo commit**:
+
+  | Medição | Haiku | `qwen3` de referência |
+  |---|---|---|
+  | Avaliação com gabarito (comando `dev,avaliacao`; relatório `docs/avaliacao/resultados/2026-11-15-0614-anthropic-claude-haiku-5-5.md`) | 66,7% = **74** de 111 | 67,6% = **75** de 111, do #483 (`fcbb5b3`, 06/11): **outro commit** |
+  | Célula do benchmark (esta rodada) | 69,4% = **77** de 111 (25, 26 e 26 por repetição) | 62,2% = **69** de 111 (23 por repetição), `qwen3:4b-instruct` na mesma matriz e no mesmo commit |
+
+  Os dois valores do Haiku diferem por 3 acertos, **abaixo dos 5 da régua**: o Haiku é estável entre as duas
+  medições. A divergência está na referência. **Onde a comparação é legítima (mesmo commit, mesma matriz),
+  o Haiku tem ganho de citação sobre o `qwen3:4b-instruct`: 77 contra 69, 8 acertos, acima da régua** (as
+  três repetições do Haiku ficam acima das três do `qwen3`); é **um ganho real, mas pequeno** (7,2 p.p.), e
+  contra a medição de 74 acertos a diferença seria 5, no limite da régua. A aparência de "sem ganho" (66,7%
+  contra 67,6%) vem de uma referência de outro commit, comparação **não conclusiva**. O que não vale é
+  afirmar ganho, ou ausência de ganho, comparando commits diferentes. A medição de 73,0% do #483 (Haiku em
+  `3fe8a957`, sem relatório no repositório) **não é auditável** e não vale como referência. Os 59,3% do
+  conjunto inteiro misturam as herdadas (69,4%) com as inéditas (50,0%, ou 48,7% sem a E03): é
+  **composição do conjunto**, não regressão. Nas inéditas o Haiku fica em 48,7% contra 33,3% do `qwen3:4b`.
 - **Tendências por rota da Ceres 2.0 e latência entre arquiteturas lidas por célula inteira**: a razão
   muda mais de uma medição para outra do que qualquer efeito de arquitetura.
 
