@@ -25,6 +25,21 @@ python3 -I docs/avaliacao/harness-api/harness.py
 Opcionais: `AGRO_REPETICOES` (padrão 3), `AGRO_IDS` (ex.: `D01,T01,X03`), `AGRO_GABARITO`,
 `AGRO_SAIDA` (padrão `docs/avaliacao/resultados`).
 
+**Sem senha (#497):** com `AGRO_TOKEN` (um access token de 15 minutos já emitido) o harness não
+precisa de `AGRO_EMAIL` nem de `AGRO_SENHA` e nunca faz login; no primeiro `401` ele para ("token
+expirado"), gravando o que já mediu. Cabem ~54 chamadas em 15 minutos; para mais, rode em lotes
+com um token novo para cada um.
+
+**Proteção da cota (#497):** antes da primeira pergunta e depois de cada uma, o harness lê
+`GET /api/assistente/uso` e **para** quando o `percentualUsado` passa de `AGRO_USO_MAXIMO`
+(padrão 50). O uso antes e depois vai no resultado (`usoCotaPercentual`). Uma medição no ambiente
+da demonstração gasta a cota da conta da banca: confira o saldo antes e escolha poucas perguntas
+por `AGRO_IDS`.
+
+**Linha de base de rede (#497):** antes das perguntas, 7 `GET /api/v1/health` (sem modelo) medem
+rede + TLS + Caddy + backend (`redeBaseline`), para separar o que é da distância do que é da
+Ceres.
+
 O resultado vai para `<saída>/<data>-<hora>-harness-api.json` (hora de Brasília), sem URL nem
 e-mail (pode ser versionado). Ele é gravado mesmo se a medição parar no meio (cota esgotada,
 Ctrl+C), com o motivo em `interrompida`; falha de rede ou tempo esgotado de uma pergunta vira o

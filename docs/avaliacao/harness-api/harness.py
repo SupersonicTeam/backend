@@ -8,8 +8,12 @@ comando `dev,avaliacao`, que conhece o seed. Aqui o que conta e o tempo e a rota
 Nada de URL, conta ou senha no repositorio: tudo por variavel de ambiente.
 
     AGRO_API_URL        ex.: https://www.exemplo.com.br (sem barra no fim)          [obrigatoria]
-    AGRO_EMAIL          e-mail de uma conta de PRODUTOR                              [obrigatoria]
-    AGRO_SENHA          senha dessa conta                                            [obrigatoria]
+    AGRO_EMAIL          e-mail de uma conta de PRODUTOR   [obrigatoria, salvo com AGRO_TOKEN]
+    AGRO_SENHA          senha dessa conta                 [obrigatoria, salvo com AGRO_TOKEN]
+    AGRO_TOKEN          access token ja emitido (JWT, 15 min): dispensa e-mail e senha; sem
+                        novo login, a medicao para com "token expirado" no primeiro 401 (#497)
+    AGRO_USO_MAXIMO     percentualUsado da cota semanal (GET /api/assistente/uso) que para a
+                        medicao (padrao 50); o uso antes e depois entra no resultado (#497)
     AGRO_BASIC_USUARIO  usuario do Basic Auth do Caddy da demonstracao (opcional)
     AGRO_BASIC_SENHA    senha do Basic Auth (opcional; o login passa por ele)
     AGRO_REPETICOES     rodadas (padrao 3)
@@ -51,9 +55,9 @@ def obrigatoria(nome):
     return valor
 
 
-def requisitar(url, corpo, cabecalhos):
-    dados = json.dumps(corpo).encode("utf-8")
-    req = urllib.request.Request(url, data=dados, method="POST", headers={
+def requisitar(url, corpo, cabecalhos, metodo="POST"):
+    dados = json.dumps(corpo).encode("utf-8") if corpo is not None else None
+    req = urllib.request.Request(url, data=dados, method=metodo, headers={
         "Content-Type": "application/json", "Accept": "application/json", **cabecalhos})
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
@@ -99,6 +103,8 @@ def perguntar(base, token, pergunta):
         codigo = codigo_erro(corpo) if status >= 400 else ""
         if codigo == "LIMITE_USO_ASSISTENTE":
             raise CotaEsgotada()
+        if status == 401 and os.environ.get("AGRO_TOKEN"):
+            raise TokenExpirado()
         if status in (429, 503) and codigo in ("MUITAS_TENTATIVAS", "ASSISTENTE_OCUPADO"):
             time.sleep(int(cabecalhos.get("Retry-After", "5")))
             continue
@@ -108,6 +114,34 @@ def perguntar(base, token, pergunta):
                 "fontesDados": len(corpo.get("fontesDados") or []),
                 "resposta": corpo.get("resposta")}
     return {"status": status, "codigo": codigo, "latenciaMs": latencia_ms, "rota": None}
+
+
+class TokenExpirado(Exception):
+    """401 com AGRO_TOKEN: nao ha senha para um novo login; a medicao para (#497)."""
+
+
+class UsoAcimaDoLimite(Exception):
+    """percentualUsado da cota passou do teto (AGRO_USO_MAXIMO): a medicao para (#497)."""
+
+
+def percentual_usado(base, token):
+    """Le GET /api/assistente/uso; None se nao conseguir (nunca derruba a medicao)."""
+    status, corpo, _ = requisitar(base + "/api/assistente/uso", None,
+                                  {"Authorization": "Bearer " + token}, "GET")
+    if status != 200:
+        return None
+    return corpo.get("percentualUsado")
+
+
+def baseline_rede(base, amostras=7):
+    """Tempo de GET /api/v1/health (publico, sem modelo): rede + TLS + Caddy + backend."""
+    tempos = []
+    for _ in range(amostras):
+        inicio = time.monotonic()
+        status, _, _ = requisitar(base + "/api/v1/health", None, {}, "GET")
+        if status == 200:
+            tempos.append(round((time.monotonic() - inicio) * 1000))
+    return {"amostras": len(tempos), "p50Ms": percentil(tempos, 50), "maxMs": max(tempos or [0])}
 
 
 class CotaEsgotada(Exception):
@@ -124,8 +158,10 @@ def percentil(valores, p):
 
 def main():
     base = obrigatoria("AGRO_API_URL").rstrip("/")
-    email = obrigatoria("AGRO_EMAIL")
-    senha = obrigatoria("AGRO_SENHA")
+    token_fixo = os.environ.get("AGRO_TOKEN", "").strip()
+    email = "" if token_fixo else obrigatoria("AGRO_EMAIL")
+    senha = "" if token_fixo else obrigatoria("AGRO_SENHA")
+    uso_maximo = int(os.environ.get("AGRO_USO_MAXIMO", "50"))
     repeticoes = int(os.environ.get("AGRO_REPETICOES", "3"))
     gabarito_arquivo = os.environ.get("AGRO_GABARITO", "docs/avaliacao/gabarito-ceres.json")
     saida = os.environ.get("AGRO_SAIDA", "docs/avaliacao/resultados")
@@ -140,12 +176,18 @@ def main():
     destino = os.path.join(saida, f"{agora}-harness-api.json")
     resultados = []
     interrompida = None
-    token = login(base, email, senha)
+    token = token_fixo or login(base, email, senha)
     inicio_token = time.monotonic()
+    rede = baseline_rede(base)
+    uso = {"antes": percentual_usado(base, token), "depois": None, "maximo": uso_maximo}
+    print(f"rede (GET health): p50 {rede['p50Ms']} ms; uso da cota antes: {uso['antes']}%",
+          flush=True)
     try:
+        if (uso["antes"] or 0) > uso_maximo:
+            raise UsoAcimaDoLimite()
         for rodada in range(1, repeticoes + 1):
             for p in perguntas:
-                if time.monotonic() - inicio_token > 12 * 60:  # access token de 15 min (#206)
+                if not token_fixo and time.monotonic() - inicio_token > 12 * 60:  # token de 15 min (#206)
                     token = login(base, email, senha)
                     inicio_token = time.monotonic()
                 r = perguntar(base, token, p["pergunta"])
@@ -153,17 +195,26 @@ def main():
                 resultados.append(r)
                 print(f"rodada {rodada}/{repeticoes} {p['id']} HTTP {r['status']} "
                       f"rota={r['rota']} {r['latenciaMs']} ms", flush=True)
+                uso["depois"] = percentual_usado(base, token)
+                if (uso["depois"] or 0) > uso_maximo:
+                    raise UsoAcimaDoLimite()
     except CotaEsgotada:
         interrompida = "Cota semanal da Ceres esgotada (429 LIMITE_USO_ASSISTENTE)"
+    except TokenExpirado:
+        interrompida = "Token expirado (401 com AGRO_TOKEN): gere outro e rode de novo"
+    except UsoAcimaDoLimite:
+        interrompida = f"Uso da cota acima de {uso_maximo}% (AGRO_USO_MAXIMO)"
     except (KeyboardInterrupt, SystemExit) as erro:
         interrompida = f"Interrompida ({type(erro).__name__})"
     finally:
-        gravar(destino, agora, gabarito["versao"], repeticoes, resultados, interrompida)
+        if resultados:
+            uso["depois"] = percentual_usado(base, token)
+        gravar(destino, agora, gabarito["versao"], repeticoes, resultados, interrompida, rede, uso)
     if interrompida:
         sys.exit(interrompida + f": o que foi medido esta em {destino}")
 
 
-def gravar(destino, agora, versao, repeticoes, resultados, interrompida):
+def gravar(destino, agora, versao, repeticoes, resultados, interrompida, rede=None, uso=None):
     por_rota = {}
     for r in resultados:
         chave = r.get("rotaEsperada") or "SEM_ROTA"
@@ -181,7 +232,8 @@ def gravar(destino, agora, versao, repeticoes, resultados, interrompida):
     with open(destino, "w", encoding="utf-8") as arquivo:
         # Sem URL nem e-mail no arquivo: ele pode ser versionado.
         json.dump({"executadoEm": agora, "fuso": "America/Sao_Paulo", "versaoGabarito": versao,
-                   "repeticoes": repeticoes, "interrompida": interrompida, "porRota": resumo,
+                   "repeticoes": repeticoes, "interrompida": interrompida, "redeBaseline": rede,
+                   "usoCotaPercentual": uso, "porRota": resumo,
                    "resultados": resultados}, arquivo, ensure_ascii=False, indent=2)
     print(json.dumps(resumo, ensure_ascii=False, indent=2))
     print(f"Gravado em {destino}")
