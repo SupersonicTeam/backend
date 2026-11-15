@@ -32,7 +32,9 @@ com um token novo para cada um.
 
 **Proteção da cota (#497):** antes da primeira pergunta e depois de cada uma, o harness lê
 `GET /api/assistente/uso` e **para** quando o `percentualUsado` passa de `AGRO_USO_MAXIMO`
-(padrão 50). O uso antes e depois vai no resultado (`usoCotaPercentual`). Uma medição no ambiente
+(padrão 50). Se a leitura do uso falhar (no começo, ou duas vezes seguidas), ele também **para**:
+uma leitura que não veio nunca vale como 0%. O uso antes e depois vai no resultado
+(`usoCotaPercentual`). Uma medição no ambiente
 da demonstração gasta a cota da conta da banca: confira o saldo antes e escolha poucas perguntas
 por `AGRO_IDS`.
 

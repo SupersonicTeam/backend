@@ -44,6 +44,8 @@ import zoneinfo
 
 # Maior que o timeout da pergunta no servidor (app.assistente.timeout-pergunta, 5 min).
 TIMEOUT_S = 330
+TIMEOUT_AUXILIAR_S = 30  # GET de uso e de health: nunca seguram a medicao por minutos
+MAX_FALHAS_USO = 2
 FUSO = zoneinfo.ZoneInfo("America/Sao_Paulo")
 MAX_ESPERAS = 5
 
@@ -55,12 +57,12 @@ def obrigatoria(nome):
     return valor
 
 
-def requisitar(url, corpo, cabecalhos, metodo="POST"):
+def requisitar(url, corpo, cabecalhos, metodo="POST", timeout=TIMEOUT_S):
     dados = json.dumps(corpo).encode("utf-8") if corpo is not None else None
     req = urllib.request.Request(url, data=dados, method=metodo, headers={
         "Content-Type": "application/json", "Accept": "application/json", **cabecalhos})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, json.loads(resp.read() or b"{}"), resp.headers
     except urllib.error.HTTPError as erro:
         try:
@@ -93,7 +95,7 @@ def login(base, email, senha):
     return corpo["accessToken"]
 
 
-def perguntar(base, token, pergunta):
+def perguntar(base, token, pergunta, token_fixo=False):
     for _ in range(MAX_ESPERAS + 1):
         inicio = time.monotonic()
         status, corpo, cabecalhos = requisitar(base + "/api/assistente/chat",
@@ -103,7 +105,7 @@ def perguntar(base, token, pergunta):
         codigo = codigo_erro(corpo) if status >= 400 else ""
         if codigo == "LIMITE_USO_ASSISTENTE":
             raise CotaEsgotada()
-        if status == 401 and os.environ.get("AGRO_TOKEN"):
+        if status == 401 and token_fixo:
             raise TokenExpirado()
         if status in (429, 503) and codigo in ("MUITAS_TENTATIVAS", "ASSISTENTE_OCUPADO"):
             time.sleep(int(cabecalhos.get("Retry-After", "5")))
@@ -120,6 +122,10 @@ class TokenExpirado(Exception):
     """401 com AGRO_TOKEN: nao ha senha para um novo login; a medicao para (#497)."""
 
 
+class UsoIndisponivel(Exception):
+    """Nao foi possivel ler GET /api/assistente/uso: sem leitura, nao ha protecao da cota."""
+
+
 class UsoAcimaDoLimite(Exception):
     """percentualUsado da cota passou do teto (AGRO_USO_MAXIMO): a medicao para (#497)."""
 
@@ -127,10 +133,45 @@ class UsoAcimaDoLimite(Exception):
 def percentual_usado(base, token):
     """Le GET /api/assistente/uso; None se nao conseguir (nunca derruba a medicao)."""
     status, corpo, _ = requisitar(base + "/api/assistente/uso", None,
-                                  {"Authorization": "Bearer " + token}, "GET")
+                                  {"Authorization": "Bearer " + token}, "GET",
+                                  TIMEOUT_AUXILIAR_S)
     if status != 200:
         return None
     return corpo.get("percentualUsado")
+
+
+class GuardaDeCota:
+    """Para a medicao quando o uso passa do teto, e tambem quando nao da para le-lo.
+
+    Uma leitura que falha nunca vale como 0%: sem ler, a medicao nao esta protegida (#497).
+    """
+
+    def __init__(self, base, token, maximo):
+        self.base, self.token, self.maximo = base, token, maximo
+        self.antes = self.depois = None
+        self.falhas = 0
+
+    def inicio(self):
+        self.antes = self.depois = percentual_usado(self.base, self.token)
+        if self.antes is None:
+            raise UsoIndisponivel()
+        if self.antes > self.maximo:
+            raise UsoAcimaDoLimite()
+
+    def apos_pergunta(self):
+        valor = percentual_usado(self.base, self.token)
+        if valor is None:
+            self.falhas += 1
+            if self.falhas >= MAX_FALHAS_USO:
+                raise UsoIndisponivel()
+            return
+        self.falhas = 0
+        self.depois = valor  # so um valor lido; a falha nunca apaga o ultimo bom
+        if valor > self.maximo:
+            raise UsoAcimaDoLimite()
+
+    def como_dict(self):
+        return {"antes": self.antes, "depois": self.depois, "maximo": self.maximo}
 
 
 def baseline_rede(base, amostras=7):
@@ -138,10 +179,13 @@ def baseline_rede(base, amostras=7):
     tempos = []
     for _ in range(amostras):
         inicio = time.monotonic()
-        status, _, _ = requisitar(base + "/api/v1/health", None, {}, "GET")
+        status, _, _ = requisitar(base + "/api/v1/health", None, {}, "GET",
+                                  TIMEOUT_AUXILIAR_S)
         if status == 200:
             tempos.append(round((time.monotonic() - inicio) * 1000))
-    return {"amostras": len(tempos), "p50Ms": percentil(tempos, 50), "maxMs": max(tempos or [0])}
+    if not tempos:
+        return {"amostras": 0, "p50Ms": None, "maxMs": None}  # nao medido, nunca 0 ms
+    return {"amostras": len(tempos), "p50Ms": percentil(tempos, 50), "maxMs": max(tempos)}
 
 
 class CotaEsgotada(Exception):
@@ -179,37 +223,36 @@ def main():
     token = token_fixo or login(base, email, senha)
     inicio_token = time.monotonic()
     rede = baseline_rede(base)
-    uso = {"antes": percentual_usado(base, token), "depois": None, "maximo": uso_maximo}
-    print(f"rede (GET health): p50 {rede['p50Ms']} ms; uso da cota antes: {uso['antes']}%",
-          flush=True)
+    guarda = GuardaDeCota(base, token, uso_maximo)
     try:
-        if (uso["antes"] or 0) > uso_maximo:
-            raise UsoAcimaDoLimite()
+        guarda.inicio()
+        print(f"rede (GET health): p50 {rede['p50Ms']} ms; "
+              f"uso da cota antes: {guarda.antes}%", flush=True)
         for rodada in range(1, repeticoes + 1):
             for p in perguntas:
                 if not token_fixo and time.monotonic() - inicio_token > 12 * 60:  # token de 15 min (#206)
                     token = login(base, email, senha)
                     inicio_token = time.monotonic()
-                r = perguntar(base, token, p["pergunta"])
+                r = perguntar(base, token, p["pergunta"], bool(token_fixo))
                 r.update({"id": p["id"], "rodada": rodada, "rotaEsperada": p.get("rotaEsperada")})
                 resultados.append(r)
                 print(f"rodada {rodada}/{repeticoes} {p['id']} HTTP {r['status']} "
                       f"rota={r['rota']} {r['latenciaMs']} ms", flush=True)
-                uso["depois"] = percentual_usado(base, token)
-                if (uso["depois"] or 0) > uso_maximo:
-                    raise UsoAcimaDoLimite()
+                guarda.apos_pergunta()
     except CotaEsgotada:
         interrompida = "Cota semanal da Ceres esgotada (429 LIMITE_USO_ASSISTENTE)"
     except TokenExpirado:
         interrompida = "Token expirado (401 com AGRO_TOKEN): gere outro e rode de novo"
     except UsoAcimaDoLimite:
         interrompida = f"Uso da cota acima de {uso_maximo}% (AGRO_USO_MAXIMO)"
+    except UsoIndisponivel:
+        interrompida = ("Nao foi possivel ler GET /api/assistente/uso: "
+                        "sem leitura da cota a medicao nao e protegida")
     except (KeyboardInterrupt, SystemExit) as erro:
         interrompida = f"Interrompida ({type(erro).__name__})"
     finally:
-        if resultados:
-            uso["depois"] = percentual_usado(base, token)
-        gravar(destino, agora, gabarito["versao"], repeticoes, resultados, interrompida, rede, uso)
+        gravar(destino, agora, gabarito["versao"], repeticoes, resultados, interrompida, rede,
+               guarda.como_dict())
     if interrompida:
         sys.exit(interrompida + f": o que foi medido esta em {destino}")
 

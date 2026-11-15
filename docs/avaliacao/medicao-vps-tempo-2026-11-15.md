@@ -27,7 +27,7 @@ embeddings, meta < 300 ms), a memória da VM e o `/healthz` da VM. Ver "Não med
   - lei (6): L03, L04, L07, L08, L09, L11;
   - MISTO (4): M01, M02, M04, M05.
 - **Tempo** = do envio do `POST /api/assistente/chat` à resposta completa, do cliente (esta
-  máquina, Windows, internet residencial). Inclui rede e TLS; a espera por `Retry-After` não
+  máquina externa à VPS). Inclui rede e TLS; a espera por `Retry-After` não
   entra (não houve nenhuma).
 - **Resultado bruto:** `docs/avaliacao/resultados/2026-11-15-1644-harness-api.json` (sem URL, sem
   e-mail, sem token).
@@ -57,8 +57,8 @@ praticamente o pior ou o segundo pior valor.
 - **Por repetição:** p50 1,90 s, 2,14 s e 1,92 s (rodadas 1 a 3); a rodada 2 teve o p95 maior
   (6,11 s) por causa de um único valor (M04). Não há tendência de aquecimento nem de degradação
   nas 54 chamadas, e a primeira pergunta (D01, 1,2 s) não mostra partida a frio.
-- **Estabilidade por pergunta:** a maior dispersão é M04 (3,5 s; 4,6 s; 6,1 s). As demais variam
-  menos de 1 s.
+- **Estabilidade por pergunta:** a maior dispersão é M04 (3,5 s; 4,6 s; 6,1 s), seguida de L04
+  (2,8 a 3,9 s) e M05 (4,2 a 5,1 s). As demais variam menos de 1 s.
 - **Prova (D12, 1 repetição):** 2,12 s, rota DADOS.
 
 Por pergunta (ms, repetições 1/2/3):
@@ -124,21 +124,22 @@ não prova a taxa do gabarito inteiro (82,9% no #483).
 | por rota | não consta no registro do #483 | dados 1,46 / 3,79 s; lei 1,90 / 3,92 s; MISTO 4,16 / 6,11 s |
 
 - **Não é comparação igual.** O #483 mede o gabarito de 87 perguntas, onde 11 são fora de escopo e
-  5 não têm rota (atalhos, conversa leve e recusa saem sem chamar o modelo e respondem em
-  milissegundos, o que abaixa o p50 local). Aqui só entram rotas que usam o modelo, e **22% das
-  chamadas são MISTO** (mais de uma etapa com o modelo), contra 8% no gabarito. Isso por si só empurra
-  p50 e p95 para cima.
-- **O que a comparação mostra:** a VPS não é "muito mais lenta" do que o local. Mesmo com a
-  mistura mais pesada, o p50 sobe de 1,4 s para ~2 s e o p95 de 4,2 s para ~4,9 s. A rede custa
-  ~0,08 s. A parte que depende da máquina (classificação com `bge-m3` em CPU ARM, busca na base
-  de lei, funções de dados) cabe, em dados corretamente roteados, em menos de 1,7 s no pior caso
-  de ponta a ponta, **já incluindo a chamada ao Haiku**.
+  5 não têm rota; parte delas não passa pelo modelo de dados nem de lei, e a mistura de rotas é
+  outra. Aqui só entram rotas de dados, lei e MISTO, e **22% das chamadas são MISTO** (mais de uma
+  etapa com o modelo), contra 8% do gabarito. Não tenho o p50 local por rota, então **não dá para
+  separar quanto da diferença vem da VPS e quanto vem da mistura**.
+- **O que a comparação mostra:** o p50 sobe de 1,4 s para 2,06 s (+47%) e o p95 de 4,2 s para
+  4,9 s (+17%), com uma mistura mais pesada. A diferença é pequena em segundos, mas **não posso
+  afirmar que a VPS tem o mesmo desempenho do local**; o que os dados sustentam é que ela não está
+  em outra ordem de grandeza. A rede custa ~0,08 s. Em dados corretamente roteados, a resposta
+  completa (classificação com `bge-m3` em CPU ARM, funções de dados e a chamada ao Haiku) termina
+  em no máximo 1,72 s.
 - **Onde o ambiente publicado difere do local:** (1) a rede até a VPS e o TLS do Caddy (~0,08 s);
   (2) o embedding `bge-m3` roda em CPU ARM na VPS (não medido isoladamente, ver abaixo);
   (3) a cota e o bulkhead da produção estão ativos (nenhum 429/503 apareceu); (4) o provedor é o
   mesmo (Haiku por API), então a latência do modelo é a mesma que a local, mais a distância
   entre a VPS e a API. Para separar com rigor o efeito de cada diferença, falta a medição das
-  camadas na VPS.
+  camadas na VPS e uma rodada local com o mesmo subconjunto de perguntas.
 
 ## Não medido (e por quê)
 
@@ -151,7 +152,7 @@ não prova a taxa do gabarito inteiro (82,9% no #483).
 ## Ressalvas
 
 - Uma rodada, um horário, uma conta. Amostra pequena para p95.
-- Rodada medida por uma máquina residencial; um cliente de outra rede pode ver ±0,1 s de rede.
+- Rodada medida de uma máquina fora da VPS, numa única rede; um cliente em outra rede pode ver diferença de ~0,1 s.
 - O harness mede o `POST /chat` (resposta completa). O `POST /chat/stream` (SSE), usado pela tela
   da banca, **não foi medido**; ele devolve só a resposta já validada (sem tokens parciais), então o
   tempo até a primeira informação deve ser parecido, mas não foi confirmado.
