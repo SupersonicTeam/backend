@@ -267,7 +267,10 @@ def gerar_todos(destino: Path, celulas, modelos, arquiteturas, ids_comum, canoni
     arquivo = destino / "latencia-p50.svg"
     arquivo.write_text(barras_agrupadas("Latência p50 por pergunta",
                                         "Capacidade comum, todas as rodadas; latência LOCAL e relativa, não a da VPS "
-                                        "(modelo por API: latência de rede)",
+                                        "(modelo por API: latência de rede)"
+                                        + ("; células marcadas (CPU) no relatório rodaram só em CPU "
+                                           "(sem GPU): a latência delas não mede a viabilidade do modelo"
+                                           if any(c.em_cpu for c in celulas) else ""),
                                         modelos, series, lat, "s", None, marca or False), encoding="utf-8")
     arquivos.append(arquivo)
 

@@ -123,6 +123,26 @@ class Celula:
         return self.manifesto.get("provedor", "ollama") != "ollama"
 
     @property
+    def em_cpu(self) -> bool:
+        """O modelo de chat local rodou so em CPU (``/api/ps`` amostrado a cada 5 s, ``ondeRodou`` do
+        ``celula.json``; o embedding nao conta): a latencia da celula nao mede o modelo em GPU nem
+        a viabilidade dele, e leva a marca ``(CPU)``, simetrica a ``(API)``. Celula por API, sem
+        amostra do modelo ou com qualquer amostra que nao seja ``CPU`` (GPU, ``dividido``) nao e
+        ``em_cpu``: erra para menos, nunca marca uma celula que possa ter usado a placa."""
+        if self.por_api:
+            return False
+        onde = (self.manifesto.get("memoria") or {}).get("ondeRodou") or {}
+        # Pelo nome do modelo da celula (a chave do ``/api/ps``), sem heuristica sobre o embedding.
+        lugares = onde.get(self.modelo) or onde.get(f"{self.modelo}:latest")
+        return bool(lugares) and all(str(x).upper() == "CPU" for x in lugares)
+
+    @property
+    def marca_latencia(self) -> str:
+        """`` (CPU)`` so onde ha latencia (tabela de latencia, linha de latencia, grafico de latencia):
+        o acerto nao depende de onde o modelo rodou, entao as tabelas de acerto nao levam a marca."""
+        return " (CPU)" if self.em_cpu else ""
+
+    @property
     def com_fidelidade(self) -> bool:
         """Variante com a fidelidade da rota de lei ligada (#269): fora de toda comparacao com as
         outras celulas (a Ceres 1 e os qwen3 nao a tem) e com secao propria."""
@@ -630,7 +650,9 @@ def conclusao(
         lat2 = latencias(ref2, ids_comum, canonico).get("TODAS", (None,))[0]
         linhas.append(
             f"**Efeito da arquitetura no `{referencia}`** ({rot2} menos {rot1}): "
-            + ", ".join(partes) + f"; latência p50 {_s(lat1)} → {_s(lat2)}.")
+            + ", ".join(partes) + f"; latência p50 {_s(lat1)}{ref1.marca_latencia} → "
+            f"{_s(lat2)}{ref2.marca_latencia}"
+            + (" (**CPU**: não é a de uma instalação com GPU)." if ref1.em_cpu or ref2.em_cpu else "."))
         linhas.append("")
         # So compara com a outra arquitetura quando a celula de la e valida: invalida nao e "nao viavel".
         novos = [m for m in viaveis_por_arq.get(arq2, [])
@@ -716,7 +738,8 @@ def _modelos_por_api(celulas, referencia, ids_comum, canonico, adaptacoes) -> li
             + (f", entre parênteses a diferença para o `{referencia}` local" if ref else
                f"; sem a célula do `{referencia}` nesta arquitetura, não há com o que comparar")
             + "): " + ", ".join(partes) + f"; latência p50 {_s(lat)}"
-            + (f" contra {_s(lat_ref)} do local nesta máquina" if ref else "")
+            + (f" contra {_s(lat_ref)}{ref.marca_latencia} do local nesta máquina"
+               + (" (**só em CPU**: sem a placa)" if ref.em_cpu else "") if ref else "")
             + ". **A latência da API é de rede e de fila do provedor, não de inferência local**: não "
             "mede o mesmo que a dos qwen3 e não é a da VPS. Não entra nos critérios de viabilidade "
             "dos modelos locais menores.")
@@ -725,6 +748,23 @@ def _modelos_por_api(celulas, referencia, ids_comum, canonico, adaptacoes) -> li
 
 
 # --------------------------------------------------------------------------- markdown
+
+
+#: Limite do ``observacoes.md`` no relatorio (acima, corta com aviso visivel).
+LIMITE_OBSERVACOES = 120_000
+
+
+def observacoes_md(texto: str) -> str:
+    """O texto livre da pasta da rodada, com os titulos rebaixados para abaixo das secoes geradas
+    (todo titulo desce dois niveis, no minimo ``###`` e no maximo ``######``), no maximo
+    ``LIMITE_OBSERVACOES`` caracteres (corte avisado) e vazio se so tem espaco."""
+    texto = texto.strip()
+    if not texto:
+        return ""
+    if len(texto) > LIMITE_OBSERVACOES:
+        texto = (texto[:LIMITE_OBSERVACOES].rstrip()
+                 + f"\n\n*(observacoes.md cortado em {LIMITE_OBSERVACOES} caracteres no relatório.)*")
+    return re.sub(r"(?m)^(#{1,6})(?=\s)", lambda m: "#" * min(6, max(3, len(m.group(1)) + 2)), texto)
 
 
 def _celula_md(texto: str, limite: int = 420) -> str:
@@ -840,6 +880,21 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
         md.append("> ⚠️ **ENSAIO antes da revisão humana das perguntas externas (#358)** "
                   "(`--ensaio`): dispositivos, classe e afirmações proibidas delas ainda são "
                   "provisórios. Não vale para a banca.\n")
+    em_cpu = [c for c in celulas if c.em_cpu]
+    if em_cpu:
+        # Em lugar visivel, nao em nota de pe: a latencia dessas celulas e da CPU, nao do modelo.
+        causa = ""
+        arquivo_causa = pasta / "causa-cpu.txt"
+        if arquivo_causa.exists():
+            causa = " **Causa registrada:** " + _celula_md(
+                arquivo_causa.read_text(encoding="utf-8").strip().replace("\n", " "), 600)
+        md.append(f"> ⚠️ **{len(em_cpu)} de {len([c for c in celulas if not c.por_api])} células de "
+                  "modelo local rodaram 100% em CPU** (marcadas **(CPU)**; `/api/ps` do Ollama, "
+                  "amostrado a cada 5 s)." + causa + " **A latência dessas células não mede a "
+                  "viabilidade dos modelos locais: é a de uma máquina que rodou sem a placa. Não é "
+                  "comparável à do Haiku (API) nem à da VPS.** O acerto (rota, função, parâmetros, "
+                  "número, citação, recusa) não depende de onde o modelo rodou e vale integralmente; "
+                  "só a latência, o p50 e o p95 ficam marcados.\n")
     sessao = rodada.get("sessao7") or {}
     if sessao and not sessao.get("confirmado", sessao.get("contem") is True):
         nome7 = f"{_celula_md(sessao.get('rotulo') or 'sessão paralela')} ({sessao.get('issue')})"
@@ -863,6 +918,14 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
               "mão: gere de novo. Cada taxa é a média das rodadas, com a faixa (mínimo–máximo) "
               "entre parênteses; n = perguntas avaliadas no critério em cada rodada.\n")
 
+    arquivo_obs = pasta / "observacoes.md"
+    if arquivo_obs.exists():
+        # Observacoes de quem rodou (achados, o que a execucao real mostrou, o que ficou de fora):
+        # texto livre da pasta da rodada, nunca gerado.
+        obs = observacoes_md(arquivo_obs.read_text(encoding="utf-8"))
+        if obs:
+            md.append("## Observações da rodada\n")
+            md.append(obs + "\n")
     md.append("## Condições\n")
     md.append("| Item | Valor |\n|---|---|")
     md.append(f"| Rodada | {rodada.get('iniciadaEm', '?')} |")
@@ -964,6 +1027,11 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
                                        for h in rodada.get("hardware", [])) else "")
               + ". **Não é a latência de produção**: a da VPS (CPU ARM, sem GPU) fica na seção "
               "\"Latência na VPS\", medida pelo harness da API.\n")
+    if any(c.em_cpu for c in celulas):
+        md.append("As células marcadas **(CPU)** rodaram o modelo de chat só na CPU desta máquina: "
+                  "**a latência delas não é a de uma instalação com GPU, não mede a viabilidade do "
+                  "modelo local e não se compara com a da célula (API)**. Entre si (mesma máquina, "
+                  "mesma CPU) ela serve para ordenar modelos e arquiteturas.\n")
     if any(c.por_api for c in celulas):
         md.append("As células marcadas **(API)** têm o chat pela API de um provedor: a máquina roda só "
                   "a JVM, o banco e o embedding. **A latência delas é de API pela rede** (inclui a "
@@ -1096,7 +1164,7 @@ def gerar(pasta: Path, graficos_dir: Path | None = None, comparar_com: Path | No
             colunas = [
                 f"{_s(lat[r][0])} / {_s(lat[r][1])}" if r in lat else "—" for r in rotas
             ]
-            md.append(f"| {c.titulo} | " + " | ".join(colunas) + " |")
+            md.append(f"| {c.titulo}{c.marca_latencia} | " + " | ".join(colunas) + " |")
         md.append("\nCada casa é p50 / p95 (nearest-rank, como o comando de avaliação).\n")
         md.append("### Perguntas instáveis entre rodadas\n")
         for c in celulas:
@@ -1603,10 +1671,14 @@ def _tabela_modelo_arquitetura(celulas, modelos, arquiteturas, ids, canonico, ad
                 medias.append(f.media if f else None)
             dif = f" | {_pontos(medias[1], medias[0])} |" if len(arquiteturas) == 2 else " |"
             linhas.append(f"| {rotulo} | {CRITERIOS[criterio][0]} | " + " | ".join(valores) + dif)
-        lats = []
+        lats, marcas = [], []
         for arq, _ in arquiteturas:
             c = next((c for c in celulas if c.modelo == modelo and c.arquitetura == arq), None)
             lats.append(latencias(c, ids, canonico).get("TODAS") if c else None)
+            # A marca (CPU) vai na celula que rodou em CPU, nunca no modelo inteiro: uma arquitetura
+            # pode ter rodado em GPU e a outra nao.
+            marcas.append(c.marca_latencia if c else "")
         linhas.append(f"| {rotulo} | Latência p50{' (rede)' if modelo in por_api else ''} | " + " | ".join(
-            _s(l[0]) if l else "n/d" for l in lats) + (" | |" if len(arquiteturas) == 2 else " |"))
+            (_s(l[0]) + marca) if l else "n/d" for l, marca in zip(lats, marcas))
+            + (" | |" if len(arquiteturas) == 2 else " |"))
     return "\n".join(linhas) + "\n"
