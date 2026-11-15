@@ -191,9 +191,13 @@ tempo** que a célula original (8.741 s contra 15.716 s); a original foi, portan
 que a repetição, e a causa dessa diferença **não foi determinada**. Por isso a comparação válida entre arquiteturas no `4b` é a Ceres 2.0 contra a
 **repetição** (mesma condição de máquina), que é a **única razão limpa da matriz**:
 
-- **Razão global 0,834** (7.261 s contra 8.710 s, soma dos 420 pares pergunta × repetição; pelos totais das células, 7.296 s contra
-  8.741 s, dá 0,835); nas três
-  repetições, 0,832 / 0,850 / 0,820. Por rota: dados 0,68, lei 0,99, misto 0,84, fora de escopo 0,69. A
+- **Razão global 0,834: razão das somas das latências por resposta**, Ceres 2.0 `4b` (execução oficial)
+  ÷ repetição da Ceres 1 `4b` (7.261 s ÷ 8.710 s), nos **420 pares** pergunta × repetição (as 140 perguntas
+  × 3 repetições, todas as rotas, conjunto inteiro; a repetição cobriu as 420). Pelos tempos totais das
+  células (7.296 s ÷ 8.741 s) dá 0,835. **Outras definições dão a mesma ordem de grandeza:** razão dos p50
+  (16,8 s ÷ 20,1 s) 0,835; mediana das razões por par 0,81; mediana das razões por pergunta (soma das 3
+  repetições) 0,80. Nas três repetições, 0,832 / 0,850 / 0,820 (a mesma razão das somas, uma repetição
+  de cada vez, 140 pares cada). Por rota: dados 0,68, lei 0,99, misto 0,84, fora de escopo 0,69. A
   Ceres 2.0 é mais rápida em dados (resposta por template) e **empata na rota de lei**; mediana e p95
   da repetição: 20,1 s e 53,1 s contra 16,8 s e 43,4 s da Ceres 2.0.
 - Parte da vantagem vem de a Ceres 1 recusar indevidamente (mais rápido, mas errado): sem esses 32
@@ -244,7 +248,10 @@ pergunta. Resultado na capacidade comum (relatório, "Conclusão para a banca"):
 
 ## O que não vale
 
-- **A razão de latência 0,46** (Ceres 2.0 `4b` contra a célula original da Ceres 1 `4b`) **e a tabela
+- **A razão de latência 0,46** (Ceres 2.0 `4b` contra a célula original da Ceres 1 `4b`; é a razão das
+  somas, 7.261 s ÷ 15.675 s nos 420 pares, ou 7.296 s ÷ 15.716 s pelos totais das células; **não é a razão
+  dos p50**, 16,8 s ÷ 30,2 s = 0,557, porque a original tem cauda longa: média 37,3 s contra p50 30,2 s)
+  **e a tabela
   "ajustada" pelo ruído do `0.6b`**: a original foi um ponto fora da curva (cerca de 80% mais lenta que a
   repetição, que levou 44,4% menos tempo). Vale o 0,834. O "ganho de 54% de latência" **não existe**; o ganho é de ~17% na célula
   inteira, e nenhum na rota de lei.
