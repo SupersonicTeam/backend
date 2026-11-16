@@ -2,6 +2,7 @@ package br.com.agrocontabil.assistente;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.agrocontabil.common.DocumentoFiscalValidator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -41,6 +42,45 @@ class DataSanitizerTest {
     String texto = "a=12ABC34501DE36 b=ABCDEF01234567 c=12abc34501de36 d=x12ABC34501DE35"
         + " e=fffeee00112233";
     assertThat(DataSanitizer.mascarar(texto)).isEqualTo(texto);
+  }
+
+  @Test
+  @DisplayName("Propriedade: token de 14 posicoes vira [CNPJ] se, e so se, o DV confere, em qualquer"
+      + " caixa (#313)")
+  void soComDvValido() throws Exception {
+    java.security.MessageDigest sha = java.security.MessageDigest.getInstance("SHA-256");
+    String alfabeto = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    int validos = 0;
+    // Sequencia fixa (derivada do SHA-256 do indice): uma falha se repete localmente.
+    for (int i = 0; i < 5_000; i++) {
+      byte[] h = sha.digest(("cnpj-" + i).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      StringBuilder token = new StringBuilder();
+      for (int p = 0; p < 12; p++) {
+        token.append(alfabeto.charAt(Math.floorMod(h[p], alfabeto.length())));
+      }
+      token.append(Math.floorMod(h[12], 10)).append(Math.floorMod(h[13], 10));
+      if (token.chars().allMatch(Character::isDigit)) {
+        continue; // so de digitos e a regra numerica, que mascara sem conferir o DV
+      }
+      boolean valido = DocumentoFiscalValidator.isCnpjAlfanumericoValido(token.toString());
+      validos += valido ? 1 : 0;
+      for (String forma : new String[] {token.toString(), token.toString().toLowerCase()}) {
+        String linha = "doc " + forma + " fim";
+        assertThat(DataSanitizer.mascarar(linha)).as(forma)
+            .isEqualTo(valido ? "doc [CNPJ] fim" : linha);
+      }
+    }
+    // Cerca de 1 em 100 tem DV valido: o teste passa pelos dois lados.
+    assertThat(validos).isBetween(10, 200);
+  }
+
+  @Test
+  @DisplayName("Limite aceito: o CNPJ alfanumerico colado em letra nao e mascarado (#313)")
+  void cnpjAlfanumericoColadoEmLetraPassa() {
+    assertThat(DataSanitizer.mascarar("cnpj12ABC34501DE35")).isEqualTo("cnpj12ABC34501DE35");
+    // com qualquer separador, mascara
+    assertThat(DataSanitizer.mascarar("cnpj:12ABC34501DE35 cnpj_12ABC34501DE35"))
+        .isEqualTo("cnpj:[CNPJ] cnpj_[CNPJ]");
   }
 
   @Test

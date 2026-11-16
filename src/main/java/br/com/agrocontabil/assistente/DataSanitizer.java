@@ -2,7 +2,6 @@ package br.com.agrocontabil.assistente;
 
 import br.com.agrocontabil.common.DocumentoFiscalValidator;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -51,9 +50,6 @@ public final class DataSanitizer {
     }
   }
 
-  /** Pontuação do CNPJ, tirada antes de conferir o DV do alfanumérico. */
-  private static final Pattern PONTUACAO_CNPJ = Pattern.compile("[./-]");
-
   private static final List<Regra> REGRAS = List.of(
       // Chave de acesso da NF-e: 44 digitos.
       new Regra(Pattern.compile("(?<![\\d])\\d{44}(?![\\d])"), "[CHAVE]"),
@@ -64,8 +60,7 @@ public final class DataSanitizer {
       // ja trocou os so de digitos, e antes do CPF.
       new Regra(Pattern.compile("(?<![A-Za-z0-9.])[0-9A-Za-z]{2}\\.?[0-9A-Za-z]{3}\\.?"
           + "[0-9A-Za-z]{3}/?[0-9A-Za-z]{4}-?\\d{2}(?![A-Za-z0-9])"), "[CNPJ]",
-          trecho -> DocumentoFiscalValidator.isCnpjAlfanumericoValido(
-              PONTUACAO_CNPJ.matcher(trecho).replaceAll("").toUpperCase(Locale.ROOT))),
+          trecho -> DocumentoFiscalValidator.isCnpjAlfanumericoNoTextoValido(trecho, true)),
       new Regra(Pattern.compile(
           "(?<![\\d.])\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}(?![\\d])"), "[CPF]"),
       new Regra(Pattern.compile(

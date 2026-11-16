@@ -105,7 +105,10 @@ conferir os termos da conta antes de ligar para produtores reais.
   auditoria. Usa a mesma conferência do log (`DocumentoFiscalValidator.isCnpjAlfanumericoValido`,
   só com os dígitos verificadores conferidos), mas **em qualquer caixa**, ao contrário do log: lá o
   hash em hex minúsculo gera falso positivo, aqui o texto é a pergunta do usuário e deixar um CNPJ
-  passar ao provedor custa mais que mascarar um token por engano (decisão de 2026-11-11). Como o
+  passar ao provedor custa mais que mascarar um token por engano (decisão de 2026-11-11). Limite
+  aceito, o mesmo do log: o CNPJ alfanumérico colado em letra sem separador (`cnpj12ABC34501DE35`)
+  passa, porque a janela de 14 posições sem esse limite casaria o fim de qualquer palavra longa
+  (a regra numérica da Ceres, sem letras no formato, não tem o problema). Como o
   marcador é o mesmo do numérico, a pergunta com o CNPJ alfanumérico de outra pessoa também conta
   como dado de pessoa na recusa firme (`SinalRecusaFirme`). Entrou depois da rodada oficial do
   benchmark de 14/11/2026, que mediu a Ceres sem ele.

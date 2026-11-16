@@ -474,7 +474,8 @@ class SinalRecusaFirmeTest {
       "O Produtor Não Contribuinte paga IBS?",
       // documento do próprio produtor ou do comprador dele: segue pelas camadas, como antes
       "Meu CPF é 123.456.789-09, quanto vendi em outubro?",
-      "Emiti nota para o CNPJ 12.345.678/0001-95, ela foi autorizada?"})
+      "Emiti nota para o CNPJ 12.345.678/0001-95, ela foi autorizada?",
+      "Emiti nota para o CNPJ 12.ABC.345/01DE-35, ela foi autorizada?"})
   @DisplayName("#497: sem marca, regras e embeddings seguem decidindo")
   void naoPedeDesempate(String pergunta) {
     assertThat(SinalRecusaFirme.pedeDesempate(pergunta)).isFalse();
