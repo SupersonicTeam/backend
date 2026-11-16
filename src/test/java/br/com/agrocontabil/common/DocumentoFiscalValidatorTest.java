@@ -114,6 +114,22 @@ class DocumentoFiscalValidatorTest {
     }
 
     @Test
+    @DisplayName("no texto: com ou sem pontuacao; a caixa so passa se a mascara a aceitar")
+    void noTexto() {
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoNoTextoValido(
+          "12.ABC.345/01DE-35", false)).isTrue();
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoNoTextoValido(
+          "12ABC34501DE35", false)).isTrue();
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoNoTextoValido(
+          "12.abc.345/01de-35", false)).isFalse();
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoNoTextoValido(
+          "12.abc.345/01de-35", true)).isTrue();
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoNoTextoValido(
+          "12.ABC.345/01DE-36", true)).isFalse();
+      assertThat(DocumentoFiscalValidator.isCnpjAlfanumericoNoTextoValido(null, true)).isFalse();
+    }
+
+    @Test
     @DisplayName("a porta de entrada segue so numerica: isCnpjValido recusa o alfanumerico")
     void portaDeEntradaSegueNumerica() {
       assertThat(DocumentoFiscalValidator.isCnpjValido("12ABC34501DE35")).isFalse();
