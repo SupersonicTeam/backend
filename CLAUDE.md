@@ -224,6 +224,8 @@ v1, v2, conjuntos antigos nem a correção. Regra `2026-11-13.6` (`VERSAO_REGRA_
 escrito e a `2026-11-12.4` segue como a do v1 e do v2): mesmas margens, quatro braços (`desligada`, `camada1`, `camada1+juiz+resgate`,
 `camada1+resgate`), regra seção 10; teste cego igual.
 
+**Ressalva do enquadramento na resposta de tratamento de produto (#443):** `docs/avaliacao/ressalva-tratamento-443/` guarda o conjunto de 60 perguntas (`perguntas-ressalva-443.json`, sha256 ao lado: 36 de defeito, 12 controles de lei, 12 de dados), a regra de decisão (`regra-de-decisao.md`, com a régua de ruído do projeto) e o executor e a decisão da medição `main` × head da correção. Vale a mesma regra do teste cego: quem escreve ou revisa a correção da #443 **não lê** o conjunto, e a mensagem a essa sessão cita só o id (`RS07`). O `ConjuntoRessalvaTratamentoTest` e os testes Python da pasta (`python3 -m unittest discover -s docs/avaliacao/ressalva-tratamento-443 -p "test_*.py"`, na CI) guardam hash, treino e prompt; a regra e as margens do `ressalva_comum.py` são uma coisa só. O merge muda o que a banca mede: depende do OK do Murillo.
+
 ## Arquitetura — regras inegociáveis
 
 - **Camadas:** `Controller → Service → Repository`. Sempre nessa direção.
