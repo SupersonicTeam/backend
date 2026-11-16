@@ -56,6 +56,10 @@ jobs:
       - name: Ressalva do enquadramento (#443, testes do conjunto, dos detectores e da decisao)
         run: python3 -m unittest discover -s docs/avaliacao/ressalva-tratamento-443 -p "test_*.py"
 
+      # Harness da Ceres contra o ambiente publicado (#497): parada pela cota e pelo token, servidor falso.
+      - name: Harness da API publicada (#497, testes da parada pela cota)
+        run: python3 -m unittest discover -s docs/avaliacao/harness-api -p "test_*.py"
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
