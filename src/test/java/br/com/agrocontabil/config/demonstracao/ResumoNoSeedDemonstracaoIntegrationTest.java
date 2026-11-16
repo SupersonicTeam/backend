@@ -8,8 +8,13 @@ import br.com.agrocontabil.assistente.SecaoResposta;
 import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.ResumoProdutor;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.service.ConsultaDadosProdutorService;
+import br.com.agrocontabil.service.NotaPorNumeroResultado;
+import br.com.agrocontabil.service.SinalNota.CodigoSinalNota;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -49,13 +54,14 @@ class ResumoNoSeedDemonstracaoIntegrationTest {
 
   @Autowired private FerramentasDadosProdutor ferramentas;
   @Autowired private ProdutorRepository produtorRepository;
+  @Autowired private ConsultaDadosProdutorService consultaService;
 
   @Test
   @DisplayName("produtor principal: atraso, nota parada e pedido, na ordem, com o resumo")
   void principal() {
     Produtor principal = produtor(CenarioDemonstracao.CHAVE_PRINCIPAL);
-    ContextoAssistente contexto =
-        new ContextoAssistente(principal.getId(), LocalDate.now(BRASILIA));
+    LocalDate hoje = LocalDate.now(BRASILIA);
+    ContextoAssistente contexto = new ContextoAssistente(principal.getId(), hoje);
 
     ResumoProdutor resumo = ferramentas.resumoDoProdutor(
         new ToolContext(contexto.comoToolContext()));
@@ -77,9 +83,33 @@ class ResumoNoSeedDemonstracaoIntegrationTest {
     assertThat(parada).isGreaterThan(atraso);
     assertThat(pedido).isGreaterThan(parada);
     assertThat(texto).contains("devolvida pelo contador", "Extrato bancário de ");
-    // Sem nota a conferir no seed (#276: falso positivo zero), ela fica so no resumo.
-    assertThat(resumo.notasAConferir()).isZero();
-    assertThat(texto).contains("Sem pendências em:").contains("notas a conferir");
+    // Nota a conferir no seed (#276, #377): a invariante do cenario e "nenhum falso positivo", nao
+    // "nenhuma nota a conferir". Os rascunhos de milho a destinatario sem IE (CFOP 5101, sem CST) ficam
+    // de proposito, para mostrar na banca o sinal ICMS_A_DEFINIR e o 422 da emissao (SeedDemonstracao,
+    // "fica rascunho e mostra na banca o sinal"). O resumo da Ceres olha so as 10 notas mais recentes
+    // entre as nao emitidas e as autorizadas dos ultimos 30 dias; conforme as autorizadas do seed saem
+    // dessa janela, entram esses rascunhos, entao a contagem varia com o dia (0 ate 15/11/2026, 2 em
+    // 16/11, 1 a 3 nas datas de reset ate a banca). A assercao antiga, isZero(), so passava porque
+    // as 10 vagas estavam tomadas por notas recentes sem sinal (CI vermelha da main em 16/11/2026).
+    // Por isso o teste trava as propriedades, que valem em qualquer data, e nunca a contagem.
+    OffsetDateTime autorizadasDesde =
+        hoje.minusDays(30).atStartOfDay(BRASILIA).toOffsetDateTime();
+    List<NotaPorNumeroResultado> aConferir =
+        consultaService.notasAConferir(principal.getId(), autorizadasDesde);
+    assertThat(aConferir).allSatisfy(nota -> {
+      assertThat(nota.status()).as("nota %s/%s", nota.numero(), nota.serie())
+          .isEqualTo(StatusNotaFiscal.RASCUNHO);
+      assertThat(nota.sinais()).as("sinais da nota %s/%s", nota.numero(), nota.serie())
+          .isNotEmpty()
+          .allSatisfy(sinal -> assertThat(sinal.codigo())
+              .isEqualTo(CodigoSinalNota.ICMS_A_DEFINIR));
+    });
+    assertThat(resumo.notasAConferir()).isEqualTo(aConferir.size());
+    if (aConferir.isEmpty()) {
+      assertThat(texto).contains("Sem pendências em:").contains("notas a conferir");
+    } else {
+      assertThat(texto).contains("a conferir");
+    }
   }
 
   private Produtor produtor(String chave) {
