@@ -1,7 +1,9 @@
 # Regra de decisão da medição da #443
 
-Versão da regra: `2026-11-15.1`. Conjunto: `perguntas-ressalva-443.json`, versão `2026-11-15.v1`.
-**Escrita e congelada antes de qualquer rodada, sem ver nenhum resultado.** As margens estão em
+Versão da regra: `2026-11-16.2`. Conjunto: `perguntas-ressalva-443.json`, versão `2026-11-15.v1` (o conjunto
+não mudou).
+**A versão `2026-11-15.1` foi escrita e congelada antes de qualquer rodada, sem ver nenhum resultado. A
+`2026-11-16.2` mudou o detector de tratamento depois de olhar a sondagem de 2026-11-16: ver a seção 10.** As margens estão em
 `ressalva_comum.py`: mudou uma, mude esta regra, a versão da regra e rode de novo. Mudar uma pergunta
 muda o sha256: suba a versão do conjunto.
 
@@ -36,8 +38,10 @@ Detectores em `ressalva_comum.py` (texto sem acento e sem caixa):
   de enquadramento ou de condição). As recusas fixas da rota de lei (`Não consegui localizar a base
   legal…`, `Não consegui confirmar uma resposta…`, `não encontrei fundamento legal`) **nunca** contam,
   mesmo citando o contador.
-- **Tratamento:** a resposta traz percentual (`60%`, `por cento`), `alíquota zero`, `alíquota cheia` ou
-  `sem redução`, e não é recusa.
+- **Tratamento:** a resposta afirma o tratamento do produto e não é recusa: percentual (`60%`, `por cento`)
+  **ou a mesma afirmação sem número** (`redução a zero`, `reduzidas a zero`, `alíquota zero`, `zerada`,
+  `isenta`, `imune`, `alíquota cheia`/`integral`/`padrão`, `alíquota reduzida`, `redução das alíquotas`,
+  `sem redução`, `não há redução`). A família sem número é da versão `2026-11-16.2` (seção 10).
 
 Por grupo:
 
@@ -167,3 +171,23 @@ pergunta está no treino nem no prompt do classificador.
 - `TETO_FALHAS_TECNICAS = 0.05`
 - `ALERTA_ESTRATO_B = 3`
 - `ALERTA_CONTROLE = 2`
+
+## 10. Correção do detector de tratamento (2026-11-16.2), feita olhando a sondagem
+
+**Isto é declarado, não escondido.** A versão `2026-11-15.1` do detector só reconhecia tratamento com
+percentual numérico, `alíquota zero`, `cheia`, `integral` ou `sem redução`. Em 2026-11-16 rodou-se uma sondagem
+(36 perguntas de defeito, 1 repetição, VPS publicada, `sondar_defeito.py`) e a leitura das respostas mostrou um
+defeito objetivo do detector: respostas como "submetidos à redução a zero das alíquotas do IBS e da CBS" ou
+"alíquotas reduzidas a zero" afirmam o tratamento sem a ressalva e ele as classificava como `SEM_TRATAMENTO`
+(RS01, RS02, RS15, RS28, RS31 e RS32). Com o detector antigo a base teria ~12 falhas em 90 no estrato A (o
+portão 2 exige 15) e a medição concluiria "o defeito não existe" com o defeito presente em 11 das 36.
+
+- **Antes e depois, na sondagem:** defeitos reconhecidos **5 → 11** de 36. As 7 recusas ("Não consegui
+  localizar a base legal…") e os 9 descartes da fidelidade seguem como estavam; as 9 respostas corretas também.
+- **Como foi corrigido:** pela **classe** ("afirma o tratamento sem percentual numérico"), não pelos seis casos.
+  O `test_decisao.py` testa formas que a sondagem não trouxe (isenção, imunidade, "alíquota padrão", "não há
+  redução", "alíquotas zeradas", "fica em zero") e frases que não afirmam tratamento. Uma delas
+  ("imunidade") falhou na primeira versão do regex e foi corrigida pelo teste.
+- **O que não mudou:** o conjunto de perguntas e o hash, as margens, o veredito e os portões.
+- **Duas leituras lado a lado:** o `resultado.md` traz, por id, o que o detector diz e o que a leitura humana diz
+  (arquivo `--leitura-humana`, ver o README) e **lista a divergência**, não a média.

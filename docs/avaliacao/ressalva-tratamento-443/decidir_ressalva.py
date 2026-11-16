@@ -46,7 +46,28 @@ def _grupo(conjunto, grupo, **filtro):
             if p["grupo"] == grupo and all(p.get(k) == v for k, v in filtro.items())]
 
 
-def decidir(conjunto, execucoes, base, candidato):
+CLASSES_HUMANAS = (comum.OK, comum.DEFEITO, comum.SEM_TRATAMENTO)
+
+
+def _detector_x_humana(execucoes, ids, bracos, leitura):
+    """Por id e braço (repetição 1): o que o detector diz e o que a leitura humana diz, lado a lado.
+
+    `leitura` = {id: {braco: classe}} com as classes OK, DEFEITO ou SEM_TRATAMENTO, de quem leu a resposta.
+    Sem leitura, a coluna fica vazia (e isso vira alerta). A divergência é listada, nunca promediada."""
+    linhas = []
+    for i in ids:
+        for b in bracos:
+            e = next((x for x in execucoes if x["braco"] == b and x["id"] == i and x["rep"] == 1), None)
+            detector = comum.classificar_defeito(e) if e else None
+            humana = (leitura or {}).get(i, {}).get(b)
+            if humana is not None and humana not in CLASSES_HUMANAS:
+                raise ValueError(f"Classe humana inválida em {i}/{b}: {humana!r} (use {CLASSES_HUMANAS})")
+            linhas.append({"id": i, "braco": b, "detector": detector, "humana": humana,
+                           "diverge": humana is not None and detector != humana})
+    return linhas
+
+
+def decidir(conjunto, execucoes, base, candidato, leitura=None):
     perguntas = {p["id"]: p for p in conjunto["perguntas"]}
     ac = {b: _acertos_por_id(perguntas, execucoes, b) for b in (base, candidato)}
     inconclusiva, bloqueios, alertas = [], [], []
@@ -136,6 +157,21 @@ def decidir(conjunto, execucoes, base, candidato):
     else:
         veredito, motivos = NAO_ENTRA, [f"sem efeito distinguível do ruído no estrato A (delta {delta_a}, "
                                         "nenhum id muda nas 3 repetições)"]
+    # As duas leituras lado a lado, por id, nos ids em que os braços discordam e nos que decidiram.
+    ids_lidos = [i for i in ids_a + ids_b if _contagem(ac[base], i) != _contagem(ac[candidato], i)]
+    ids_lidos += [i for i in (leitura or {}) if i in perguntas and i not in ids_lidos]
+    resultado["detectorXHumana"] = _detector_x_humana(execucoes, ids_lidos, (base, candidato), leitura)
+    divergentes = [d for d in resultado["detectorXHumana"] if d["diverge"]]
+    decisivos = set(corrigidos) | set(piorados)
+    if not leitura:
+        alertas.append("sem leitura humana (--leitura-humana): só o detector fala, e ele é lexical")
+    if divergentes:
+        alertas.append("leitura humana diverge do detector em: "
+                       + ", ".join(f"{d['id']}/{d['braco']}" for d in divergentes))
+    divergencia_decisiva = sorted({d["id"] for d in divergentes} & decisivos)
+    if divergencia_decisiva and veredito != INCONCLUSIVA:
+        veredito, motivos = INCONCLUSIVA, [f"a leitura humana diverge do detector em id decisivo "
+                                           f"{divergencia_decisiva}: corrija o detector e decida de novo (regra, seção 6)"]
     resultado.update({"veredito": veredito, "motivos": motivos, "alertas": alertas})
 
     # Leitura humana: onde os braços discordam no estrato A/B, a repetição 1 de cada um.
@@ -177,6 +213,11 @@ def para_markdown(r):
                       f"{c['delta']} | {', '.join(c['idsComPerdaEstavel']) or '-'} |")
         if c["excluidosPorNaoQualificarNaBase"]:
             linhas.append(f"| ↳ excluídos na base | {', '.join(c['excluidosPorNaoQualificarNaBase'])} | | | | |")
+    linhas += ["", "## Detector × leitura humana, por id (repetição 1)", "",
+               "| Id | Braço | Detector | Leitura humana | Diverge |", "|---|---|---|---|---|"]
+    for d in r["detectorXHumana"]:
+        linhas.append(f"| {d['id']} | {d['braco']} | {d['detector']} | {d['humana'] or '(não lida)'} | "
+                      f"{'**SIM**' if d['diverge'] else 'não'} |")
     linhas += ["", "## Para a leitura humana", "",
                "Quem lê não é quem escreveu a correção. Discordância entre o detector e a leitura em um id "
                "decisivo (corrigido ou piorado nas 3 repetições) invalida a decisão.", ""]
@@ -197,6 +238,8 @@ def main(argv=None):
     ap.add_argument("--rodada", required=True, type=Path)
     ap.add_argument("--base", default=None)
     ap.add_argument("--candidato", default=None)
+    ap.add_argument("--leitura-humana", type=Path, default=None,
+                    help='JSON {"RS01": {"base": "DEFEITO", "candidato": "OK"}}, classes de quem leu a repetição 1')
     args = ap.parse_args(argv)
     manifesto = json.loads((args.rodada / "execucao.json").read_text(encoding="utf-8"))
     conjunto = comum.carregar_conjunto()
@@ -213,7 +256,8 @@ def main(argv=None):
         sys.exit("O manifesto não traz o commit de: " + ", ".join(sem_commit) + " (INCONCLUSIVA).")
     execucoes = [json.loads(linha) for linha in
                  (args.rodada / "respostas-brutas.jsonl").read_text(encoding="utf-8").splitlines() if linha]
-    resultado = decidir(conjunto, execucoes, base, candidato)
+    leitura = json.loads(args.leitura_humana.read_text(encoding="utf-8")) if args.leitura_humana else None
+    resultado = decidir(conjunto, execucoes, base, candidato, leitura)
     (args.rodada / "resultado.json").write_text(json.dumps(resultado, ensure_ascii=False, indent=2) + "\n",
                                                 encoding="utf-8")
     (args.rodada / "resultado.md").write_text(para_markdown(resultado), encoding="utf-8")

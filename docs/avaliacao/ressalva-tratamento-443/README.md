@@ -65,6 +65,15 @@ python3 -I docs/avaliacao/ressalva-tratamento-443/decidir_ressalva.py --rodada <
 da decisão: as respostas são da conta de demonstração, sem segredo, e são o que torna a decisão auditável.
 O `--commit NOME=SHA` de cada braço é obrigatório.
 
+`decidir_ressalva.py --leitura-humana arquivo.json` junta a leitura de quem leu as respostas (repetição 1, por id e
+braço, classes `OK`, `DEFEITO` ou `SEM_TRATAMENTO`, ex.: `{"RS01": {"base": "DEFEITO", "candidato": "OK"}}`) e o
+`resultado.md` traz, por id, **o detector e a leitura humana lado a lado**, com a divergência listada (sem média).
+Divergência em id decisivo torna a rodada `INCONCLUSIVA` (regra, seções 6 e 10). Sem o arquivo, a coluna fica
+vazia e sai um alerta.
+
+`sondar_defeito.py` (1 repetição, 36 perguntas, 1 braço) é a sondagem que mostrou, em 2026-11-16, o defeito na
+VPS e o furo do detector de tratamento sem número (regra, seção 10).
+
 Se a correção for atrás de uma flag, os dois braços podem ser o **mesmo jar** com a flag desligada e
 ligada, como na fidelidade (`docs/avaliacao/fidelidade-lei/`).
 

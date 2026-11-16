@@ -74,6 +74,40 @@ class DetectoresTest(unittest.TestCase):
         self.assertFalse(comum.tem_tratamento("Não encontrei esse produto na tabela oficial."))
         self.assertFalse(comum.tem_tratamento(RECUSA_DE_LEI))
 
+    def test_tratamento_sem_numero_e_a_mesma_afirmacao(self):
+        """Versão 2026-11-16.2: a família "afirma o tratamento sem percentual numérico". As formas abaixo NÃO
+        estavam na sondagem que motivou o ajuste: o teste guarda a classe, não os seis casos vistos."""
+        for texto in ("O arroz fica isento de IBS e CBS.",
+                      "Esse produto tem imunidade na venda.",
+                      "A alíquota é reduzida a zero para o produto.",
+                      "As alíquotas ficam em zero na saída.",
+                      "Há redução das alíquotas do IBS para o item.",
+                      "O produto paga a alíquota padrão, sem benefício.",
+                      "Os produtos têm alíquotas zeradas.",
+                      "Para esse produto, a alíquota fica reduzida em relação à regra geral.",
+                      "A lei não prevê redução para esse caso.",
+                      "Não há redução de alíquota nesse caso.",
+                      "Tributação com alíquota integral.",
+                      "Está listado como alíquota zero no Anexo I."):
+            self.assertTrue(comum.tem_tratamento(texto), texto)
+
+    def test_sem_afirmacao_de_tratamento_continua_sem(self):
+        for texto in ("Não encontrei esse produto no seu cadastro.",
+                      "A nota foi emitida e está aguardando a aprovação do contador.",
+                      "Esse é um assunto de imposto de renda, não da reforma tributária.",
+                      "O prazo de pagamento da guia vence na sexta.",
+                      "Pergunte sobre notas, guias ou a reforma tributária.",
+                      RECUSA_DE_LEI, TRECHOS_SEM_CONFIRMACAO):
+            self.assertFalse(comum.tem_tratamento(texto), texto)
+
+    def test_defeito_sem_numero_e_classificado_como_defeito(self):
+        sem_numero = ("O queijo está no Anexo I, submetido à redução a zero das alíquotas do IBS e da CBS "
+                      "(LC 214/2025, Anexo I, item 21).")
+        self.assertEqual(comum.classificar_defeito(execucao(sem_numero)), comum.DEFEITO)
+        self.assertEqual(comum.classificar_defeito(execucao(sem_numero + " Confirme com o seu contador.")),
+                         comum.OK)
+        self.assertEqual(comum.classificar_defeito(execucao(TRECHOS_SEM_CONFIRMACAO)), comum.SEM_TRATAMENTO)
+
     def test_contaminacao_de_tabela(self):
         self.assertTrue(comum.contaminada_por_tabela(TEMPLATE_COM_RESSALVA))
         self.assertTrue(comum.contaminada_por_tabela("cClassTrib 200034"))
@@ -342,6 +376,41 @@ class DecisaoTest(unittest.TestCase):
         self.assertIn("ENTRA", md)
         self.assertIn("Para a leitura humana", md)
         self.assertEqual(len(r["paraLeitura"]), 15)
+
+
+    def test_detector_e_leitura_humana_lado_a_lado_e_a_divergencia_aparece(self):
+        base = self.base_com_defeito()
+        i = self.ids_a[0]
+        ex_ = _execs(self.conjunto, "base", base) + _execs(self.conjunto, "cand", {})
+        # a leitura humana concorda no id decisivo (candidato corrigido) e discorda num id que não decidiu
+        leitura = {i: {"base": comum.DEFEITO, "cand": comum.OK},
+                   self.ids_a[20]: {"base": comum.DEFEITO, "cand": comum.DEFEITO}}
+        r = dec.decidir(self.conjunto, ex_, "base", "cand", leitura)
+        linhas = {(d["id"], d["braco"]): d for d in r["detectorXHumana"]}
+        self.assertFalse(linhas[(i, "base")]["diverge"])
+        self.assertEqual(linhas[(i, "cand")]["detector"], comum.OK)
+        self.assertTrue(linhas[(self.ids_a[20], "base")]["diverge"])  # detector OK, humana DEFEITO
+        self.assertTrue(any("diverge" in a for a in r["alertas"]))
+        self.assertEqual(r["veredito"], dec.ENTRA)  # a divergência não é no id decisivo desta vez
+        self.assertIn("Detector × leitura humana", dec.para_markdown(r))
+
+    def test_divergencia_em_id_decisivo_invalida_a_decisao(self):
+        i = self.ids_a[0]
+        ex_ = _execs(self.conjunto, "base", self.base_com_defeito()) + _execs(self.conjunto, "cand", {})
+        leitura = {i: {"base": comum.OK, "cand": comum.OK}}  # a humana não vê o defeito que o detector viu
+        r = dec.decidir(self.conjunto, ex_, "base", "cand", leitura)
+        self.assertEqual(r["veredito"], dec.INCONCLUSIVA)
+        self.assertIn("diverge", r["motivos"][0])
+
+    def test_sem_leitura_humana_vira_alerta(self):
+        r = self.decidir(self.base_com_defeito(), {})
+        self.assertTrue(any("sem leitura humana" in a for a in r["alertas"]))
+        self.assertTrue(all(d["humana"] is None for d in r["detectorXHumana"]))
+
+    def test_classe_humana_invalida_e_recusada(self):
+        ex_ = _execs(self.conjunto, "base", {}) + _execs(self.conjunto, "cand", {})
+        with self.assertRaises(ValueError):
+            dec.decidir(self.conjunto, ex_, "base", "cand", {self.ids_a[0]: {"base": "TALVEZ"}})
 
 
 if __name__ == "__main__":

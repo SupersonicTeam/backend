@@ -13,7 +13,7 @@ from pathlib import Path
 DIR = Path(__file__).resolve().parent
 CONJUNTO = DIR / "perguntas-ressalva-443.json"
 VERSAO_CONJUNTO = "2026-11-15.v1"
-VERSAO_REGRA = "2026-11-15.1"
+VERSAO_REGRA = "2026-11-16.2"
 
 REPETICOES = 3
 FUNCAO_TRATAMENTO = "consultarTratamentoProduto"
@@ -63,9 +63,20 @@ _RECUSAS = (
     "nao encontrei fundamento legal",
 )
 
+# Afirmação de tratamento: percentual numérico OU a mesma afirmação sem número ("redução a zero", "isenta",
+# "alíquotas reduzidas", "sem redução"). A segunda família entrou na versão 2026-11-16.2 (ver a regra, seção 10).
 _TRATAMENTO = re.compile(
-    r"\d+(?:,\d+)?\s*%|\bpor cento\b|aliquota zero|aliquota cheia|aliquota integral"
-    r"|sem reducao|\bzerad[ao]s?\b")
+    r"\d+(?:,\d+)?\s*%|\bpor cento\b"
+    # zero: "alíquota zero", "alíquota fica em zero", "reduzidas a zero", "redução para zero", "zerada"
+    r"|aliquotas?\s+(?:\w+\s+){0,2}zero|reduz\w*\s+(?:a|para|ate)\s+zero|reducao\s+(?:a|para|ate)\s+zero"
+    r"|\bzerad[ao]s?\b"
+    # isenção e imunidade
+    r"|\bisen(?:to|ta|tos|tas|cao|coes)\b|\bimun(?:e|es|idade|idades)\b"
+    # alíquota cheia ou reduzida, com ou sem número
+    r"|aliquotas?\s+(?:cheia|integral|normal|padrao|plena)s?\b"
+    r"|aliquotas?\s+(?:\w+\s+){0,4}reduzid[ao]s?\b|reduc\w+\s+(?:\w+\s+){0,3}aliquotas?\b"
+    # ausência de redução
+    r"|sem reducao|nao (?:ha|tem|possui|prev\w*) reducao")
 
 _CONTAMINACAO_DE_TABELA = re.compile(r"cclasstrib|tabela oficial de classificacao")
 
