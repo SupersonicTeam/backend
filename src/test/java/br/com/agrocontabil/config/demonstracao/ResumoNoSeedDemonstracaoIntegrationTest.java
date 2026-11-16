@@ -8,7 +8,12 @@ import br.com.agrocontabil.assistente.SecaoResposta;
 import br.com.agrocontabil.assistente.ferramentas.FerramentasDadosProdutor;
 import br.com.agrocontabil.assistente.ferramentas.RespostasFerramentas.ResumoProdutor;
 import br.com.agrocontabil.model.Produtor;
+import br.com.agrocontabil.repository.NotaFiscalRepository;
 import br.com.agrocontabil.repository.ProdutorRepository;
+import br.com.agrocontabil.service.SinaisNotaConferirService;
+import br.com.agrocontabil.service.SinaisNotaConferirService.NotaParaSinal;
+import br.com.agrocontabil.service.SinalNota;
+import br.com.agrocontabil.service.SinalNota.CodigoSinalNota;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -19,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
@@ -49,6 +55,8 @@ class ResumoNoSeedDemonstracaoIntegrationTest {
 
   @Autowired private FerramentasDadosProdutor ferramentas;
   @Autowired private ProdutorRepository produtorRepository;
+  @Autowired private NotaFiscalRepository notaRepository;
+  @Autowired private SinaisNotaConferirService sinaisService;
 
   @Test
   @DisplayName("produtor principal: atraso, nota parada e pedido, na ordem, com o resumo")
@@ -77,9 +85,29 @@ class ResumoNoSeedDemonstracaoIntegrationTest {
     assertThat(parada).isGreaterThan(atraso);
     assertThat(pedido).isGreaterThan(parada);
     assertThat(texto).contains("devolvida pelo contador", "Extrato bancário de ");
-    // Sem nota a conferir no seed (#276: falso positivo zero), ela fica so no resumo.
-    assertThat(resumo.notasAConferir()).isZero();
-    assertThat(texto).contains("Sem pendências em:").contains("notas a conferir");
+    // Nota a conferir no seed (#276, #377): a invariante do cenario e "nenhum falso positivo", nao
+    // "nenhuma nota a conferir". Os rascunhos de milho a destinatario sem IE ficam de proposito,
+    // para mostrar na banca o sinal ICMS_A_DEFINIR e o 422 da emissao. O resumo olha so as 10 notas
+    // mais recentes entre as nao emitidas e as autorizadas dos ultimos 30 dias, entao a contagem
+    // dele muda com o dia, e o isZero() antigo so passava porque essas vagas estavam tomadas por
+    // notas sem sinal. O teste trava propriedades, validas em qualquer data, nunca a contagem.
+    List<SinalNota> sinais = sinaisDeTodasAsNotas(principal);
+    assertThat(sinais).as("sinais das notas do seed")
+        .extracting(SinalNota::codigo)
+        .doesNotContain(CodigoSinalNota.PRODUTO_PARECE_SERVICO,
+            CodigoSinalNota.POSSIVEL_DUPLICIDADE, CodigoSinalNota.VALOR_UNITARIO_FORA_PADRAO)
+        .contains(CodigoSinalNota.ICMS_A_DEFINIR);
+    assertThat(resumo.notasAConferir()).isLessThanOrEqualTo(sinais.size());
+    assertThat(texto).contains("a conferir");
+  }
+
+  /** Os sinais de toda nota do produtor, sem o teto de 10 candidatas do resumo. */
+  private List<SinalNota> sinaisDeTodasAsNotas(Produtor produtor) {
+    return notaRepository.findByProdutorId(produtor.getId(), PageRequest.of(0, 1000)).stream()
+        .flatMap(nota -> sinaisService.sinais(produtor.getId(), new NotaParaSinal(nota.getId(),
+            nota.getOrigem(), nota.getStatus(), nota.getDataEmissao(),
+            nota.getDestinatarioCpfCnpj(), nota.getValorTotalNota())).stream())
+        .toList();
   }
 
   private Produtor produtor(String chave) {
