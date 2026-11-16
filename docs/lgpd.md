@@ -102,7 +102,7 @@ conferir os termos da conta antes de ligar para produtores reais.
   pelo falso positivo com hash em hex).
 - **Ceres (`DataSanitizer`):** reconhece o CNPJ alfanumérico da RFB (#313), com e sem pontuação, e o
   troca por `[CNPJ]` antes de a pergunta e os resultados irem ao modelo, à busca da lei e à
-  auditoria. Usa a mesma conferência do log (`DocumentoFiscalValidator.isCnpjAlfanumericoValido`,
+  auditoria. Usa a mesma conferência do log (`DocumentoFiscalValidator.isCnpjAlfanumericoNoTextoValido`,
   só com os dígitos verificadores conferidos), mas **em qualquer caixa**, ao contrário do log: lá o
   hash em hex minúsculo gera falso positivo, aqui o texto é a pergunta do usuário e deixar um CNPJ
   passar ao provedor custa mais que mascarar um token por engano (decisão de 2026-11-11). Limite

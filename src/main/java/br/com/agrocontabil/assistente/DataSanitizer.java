@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
  * <p><strong>CNPJ alfanumérico da RFB (issue #313):</strong> 12 posições com dígito ou letra e 2
  * dígitos verificadores ({@code 12.ABC.345/01DE-35}, IN RFB 2.229/2024), com e sem pontuação, viram
  * {@code [CNPJ]} só quando os dígitos verificadores conferem, pela mesma conta da máscara de log
- * ({@link DocumentoFiscalValidator#isCnpjAlfanumericoValido}, um ponto único): sem isso, todo
+ * ({@link DocumentoFiscalValidator#isCnpjAlfanumericoNoTextoValido}, um ponto único): sem isso, todo
  * token de 14 caracteres terminado em 2 dígitos (hash, código) sairia {@code [CNPJ]}. A diferença
  * em relação ao log é a caixa, por decisão do Murillo (2026-11-11, issue #313): o log recusa
  * minúscula porque carrega hash em hex minúsculo; aqui a pergunta é texto do usuário, digitado em
