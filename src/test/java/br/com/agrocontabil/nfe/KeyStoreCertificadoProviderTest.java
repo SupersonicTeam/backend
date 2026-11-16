@@ -81,4 +81,56 @@ class KeyStoreCertificadoProviderTest {
     assertThat(saida.getOut()).contains("nao carregou").doesNotContain("senha-errada");
     assertThatThrownBy(ilegivel::getCertificate).isInstanceOf(AssinaturaDigitalException.class);
   }
+
+  private static final String AVISO_DEMO = "a demonstracao NAO vai gerar nota";
+
+  @Test
+  @DisplayName("demonstracao ligada + caminho inexistente = ERROR, sem senha nem alias (#560)")
+  void demonstracaoComCaminhoInexistenteLogaError(CapturedOutput saida) {
+    var props = new CertificadoDigitalProperties("file:/caminho/seguro/certificado.p12",
+        "senha-secreta", "alias-secreto");
+    new KeyStoreCertificadoProvider(props, true).conferirNaSubida();
+
+    assertThat(saida.getOut()).contains("ERROR").contains(AVISO_DEMO)
+        .doesNotContain("senha-secreta").doesNotContain("alias-secreto");
+  }
+
+  @Test
+  @DisplayName("demonstracao ligada + caminho em branco = ERROR (#560)")
+  void demonstracaoComCaminhoEmBrancoLogaError(CapturedOutput saida) {
+    new KeyStoreCertificadoProvider(new CertificadoDigitalProperties("", "x", ""), true)
+        .conferirNaSubida();
+
+    assertThat(saida.getOut()).contains(AVISO_DEMO);
+  }
+
+  @Test
+  @DisplayName("demonstracao ligada + arquivo ilegivel (senha errada) = ERROR (#560)")
+  void demonstracaoComArquivoIlegivelLogaError(CapturedOutput saida) {
+    new KeyStoreCertificadoProvider(
+        new CertificadoDigitalProperties(TEST_P12, "senha-errada", "nfe-teste"), true)
+        .conferirNaSubida();
+
+    assertThat(saida.getOut()).contains(AVISO_DEMO).doesNotContain("senha-errada");
+  }
+
+  @Test
+  @DisplayName("demonstracao ligada + certificado existente = sem o ERROR da demonstracao (#560)")
+  void demonstracaoComCaminhoExistenteNaoLogaError(CapturedOutput saida) {
+    new KeyStoreCertificadoProvider(
+        new CertificadoDigitalProperties(TEST_P12, "changeit", "nfe-teste"), true)
+        .conferirNaSubida();
+
+    assertThat(saida.getOut()).doesNotContain(AVISO_DEMO);
+  }
+
+  @Test
+  @DisplayName("demonstracao desligada + caminho inexistente = so o WARN de sempre (#560)")
+  void semDemonstracaoCaminhoInexistenteNaoLogaErrorDaDemonstracao(CapturedOutput saida) {
+    new KeyStoreCertificadoProvider(
+        new CertificadoDigitalProperties("file:/nao/existe.p12", "x", ""), false)
+        .conferirNaSubida();
+
+    assertThat(saida.getOut()).doesNotContain(AVISO_DEMO).contains("nao carregou na subida");
+  }
 }

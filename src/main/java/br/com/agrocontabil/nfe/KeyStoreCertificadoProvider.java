@@ -10,6 +10,8 @@ import java.security.cert.X509Certificate;
 import java.util.Enumeration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.DefaultResourceLoader;
@@ -41,8 +43,17 @@ public class KeyStoreCertificadoProvider {
   private volatile X509Certificate certificate;
   private final Object lock = new Object();
 
+  private final boolean demonstracaoHabilitada;
+
   public KeyStoreCertificadoProvider(CertificadoDigitalProperties props) {
+    this(props, false);
+  }
+
+  @Autowired
+  public KeyStoreCertificadoProvider(CertificadoDigitalProperties props,
+      @Value("${app.demonstracao.habilitada:false}") boolean demonstracaoHabilitada) {
     this.props = props;
+    this.demonstracaoHabilitada = demonstracaoHabilitada;
   }
 
   /** Chave privada do certificado, carregada sob demanda. */
@@ -63,13 +74,28 @@ public class KeyStoreCertificadoProvider {
     if (props.path() == null || props.path().isBlank()) {
       log.info("Certificado digital da NF-e nao configurado: a emissao falha ate definir "
           + "NFE_CERT_PATH.");
+      avisarDemonstracaoSemNota();
       return;
     }
     try {
       ensureLoaded();
     } catch (AssinaturaDigitalException e) {
+      avisarDemonstracaoSemNota();
       log.warn("Certificado digital da NF-e nao carregou na subida: {}. A emissao vai falhar ate "
           + "corrigir NFE_CERT_PATH/NFE_CERT_PASSWORD.", e.getMessage());
+    }
+  }
+
+  /**
+   * Com a demonstração ligada, certificado ausente ou ilegível faz o seed subir sem nota (#560).
+   * Nunca imprime senha nem alias, e nunca impede a subida.
+   */
+  private void avisarDemonstracaoSemNota() {
+    if (demonstracaoHabilitada) {
+      log.error("DEMONSTRACAO_HABILITADA esta ligada, mas o certificado digital da NF-e nao "
+          + "carregou (NFE_CERT_PATH ausente, inexistente ou ilegivel): a demonstracao NAO vai "
+          + "gerar nota. Corrija NFE_CERT_PATH (ou remova a variavel no dev, para valer o "
+          + "certificado de teste).");
     }
   }
 
