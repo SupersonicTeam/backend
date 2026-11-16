@@ -26,9 +26,20 @@ import ressalva_comum as comum  # noqa: E402
 PAUSA_S = 3.1  # limite de 20 perguntas por minuto por usuário (#150)
 
 
+DESCARTADO = "DESCARTADO"  # fidelidade da rota de lei reprovou e entregou os trechos no lugar do texto
+
+
+def descartada_pela_fidelidade(resposta):
+    """"Não consegui confirmar uma resposta nos trechos de lei que encontrei…": descarte, não defeito."""
+    return "nao consegui confirmar uma resposta" in comum.normalizar(resposta)
+
+
 def classificar(execucao):
-    """Classe do defeito e se a resposta fala do contador sem o detector reconhecer a ressalva."""
+    """Três desfechos (OK = correto, DEFEITO, DESCARTADO) mais SEM_TRATAMENTO e FALHA_TECNICA, e se a
+    resposta fala do contador sem o detector reconhecer a ressalva."""
     classe = comum.classificar_defeito(execucao)
+    if classe == comum.SEM_TRATAMENTO and descartada_pela_fidelidade(execucao.get("resposta")):
+        return DESCARTADO, False
     solta = classe == comum.DEFEITO and comum.menciona_contador_solto(execucao.get("resposta"))
     return classe, solta
 
