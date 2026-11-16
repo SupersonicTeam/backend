@@ -905,8 +905,9 @@ no cadastro (decisão do Murillo, 2026-10-19).
   desde o PR #310 — antes UUID e hash com 11 dígitos seguidos de letra viravam `[CPF]`; CPF grudado
   em letra sem separador passa, limite aceito); o CNPJ alfanumérico da RFB também vira `[CNPJ]`
   desde a #313, mas só com o DV conferido e só em maiúsculas, porque o log carrega hash em hex
-  minúsculo (o `DataSanitizer` da Ceres ainda não o reconhece: espera a rodada do benchmark,
-  decisão de 2026-11-11); a chave de acesso fica (não é pessoal e a
+  minúsculo (o `DataSanitizer` da Ceres o reconhece com a mesma conferência do DV, mas em qualquer
+  caixa, porque lá o texto é a pergunta do usuário e não há hash em hex: #313, depois da rodada do
+  benchmark; vira `[CNPJ]` e conta como dado de pessoa na recusa firme); a chave de acesso fica (não é pessoal e a
   operação precisa dela); o **stack trace** também (`ExcecaoLogMascaradaConverter`, via
   `LOG_EXCEPTION_CONVERSION_WORD`). IP dos logs de limite truncado pelos bytes. A exclusão do
   produtor desfaz os vínculos com contadores (o ex-contador perdia o acesso só quando ele próprio

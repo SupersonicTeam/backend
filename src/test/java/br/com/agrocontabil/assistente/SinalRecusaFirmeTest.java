@@ -449,7 +449,8 @@ class SinalRecusaFirmeTest {
       "As notas do produtor João foram autorizadas?",
       "Quanto o meu cunhado vendeu?",
       "Qual a senha do meu certificado digital?",
-      "Veja a situação do CNPJ 12.345.678/0001-95"})
+      "Veja a situação do CNPJ 12.345.678/0001-95",
+      "Veja a situação do CNPJ 12.ABC.345/01DE-35"})
   @DisplayName("#497: marca de terceiro ou de ordem deixa a rota para o modelo")
   void pedeDesempate(String pergunta) {
     assertThat(SinalRecusaFirme.pedeDesempate(pergunta)).isTrue();

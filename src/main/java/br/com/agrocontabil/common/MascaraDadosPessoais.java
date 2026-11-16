@@ -39,8 +39,8 @@ import java.util.regex.Pattern;
  * de 14 caracteres terminado em 2 dígitos (hash, base64) sairia {@code [CNPJ]}, o mesmo tipo de
  * falso positivo que o PR #310 corrigiu no CPF. Só maiúsculas, que é o formato da RFB e do XML: o
  * log carrega hash em hex minúsculo, e com minúscula cerca de um em cada cem desses tokens viraria
- * {@code [CNPJ]}. O {@code DataSanitizer} da Ceres ganha a sua regra, em qualquer caixa, depois
- * da rodada do benchmark.
+ * {@code [CNPJ]}. O {@code DataSanitizer} da Ceres tem a sua regra, com a mesma conferência do DV
+ * mas em qualquer caixa (#313): lá o texto é a pergunta do usuário.
  *
  * <p>Diferente do {@code DataSanitizer} da Ceres, que mascara também a chave: lá o destino é o
  * provedor do modelo, onde nada fiscal precisa chegar.

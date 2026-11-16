@@ -18,6 +18,46 @@ class DataSanitizerTest {
   }
 
   @Test
+  @DisplayName("CNPJ alfanumerico valido, com e sem pontuacao, vira [CNPJ] (#313)")
+  void mascaraCnpjAlfanumerico() {
+    assertThat(DataSanitizer.mascarar(
+        "fornecedor 12.ABC.345/01DE-35 raw=12ABC34501DE35 (12ABC34501DE35)."))
+        .isEqualTo("fornecedor [CNPJ] raw=[CNPJ] ([CNPJ]).");
+  }
+
+  @Test
+  @DisplayName("CNPJ alfanumerico em minusculas, com o DV valido, tambem e mascarado (#313)")
+  void mascaraCnpjAlfanumericoEmMinusculas() {
+    // Diferente do log (so maiusculas, por causa do hash em hex): a pergunta e texto do usuario.
+    assertThat(DataSanitizer.mascarar("cnpj 12abc34501de35 e 12.aBc.345/01dE-35"))
+        .isEqualTo("cnpj [CNPJ] e [CNPJ]");
+  }
+
+  @Test
+  @DisplayName("Token de 14 caracteres com DV invalido ou colado em letra fica intacto (#313)")
+  void cnpjAlfanumericoSemDvValidoFicaIntacto() {
+    // DV trocado, hash em hex terminado em 2 digitos, minusculas com DV errado e o documento colado
+    // em letra.
+    String texto = "a=12ABC34501DE36 b=ABCDEF01234567 c=12abc34501de36 d=x12ABC34501DE35"
+        + " e=fffeee00112233";
+    assertThat(DataSanitizer.mascarar(texto)).isEqualTo(texto);
+  }
+
+  @Test
+  @DisplayName("CNPJ so de digitos segue mascarado, com ou sem DV valido (#313)")
+  void cnpjNumericoSegueMascarado() {
+    assertThat(DataSanitizer.mascarar("11222333000181 e 12345678000199"))
+        .isEqualTo("[CNPJ] e [CNPJ]");
+  }
+
+  @Test
+  @DisplayName("O CNPJ alfanumerico no meio de uma pergunta sai da frase, sem mexer no resto (#313)")
+  void cnpjAlfanumericoNoMeioDaPergunta() {
+    assertThat(DataSanitizer.mascarar("qual o saldo do 12.ABC.345/01DE-35?"))
+        .isEqualTo("qual o saldo do [CNPJ]?");
+  }
+
+  @Test
   @DisplayName("Chave de acesso, e-mail, telefone e CEP viram marcadores")
   void mascaraContatosEChave() {
     String chave = "3".repeat(44);
