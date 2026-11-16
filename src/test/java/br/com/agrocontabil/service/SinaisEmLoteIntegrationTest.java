@@ -40,6 +40,10 @@ import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
  * regra, lida de outro jeito" de "refatorei e mudei a regra": há ao menos um caso de cada sinal,
  * nota de outro produtor, cancelada, importada e fora do prazo, e os limites do lote (tamanho do
  * lote e teto da referência) são baixados para exercitar a divisão em partes e a leitura por nota.
+ *
+ * <p>As notas do seed da demonstração (os rascunhos de milho a destinatário sem IE, que dão o
+ * {@code ICMS_A_DEFINIR} da banca) não são repetidas aqui: o {@code
+ * ResumoNoSeedDemonstracaoIntegrationTest} as exercita pelo resumo, que passa pelo lote.
  */
 @SpringBootTest
 @Import(TestDatabaseCleaner.class)
