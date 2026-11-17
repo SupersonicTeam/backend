@@ -29,11 +29,39 @@ public record CargaTurno(long exp, Intencao rota, boolean reescrita,
   /** Máximo de faixas de texto livre antes de virar {@code "*"}. */
   public static final int MAXIMO_LIVRES = 16;
 
-  /** Normaliza as listas. */
+  /**
+   * Normaliza as listas. As faixas dos textos livres chegam em ordem crescente e sem sobreposição
+   * (a emissão as ordena e une): quem as percorre para fatiar a resposta conta com isso, então a
+   * invariante é do tipo, e uma carga que a quebra não existe.
+   */
   public CargaTurno {
     Objects.requireNonNull(rota, "rota");
     consulta = consulta == null ? null : List.copyOf(consulta);
     livres = livres == null ? null : List.copyOf(livres);
+    if (!emOrdem(livres)) {
+      throw new IllegalArgumentException("faixas fora de ordem");
+    }
+  }
+
+  /**
+   * {@code true} se cada faixa começa onde a anterior termina ou depois (ordem crescente, sem
+   * sobreposição; faixas coladas valem, a emissão é que as une). Nulo e vazio valem.
+   *
+   * @param faixas faixas na ordem recebida
+   * @return se a lista pode ser percorrida para fatiar a resposta
+   */
+  static boolean emOrdem(List<Faixa> faixas) {
+    if (faixas == null) {
+      return true;
+    }
+    int fimAnterior = 0;
+    for (Faixa f : faixas) {
+      if (f.inicio() < fimAnterior) {
+        return false;
+      }
+      fimAnterior = f.fim();
+    }
+    return true;
   }
 
   /** Mesma carga sem as citações de lei ({@code lei.c}), o primeiro corte de tamanho. */

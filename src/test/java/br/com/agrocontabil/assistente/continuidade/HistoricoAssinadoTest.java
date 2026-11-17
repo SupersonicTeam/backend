@@ -144,6 +144,29 @@ class HistoricoAssinadoTest {
   }
 
   @Test
+  @DisplayName("Carga assinada com faixas fora de ordem: histórico ignorado, sem chegar à reescrita")
+  void faixasForaDeOrdemNaCargaAssinada() {
+    long exp = AGORA.plus(Duration.ofMinutes(10)).getEpochSecond();
+    String resposta = "Pedido do escritório: texto livre de terceiro aqui dentro.";
+    String json = "{\"exp\":" + exp + ",\"rota\":\"DADOS\",\"reescrita\":false,"
+        + "\"t\":[[30,50],[10,20]]}";
+    String assinatura = porta.assinar(produtor, json, "tenho pedido?", resposta).orElseThrow();
+    TurnoConversa turno = new TurnoConversa("tenho pedido?", resposta, assinatura);
+
+    HistoricoConferido conferido = conferencia.conferir(produtor, List.of(turno), AGORA, FUNCOES);
+
+    assertThat(conferido.vazio()).isTrue();
+    assertThat(conferido.desfechos()).containsExactly(DesfechoContinuidade.HISTORICO_IGNORADO);
+
+    // A mesma carga em ordem confere: o que barrou foi a ordem.
+    String emOrdem = json.replace("[[30,50],[10,20]]", "[[10,20],[30,50]]");
+    String assinaturaOk = porta.assinar(produtor, emOrdem, "tenho pedido?", resposta).orElseThrow();
+    assertThat(conferencia.conferir(produtor,
+        List.of(new TurnoConversa("tenho pedido?", resposta, assinaturaOk)), AGORA, FUNCOES)
+        .pares()).hasSize(1);
+  }
+
+  @Test
   @DisplayName("Par vencido cai sozinho; repetido conta uma vez; pergunta de injeção cai")
   void vencidoRepetidoEInjecao() {
     TurnoConversa velho = emissao.emitir(produtor, "p velho", "r", Intencao.DADOS,

@@ -99,14 +99,13 @@ public final class Autocorrecao {
 
   static String rotulo(ChamadaAssinada c) {
     String base = switch (c.funcao()) {
-      case "totalVendasPorProduto" -> "vendas de " + valor(c, "descricaoOuNcm");
-      case "totalComprasPorInsumo" -> "compras de " + valor(c, "descricaoOuNcm");
+      case "totalVendasPorProduto" -> com("vendas de ", valor(c, "descricaoOuNcm"), "suas vendas");
+      case "totalComprasPorInsumo" -> com("compras de ", valor(c, "descricaoOuNcm"),
+          "suas compras");
       case "listarNotas" -> notas(c);
-      case "consultarNota" -> "a nota " + valor(c, "numero");
-      case "consultarApuracao" -> c.argumento("mes") == null ? "a apuração do mês atual"
-          : "a apuração de " + mes(c.argumento("mes"));
-      case "vencimentosDoMes" -> c.argumento("mes") == null ? "os vencimentos do mês atual"
-          : "os vencimentos de " + mes(c.argumento("mes"));
+      case "consultarNota" -> com("a nota ", valor(c, "numero"), "uma nota");
+      case "consultarApuracao" -> doMes("a apuração", c);
+      case "vencimentosDoMes" -> doMes("os vencimentos", c);
       case "consultarCreditos" -> "seus créditos";
       case "consultarRetencoes" -> "suas retenções";
       case "proximosVencimentos" -> "os vencimentos dos próximos "
@@ -114,8 +113,8 @@ public final class Autocorrecao {
       case "guiasEmAtraso" -> "as guias em atraso";
       case "listarAlertas" -> "os prazos dos próximos dias";
       case "resumoDoProdutor" -> "o resumo das suas pendências";
-      case "consultarTratamentoProduto" -> "o tratamento de " + valor(c, "produtoOuNcm")
-          + " na reforma";
+      case "consultarTratamentoProduto" -> com("o tratamento de ", valor(c, "produtoOuNcm"),
+          "o tratamento de um produto") + " na reforma";
       default -> "seus dados";
     };
     return base + faixaDeDatas(c);
@@ -153,9 +152,35 @@ public final class Autocorrecao {
     return " de " + inicio + " a " + fim;
   }
 
+  /** O argumento sem espaços nas pontas, ou nulo se faltar ou estiver em branco. */
   private static String valor(ChamadaAssinada c, String nome) {
     String valor = c.argumento(nome);
-    return valor == null || valor.isBlank() ? "?" : valor.strip();
+    return valor == null || valor.isBlank() ? null : valor.strip();
+  }
+
+  /**
+   * O rótulo com o argumento ou, sem ele, o rótulo genérico da mesma função: o argumento vem do
+   * modelo e pode faltar, e a frase entregue nunca leva um símbolo no lugar dele. O nome da
+   * função, que é do backend, continua dizendo o que foi consultado.
+   */
+  private static String com(String prefixo, String valor, String semValor) {
+    return valor == null ? semValor : prefixo + valor;
+  }
+
+  /**
+   * Apuração ou vencimentos de um mês. Sem {@code mes}, o mês atual; com {@code mes} fora de
+   * {@code AAAA-MM}, "do mês informado": o texto entregue não ecoa o argumento cru do modelo.
+   */
+  private static String doMes(String assunto, ChamadaAssinada c) {
+    String iso = c.argumento("mes");
+    if (iso == null) {
+      return assunto + " do mês atual";
+    }
+    try {
+      return assunto + " de " + YearMonth.parse(iso.strip()).format(MES);
+    } catch (DateTimeParseException e) {
+      return assunto + " do mês informado";
+    }
   }
 
   private static String data(String iso) {
@@ -166,17 +191,6 @@ public final class Autocorrecao {
       return LocalDate.parse(iso.strip()).format(DATA);
     } catch (DateTimeParseException e) {
       return null;
-    }
-  }
-
-  private static String mes(String iso) {
-    if (iso == null) {
-      return "o mês atual";
-    }
-    try {
-      return YearMonth.parse(iso.strip()).format(MES);
-    } catch (DateTimeParseException e) {
-      return iso;
     }
   }
 }

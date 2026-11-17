@@ -127,7 +127,8 @@ public final class CodecCarga {
   }
 
   /**
-   * Lê a carga, estrita. Só a forma: validade, rota e faixas contra a resposta são da conferência.
+   * Lê a carga, estrita. Só a forma, inclusive a ordem das faixas entre si (crescente, sem
+   * sobreposição): validade, rota e faixas contra a resposta são da conferência.
    *
    * @param json carga já autenticada pelo MAC
    * @return a carga, ou vazio se a forma não confere
@@ -294,7 +295,8 @@ public final class CodecCarga {
       }
       faixas.add(faixa.get());
     }
-    return Optional.of(faixas);
+    // Fora de ordem ou sobrepostas: a emissao nunca as escreve assim (EmissaoTurno.faixas).
+    return CargaTurno.emOrdem(faixas) ? Optional.of(faixas) : Optional.empty();
   }
 
   private static Optional<Faixa> faixa(JsonNode no) {
