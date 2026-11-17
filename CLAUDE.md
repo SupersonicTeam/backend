@@ -130,13 +130,27 @@ o `AI_ANTHROPIC_MODEL`, não o `AI_CHAT_MODEL`. Isso **substitui** a decisão de
 compose em uso; **não copie o `deploy/compose.yaml` inteiro** enquanto o `.env` da VPS não tiver
 `SITE_DOMINIO` e `TLS_ASK_CHAVE`, #464 — passo a passo e reversão em `deploy/README.md`). O Haiku 5.5 **entra** na matriz do
 benchmark da banca (#348), só na Ceres 2.0: a Ceres 1 (`2463c27`) não tem o provedor Anthropic.
-- **Medição do #483** (gabarito 2026-11-05.3, 87 perguntas × 3 repetições; qwen3 de 06/11 em
-  `fcbb5b3` na VPS, Haiku em `3fe8a957` pela API): função 82,2% → 93,3%, parâmetros 76,3% →
-  92,1%, número 82,5% → 92,5%, citação 67,6% → 73,0%, rota 81,7% → 82,9%, p50 de 8,1 s para
-  1,4 s e p95 de 26,8 s para 4,2 s.
-- **Ressalva (sem investigação):** a recusa correta caiu de 100% para 92,9% e a rota nos casos
-  adversários de 76,2% para 66,7%. As duas rodadas não são do mesmo commit (o qwen3 não foi
-  rodado de novo na `main` de 2026-11-10).
+- **Medição do #483, de 10/11, sem relatório no repositório** (a #483 disse "Os relatórios não
+  entram neste PR"; por isso **não é auditável**) (gabarito 2026-11-05.3, 87 perguntas × 3
+  repetições; qwen3 de 06/11 em `fcbb5b3` na VPS, Haiku em `3fe8a957` pela API): função 82,2% →
+  93,3%, parâmetros 76,3% → 92,1%, número 82,5% → 92,5%, citação 67,6% → 73,0%, rota 81,7% →
+  82,9%, p50 de 8,1 s para 1,4 s e p95 de 26,8 s para 4,2 s.
+- **Medição auditável no `2bfb1ef3`** (o SHA da matriz oficial do benchmark; mesmo gabarito, seed
+  v4 e 3 repetições; relatório em
+  `docs/avaliacao/resultados/2026-11-15-0614-anthropic-claude-haiku-5-5.md`, PR #568): função
+  82,2% → **91,1%**, parâmetros 76,3% → **89,5%**, número 82,5% → **91,7%**, rota 81,7% →
+  **81,7%**, p50 **1,5 s** e p95 **4,5 s**, e a citação **67,6% → 66,7% (faixa 64,9–67,6%)**:
+  **a citação medida no SHA auditável não mostra ganho do Haiku sobre o qwen3**, ao contrário do
+  73,0% de 10/11, que não se reproduziu (pode ser o modelo ou o código que entrou entre
+  `3fe8a957` e `2bfb1ef3`; sem artefato de 10/11 não dá para separar). A decisão de modelo não
+  muda (o ganho em função, parâmetros e número é grande e a latência cai de 8,1 s para 1,5 s), mas
+  **o número da citação não vai à banca como ganho**.
+- **Ressalva, investigada no PR #568** (`docs/avaliacao/resultados/2026-11-15-comparacao-haiku-qwen-adversarios.md`):
+  recusa correta 100% → 95,2% (85,7–100%) e rota nos casos adversários 76,2% → 66,7%
+  (61,9–76,2%). O qwen dá o mesmo resultado nas 3 repetições; **o Haiku não** (temperatura 1,0):
+  na rota adversária, X01, X15 e X16 pioram nas 3 repetições e X09, X11 e X13 melhoram em 1 de 3;
+  a recusa falha só em X09 e X11, na repetição 2. A comparação mistura modelo e código (#459 e
+  #506 entraram entre as duas rodadas); diferença de um ou dois casos entre rodadas é ruído.
 - **Pendência de LGPD, do próprio #483:** com o provedor por API, a pergunta sanitizada e dados
   de negócio do produtor (valores, datas, números de nota, categorias de produto e NCM) saem do
   servidor; nome, documento, contato, endereço e o XML das notas não saem (`docs/lgpd.md`,
@@ -151,8 +165,11 @@ benchmark da banca (#348), só na Ceres 2.0: a Ceres 1 (`2463c27`) não tem o pr
 (cópia adaptada para a Ceres 1),
 banco próprio por arquitetura e prova do pensamento desligado; o gerador (Python, só stdlib,
 testado na CI) monta o relatório com o recorte comum e o gabarito inteiro. Guia em
-`docs/avaliacao/benchmark/README.md`. **Rodada real pendente** (precisa de Ollama e da base de lei);
-o exemplo versionado é de dados fictícios. O comando de avaliação não mudou. **A célula por API**
+`docs/avaliacao/benchmark/README.md`. **Rodada oficial feita em 14/11/2026** (140 perguntas × 3
+repetições, Ceres 2.0 em `2bfb1ef3`); **resultados e como lê-los em
+`docs/avaliacao/benchmark/resultados-2026-11-14.md`** (capacidade comum de 118 perguntas × conjunto
+inteiro, régua de ruído, o que não vale e a célula da fidelidade); o relatório completo fica no cego
+privado e não entra no backend; o exemplo versionado é de dados fictícios. O comando de avaliação não mudou. **A célula por API**
 não usa Ollama para o chat, desliga o raciocínio e o prova na API, e lê `ANTHROPIC_API_KEY` só do
 ambiente (nunca em arquivo; oculta em log, erro e relatório; o executor recusa a rodada sem ela e
 faz uma prova antes de começar). A latência dela é de API pela rede: sai marcada **(API)** e fora da
@@ -206,6 +223,8 @@ ajustado depois da segunda rodada, também olhando o v1 e o v2; a terceira medi�
 v1, v2, conjuntos antigos nem a correção. Regra `2026-11-13.6` (`VERSAO_REGRA_ATUAL`; a `2026-11-13.5` é a com que o v3 foi
 escrito e a `2026-11-12.4` segue como a do v1 e do v2): mesmas margens, quatro braços (`desligada`, `camada1`, `camada1+juiz+resgate`,
 `camada1+resgate`), regra seção 10; teste cego igual.
+
+**Ressalva do enquadramento na resposta de tratamento de produto (#443):** `docs/avaliacao/ressalva-tratamento-443/` guarda o conjunto de 60 perguntas (`perguntas-ressalva-443.json`, sha256 ao lado: 36 de defeito, 12 controles de lei, 12 de dados), a regra de decisão (`regra-de-decisao.md`, com a régua de ruído do projeto) e o executor e a decisão da medição `main` × head da correção. Vale a mesma regra do teste cego: quem escreve ou revisa a correção da #443 **não lê** o conjunto, e a mensagem a essa sessão cita só o id (`RS07`). O `ConjuntoRessalvaTratamentoTest` e os testes Python da pasta (`python3 -m unittest discover -s docs/avaliacao/ressalva-tratamento-443 -p "test_*.py"`, na CI) guardam hash, treino e prompt; a regra e as margens do `ressalva_comum.py` são uma coisa só. O merge muda o que a banca mede: depende do OK do Murillo.
 
 ## Arquitetura — regras inegociáveis
 
@@ -320,7 +339,13 @@ br.com.agrocontabil
 │                  #   régua da clareza, ClarezaTexto));
 │                  # LinhaGlossario (#424: linha "O que isso quer dizer" ao fim da resposta de lei aceita, montada
 │                  #   pelo backend depois de todas as conferências, com a definição de cada termo do glossário que o
-│                  #   texto usa sem explicar; resposta descartada não leva);
+│                  #   texto usa sem explicar; resposta descartada não leva; teto de 3 termos comuns por resposta,
+│                  #   MAXIMO_COMUNS, na ordem do glossário — sigla fora do teto, porque cortá-la seria regressão na
+│                  #   régua de clareza. Desde a #269 (item 2) o glossário tem os termos da lei — alíquota, base de
+│                  #   cálculo, fato gerador, contribuinte, crédito presumido, isenção, imunidade, diferimento,
+│                  #   responsável tributário, não cumulatividade, regime regular —, todos `sigla: false` e
+│                  #   `emLinha: false`: ficam fora da acomodação sigla↔nome da fidelidade, da régua de clareza e da
+│                  #   composição de dados, e o prompt de lei não muda (a diretriz do PR #425 foi reprovada no Haiku));
 │                  # explicacao/ (#268, com a #415; flag app.assistente.explicacao.enabled, DESLIGADA por padrão):
 │                  #   ExplicacaoDaResposta (3 fases: reserva própria da cota, sem 429 sem saldo; chamada na janela de
 │                  #   interrupção; acerto/estorno e o desfecho na auditoria, changeSet 0064), ExplicadorResposta
@@ -373,6 +398,14 @@ br.com.agrocontabil
 │                  #   AtalhoReformaTributaria: texto explicado do TextoReformaTributaria, #347,
 │                  #   personalizado por DadosProdutorPorta.perfilDoAtalho, 33 citações fixas;
 │                  #   revisar o texto com a equipe);
+│                  # orquestracao/AtalhoDefinicao (#269: "o que é o IBS?" pelo glossário e pelo dispositivo que
+│                  #   institui o termo, sem modelo e sem busca por similaridade — na VPS a pergunta mais básica
+│                  #   do produtor não era respondida. Molde da ConversaLeve: fórmula da lista fechada + termo
+│                  #   exato do mapa curado (14 termos, dispositivo conferido na base; termo fora do mapa segue
+│                  #   para a rota de lei, senão a resposta sairia sem citação e a régua a contaria como falha).
+│                  #   Disciplina da mensagem inteira separa da lei e dos dados ("o que é a alíquota do IBS?",
+│                  #   "o que é a minha apuração?" seguem o fluxo normal); rota LEGISLACAO com citação pelo
+│                  #   CitacoesFixas, camada ATALHO_DEFINICAO, desfecho DEFINICAO_DO_GLOSSARIO, sem changeSet);
 │                  # orquestracao/ConversaLeve (#493: saudação, agradecimento, despedida, "ok", "quem é
 │                  #   você?" e "tem certeza?" pela lista fechada, depois dos atalhos e antes do
 │                  #   FiltroInjecao; texto montado pelo backend, sem modelo, pagando só a leitura (#511); rota
@@ -485,7 +518,7 @@ br.com.agrocontabil
 | GET | `/api/alertas` | Alertas tributários do produtor (RN010, #140): guia pendente, fechamento da apuração do mês e fim do prazo de cancelamento de NF-e (RN006) que vencem em **menos de 5 dias**; gerados por job diário às 9h, e o motivo é conferido na leitura (guia paga some na hora). Só produtor (contador 403) |
 | POST | `/api/assistente/chat` | Pergunta à Ceres (`{pergunta}`, máx. 1000 caracteres); resposta `{resposta, rota, citacoes[], fontesDados[{funcao, parametros, origem}], modoFallback, atalhos[]}` (`origem` `PRODUTOR`/`TABELA_OFICIAL`, #342; o rótulo em português é do frontend), mais `explicacao` (#268: explicação curta da resposta de dados, conferida pelo `VerificadorFidelidade`; **ausente** quando nula, inclusive com a flag `app.assistente.explicacao.enabled` desligada, o padrão); rota decidida pelo orquestrador: DADOS/LEGISLACAO/MISTO/FORA_DE_ESCOPO (#157); só produtor (contador 403); 503 `ASSISTENTE_OCUPADO` + `Retry-After` sem vaga (limite global ou pergunta anterior do mesmo produtor em andamento), 503 `ASSISTENTE_TEMPO_ESGOTADO`; com o modelo fora, **200 com `modoFallback: true`** (trechos de lei verbatim ou `atalhos` de tela, #146) — 503 `ASSISTENTE_INDISPONIVEL` só com o banco também fora. **Continuidade (#499), atrás de `AI_CONTINUIDADE_HABILITADA` (desligada):** a requisição aceita `historico` (até 3 trocas assinadas, cada uma igual ao `turno` recebido) e `ultimaRespostaSemTurno`; a resposta traz `perguntaInterpretada` e `turno` (fora do JSON quando nulos). Par adulterado, alheio ou vencido (30 min) é ignorado em silêncio; mais de 3 itens → 400 de corpo ilegível; item vazio → 400 em `historico[i]`. Corpo da Ceres até 80 KB. Contrato em `docs/contrato-frontend-ceres.md`, seção 4a |
 | POST | `/api/assistente/chat/stream` | Mesma pergunta em SSE (#157): eventos `rota` → `resposta` → `fim`, ou `erro` (envelope `errors[]`); sem tokens parciais (só a resposta já validada). Com a explicação ligada (#268, desligada por padrão): `rota` → `resposta` → `explicacao` (`{"explicacao": "..."}`, opcional: descartada ou fora do prazo, não vem) → `fim`; a vaga só volta depois dela ou do prazo dela; um `erro` depois da `resposta` não invalida o que já foi enviado. Abre com o comentário `:ceres`, escrito pela thread da requisição: o commit da resposta nunca é da Ceres (#335); o mesmo comentário vai antes de cada chamada ao modelo (#499). Cancelada pelo cliente (conexão caiu, sem prazo vencido antes) paga o gasto: chamadas concluídas e a entrada estimada da interrompida, até o reservado; falha do servidor estorna tudo |
-| GET | `/api/assistente/uso` | Uso semanal da Ceres em créditos (#166): `{plano, habilitada, creditosSemana, consumidos, restantes, renovaEm, percentualUsado, conversaVaiAoProvedor}`. **A tela mostra só o `percentualUsado` (#511)**, inteiro de 0 a 100: ⌈consumidos ÷ creditosSemana × 100⌉, no máximo 99 com saldo, 100 só com `restantes` = 0, 0 só sem uso; os créditos ficam no JSON para compatibilidade e nenhuma mensagem ao usuário cita número de créditos. Semana de segunda a domingo (Brasília), sem acúmulo. Só produtor (contador 403). Sem saldo para o teto de uma pergunta, os dois `POST` acima respondem **429 `LIMITE_USO_ASSISTENTE`** com `Retry-After`, antes de o stream abrir — inclusive as três perguntas de atalho da tela, a conversa leve e as recusas pelo filtro de injeção e antes do classificador (#497), que não usam o modelo mas pagam a leitura da mensagem (#511): para elas (`OrquestradorService.respondeSemModelo`), o 429 vem só sem saldo para a leitura. **Desde a #511, 1 crédito por token ponderado** (`tokens-por-credito` = 1; produtor 1.000.000 e escritório 5.000.000 por semana; changeSet 0060 converteu o uso gravado × 1000): toda pergunta tem custo; sem chamada ao modelo (atalho, conversa leve, recusa pelo filtro ou antes do classificador, fallback), a leitura é ⌈tokens estimados da mensagem × peso-entrada × fator⌉, com tokens = ⌈caracteres ÷ 4⌉ (`ContextoAssistente.tokensDaLeitura`); com chamadas, o consumo real, sem taxa extra. `conversaVaiAoProvedor` (#499): `true` com a continuidade ligada e o modelo por API (a tela mostra o aviso). Reserva por caminho (`config/CaminhoCota`, #499): a leitura da mensagem no caminho sem modelo (inclusive a reexecução e os textos fixos da continuidade), 31.744, 24.576, 34.816 ou 43.776 créditos, mais a parcela do juiz da lei (#269) em todo caminho com modelo quando ele pode rodar (`AssistenteProperties.tetoDaPergunta(fator, caminho)`) |
+| GET | `/api/assistente/uso` | Uso semanal da Ceres em créditos (#166): `{plano, habilitada, creditosSemana, consumidos, restantes, renovaEm, percentualUsado, conversaVaiAoProvedor}`. **A tela mostra só o `percentualUsado` (#511)**, inteiro de 0 a 100: ⌈consumidos ÷ creditosSemana × 100⌉, no máximo 99 com saldo, 100 só com `restantes` = 0, 0 só sem uso; os créditos ficam no JSON para compatibilidade e nenhuma mensagem ao usuário cita número de créditos. Semana de segunda a domingo (Brasília), sem acúmulo. Só produtor (contador 403). Sem saldo para o teto de uma pergunta, os dois `POST` acima respondem **429 `LIMITE_USO_ASSISTENTE`** com `Retry-After`, antes de o stream abrir — inclusive as três perguntas de atalho da tela, a conversa leve, a pergunta de definição ("o que é o IBS?", #269) e as recusas pelo filtro de injeção e antes do classificador (#497), que não usam o modelo mas pagam a leitura da mensagem (#511): para elas (`OrquestradorService.respondeSemModelo`), o 429 vem só sem saldo para a leitura. **Desde a #511, 1 crédito por token ponderado** (`tokens-por-credito` = 1; produtor 1.000.000 e escritório 5.000.000 por semana; changeSet 0060 converteu o uso gravado × 1000): toda pergunta tem custo; sem chamada ao modelo (atalho, conversa leve, recusa pelo filtro ou antes do classificador, fallback), a leitura é ⌈tokens estimados da mensagem × peso-entrada × fator⌉, com tokens = ⌈caracteres ÷ 4⌉ (`ContextoAssistente.tokensDaLeitura`); com chamadas, o consumo real, sem taxa extra. `conversaVaiAoProvedor` (#499): `true` com a continuidade ligada e o modelo por API (a tela mostra o aviso). Reserva por caminho (`config/CaminhoCota`, #499): a leitura da mensagem no caminho sem modelo (inclusive a reexecução e os textos fixos da continuidade), 31.744, 24.576, 34.816 ou 43.776 créditos, mais a parcela do juiz da lei (#269) em todo caminho com modelo quando ele pode rodar (`AssistenteProperties.tetoDaPergunta(fator, caminho)`) |
 
 ## Segurança
 
@@ -881,8 +914,9 @@ no cadastro (decisão do Murillo, 2026-10-19).
   desde o PR #310 — antes UUID e hash com 11 dígitos seguidos de letra viravam `[CPF]`; CPF grudado
   em letra sem separador passa, limite aceito); o CNPJ alfanumérico da RFB também vira `[CNPJ]`
   desde a #313, mas só com o DV conferido e só em maiúsculas, porque o log carrega hash em hex
-  minúsculo (o `DataSanitizer` da Ceres ainda não o reconhece: espera a rodada do benchmark,
-  decisão de 2026-11-11); a chave de acesso fica (não é pessoal e a
+  minúsculo (o `DataSanitizer` da Ceres o reconhece com a mesma conferência do DV, mas em qualquer
+  caixa, porque lá o texto é a pergunta do usuário e não há hash em hex: #313, depois da rodada do
+  benchmark; vira `[CNPJ]` e conta como dado de pessoa na recusa firme); a chave de acesso fica (não é pessoal e a
   operação precisa dela); o **stack trace** também (`ExcecaoLogMascaradaConverter`, via
   `LOG_EXCEPTION_CONVERSION_WORD`). IP dos logs de limite truncado pelos bytes. A exclusão do
   produtor desfaz os vínculos com contadores (o ex-contador perdia o acesso só quando ele próprio
@@ -930,8 +964,9 @@ no cadastro (decisão do Murillo, 2026-10-19).
   no domínio do CNPJ, Receita/QSA) também fica para depois da banca.
 - **LGPD e o provedor da Ceres por API (#483):** política de dados e transferência internacional (art. 33) com o
   jurídico, junto da D7 do envio de e-mail (#460); antes de a Ceres atender produtores reais no Haiku.
-- **Haiku 5.5 sem investigação (#483):** recusa correta de 100% para 92,9% e rota nos casos adversários de 76,2%
-  para 66,7%, não investigadas (as duas rodadas não são do mesmo commit).
+- **Haiku 5.5 e os casos adversários (#483):** investigado no PR #568 (ver acima): X01, X15 e X16
+  são os casos estáveis que pioram; falta decidir se se corrige a regra ou o prompt do classificador.
+  Rodar o qwen no `2bfb1ef3` separaria o efeito do modelo do efeito do código.
 - **Ceres (Sprint 6):**
   - **Vigência por dispositivo:** cada norma entra com uma vigência só. Os dispositivos da LC 214 com redação dada pela LC 227/2026 aparecem vigentes desde 16/01/2025; pergunta sobre data anterior a 2026 receberia a redação atual. Derivar a vigência das anotações "(Redação dada pela...)" resolve.
   - **Anexo XVIII da LC 214** (tabelas do Simples Nacional, sem itens numerados) não vira trecho.

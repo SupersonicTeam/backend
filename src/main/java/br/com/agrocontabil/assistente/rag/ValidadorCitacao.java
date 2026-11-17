@@ -30,8 +30,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class ValidadorCitacao {
 
-  /** Texto fixo quando não há fundamento legal validado. */
-  public static final String SEM_FUNDAMENTO = "Não encontrei fundamento legal para isso.";
+  /**
+   * Texto fixo quando não há fundamento legal validado. Diz que a Ceres <strong>não localizou</strong>
+   * a base legal, nunca que ela não existe: o texto anterior ("não encontrei fundamento legal para
+   * isso") era lido como afirmação sobre o direito, e saía também quando a norma está na base e a
+   * busca não a trouxe (diagnóstico de 2026-11-14, 15 das 31 falhas). Encaminha ao contador, porque
+   * é a única saída verdadeira nos dois casos. Sem dígito, para não virar fonte de número.
+   */
+  public static final String SEM_FUNDAMENTO = "Não consegui localizar a base legal para responder"
+      + " isso — o que não quer dizer que ela não exista. O seu contador pode confirmar; se for de"
+      + " outra área da contabilidade, como o imposto de renda ou questões da propriedade, é com"
+      + " ele também.";
 
   private static final Pattern MARCA =
       Pattern.compile("\\[\\s*(T\\d+(?:\\s*[,;]\\s*T\\d+)*)\\s*\\]");

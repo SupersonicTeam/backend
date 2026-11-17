@@ -2,6 +2,7 @@ package br.com.agrocontabil.assistente.orquestracao;
 
 import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.FontePergunta;
+import br.com.agrocontabil.assistente.GlossarioProdutor;
 import br.com.agrocontabil.assistente.PromptsCeres;
 import br.com.agrocontabil.assistente.ResultadoRota;
 import br.com.agrocontabil.assistente.RotaDados;
@@ -97,6 +98,7 @@ public class OrquestradorService {
   private final FundamentoRetencao fundamentoRetencao;
   private final TextosDoBackend textosDoBackend;
   private final AtalhoReformaTributaria atalhoReforma;
+  private final AtalhoDefinicao atalhoDefinicao;
   private final double confiancaMinima;
   private final ReescritaContinuidade reescrita;
   private final ReconferenciaLei reconferencia;
@@ -105,10 +107,12 @@ public class OrquestradorService {
   public OrquestradorService(ClassificadorIntencao classificador, RotaDados rotaDados,
       RotaLegislacao rotaLegislacao, TrechosDasCompras trechosDasCompras,
       FundamentoRetencao fundamentoRetencao, TextosDoBackend textosDoBackend,
-      AtalhoReformaTributaria atalhoReforma, ModoFallback fallback,
+      AtalhoReformaTributaria atalhoReforma, AtalhoDefinicao atalhoDefinicao,
+      ModoFallback fallback,
       DisponibilidadeModelo disponibilidade, AssistenteProperties propriedades) {
     this(classificador, rotaDados, rotaLegislacao, trechosDasCompras, fundamentoRetencao,
-        textosDoBackend, atalhoReforma, fallback, disponibilidade, propriedades, null, null);
+        textosDoBackend, atalhoReforma, atalhoDefinicao, fallback, disponibilidade, propriedades,
+        null, null);
   }
 
   /** Constrói o orquestrador com a continuidade da conversa (#499). */
@@ -116,12 +120,14 @@ public class OrquestradorService {
   public OrquestradorService(ClassificadorIntencao classificador, RotaDados rotaDados,
       RotaLegislacao rotaLegislacao, TrechosDasCompras trechosDasCompras,
       FundamentoRetencao fundamentoRetencao, TextosDoBackend textosDoBackend,
-      AtalhoReformaTributaria atalhoReforma, ModoFallback fallback,
-      DisponibilidadeModelo disponibilidade, AssistenteProperties propriedades,
-      ReescritaContinuidade reescrita, ReconferenciaLei reconferencia) {
+      AtalhoReformaTributaria atalhoReforma, AtalhoDefinicao atalhoDefinicao,
+      ModoFallback fallback, DisponibilidadeModelo disponibilidade,
+      AssistenteProperties propriedades, ReescritaContinuidade reescrita,
+      ReconferenciaLei reconferencia) {
     this.reescrita = reescrita;
     this.reconferencia = reconferencia;
     this.atalhoReforma = atalhoReforma;
+    this.atalhoDefinicao = atalhoDefinicao;
     this.classificador = classificador;
     this.rotaDados = rotaDados;
     this.rotaLegislacao = rotaLegislacao;
@@ -144,6 +150,7 @@ public class OrquestradorService {
    */
   public static boolean respondeSemModelo(String pergunta) {
     return AtalhosFixos.ehAtalho(pergunta) || ConversaLeve.ehConversaLeve(pergunta)
+        || AtalhoDefinicao.ehDefinicao(pergunta)
         || FiltroInjecao.pareceInjecao(pergunta) || SinalRecusaFirme.inequivoco(pergunta);
   }
 
@@ -213,6 +220,17 @@ public class OrquestradorService {
   private ResultadoOrquestracao fluxo(String pergunta, String mensagemNova,
       ContextoAssistente contexto, Consumer<Intencao> aoDecidirRota, FontePergunta fonteDados,
       FontePergunta fonteLei) {
+    // Definicao (#269): "o que e o IBS?" pelo glossario e pelo dispositivo que institui o termo,
+    // sem modelo e sem a busca por similaridade, que nao traz o artigo certo nessa pergunta. A
+    // formula e fechada e o termo vem do glossario: nao ha texto livre, como no atalho da tela.
+    // Fica no comeco da pergunta de sempre: depois do atalho e da conversa leve e antes do
+    // classificador (filtro de injecao e recusa firme inclusos), a ordem da pergunta sem
+    // continuidade. A DecisaoContinuidade a manda para ca (caminho NORMAL, sem modelo) antes da
+    // confirmacao e da reescrita; com reescrita, vale a pergunta considerada, como no atalho.
+    Optional<GlossarioProdutor.Termo> definicao = AtalhoDefinicao.reconhecer(pergunta);
+    if (definicao.isPresent()) {
+      return responderDefinicao(definicao.get(), pergunta, contexto, aoDecidirRota);
+    }
     ClassificacaoIntencao classificacao = classificar(pergunta, contexto);
     Intencao rota = classificacao.intencao();
     aoDecidirRota.accept(rota);
@@ -487,6 +505,23 @@ public class OrquestradorService {
       registrarDados(dados, contexto);
       resultado = deRota(Intencao.DADOS, dados);
     }
+    resultado = textosDoBackend.aplicar(resultado, contexto);
+    return fundamentoRetencao.aplicar(resultado, pergunta, contexto);
+  }
+
+  /**
+   * Pergunta de definição (#269): a definição do glossário e o dispositivo que institui o termo,
+   * sem nenhuma chamada ao modelo e sem depender do disjuntor. Rota {@code LEGISLACAO} com citação,
+   * como o atalho da reforma; camada e desfecho próprios na auditoria. O {@code TextosDoBackend} e
+   * o {@code FundamentoRetencao} seguem valendo: a pergunta pode ser de um termo de retenção
+   * ("o que é split payment?"), e aí o parágrafo da RN009 entra como em qualquer resposta.
+   */
+  private ResultadoOrquestracao responderDefinicao(GlossarioProdutor.Termo termo, String pergunta,
+      ContextoAssistente contexto, Consumer<Intencao> aoDecidirRota) {
+    contexto.registrarCamadaClassificacao(CamadaClassificacao.ATALHO_DEFINICAO.name());
+    aoDecidirRota.accept(Intencao.LEGISLACAO);
+    contexto.verificarAtiva();
+    ResultadoOrquestracao resultado = atalhoDefinicao.responder(termo, contexto);
     resultado = textosDoBackend.aplicar(resultado, contexto);
     return fundamentoRetencao.aplicar(resultado, pergunta, contexto);
   }

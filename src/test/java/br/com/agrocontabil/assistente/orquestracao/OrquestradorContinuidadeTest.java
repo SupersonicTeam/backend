@@ -30,6 +30,7 @@ import br.com.agrocontabil.assistente.continuidade.ReescritaContinuidade;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.llm.DisponibilidadeModelo;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
+import br.com.agrocontabil.assistente.rag.TrechoRecuperado;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.config.CaminhoCota;
 import br.com.agrocontabil.model.DesfechoInteracao;
@@ -53,6 +54,10 @@ class OrquestradorContinuidadeTest {
   private static final long EXP = LocalDate.of(2026, 11, 10).atTime(15, 30)
       .atZone(java.time.ZoneId.of("America/Sao_Paulo")).toEpochSecond();
   private static final String TEXTO = "Encontrei 1 nota rejeitada.";
+  private static final TrechoRecuperado TRECHO_IBS = new TrechoRecuperado(null, "id-ibs",
+      "LC 214/2025", "art. 1º, inciso I",
+      "https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm",
+      "Art. 1º Ficam instituídos: I - o Imposto sobre Bens e Serviços (IBS)...", 0);
 
   @Mock private ClassificadorIntencao classificador;
   @Mock private RotaDados rotaDados;
@@ -71,7 +76,7 @@ class OrquestradorContinuidadeTest {
     AssistenteProperties propriedades = new AssistenteProperties();
     orquestrador = new OrquestradorService(classificador, rotaDados, rotaLegislacao,
         trechosDasCompras, new FundamentoRetencao(buscaTextual), new TextosDoBackend(buscaTextual),
-        atalhoReforma, new ModoFallback(buscaTextual, propriedades),
+        atalhoReforma, new AtalhoDefinicao(buscaTextual), new ModoFallback(buscaTextual, propriedades),
         new DisponibilidadeModelo(Duration.ofSeconds(30), () -> 0L), propriedades, reescrita,
         reconferencia);
     contexto = new ContextoAssistente(UUID.randomUUID(), LocalDate.of(2026, 11, 11));
@@ -254,6 +259,48 @@ class OrquestradorContinuidadeTest {
     assertThat(r.rota()).isEqualTo(Intencao.FORA_DE_ESCOPO);
     assertThat(contexto.camadaClassificacao())
         .isEqualTo(CamadaClassificacao.SINAL_RECUSA_FIRME.name());
+    verifyNoInteractions(classificador, rotaDados, rotaLegislacao);
+  }
+
+  @Test
+  @DisplayName("#269/#511: pergunta de definição com histórico não vai à reescrita nem à "
+      + "confirmação: atalho de definição sem modelo, com a reserva só da leitura")
+  void definicaoComHistoricoVaiAoAtalho() {
+    ParConferido par = parDeDados("tenho nota rejeitada?",
+        List.of(chamada("listarNotas", "{\"situacao\":\"REJEITADA\"}")), TEXTO);
+    when(buscaTextual.buscarDispositivos(any(), any())).thenReturn(List.of(TRECHO_IBS));
+    Decisao decisao = DecisaoContinuidade.decidir("o que é o IBS?", historico(par), false);
+    assertThat(decisao.caminho()).isEqualTo(DecisaoContinuidade.Caminho.NORMAL);
+    assertThat(decisao.custo()).isEqualTo(CaminhoCota.SEM_MODELO);
+    ContextoAssistente semModelo = new ContextoAssistente(UUID.randomUUID(),
+        LocalDate.of(2026, 11, 11));
+    semModelo.semReservaParaOModelo();
+
+    ResultadoOrquestracao r =
+        orquestrador.responder("o que é o IBS?", semModelo, rota -> { }, decisao, true);
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.DEFINICAO_DO_GLOSSARIO);
+    assertThat(semModelo.camadaClassificacao())
+        .isEqualTo(CamadaClassificacao.ATALHO_DEFINICAO.name());
+    verifyNoInteractions(reescrita, reconferencia, classificador, rotaDados, rotaLegislacao);
+  }
+
+  @Test
+  @DisplayName("#269: reescrita que vira pergunta de definição sai pelo atalho de definição")
+  void reescritaQueViraDefinicao() {
+    ParConferido par = parDeDados("tenho nota rejeitada?",
+        List.of(chamada("listarNotas", "{\"situacao\":\"REJEITADA\"}")), TEXTO);
+    when(reescrita.reescrever(any(), any(), any(), any(), any()))
+        .thenReturn(new ReescritaContinuidade.Resultado("o que é o IBS?",
+            DesfechoContinuidade.CONTINUIDADE_APLICADA));
+    when(buscaTextual.buscarDispositivos(any(), any())).thenReturn(List.of(TRECHO_IBS));
+
+    ResultadoOrquestracao r = responder("e algum crédito?",
+        new Decisao(DecisaoContinuidade.Caminho.REESCRITA, CaminhoCota.REESCRITA, historico(par),
+            Optional.of(par), MensagemContinuidade.Tipo.NENHUMA, null));
+
+    assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.DEFINICAO_DO_GLOSSARIO);
+    assertThat(r.perguntaConsiderada()).isEqualTo("o que é o IBS?");
     verifyNoInteractions(classificador, rotaDados, rotaLegislacao);
   }
 

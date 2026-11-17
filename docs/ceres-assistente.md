@@ -89,7 +89,7 @@ do Ollama nem de chave de API.
 | `vencimentosDoMes(mes)` | "quanto eu tenho que pagar este mês?", "quais impostos vencem em novembro?" (#257) | mês corrente (padrão): atraso de qualquer mês + não pagas de hoje ao fim do mês, com os dois subtotais e a soma do backend; mês futuro: as do mês; mês passado: as que ficaram sem pagar. Até 12 meses do atual. Obrigações do catálogo, pedidos do escritório e IBS/CBS apurado ficam fora (decisões da #274) |
 | `listarAlertas()` | "tenho algo vencendo?" (máx. 10) | `AlertaTributarioService.listarAtivos`: guia, fechamento do mês e prazo de cancelamento a menos de 5 dias, motivo conferido na consulta (#140) |
 | `consultarRetencoes(dataInicio, dataFim)` | "quanto foi retido de Funrural nas minhas vendas?" | `RetencaoService.resumir` (RN009, #145): vendas autorizadas por tipo de comprador; Funrural de 1,5% retido na venda a empresa/cooperativa, sem retenção nas vendas a pessoa física ou no varejo (o produtor recolhe); venda ao exterior imune (Constituição, art. 149, § 2º, I); IBS/CBS separado pelo split payment |
-| `resumoDoProdutor()` | "o que eu preciso saber?", "tem algo importante nos meus dados?" (#266) | agrega no backend, numa função só, as cinco partes de atenção: guias em atraso, prazos dos próximos dias (alertas da RN010), notas paradas (devolvidas, com inconsistências, aguardando aprovação ou rejeitadas, 24 meses), pedidos de documento do escritório ainda pendentes (vínculos ativos, #180) e notas a conferir (#276: as não emitidas e as autorizadas nos 30 dias do prazo de cancelamento, das 10 mais recentes). Ao modelo, **só as contagens**; o título do pedido (texto do escritório) e a descrição do item ficam no texto do backend |
+| `resumoDoProdutor()` | "o que eu preciso saber?", "tem algo importante nos meus dados?" (#266) | agrega no backend, numa função só, as cinco partes de atenção: guias em atraso, prazos dos próximos dias (alertas da RN010), notas paradas (devolvidas, com inconsistências, aguardando aprovação ou rejeitadas, 24 meses), pedidos de documento do escritório ainda pendentes (vínculos ativos, #180) e notas a conferir (#276: as não emitidas e as autorizadas nos 30 dias do prazo de cancelamento; **todas as candidatas são examinadas, sem teto** (#579: o antigo teto de 10 antes de avaliar escondia a nota com sinal atrás das mais recentes sem sinal), com os sinais avaliados em lote: o número de consultas não cresce com o de notas (cresce só com os produtos distintos, um par NCM/unidade por consulta de referência, e a cada 500 notas; 7 consultas na medição de 10 a 400 candidatas, que passou de 6,4 s a 0,3 s). Ao modelo, **só as contagens**; o título do pedido (texto do escritório) e a descrição do item ficam no texto do backend |
 | `consultarTratamentoProduto(produtoOuNcm)` | "o feijão tem alíquota reduzida?", "quanto de CBS incide no milho?" (#283, parte 1) | `TratamentoProdutoService` sobre a **tabela oficial** (IT 2025.002 v1.70, changeSet 0048) pelo `ClassificacaoTributariaService` — a mesma fonte do `ReducaoNcmResolver` (teste de coerência NCM a NCM). NCM de 8 dígitos (com pontos ou "NCM" na frente) ou nome. O nome casa, sem acento nem plural ("feijões" = "feijão"), as descrições dos NCMs da referência (#282) e dos itens dos anexos ("adubo" → "Fertilizantes (adubos)" do Anexo IX, com o tratamento de cada NCM do item agrupado); vence quem casa as palavras **mais raras** ("grãos de soja" é soja, "ovos fertilizados" é o item do Anexo IX), e no empate a referência vence o item. NCM fora da referência e de todo anexo sai com a ressalva de conferir o código, nunca com a alíquota cheia afirmada. Até 3 produtos: cClassTrib, % de redução, artigo e anexo **do dado**, e a **condição** que o dado não decide (in natura, destinado à alimentação humana, não cozido). Não é dado do produtor (porta própria, `TratamentoProdutoPorta`; registrada por `registrarConsultaDeTabela`, que não conta como dado encontrado no MISTO) |
 
 **O modelo só escolhe a função; a resposta é do template (#266).** A rota de dados chama o modelo
@@ -581,7 +581,9 @@ juiz, o juiz na configuração `justificativa`, vetando as aprovadas e resgatand
 por polaridade. **Os padrões do código não mudam: tudo segue desligado.** Ligar na VPS é decisão à parte,
 ainda não tomada; quando for, é só configuração, com estas variáveis no `.env` de lá (os booleanos em
 minúsculas; o provedor é o de sempre, `AI_CHAT_PROVIDER=anthropic`, `AI_ANTHROPIC_MODEL=claude-haiku-5-5`,
-`AI_ANTHROPIC_THINKING=disabled`):
+`AI_ANTHROPIC_THINKING=disabled`). Na VPS o `deploy/compose.yaml` precisa repassar essas variáveis ao
+backend (repassa desde o #269) antes de o `.env` ter efeito; passo a passo e reversão em
+`deploy/README.md`, "Fidelidade da rota de lei":
 
 ```
 AI_FIDELIDADE_LEI_HABILITADA=true
@@ -779,6 +781,73 @@ do tipo e uma das variantes do corpo, escolhida pelo `hashCode` da mensagem norm
 expressão dela tem forma de injeção (testado). A avaliação conta a recusa pela rota, e o
 `CONVERSA_LEVE` não entra entre os desfechos de recusa.
 
+**Atalho da pergunta de definição, depois da conversa leve (#269).** "O que é o IBS?" é a pergunta
+mais básica que um produtor faz, e na VPS em 2026-11-13 (fidelidade desligada, o comportamento de
+hoje) ela **não era respondida**: "o que é o ibs?" saiu como "Não encontrei fundamento legal para
+isso" e "oq é o imposto IBS?" trouxe o art. 69, § 2º, II, a base de cálculo da importação. O
+dispositivo que institui o IBS está na base — a busca por similaridade é que não o traz numa
+pergunta curta de definição, em que a pergunta casa mal com o texto jurídico e há centenas de
+trechos citando o termo (a #200). Como no #347, a saída é o backend responder o que sabe responder
+certo.
+
+O `AtalhoDefinicao` reconhece pelo molde da `ConversaLeve`: a mensagem normalizada começa por uma
+**fórmula** da lista fechada ("o que é", "oq é", "o que significa", "o que quer dizer", "defina"...)
+e o que sobra, sem as **palavras ignoráveis** ("o", "a", "imposto", "tributo", "sigla"...), é
+**exatamente** um termo do mapa curado — mesmo número de palavras, não só contê-lo. O padrão do
+glossário vale com a caixa ignorada (a sigla é escrita `\bIBS\b`, e a pergunta chega em minúsculas),
+então "o que são créditos?" acha o "crédito" e "o que é crédito presumido?" vai para o termo próprio.
+
+É essa **disciplina da mensagem inteira** que separa a definição da pergunta de lei e da de dados,
+sem lista de proibições: "o que é a alíquota do IBS?" (quer o número), "o que é o NCM da soja?"
+(quer o tratamento do produto, #283), "o que é a minha apuração?" (quer o dado — o possessivo não é
+palavra ignorável, de propósito) e "o que é insumo agropecuário para a lei?" (quer a regra) têm
+palavra a mais e seguem o fluxo normal. A `LEGISLACAO_GENERICA` das `RegrasClassificacao` não
+serviria de guarda: ela lista "alíquota", "isenção", "imunidade", "fato gerador" e "contribuinte",
+que são termos deste mapa.
+
+**Só termo com dispositivo conferido.** O mapa liga cada termo ao dispositivo que o institui ou
+define, conferido vigente na base em 2026-11-13, e a citação sai pelo `CitacoesFixas`, por rótulo
+exato — nunca por similaridade:
+
+| Termo | Dispositivo |
+|---|---|
+| IBS | LC 214/2025, art. 1º, inciso I |
+| CBS | LC 214/2025, art. 1º, inciso II |
+| Funrural | Lei 8.212/1991, art. 25, inciso I |
+| crédito | LC 214/2025, art. 47 |
+| apuração | LC 214/2025, art. 45 |
+| split payment | LC 214/2025, art. 31 |
+| alíquota | LC 214/2025, art. 14 |
+| base de cálculo | LC 214/2025, art. 12 |
+| fato gerador | LC 214/2025, art. 10 |
+| contribuinte | LC 214/2025, art. 21 |
+| crédito presumido | LC 214/2025, art. 168 |
+| imunidade | LC 214/2025, art. 8º |
+| não cumulatividade | EC 132/2023, art. 1º (redação do art. 156-A, § 1º, inciso VIII) |
+| regime regular | LC 214/2025, art. 47 |
+
+Termo do glossário **fora** do mapa não é atalho e segue para a rota de lei, como antes: NF-e,
+DANFE, NCM, CFOP, SEFAZ, cClassTrib e guia são conceitos do sistema, não da lei; LC, EC e ADCT são
+metalinguagem; ICMS, ISS, PIS e Cofins são instituídos por leis que não estão na base; e isenção,
+diferimento e responsável tributário não têm dispositivo que os defina em geral (o único
+diferimento na base é o do art. 138, § 2º, dos insumos do Anexo IX, **fora do escopo** pela #280).
+Sem essa regra, uma resposta de legislação sem citação contaria como "sem citação válida" na régua
+da avaliação, e o atalho melhoraria a leitura piorando o número.
+
+A resposta é a definição montada ("IBS (imposto sobre bens e serviços): o novo imposto sobre a
+venda..."), o fecho `COM_FONTE` — **só quando a citação veio da base** — e a linha "O que isso quer
+dizer" (`LinhaGlossario`) com os termos que a própria definição usa (a do IBS fala do ICMS e do ISS).
+Rota `LEGISLACAO` com citação, sem modelo e sem disjuntor, pagando só a leitura da mensagem (#511);
+camada `ATALHO_DEFINICAO` e desfecho `DEFINICAO_DO_GLOSSARIO` na auditoria, que **não** é recusa nem
+texto descartado. Os dois enums cabem nas colunas (`VARCHAR(20)` e `VARCHAR(40)`), sem changeSet. O
+`TextosDoBackend` e o `FundamentoRetencao` seguem valendo: "o que é split payment?" leva o parágrafo
+da RN009 como qualquer resposta.
+
+**Nenhum conjunto de avaliação mede pergunta de definição pura** (709 perguntas em 14 conjuntos,
+conferido pela sessão da orquestração em 2026-11-13: nenhuma cai no atalho, nem por perto). Ou seja,
+o atalho não muda a medição de nenhum conjunto existente — e também não pode ser validado por eles:
+ele se sustenta em teste de código, possível porque a resposta é determinística e do backend.
+
 **O atalho de legislação explicado (#347).** O texto curado da #343 (quatro itens) ficou
 engessado para o produtor. O `AtalhoReformaTributaria` responde agora com o texto explicado do
 `TextoReformaTributaria`, em seções: o que são o IBS e a CBS e o que eles substituem; o calendário
@@ -904,6 +973,35 @@ Sigla que o modelo já explicou no texto não entra; sem sigla solta, não há l
 (`TRECHOS_SEM_CONFIRMACAO`, `SO_TRECHOS`, sem fundamento) não leva a linha: são frases fixas sem
 sigla. Os itens 3 e 4 da #269 (descarte com trechos e lei do MISTO) já estavam entregues pela #258,
 #260 e #343, acima. A medição de clareza segue na régua de 8 siglas (`ClarezaTexto`).
+
+**Termos da linguagem da lei no glossário (#269, item 2).** O glossário ganhou os termos jurídicos
+que a rota de lei usa e o produtor não tem por que conhecer: **alíquota, base de cálculo, fato
+gerador, contribuinte, crédito presumido, isenção, imunidade, diferimento, responsável tributário,
+não cumulatividade e regime regular**, nessa ordem — a ordem é a frequência esperada na resposta de
+lei e é também a prioridade do teto, abaixo. Com eles, a resposta de lei termina explicando o termo
+da lei em vez de trocá-lo por uma palavra comum: o texto conferido não muda **uma palavra**, porque a
+linha é montada depois de todas as conferências. É o caminho que entrou no lugar da diretriz de
+linguagem no prompt, que a medição de 10/11 no Haiku reprovou (PR #425, 0 fiéis de 16 contra 3 de 16
+na `main`); o prompt de lei não mudou.
+
+Nenhum deles é **sigla**, de propósito: assim ficam fora da acomodação "sigla = nome por extenso" da
+conferência de fidelidade (`ConferenciaFidelidadeLei.raizesDasCopias` só lê siglas) e da régua de
+clareza (`ClarezaTexto`, 8 siglas fixas). Também entram com `emLinha: false`, então a composição das
+respostas de **dados** não muda. Efeito nulo na cobertura, no número, na polaridade e no juiz da
+fidelidade.
+
+**Teto da linha (`LinhaGlossario.MAXIMO_COMUNS` = 3).** A linha explica **no máximo três termos
+comuns** por resposta, na ordem em que o `aExplicar` os devolve (os que o produtor leu no texto
+primeiro, na ordem curada do glossário; os que só aparecem nas definições, depois). **A sigla não
+entra no teto:** ela já era toda explicada antes dele, e cortá-la seria regressão na régua de clareza
+e no `RotaLegislacaoTest`. Por isso a linha ainda pode passar de três itens quando a resposta traz
+muitas siglas ou quando a definição de uma puxa outras (a do IBS cita o ICMS e o ISS).
+
+A seção "O QUE QUER DIZER" do **atalho da reforma tributária** (#347) monta a lista pelo mesmo
+`aExplicar`, sem o teto (é texto de referência, não uma linha ao fim de uma resposta): ela passou de
+13 para 18 itens, de ~1,2 mil para 1.685 caracteres, num texto de 5.073. Se o crescimento não for
+desejado ali, o teto também pode valer para ela — decisão à parte, porque o atalho é um dos três
+textos que a tela mostra.
 
 **Percentual por extenso (#269, achado do diagnóstico).** A Lei 9.528, art. 6º, escreve a contribuição
 ao SENAR "de zero vírgula dois por cento"; a resposta certa "0,2%" caía como número sem fonte

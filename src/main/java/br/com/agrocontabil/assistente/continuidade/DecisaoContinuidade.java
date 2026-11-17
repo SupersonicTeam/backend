@@ -1,6 +1,7 @@
 package br.com.agrocontabil.assistente.continuidade;
 
 import br.com.agrocontabil.assistente.SinalRecusaFirme;
+import br.com.agrocontabil.assistente.orquestracao.AtalhoDefinicao;
 import br.com.agrocontabil.assistente.orquestracao.AtalhosFixos;
 import br.com.agrocontabil.assistente.orquestracao.ConversaLeve;
 import br.com.agrocontabil.assistente.orquestracao.FiltroInjecao;
@@ -92,12 +93,14 @@ public final class DecisaoContinuidade {
     // Filtro de injecao e recusa firme (#497) olham a MENSAGEM antes da confirmacao e da
     // reescrita: ataque ou pedido sobre outra pessoa nunca vai ao prompt da reescrita nem a
     // reconferencia. Vai a pergunta de sempre, que recusa sem o modelo (OrquestradorService
-    // .respondeSemModelo), e a cota reserva so a leitura (#511).
-    boolean recusaSemModelo =
-        FiltroInjecao.pareceInjecao(mensagem) || SinalRecusaFirme.inequivoco(mensagem);
-    if (semHistorico || recusaSemModelo) {
+    // .respondeSemModelo), e a cota reserva so a leitura (#511). A pergunta de definicao (#269,
+    // "o que e o IBS?") tambem: formula fechada que nao depende do historico, respondida pelo
+    // glossario no comeco da pergunta de sempre, sem modelo.
+    boolean semModelo = FiltroInjecao.pareceInjecao(mensagem)
+        || SinalRecusaFirme.inequivoco(mensagem) || AtalhoDefinicao.ehDefinicao(mensagem);
+    if (semHistorico || semModelo) {
       return new Decisao(Caminho.NORMAL,
-          recusaSemModelo ? CaminhoCota.SEM_MODELO : CaminhoCota.NORMAL, historico,
+          semModelo ? CaminhoCota.SEM_MODELO : CaminhoCota.NORMAL, historico,
           Optional.empty(), MensagemContinuidade.Tipo.NENHUMA, null);
     }
     ParConferido par = historico.ultimo().orElseThrow();

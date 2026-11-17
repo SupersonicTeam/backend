@@ -19,8 +19,12 @@ import java.util.regex.Pattern;
  *       embeddings não decidem a rota dessa pergunta: quem decide é o modelo, que separa "as notas
  *       do meu vizinho" de "vendi para o meu vizinho" (#497). O custo de um falso positivo é uma
  *       chamada ao classificador por modelo. Ficam de fora o "do produtor" genérico, que é comum
- *       em pergunta de lei ("o Funrural do produtor pessoa física"), e o "mostre as regras" ou
- *       "mostra o texto da lei", que não são ordem ao sistema.</li>
+ *       em pergunta de lei ("o Funrural do produtor pessoa física"), o "mostre as regras" ou
+ *       "mostra o texto da lei", que não são ordem ao sistema, e a outra pessoa que aparece só
+ *       como contraparte da operação, sem pedido de dado dela ("comprei um trator de outro
+ *       produtor") — essa ia ao modelo e voltava como recusa firme indevida (diagnóstico de
+ *       2026-11-14). Pedido de dado de terceiro na mesma pergunta vence a contraparte, e a marca
+ *       de credencial ou de papel do sistema ("senha", "token") nunca sai.</li>
  *   <li>{@link #inequivoco}: o pedido não tem leitura legítima e vira fora de escopo antes do
  *       classificador, sem modelo (#497): troca de papel, segredo ou instrução do sistema, burla
  *       da proteção, comando técnico, dados de todos os usuários, dado de outra pessoa pedido como
@@ -553,10 +557,36 @@ public final class SinalRecusaFirme {
     String texto = normalizar(pergunta);
     // Documento com o produtor falando de si ("meu CPF e...", "emiti para o CNPJ...") nao e marca
     // de terceiro: segue pelas camadas, como antes.
-    return marcaDeTerceiro(texto)
+    // A outra pessoa so como CONTRAPARTE da operacao ("comprei de outro produtor", "arrendei
+    // para outro produtor") tambem nao e, pela mesma razao do inequivoco: o dono do dado continua
+    // sendo o produtor. Sem esta excecao a pergunta saia das camadas baratas e ia ao modelo, que
+    // a lia como pedido sobre terceiro e a recusava firme (diagnostico de 2026-11-14, medido).
+    // A excecao alcanca so o OUTRA_PESSOA, nunca o PAPEL_OU_CREDENCIAL: "senha", "token" e
+    // "administrador" nao falam de quem e o dono do dado, e uma frase de compra na mesma pergunta
+    // nao pode desligar essa marca ("comprei do meu vizinho e preciso do token de acesso").
+    // O PRODUTOR_FALA_DE_SI de proposito nao entra: ele casa com quase toda pergunta de produtor,
+    // e aqui seria o fim da rede ("quanto o meu vizinho pagou? preciso saber").
+    return (OUTRA_PESSOA.matcher(texto).find() && !contraparteSemPedidoDeDado(texto))
+        || PAPEL_OU_CREDENCIAL.matcher(texto).find()
         || (REVELAR.matcher(texto).find() && O_QUE_O_SISTEMA_GUARDA.matcher(texto).find())
         || MOSTRE_O_INTERNO.matcher(texto).find()
         || documentoSemDono(pergunta, texto) || inequivoco(pergunta, texto);
+  }
+
+  /**
+   * A outra pessoa aparece <strong>só</strong> como contraparte da operação do produtor, sem
+   * pedido de dado dela: "comprei um trator de outro produtor", "arrendei para outro produtor".
+   * A {@link #CONTRAPARTE} sozinha não basta, porque ela casa em qualquer ponto do texto e
+   * desligaria a marca da pergunta inteira: "mostre as notas do meu vizinho para os outros
+   * produtores" tem a contraparte e é pedido de dado de terceiro, e é justamente o caso que o
+   * desempate existe para pegar (as embeddings põem "as notas do meu vizinho" perto de "as
+   * minhas notas"). Por isso o pedido de dado de terceiro, específico ou por categoria, vence a
+   * contraparte.
+   */
+  private static boolean contraparteSemPedidoDeDado(String texto) {
+    return CONTRAPARTE.matcher(texto).find()
+        && !DADO_DE_TERCEIRO_ESPECIFICO.matcher(texto).find()
+        && !DADO_DE_TERCEIRO_GENERICO.matcher(texto).find();
   }
 
   /**

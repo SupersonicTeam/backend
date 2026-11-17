@@ -1,6 +1,9 @@
 package br.com.agrocontabil.assistente;
 
+import br.com.agrocontabil.common.DocumentoFiscalValidator;
 import java.util.List;
+import java.util.function.Predicate;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -23,11 +26,29 @@ import java.util.regex.Pattern;
  *
  * <p>Os padrões exigem que o número esteja isolado (sem dígito colado antes ou depois): valores
  * como {@code R$ 123.456.789,01} e datas não são confundidos com documento.
+ *
+ * <p><strong>CNPJ alfanumérico da RFB (issue #313):</strong> 12 posições com dígito ou letra e 2
+ * dígitos verificadores ({@code 12.ABC.345/01DE-35}, IN RFB 2.229/2024), com e sem pontuação, viram
+ * {@code [CNPJ]} só quando os dígitos verificadores conferem, pela mesma conta da máscara de log
+ * ({@link DocumentoFiscalValidator#isCnpjAlfanumericoNoTextoValido}, um ponto único): sem isso, todo
+ * token de 14 caracteres terminado em 2 dígitos (hash, código) sairia {@code [CNPJ]}. A diferença
+ * em relação ao log é a caixa, por decisão do Murillo (2026-11-11, issue #313): o log recusa
+ * minúscula porque carrega hash em hex minúsculo; aqui a pergunta é texto do usuário, digitado em
+ * qualquer caixa, e deixar um CNPJ passar ao provedor custa mais que mascarar um token por engano
+ * (que, com o DV exigido, é raro). O texto é passado a maiúsculas só para conferir o DV.
  */
 public final class DataSanitizer {
 
-  /** Um padrão e o marcador que o substitui, aplicados em ordem (o mais longo primeiro). */
-  private record Regra(Pattern padrao, String marcador) {}
+  /**
+   * Um padrão, o marcador que o substitui e a conferência do trecho achado (o que não confere
+   * fica como está), aplicados em ordem (o mais longo primeiro).
+   */
+  private record Regra(Pattern padrao, String marcador, Predicate<String> confere) {
+
+    Regra(Pattern padrao, String marcador) {
+      this(padrao, marcador, trecho -> true);
+    }
+  }
 
   private static final List<Regra> REGRAS = List.of(
       // Chave de acesso da NF-e: 44 digitos.
@@ -35,6 +56,11 @@ public final class DataSanitizer {
       // CNPJ antes do CPF (14 digitos contem 11).
       new Regra(Pattern.compile(
           "(?<![\\d.])\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}(?![\\d])"), "[CNPJ]"),
+      // CNPJ alfanumerico (#313): so com o DV conferido, em qualquer caixa. Depois do numerico, que
+      // ja trocou os so de digitos, e antes do CPF.
+      new Regra(Pattern.compile("(?<![A-Za-z0-9.])[0-9A-Za-z]{2}\\.?[0-9A-Za-z]{3}\\.?"
+          + "[0-9A-Za-z]{3}/?[0-9A-Za-z]{4}-?\\d{2}(?![A-Za-z0-9])"), "[CNPJ]",
+          trecho -> DocumentoFiscalValidator.isCnpjAlfanumericoNoTextoValido(trecho, true)),
       new Regra(Pattern.compile(
           "(?<![\\d.])\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}(?![\\d])"), "[CPF]"),
       new Regra(Pattern.compile(
@@ -59,7 +85,12 @@ public final class DataSanitizer {
     }
     String resultado = texto;
     for (Regra regra : REGRAS) {
-      resultado = regra.padrao().matcher(resultado).replaceAll(regra.marcador());
+      // O trecho que nao confere volta como veio, protegido: um "$" ou uma "\" nele seriam lidos
+      // como referencia de grupo pela troca.
+      resultado = regra.padrao().matcher(resultado).replaceAll(achado ->
+          regra.confere().test(achado.group())
+              ? regra.marcador()
+              : Matcher.quoteReplacement(achado.group()));
     }
     return resultado;
   }

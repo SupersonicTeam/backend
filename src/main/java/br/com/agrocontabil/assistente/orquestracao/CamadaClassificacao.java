@@ -15,6 +15,12 @@ public enum CamadaClassificacao {
    * seguimento, pela lista fechada (#493). Cabe no {@code VARCHAR(20)}, sem changeSet.
    */
   CONVERSA_LEVE,
+  /**
+   * {@link AtalhoDefinicao}: pergunta de definição ("o que é o IBS?") respondida pelo glossário e
+   * pelo dispositivo que institui o termo, sem modelo e sem busca por similaridade (#269). Cabe no
+   * {@code VARCHAR(20)}, sem changeSet.
+   */
+  ATALHO_DEFINICAO,
   /** {@link FiltroInjecao}: forma de prompt injection → fora de escopo. */
   FILTRO_INJECAO,
   /**

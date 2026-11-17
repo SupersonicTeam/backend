@@ -225,6 +225,40 @@ O backend volta ao `qwen3:4b-instruct` do Ollama, que segue baixado. Se ele fico
 sem uso (`OLLAMA_KEEP_ALIVE`), a primeira pergunta depois da reversão demora mais: o modelo volta
 a ser carregado na memória.
 
+## Fidelidade da rota de lei (#269)
+
+A correção da rota de lei (conferência em código mais o juiz, uma segunda chamada ao modelo) está
+**desligada por padrão**, no código e no `compose.yaml`: copiar o compose não liga nada. Quem liga é o
+`.env`, com a configuração escolhida pelo Murillo em 2026-11-13 (`docs/ceres-assistente.md`,
+"Configuração escolhida"; booleanos em minúsculas):
+
+```
+AI_FIDELIDADE_LEI_HABILITADA=true
+AI_FIDELIDADE_LEI_JUIZ_HABILITADO=true
+AI_FIDELIDADE_LEI_JUIZ_CONFIGURACAO=justificativa
+AI_FIDELIDADE_LEI_JUIZ_RESGATE_HABILITADO=true
+AI_FIDELIDADE_LEI_JUIZ_RESGATE_POLARIDADE=true
+```
+
+O veto, a cobertura mínima (0,7; 0,3 com o juiz) e os tetos do juiz (`AI_TETO_JUIZ`,
+`AI_TETO_JUIZ_JUSTIFICATIVA`) também passam pelo compose, com o padrão do código, e ficam como estão.
+O provedor é o do Haiku (`AI_CHAT_PROVIDER=anthropic`, seção acima). Com o juiz ligado, cada pergunta
+de lei faz uma chamada a mais ao modelo e a reserva da cota por pergunta sobe de 31.744 para 44.032
+créditos com a configuração `justificativa` (40.448 com o juiz `atual`).
+
+1. **O `compose.yaml` com as variáveis precisa estar na VPS antes**; senão o `.env` não tem efeito
+   (o compose lista as variáveis do backend uma a uma). Vale a mesma cautela do passo 4 da seção
+   anterior: sem `SITE_DOMINIO` e `TLS_ASK_CHAVE` no `.env`, leve ao compose em uso só as linhas
+   `AI_FIDELIDADE_LEI_*`, `AI_TETO_JUIZ` e `AI_TETO_JUIZ_JUSTIFICATIVA` do `backend`. Guarde o
+   anterior (`cp -p`) e valide com `docker compose -f <arquivo> config -q`.
+2. Acrescente as cinco linhas ao `.env` (600).
+3. Recrie **só o backend**: `docker compose up -d --no-deps backend`, e espere ficar `healthy`.
+4. Confira com uma pergunta de lei digitada e a auditoria (`assistente_interacao`, coluna
+   `fidelidade_lei`).
+
+**Reverter:** comente as cinco linhas (ou ponha `AI_FIDELIDADE_LEI_HABILITADA=false`) e rode
+`docker compose up -d --no-deps backend`. Não precisa de deploy de código.
+
 ## Continuidade da conversa da Ceres (#499)
 
 Desligada por padrão (`AI_CONTINUIDADE_HABILITADA=false`). Ligada, vale para **todos os
@@ -240,7 +274,7 @@ uma devolução; ver `docs/lgpd.md`, "Continuidade da conversa"):
 2. O aviso na tela da Ceres (o Angular lê `conversaVaiAoProvedor` de `GET /api/assistente/uso`).
 3. O prazo de retenção no provedor escrito na política e no `docs/lgpd.md` (conferir os termos da
    organização no Console e pedir retenção zero, se houver).
-4. O merge do PR da continuidade só sai depois da medição e do OK do Murillo.
+4. A medição da #499 e o OK do Murillo (o código entra na `main` com a flag desligada).
 
 **Ligar:** com o lock do deploy (`cd /opt/agrocontabil && flock -w 900 .deploy.lock bash`),
 acrescente `AI_CONTINUIDADE_HABILITADA=true` ao `.env` e confira que o compose em uso repassa a

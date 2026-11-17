@@ -10,6 +10,7 @@ import br.com.agrocontabil.config.demonstracao.CenarioDemonstracao.LinhaVenda;
 import br.com.agrocontabil.config.demonstracao.CenarioDemonstracao.Membro;
 import br.com.agrocontabil.config.demonstracao.CenarioDemonstracao.Parte;
 import br.com.agrocontabil.config.demonstracao.CenarioDemonstracao.Produto;
+import br.com.agrocontabil.exception.AssinaturaDigitalException;
 import br.com.agrocontabil.exception.DomainException;
 import br.com.agrocontabil.exception.SenhaFracaException;
 import br.com.agrocontabil.model.AcaoRevisao;
@@ -42,6 +43,7 @@ import br.com.agrocontabil.model.TipoEscritorio;
 import br.com.agrocontabil.model.TipoGuiaFiscal;
 import br.com.agrocontabil.model.TipoProdutor;
 import br.com.agrocontabil.model.VinculoCarteira;
+import br.com.agrocontabil.nfe.KeyStoreCertificadoProvider;
 import br.com.agrocontabil.nfe.NfeAssinador;
 import br.com.agrocontabil.nfe.NfeToNotaFiscalMapper;
 import br.com.agrocontabil.nfe.NotaFiscalNfeMapper;
@@ -192,6 +194,7 @@ public class SeedDemonstracao implements CommandLineRunner {
   private final NotaFiscalNfeMapper nfeMapper;
   private final XmlGenerator xmlGenerator;
   private final NfeAssinador assinador;
+  private final KeyStoreCertificadoProvider certificadoProvider;
   private final NfeToNotaFiscalMapper importacaoMapper;
   private final ApuracaoService apuracaoService;
   private final AlertaTributarioService alertaService;
@@ -216,7 +219,8 @@ public class SeedDemonstracao implements CommandLineRunner {
       ModeloPedidoRepository modeloPedidoRepository,
       TributacaoService tributacaoService, CreditoTributarioService creditoService,
       GeracaoNotaFiscalService geracaoService, NotaFiscalNfeMapper nfeMapper,
-      XmlGenerator xmlGenerator, NfeAssinador assinador, NfeToNotaFiscalMapper importacaoMapper,
+      XmlGenerator xmlGenerator, NfeAssinador assinador,
+      KeyStoreCertificadoProvider certificadoProvider, NfeToNotaFiscalMapper importacaoMapper,
       ApuracaoService apuracaoService, AlertaTributarioService alertaService,
       CotaDemonstracaoCeres cotaCeres, VerificacaoCnpjService verificacaoCnpj,
       PasswordEncoder passwordEncoder,
@@ -242,6 +246,7 @@ public class SeedDemonstracao implements CommandLineRunner {
     this.nfeMapper = nfeMapper;
     this.xmlGenerator = xmlGenerator;
     this.assinador = assinador;
+    this.certificadoProvider = certificadoProvider;
     this.importacaoMapper = importacaoMapper;
     this.apuracaoService = apuracaoService;
     this.alertaService = alertaService;
@@ -282,6 +287,7 @@ public class SeedDemonstracao implements CommandLineRunner {
         completarCredenciais();
         log.info("Demonstracao da banca ja semeada: nada recriado.");
       } else {
+        avisarSeCertificadoNaoCarrega(certificadoProvider);
         Resumo resumo = semear();
         ultimoResumo = resumo;
         log.info("Demonstracao da banca semeada: {} produtores, {} notas ({} recusadas), {} guias, "
@@ -295,6 +301,27 @@ public class SeedDemonstracao implements CommandLineRunner {
       }
     } catch (RuntimeException e) {
       log.error("Demonstracao da banca nao semeada; a aplicacao segue sem ela.", e);
+    }
+  }
+
+  /**
+   * Confere o certificado antes de semear (#560): sem ele cada nota é recusada na assinatura e a
+   * demonstração sobe sem nota, só com WARN por nota. Só avisa (a semeadura segue e a aplicação
+   * sobe de qualquer jeito); não roda quando a demonstração já está semeada, porque aí as notas
+   * estão no banco e o certificado só faria falta numa emissão nova. A senha nunca entra na mensagem.
+   * O caminho e o alias configurados podem aparecer, porque a mensagem da exceção do provider os
+   * cita ("Alias '...' nao contem chave privada"), e é ela que ajuda quem lê o log. Tirar o alias
+   * do log exigiria mexer na mensagem do {@code KeyStoreCertificadoProvider}, fora do escopo da
+   * #560.
+   */
+  static void avisarSeCertificadoNaoCarrega(KeyStoreCertificadoProvider provider) {
+    try {
+      provider.getCertificate();
+    } catch (AssinaturaDigitalException e) {
+      log.error("Demonstracao da banca: o certificado digital da NF-e nao carregou ({}). A "
+          + "demonstracao vai subir SEM nota. Confira NFE_CERT_PATH e NFE_CERT_PASSWORD (e "
+          + "NFE_CERT_ALIAS); no dev, retire as tres do ambiente para valer o certificado de "
+          + "teste.", e.getMessage());
     }
   }
 

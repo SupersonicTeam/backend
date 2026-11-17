@@ -128,10 +128,18 @@ flag ligada e o provedor por API fora de `dev`/`test` (`config/AvisoContinuidade
   com DV válido e em maiúsculas (#313), e-mail e telefone brasileiro (com DDD entre parênteses, ou
   sem parênteses com o hífen). O alfanumérico em minúsculas passa no log (decisão de 2026-11-11,
   pelo falso positivo com hash em hex).
-- **Ceres (`DataSanitizer`):** ainda não reconhece o CNPJ alfanumérico; uma pergunta com ele vai
-  ao modelo com o número. A regra, em qualquer caixa, entra depois da rodada real do benchmark e
-  antes de 26/11, porque muda a entrada do modelo e a recusa firme, que a banca mede; se a rodada
-  atrasar, fica para depois da banca (#313).
+- **Ceres (`DataSanitizer`):** reconhece o CNPJ alfanumérico da RFB (#313), com e sem pontuação, e o
+  troca por `[CNPJ]` antes de a pergunta e os resultados irem ao modelo, à busca da lei e à
+  auditoria. Usa a mesma conferência do log (`DocumentoFiscalValidator.isCnpjAlfanumericoNoTextoValido`,
+  só com os dígitos verificadores conferidos), mas **em qualquer caixa**, ao contrário do log: lá o
+  hash em hex minúsculo gera falso positivo, aqui o texto é a pergunta do usuário e deixar um CNPJ
+  passar ao provedor custa mais que mascarar um token por engano (decisão de 2026-11-11). Limite
+  aceito, o mesmo do log: o CNPJ alfanumérico colado em letra sem separador (`cnpj12ABC34501DE35`)
+  passa, porque a janela de 14 posições sem esse limite casaria o fim de qualquer palavra longa
+  (a regra numérica da Ceres, sem letras no formato, não tem o problema). Como o
+  marcador é o mesmo do numérico, a pergunta com o CNPJ alfanumérico de outra pessoa também conta
+  como dado de pessoa na recusa firme (`SinalRecusaFirme`). Entrou depois da rodada oficial do
+  benchmark de 14/11/2026, que mediu a Ceres sem ele.
 
 ## Criptografia em repouso (#147)
 

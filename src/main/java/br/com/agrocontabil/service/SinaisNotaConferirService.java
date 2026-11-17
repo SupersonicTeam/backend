@@ -8,6 +8,8 @@ import br.com.agrocontabil.model.OrigemNotaFiscal;
 import br.com.agrocontabil.model.StatusNotaFiscal;
 import br.com.agrocontabil.repository.ItemParaSinal;
 import br.com.agrocontabil.repository.OutraNota;
+import br.com.agrocontabil.repository.OutraNotaDoDia;
+import br.com.agrocontabil.repository.ValorUnitarioNoTempo;
 import br.com.agrocontabil.repository.ValorUnitarioReferencia;
 import br.com.agrocontabil.repository.NcmReferenciaRepository;
 import br.com.agrocontabil.repository.NotaFiscalRepository;
@@ -36,6 +38,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -193,12 +196,44 @@ public class SinaisNotaConferirService {
    */
   @Transactional(readOnly = true)
   public List<SinalNota> sinais(UUID produtorId, NotaParaSinal nota) {
-    if (nota.origem() != OrigemNotaFiscal.PROPRIA || SEM_SINAL.contains(nota.status())) {
+    return avaliar(nota, new FonteDireta(produtorId));
+  }
+
+  /**
+   * Sinais de várias notas do mesmo produtor de uma vez (issue #579): o resultado de cada uma é o
+   * mesmo de {@link #sinais}, porque a regra é uma só ({@link #avaliar}); só a leitura dos dados
+   * muda, e o número de consultas deixa de crescer com o de notas (itens das notas, outras notas do
+   * mesmo dia e valores de referência são lidos em lote). Existe para o resumo da Ceres examinar
+   * todas as candidatas sem um teto que escondesse nota com sinal.
+   *
+   * @param produtorId produtor da sessão
+   * @param notas      notas já lidas pelo chamador
+   * @return os sinais de cada nota (lista vazia sem sinal), na ordem de {@code notas}
+   */
+  @Transactional(readOnly = true)
+  public Map<UUID, List<SinalNota>> sinaisEmLote(UUID produtorId, List<NotaParaSinal> notas) {
+    Map<UUID, List<SinalNota>> resultado = new LinkedHashMap<>();
+    if (notas.isEmpty()) {
+      return resultado;
+    }
+    for (int i = 0; i < notas.size(); i += notasPorLote) {
+      List<NotaParaSinal> parte = notas.subList(i, Math.min(i + notasPorLote, notas.size()));
+      FonteEmLote fonte = new FonteEmLote(produtorId, parte);
+      for (NotaParaSinal nota : parte) {
+        resultado.put(nota.id(), avaliar(nota, fonte));
+      }
+    }
+    return resultado;
+  }
+
+  /** A regra dos sinais de uma nota, igual para a nota avulsa e para o lote (só a fonte muda). */
+  private List<SinalNota> avaliar(NotaParaSinal nota, Fonte fonte) {
+    if (!precisaAvaliar(nota)) {
       return List.of();
     }
     Momento momento = momento(nota);
     OffsetDateTime prazo = momento == Momento.AUTORIZADA_NO_PRAZO ? limite(nota) : null;
-    List<ItemParaSinal> itens = notaFiscalRepository.findItensParaSinais(nota.id(), produtorId);
+    List<ItemParaSinal> itens = fonte.itens(nota.id());
     if (itens.isEmpty()) {
       // Sem itens: nota de outro produtor (a leitura filtra pelo dono) ou ainda vazia.
       return List.of();
@@ -206,12 +241,12 @@ public class SinaisNotaConferirService {
     List<SinalNota> sinais = new ArrayList<>();
     Map<String, Boolean> cClassTribJaConferido = new HashMap<>();
     for (ItemParaSinal item : itens) {
-      motivoServico(item).ifPresent(motivo -> sinais.add(new SinalNota(
+      motivoServico(item, fonte::ncmNaReferencia).ifPresent(motivo -> sinais.add(new SinalNota(
           CodigoSinalNota.PRODUTO_PARECE_SERVICO, motivo, momento, item.numeroItem(),
           item.descricao(), item.cfop(), prazo, item.unidade(), null, null, null, null)));
       if (ANTES_DO_XML.contains(nota.status())) {
         if (cClassTribNaoAdmitido(item.cClassTrib(), item.ncm(), nota.dataEmissao(),
-            cClassTribJaConferido)) {
+            cClassTribJaConferido, fonte::cClassTribNaoAdmitido)) {
           sinais.add(new SinalNota(CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO,
               Motivo.CODIGO_NAO_VALE_PARA_O_NCM, momento, item.numeroItem(), item.descricao(),
               item.cfop(), null));
@@ -226,12 +261,40 @@ public class SinaisNotaConferirService {
         }
       }
     }
-    sinais.addAll(valoresForaDoPadrao(produtorId, nota, itens, momento, prazo));
+    sinais.addAll(valoresForaDoPadrao(nota, itens, momento, prazo, fonte));
     // Do primeiro item ao ultimo; o sinal da nota inteira (duplicidade) por ultimo.
     sinais.sort(Comparator.comparing(SinalNota::numeroItem,
         Comparator.nullsLast(Comparator.naturalOrder())));
-    duplicidade(produtorId, nota, itens, momento, prazo).ifPresent(sinais::add);
+    duplicidade(nota, itens, momento, prazo, fonte).ifPresent(sinais::add);
     return List.copyOf(sinais);
+  }
+
+  /** Só nota própria e fora das situações sem sinal é avaliada. */
+  private static boolean precisaAvaliar(NotaParaSinal nota) {
+    return nota.origem() == OrigemNotaFiscal.PROPRIA && !SEM_SINAL.contains(nota.status());
+  }
+
+  /** A nota entra na duplicidade: tem dia, destinatário e valor, e não está cancelada nem rejeitada. */
+  private static boolean entraNaDuplicidade(NotaParaSinal nota) {
+    return nota.dataEmissao() != null && nota.destinatarioCpfCnpj() != null
+        && nota.valorTotal() != null && !FORA_DA_DUPLICIDADE.contains(nota.status());
+  }
+
+  /** Começo do dia (BRT) da emissão. */
+  private static OffsetDateTime inicioDoDia(NotaParaSinal nota) {
+    return nota.dataEmissao().atZoneSameInstant(FUSO).toLocalDate().atStartOfDay(FUSO)
+        .toOffsetDateTime();
+  }
+
+  /** Começo do dia seguinte ao da emissão (BRT). */
+  private static OffsetDateTime fimDoDia(NotaParaSinal nota) {
+    return nota.dataEmissao().atZoneSameInstant(FUSO).toLocalDate().plusDays(1)
+        .atStartOfDay(FUSO).toOffsetDateTime();
+  }
+
+  /** Janela de referência do valor unitário: 12 meses até a emissão (ou até agora, sem emissão). */
+  private OffsetDateTime fimDaReferencia(NotaParaSinal nota) {
+    return nota.dataEmissao() == null ? OffsetDateTime.now(clock) : nota.dataEmissao();
   }
 
   /**
@@ -253,7 +316,7 @@ public class SinaisNotaConferirService {
     Map<String, Boolean> jaConferido = new HashMap<>();
     for (NotaFiscalItem item : nota.getItens()) {
       if (cClassTribNaoAdmitido(item.getCClassTrib(), item.getNcm(), nota.getDataEmissao(),
-          jaConferido)) {
+          jaConferido, this::naoAdmitidoPelaTabela)) {
         sinais.add(new SinalNota(CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO,
             Motivo.CODIGO_NAO_VALE_PARA_O_NCM, Momento.ANTES_DE_EMITIR, item.getNumeroItem(),
             item.getDescricao(), item.getCfop(), null));
@@ -264,7 +327,7 @@ public class SinaisNotaConferirService {
 
   /** cClassTrib informado que o NCM não alcança: a regra do {@code FiscalRulesValidator}. */
   private boolean cClassTribNaoAdmitido(String cClassTrib, String ncm, OffsetDateTime emissao,
-      Map<String, Boolean> jaConferido) {
+      Map<String, Boolean> jaConferido, ConferenciaDoCodigo conferencia) {
     if (cClassTrib == null || cClassTrib.isBlank() || ncm == null || ncm.isBlank()) {
       return false;
     }
@@ -272,27 +335,21 @@ public class SinaisNotaConferirService {
     return jaConferido.computeIfAbsent(cClassTrib.strip() + "|" + ncm.strip(), chave -> {
       LocalDate data = (emissao == null ? OffsetDateTime.now(clock) : emissao)
           .atZoneSameInstant(FUSO).toLocalDate();
-      return classificacaoService.codigoNaoAdmitido(cClassTrib.strip(), ncm.strip(), data)
-          .isPresent();
+      return conferencia.naoAdmitido(cClassTrib.strip(), ncm.strip(), data);
     });
   }
 
   /** Outra nota do mesmo produtor com o mesmo destinatário, valor, itens e dia. */
-  private Optional<SinalNota> duplicidade(UUID produtorId, NotaParaSinal nota,
-      List<ItemParaSinal> itens, Momento momento, OffsetDateTime prazo) {
-    if (nota.dataEmissao() == null || nota.destinatarioCpfCnpj() == null
-        || nota.valorTotal() == null || FORA_DA_DUPLICIDADE.contains(nota.status())) {
+  private Optional<SinalNota> duplicidade(NotaParaSinal nota, List<ItemParaSinal> itens,
+      Momento momento, OffsetDateTime prazo, Fonte fonte) {
+    if (!entraNaDuplicidade(nota)) {
       return Optional.empty();
     }
-    LocalDate dia = nota.dataEmissao().atZoneSameInstant(FUSO).toLocalDate();
-    List<OutraNota> candidatas = notaFiscalRepository.findPossiveisDuplicadas(
-        produtorId, nota.id(), nota.destinatarioCpfCnpj(), nota.valorTotal(),
-        dia.atStartOfDay(FUSO).toOffsetDateTime(),
-        dia.plusDays(1).atStartOfDay(FUSO).toOffsetDateTime(), NA_DUPLICIDADE);
+    List<OutraNota> candidatas = fonte.possiveisDuplicadas(nota, inicioDoDia(nota),
+        fimDoDia(nota));
     Map<String, Long> estesItens = assinatura(itens);
     for (OutraNota outra : candidatas) {
-      if (estesItens.equals(
-          assinatura(notaFiscalRepository.findItensParaSinais(outra.id(), produtorId)))) {
+      if (estesItens.equals(assinatura(fonte.itens(outra.id())))) {
         return Optional.of(new SinalNota(CodigoSinalNota.POSSIVEL_DUPLICIDADE, Motivo.MESMA_VENDA,
             momento, null, null, null, prazo, null, null, null, outra.numero(), outra.serie()));
       }
@@ -312,10 +369,9 @@ public class SinaisNotaConferirService {
    * Itens de venda com valor unitário mais de 3 vezes fora da mediana do mesmo NCM e unidade, com
    * 5+ notas de referência na janela de 12 meses até a emissão da nota.
    */
-  private List<SinalNota> valoresForaDoPadrao(UUID produtorId, NotaParaSinal nota,
-      List<ItemParaSinal> itens, Momento momento, OffsetDateTime prazo) {
-    OffsetDateTime ate = nota.dataEmissao() == null ? OffsetDateTime.now(clock)
-        : nota.dataEmissao();
+  private List<SinalNota> valoresForaDoPadrao(NotaParaSinal nota, List<ItemParaSinal> itens,
+      Momento momento, OffsetDateTime prazo, Fonte fonte) {
+    OffsetDateTime ate = fimDaReferencia(nota);
     OffsetDateTime desde = ate.minusMonths(MESES_REFERENCIA);
     Map<String, Optional<BigDecimal>> medianas = new HashMap<>();
     List<SinalNota> sinais = new ArrayList<>();
@@ -327,7 +383,7 @@ public class SinaisNotaConferirService {
       String ncm = item.ncm().strip();
       String unidade = unidade(item.unidade());
       Optional<BigDecimal> mediana = medianas.computeIfAbsent(ncm + "|" + unidade,
-          k -> medianaDeReferencia(produtorId, nota.id(), ncm, unidade, desde, ate));
+          k -> medianaDeReferencia(fonte, nota.id(), ncm, unidade, desde, ate));
       if (mediana.isEmpty()) {
         continue;
       }
@@ -348,11 +404,10 @@ public class SinaisNotaConferirService {
   }
 
   /** Mediana das notas de referência (cada nota pela mediana dos itens dela); vazia com < 5. */
-  private Optional<BigDecimal> medianaDeReferencia(UUID produtorId, UUID notaId, String ncm,
+  private Optional<BigDecimal> medianaDeReferencia(Fonte fonte, UUID notaId, String ncm,
       String unidade, OffsetDateTime desde, OffsetDateTime ate) {
     Map<UUID, List<BigDecimal>> porNota = new LinkedHashMap<>();
-    notaFiscalRepository.findValoresUnitariosDeReferencia(produtorId, notaId, ncm, unidade,
-            desde, ate, PageRequest.of(0, MAXIMO_VALORES_REFERENCIA))
+    fonte.valoresDeReferencia(notaId, ncm, unidade, desde, ate)
         .forEach(r -> porNota.computeIfAbsent(r.notaId(), k -> new ArrayList<>())
             .add(r.valorUnitario()));
     if (porNota.size() < MINIMO_NOTAS_REFERENCIA) {
@@ -407,6 +462,12 @@ public class SinaisNotaConferirService {
    * consulta) e a referência de NCM só quando o CFOP não é genérico.
    */
   Optional<Motivo> motivoServico(ItemParaSinal item) {
+    return motivoServico(item, ncmReferenciaRepository::existsByCodigo);
+  }
+
+  /** O mesmo, com a conferência do NCM na referência vinda da fonte (o lote guarda o resultado). */
+  private Optional<Motivo> motivoServico(ItemParaSinal item,
+      Predicate<String> ncmNaReferencia) {
     Termos termos = termosDeServico(item.descricao());
     if (termos == Termos.NENHUM) {
       return Optional.empty();
@@ -426,8 +487,7 @@ public class SinaisNotaConferirService {
     if (unidade == Direcao.SERVICO) {
       return Optional.of(Motivo.UNIDADE_DE_SERVICO);
     }
-    boolean foraDaReferencia = !temNcm
-        || !ncmReferenciaRepository.existsByCodigo(item.ncm().strip());
+    boolean foraDaReferencia = !temNcm || !ncmNaReferencia.test(item.ncm().strip());
     return foraDaReferencia ? Optional.of(Motivo.NCM_FORA_DA_REFERENCIA) : Optional.empty();
   }
 
@@ -532,6 +592,222 @@ public class SinaisNotaConferirService {
           .toList();
     } catch (IOException e) {
       throw new UncheckedIOException("Lista de sinais ausente: " + recurso, e);
+    }
+  }
+
+  /** Notas por lote: limita os parâmetros das consultas em lote e o que fica em memória. */
+  static final int NOTAS_POR_LOTE = 500;
+
+  /** Linhas lidas por par (NCM, unidade) no lote; no teto, só serve à nota que já tem as linhas do seu limite. */
+  static final int TETO_REFERENCIA_EM_LOTE = 5_000;
+
+  /** Os limites do lote, de instância só para o teste os baixar (produção usa as constantes). */
+  int notasPorLote = NOTAS_POR_LOTE;
+  int tetoReferenciaEmLote = TETO_REFERENCIA_EM_LOTE;
+
+  /** Conferência do cClassTrib informado contra a tabela oficial. */
+  @FunctionalInterface
+  private interface ConferenciaDoCodigo {
+    boolean naoAdmitido(String cClassTrib, String ncm, LocalDate data);
+  }
+
+  /** Cada conferência a que a regra recorre; o resultado é o mesmo, só a leitura muda (#579). */
+  private interface Fonte {
+
+    /** Itens da nota, na ordem do número; vazia para nota de outro produtor ou sem itens. */
+    List<ItemParaSinal> itens(UUID notaId);
+
+    /** Valores unitários de referência (a consulta de {@code findValoresUnitariosDeReferencia}). */
+    List<ValorUnitarioReferencia> valoresDeReferencia(UUID notaId, String ncm, String unidade,
+        OffsetDateTime desde, OffsetDateTime ate);
+
+    /** Outras notas candidatas a duplicidade do dia (a consulta de {@code findPossiveisDuplicadas}). */
+    List<OutraNota> possiveisDuplicadas(NotaParaSinal nota, OffsetDateTime inicio,
+        OffsetDateTime fim);
+
+    /** O NCM está na referência agropecuária. */
+    boolean ncmNaReferencia(String ncm);
+
+    /** O cClassTrib informado não vale para o NCM na data. */
+    boolean cClassTribNaoAdmitido(String cClassTrib, String ncm, LocalDate data);
+  }
+
+  private boolean naoAdmitidoPelaTabela(String cClassTrib, String ncm, LocalDate data) {
+    return classificacaoService.codigoNaoAdmitido(cClassTrib, ncm, data).isPresent();
+  }
+
+  /** Lê da nota avulsa: uma consulta por pergunta, como sempre foi. */
+  private final class FonteDireta implements Fonte {
+    private final UUID produtorId;
+
+    FonteDireta(UUID produtorId) {
+      this.produtorId = produtorId;
+    }
+
+    @Override
+    public List<ItemParaSinal> itens(UUID notaId) {
+      return notaFiscalRepository.findItensParaSinais(notaId, produtorId);
+    }
+
+    @Override
+    public List<ValorUnitarioReferencia> valoresDeReferencia(UUID notaId, String ncm,
+        String unidade, OffsetDateTime desde, OffsetDateTime ate) {
+      return notaFiscalRepository.findValoresUnitariosDeReferencia(produtorId, notaId, ncm,
+          unidade, desde, ate, PageRequest.of(0, MAXIMO_VALORES_REFERENCIA));
+    }
+
+    @Override
+    public List<OutraNota> possiveisDuplicadas(NotaParaSinal nota, OffsetDateTime inicio,
+        OffsetDateTime fim) {
+      return notaFiscalRepository.findPossiveisDuplicadas(produtorId, nota.id(),
+          nota.destinatarioCpfCnpj(), nota.valorTotal(), inicio, fim, NA_DUPLICIDADE);
+    }
+
+    @Override
+    public boolean ncmNaReferencia(String ncm) {
+      return ncmReferenciaRepository.existsByCodigo(ncm);
+    }
+
+    @Override
+    public boolean cClassTribNaoAdmitido(String cClassTrib, String ncm, LocalDate data) {
+      return naoAdmitidoPelaTabela(cClassTrib, ncm, data);
+    }
+  }
+
+  /**
+   * Lê de várias notas de uma vez (#579). Os itens, as outras notas do dia e os valores de
+   * referência vêm em lote e cada nota aplica em memória a sua janela, o seu dia e a exclusão de si
+   * mesma, na ordem que a consulta por nota devolveria; o que o lote não prova igual (referência
+   * cortada pelo teto sem as linhas do limite da nota, janela de fora da união) é lido pela fonte
+   * direta.
+   */
+  private final class FonteEmLote implements Fonte {
+    private final UUID produtorId;
+    private final Fonte direta;
+    private final Map<UUID, List<ItemParaSinal>> itens = new HashMap<>();
+    private final Map<String, List<OutraNotaDoDia>> duplicadasPorDestinatario = new HashMap<>();
+    private final Map<String, ReferenciaDoPar> referencias = new HashMap<>();
+    private final Map<String, Boolean> ncms = new HashMap<>();
+    private final Map<String, Boolean> classificados = new HashMap<>();
+    private final OffsetDateTime desdeDaUniao;
+    private final OffsetDateTime ateDaUniao;
+
+    FonteEmLote(UUID produtorId, List<NotaParaSinal> notas) {
+      this.produtorId = produtorId;
+      this.direta = new FonteDireta(produtorId);
+      List<NotaParaSinal> avaliadas = notas.stream()
+          .filter(SinaisNotaConferirService::precisaAvaliar).toList();
+      carregarItens(avaliadas.stream().map(NotaParaSinal::id).toList());
+      OffsetDateTime ate = null;
+      OffsetDateTime desde = null;
+      for (NotaParaSinal nota : avaliadas) {
+        OffsetDateTime fim = fimDaReferencia(nota);
+        ate = ate == null || fim.isAfter(ate) ? fim : ate;
+        OffsetDateTime inicio = fim.minusMonths(MESES_REFERENCIA);
+        desde = desde == null || inicio.isBefore(desde) ? inicio : desde;
+      }
+      this.ateDaUniao = ate;
+      this.desdeDaUniao = desde;
+      carregarDuplicadas(avaliadas.stream()
+          .filter(SinaisNotaConferirService::entraNaDuplicidade).toList());
+    }
+
+    private void carregarItens(List<UUID> ids) {
+      List<UUID> faltando = ids.stream().filter(id -> !itens.containsKey(id)).distinct()
+          .toList();
+      for (int i = 0; i < faltando.size(); i += notasPorLote) {
+        List<UUID> parte = faltando.subList(i, Math.min(i + notasPorLote, faltando.size()));
+        Map<UUID, List<ItemParaSinal>> lidos = new HashMap<>();
+        notaFiscalRepository.findItensParaSinaisDasNotas(parte, produtorId)
+            .forEach(item -> lidos.computeIfAbsent(item.notaId(), k -> new ArrayList<>())
+                .add(item.item()));
+        parte.forEach(id -> itens.put(id, lidos.getOrDefault(id, List.of())));
+      }
+    }
+
+    private void carregarDuplicadas(List<NotaParaSinal> candidatas) {
+      if (candidatas.isEmpty()) {
+        return;
+      }
+      OffsetDateTime inicio = candidatas.stream().map(SinaisNotaConferirService::inicioDoDia)
+          .min(Comparator.naturalOrder()).orElseThrow();
+      OffsetDateTime fim = candidatas.stream().map(SinaisNotaConferirService::fimDoDia)
+          .max(Comparator.naturalOrder()).orElseThrow();
+      List<OutraNotaDoDia> lidas = notaFiscalRepository.findPossiveisDuplicadasDoLote(
+          produtorId,
+          candidatas.stream().map(NotaParaSinal::destinatarioCpfCnpj).distinct().toList(),
+          candidatas.stream().map(NotaParaSinal::valorTotal).distinct().toList(),
+          inicio, fim, NA_DUPLICIDADE);
+      lidas.forEach(o -> duplicadasPorDestinatario
+          .computeIfAbsent(o.destinatario(), k -> new ArrayList<>()).add(o));
+      // Os itens das outras notas que casam, de uma vez: a regra os compara com os da consultada.
+      carregarItens(candidatas.stream()
+          .flatMap(n -> possiveisDuplicadas(n, inicioDoDia(n), fimDoDia(n)).stream())
+          .map(OutraNota::id).toList());
+    }
+
+    @Override
+    public List<ItemParaSinal> itens(UUID notaId) {
+      if (!itens.containsKey(notaId)) {
+        carregarItens(List.of(notaId));
+      }
+      return itens.get(notaId);
+    }
+
+    @Override
+    public List<OutraNota> possiveisDuplicadas(NotaParaSinal nota, OffsetDateTime inicio,
+        OffsetDateTime fim) {
+      return duplicadasPorDestinatario.getOrDefault(nota.destinatarioCpfCnpj(), List.of())
+          .stream()
+          .filter(o -> !o.id().equals(nota.id())
+              && o.valorTotal().compareTo(nota.valorTotal()) == 0
+              && !o.dataEmissao().isBefore(inicio) && o.dataEmissao().isBefore(fim))
+          .map(OutraNotaDoDia::comoOutraNota)
+          .toList();
+    }
+
+    @Override
+    public List<ValorUnitarioReferencia> valoresDeReferencia(UUID notaId, String ncm,
+        String unidade, OffsetDateTime desde, OffsetDateTime ate) {
+      if (desdeDaUniao == null || desde.isBefore(desdeDaUniao) || ate.isAfter(ateDaUniao)) {
+        return direta.valoresDeReferencia(notaId, ncm, unidade, desde, ate);
+      }
+      String chave = ncm + "|" + unidade;
+      ReferenciaDoPar referencia = referencias.get(chave);
+      if (referencia == null) {
+        List<ValorUnitarioNoTempo> lidas = notaFiscalRepository.findValoresUnitariosNoTempo(
+            produtorId, ncm, unidade, desdeDaUniao, ateDaUniao,
+            PageRequest.of(0, tetoReferenciaEmLote));
+        referencia = new ReferenciaDoPar(lidas, lidas.size() >= tetoReferenciaEmLote);
+        referencias.put(chave, referencia);
+      }
+      List<ValorUnitarioReferencia> daNota = referencia.linhas().stream()
+          .filter(l -> !l.notaId().equals(notaId) && !l.dataEmissao().isBefore(desde)
+              && !l.dataEmissao().isAfter(ate))
+          .limit(MAXIMO_VALORES_REFERENCIA)
+          .map(l -> new ValorUnitarioReferencia(l.notaId(), l.valorUnitario()))
+          .toList();
+      // As linhas lidas são a ponta mais recente da lista inteira (mesma ordem da consulta por
+      // nota): se a leitura foi cortada pelo teto, só vale para esta nota se já tem as linhas do
+      // limite dela; senão faltam linhas mais antigas, e a nota lê as suas.
+      if (referencia.truncada() && daNota.size() < MAXIMO_VALORES_REFERENCIA) {
+        return direta.valoresDeReferencia(notaId, ncm, unidade, desde, ate);
+      }
+      return daNota;
+    }
+
+    /** Linhas de um par (NCM, unidade) na janela da união e se a leitura foi cortada pelo teto. */
+    private record ReferenciaDoPar(List<ValorUnitarioNoTempo> linhas, boolean truncada) {}
+
+    @Override
+    public boolean ncmNaReferencia(String ncm) {
+      return ncms.computeIfAbsent(ncm, direta::ncmNaReferencia);
+    }
+
+    @Override
+    public boolean cClassTribNaoAdmitido(String cClassTrib, String ncm, LocalDate data) {
+      return classificados.computeIfAbsent(cClassTrib + "|" + ncm + "|" + data,
+          k -> naoAdmitidoPelaTabela(cClassTrib, ncm, data));
     }
   }
 

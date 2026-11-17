@@ -60,6 +60,12 @@ public enum DesfechoInteracao {
    * modelo e sem crédito. Não é recusa: a avaliação conta a recusa pela rota.
    */
   CONVERSA_LEVE,
+  /**
+   * Pergunta de definição ("o que é o IBS?") respondida pelo glossário e pelo dispositivo que
+   * institui o termo (#269), sem modelo e sem busca por similaridade. Resposta <strong>aceita</strong>,
+   * com citação: não é recusa nem texto descartado.
+   */
+  DEFINICAO_DO_GLOSSARIO,
   /** O modelo não respondeu (fora do ar, timeout, recusa do provedor). */
   MODELO_INDISPONIVEL,
   /**

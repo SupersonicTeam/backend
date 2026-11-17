@@ -8,6 +8,7 @@ import br.com.agrocontabil.assistente.ferramentas.TextosDosTemplates;
 import br.com.agrocontabil.assistente.continuidade.Autocorrecao;
 import br.com.agrocontabil.assistente.continuidade.ChamadaAssinada;
 import br.com.agrocontabil.assistente.continuidade.ReconferenciaLei;
+import br.com.agrocontabil.assistente.orquestracao.AtalhoDefinicao;
 import br.com.agrocontabil.assistente.orquestracao.ConversaLeve;
 import br.com.agrocontabil.assistente.orquestracao.FundamentoRetencao;
 import br.com.agrocontabil.assistente.orquestracao.OrquestradorService;
@@ -119,6 +120,9 @@ public class TextosFixosAcentuadosTest {
     textos.put("PromptsCeres.RECUSA_FIRME", PromptsCeres.RECUSA_FIRME);
     // Conversa leve (#493): cada variante e cada parte fixa da resposta.
     ConversaLeve.textos().forEach((nome, texto) -> textos.put("ConversaLeve " + nome, texto));
+    // Atalho de definição (#269): o fecho e a definição montada de cada termo do mapa curado.
+    AtalhoDefinicao.textos().forEach((nome, texto) ->
+        textos.put("AtalhoDefinicao " + nome, texto));
     textos.put("ValidadorCitacao.SEM_FUNDAMENTO", ValidadorCitacao.SEM_FUNDAMENTO);
     // Continuidade (#499): aberturas da autocorrecao, reconferencia de lei e SEGUIMENTO novo.
     textos.put("ConversaLeve.SEGUIMENTO_CONTINUIDADE", ConversaLeve.SEGUIMENTO_CONTINUIDADE);

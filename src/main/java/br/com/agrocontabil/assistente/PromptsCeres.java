@@ -101,14 +101,26 @@ public final class PromptsCeres {
       """;
 
   /**
-   * Recusa de pergunta fora de escopo ou de intenção incerta, sem chamar o modelo (#494): diz o que
-   * a Ceres faz e dá exemplos, sem convite para reformular. Os exemplos são cópias literais das
-   * descrições das funções que a regra decide como dados.
+   * Recusa de pergunta fora de escopo ou de intenção incerta, sem chamar o modelo (#494):
+   * divide o trabalho em vez de fechar a porta — diz o que a Ceres faz, <strong>para quem vai o
+   * resto</strong> e dá exemplos, sem convite para reformular. O encaminhamento ao contador entrou
+   * pelo diagnóstico de 2026-11-14: das 44 perguntas fora do escopo, só 2 saíam com alguém a quem
+   * recorrer, e esta recusa não era uma delas. Os dois temas citados como de fora (imposto de renda
+   * e questões da propriedade) são os mais frequentes nesse conjunto, e um caso concreto ensina o
+   * limite melhor que a abstração. Os exemplos são cópias literais das descrições das funções que
+   * a regra decide como dados.
+   *
+   * <p>Diz "o seu contador" mesmo para o produtor sem vínculo ativo, que o sistema admite (#178):
+   * personalizar pelo vínculo faria desta constante um método com consulta ao banco no caminho da
+   * recusa, que hoje não faz nenhuma. A frase diz de que profissional se trata, e quem não tem
+   * contador entende o recado.
    */
-  public static final String RECUSA_GENTIL = "Desculpe, não consigo ajudar com isso. Eu cuido só"
-      + " das suas notas, guias e prazos no AgroConIA e das regras da reforma tributária do"
-      + " agronegócio.\n\nVocê pode perguntar, por exemplo:\n- Tenho nota rejeitada?\n"
-      + "- Tenho imposto para pagar na semana que vem?\n- Como estão as minhas pendências?";
+  public static final String RECUSA_GENTIL = "Isso está fora do que eu faço. Eu cuido das suas"
+      + " notas, guias e prazos no AgroConIA e das regras da reforma tributária do agronegócio; o"
+      + " resto da sua contabilidade, como o imposto de renda e as questões da propriedade, é com o"
+      + " seu contador.\n\nDo que é comigo, pode perguntar agora. Por exemplo:\n"
+      + "- Tenho nota rejeitada?\n- Tenho imposto para pagar na semana que vem?\n"
+      + "- Como estão as minhas pendências?";
 
   /**
    * Recusa firme (#494): injeção, pedido sobre outra pessoa, documento ou identificador. Sem
