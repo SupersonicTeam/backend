@@ -86,7 +86,8 @@ public final class LinhaGlossario {
 
   /**
    * O texto seguido da linha, em outro parágrafo; o próprio texto se não há o que explicar. Usado
-   * pela {@code RotaLegislacao} na resposta de lei aceita e pelo {@code AtalhoDefinicao} (#269).
+   * pela {@code RotaLegislacao} na resposta de lei aceita, pelo {@code AtalhoDefinicao} (#269) e
+   * pela {@code ReconferenciaLei} da continuidade (#499).
    *
    * @param texto texto já validado, com as referências legais montadas
    * @return o texto, com a linha se houver termo a explicar

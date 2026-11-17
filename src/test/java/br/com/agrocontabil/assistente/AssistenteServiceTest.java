@@ -17,6 +17,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.agrocontabil.assistente.auditoria.AuditoriaAssistente;
+import br.com.agrocontabil.assistente.continuidade.ContinuidadeConversa;
+import br.com.agrocontabil.assistente.continuidade.DecisaoContinuidade;
+import br.com.agrocontabil.assistente.continuidade.DecisaoContinuidade.Decisao;
+import br.com.agrocontabil.assistente.continuidade.HistoricoConferido;
+import br.com.agrocontabil.assistente.continuidade.MensagemContinuidade;
 import br.com.agrocontabil.assistente.explicacao.ExplicacaoDaResposta;
 import br.com.agrocontabil.assistente.explicacao.ExplicadorResposta;
 import br.com.agrocontabil.assistente.llm.DisponibilidadeModelo;
@@ -28,6 +33,7 @@ import br.com.agrocontabil.assistente.porta.IdentidadePorta;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
 import br.com.agrocontabil.common.ErrorCode;
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.config.CaminhoCota;
 import br.com.agrocontabil.dto.AssistenteChatRequest;
 import br.com.agrocontabil.dto.AssistenteChatResponse;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
@@ -754,6 +760,101 @@ class AssistenteServiceTest {
     return explicador;
   }
 
+  /** O serviço com a continuidade (#499) e a explicação (#268) ligadas ao mesmo tempo. */
+  private ExplicadorResposta criarComAsDuas(ContinuidadeConversa continuidade) {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    propriedades.setMaxConversasSimultaneas(1);
+    propriedades.setTimeoutPergunta(Duration.ofSeconds(10));
+    propriedades.getExplicacao().setEnabled(true);
+    propriedades.getExplicacao().setTimeout(Duration.ofSeconds(5));
+    ExplicadorResposta explicador = org.mockito.Mockito.mock(ExplicadorResposta.class);
+    ExplicacaoDaResposta etapa = new ExplicacaoDaResposta(explicador, cota, auditoria,
+        modeloLinguagem, new DisponibilidadeModelo(propriedades), propriedades);
+    service = new AssistenteService(identidade, cota, orquestrador, auditoria, modeloLinguagem,
+        Clock.fixed(Instant.parse("2026-11-11T15:00:00Z"), ZoneOffset.UTC), propriedades,
+        continuidade, etapa);
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(continuidade.habilitada()).thenReturn(true);
+    when(auditoria.registrar(any(), any(), any(), any(), anyLong(), anyInt()))
+        .thenReturn(UUID.randomUUID());
+    return explicador;
+  }
+
+  @Test
+  @DisplayName("#499/#268: as duas ligadas, reescrita de dados: a pergunta reserva o teto do "
+      + "caminho com reescrita e a explicacao, o proprio, depois do acerto")
+  void duasLigadasReescritaReservaAsDuas() {
+    ContinuidadeConversa continuidade = org.mockito.Mockito.mock(ContinuidadeConversa.class);
+    ExplicadorResposta explicador = criarComAsDuas(continuidade);
+    Decisao decisao = new Decisao(DecisaoContinuidade.Caminho.REESCRITA, CaminhoCota.REESCRITA,
+        HistoricoConferido.VAZIO, java.util.Optional.empty(), MensagemContinuidade.Tipo.NENHUMA,
+        null);
+    when(continuidade.decidir(eq(produtorId), any(), any())).thenReturn(decisao);
+    when(orquestrador.responder(any(), any(), any(), eq(decisao), eq(true))).thenReturn(ok());
+    when(explicador.explicar(eq("ok"), any())).thenReturn(new ExplicadorResposta.Explicacao(
+        EXPLICADA, DesfechoExplicacao.EXPLICACAO_ACEITA));
+    br.com.agrocontabil.dto.TurnoConversa turno =
+        new br.com.agrocontabil.dto.TurnoConversa("e algum credito?", "ok", "v1.a.b");
+    when(continuidade.emitir(eq(produtorId), any(), eq("ok"), any(), any(), any()))
+        .thenReturn(java.util.Optional.of(turno));
+
+    AssistenteChatResponse resposta =
+        service.conversar(new AssistenteChatRequest("e algum credito?"));
+
+    assertThat(resposta.explicacao()).isEqualTo(EXPLICADA);
+    // A explicacao entra por cima da resposta com a continuidade: o turno assina so a resposta.
+    assertThat(resposta.turno()).isEqualTo(turno);
+    assertThat(resposta.resposta()).isEqualTo("ok");
+    assertThat(cota.ultimoCaminho).isEqualTo(CaminhoCota.REESCRITA);
+    assertThat(cota.reservas).isEqualTo(1);
+    assertThat(cota.acertos).isEqualTo(1);
+    assertThat(cota.reservasExplicacao).isEqualTo(1);
+    assertThat(cota.acertosExplicacao).isEqualTo(1);
+    assertThat(cota.leituras).isZero();
+  }
+
+  @Test
+  @DisplayName("#499/#268/#511: as duas ligadas, reexecucao sem modelo: so a leitura, sem "
+      + "explicacao nem chamada ao modelo")
+  void duasLigadasReexecucaoSemExplicacao() {
+    ContinuidadeConversa continuidade = org.mockito.Mockito.mock(ContinuidadeConversa.class);
+    ExplicadorResposta explicador = criarComAsDuas(continuidade);
+    Decisao decisao = new Decisao(DecisaoContinuidade.Caminho.CONFIRMACAO, CaminhoCota.SEM_MODELO,
+        HistoricoConferido.VAZIO, java.util.Optional.empty(),
+        MensagemContinuidade.Tipo.CONFIRMACAO, null);
+    when(continuidade.decidir(eq(produtorId), any(), any())).thenReturn(decisao);
+    when(orquestrador.responder(any(), any(), any(), eq(decisao), eq(true))).thenReturn(ok());
+
+    AssistenteChatResponse resposta = service.conversar(new AssistenteChatRequest("tem certeza?"));
+
+    assertThat(resposta.explicacao()).isNull();
+    assertThat(cota.leituras).isEqualTo(1);
+    assertThat(cota.reservas).isZero();
+    assertThat(cota.reservasExplicacao).isZero();
+    verifyNoInteractions(explicador);
+    verify(modeloLinguagem, never()).chamar(any());
+  }
+
+  @Test
+  @DisplayName("#499/#268: as duas desligadas, o fluxo e o da main: orquestrador sem a decisao, "
+      + "resposta sem turno, sem pergunta interpretada e sem explicacao")
+  void duasDesligadasFluxoDaMain() {
+    criar();
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(orquestrador.responder(any(), any(), any())).thenReturn(ok());
+
+    AssistenteChatResponse resposta = service.conversar(new AssistenteChatRequest("quanto?"));
+
+    assertThat(resposta.turno()).isNull();
+    assertThat(resposta.perguntaInterpretada()).isNull();
+    assertThat(resposta.explicacao()).isNull();
+    verify(orquestrador).responder(eq("quanto?"), any(), any());
+    assertThat(cota.reservas).isEqualTo(1);
+    // O caminho comum: o mesmo teto que a main reserva (TetoDaCotaCobreChamadasTest).
+    assertThat(cota.ultimoCaminho).isEqualTo(CaminhoCota.NORMAL);
+    assertThat(cota.reservasExplicacao).isZero();
+  }
+
   @Test
   @DisplayName("#268: sincrono com a explicacao aceita: campo preenchido, reserva propria e "
       + "acerto sem contar outra pergunta, ACEITA na auditoria")
@@ -880,6 +981,91 @@ class AssistenteServiceTest {
     assertThat(AssistenteService.desconexao(null)).isFalse();
   }
 
+  // --- continuidade (#499) ---
+
+  @Test
+  @DisplayName("#499: caminho de custo zero da continuidade nao reserva e recusa chamar o modelo")
+  void caminhoSemModeloRecusaOModelo() {
+    ContinuidadeConversa continuidade = org.mockito.Mockito.mock(ContinuidadeConversa.class);
+    AssistenteProperties propriedades = new AssistenteProperties();
+    propriedades.setMaxConversasSimultaneas(1);
+    service = new AssistenteService(identidade, cota, orquestrador, auditoria, modeloLinguagem,
+        Clock.fixed(Instant.parse("2026-11-11T15:00:00Z"), ZoneOffset.UTC), propriedades,
+        continuidade);
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(continuidade.habilitada()).thenReturn(true);
+    // Confirmacao de dados cuja consulta bate: reexecucao sem modelo, so a leitura (#511).
+    Decisao decisao = new Decisao(DecisaoContinuidade.Caminho.CONFIRMACAO, CaminhoCota.SEM_MODELO,
+        HistoricoConferido.VAZIO, java.util.Optional.empty(),
+        MensagemContinuidade.Tipo.CONFIRMACAO, null);
+    when(continuidade.decidir(eq(produtorId), any(), any())).thenReturn(decisao);
+    when(orquestrador.responder(any(), any(), any(), eq(decisao), eq(true))).thenAnswer(inv -> {
+      ContextoAssistente contexto = inv.getArgument(1);
+      contexto.chamar(modeloLinguagem, PROMPT);
+      return ok();
+    });
+
+    assertThatThrownBy(() -> service.conversar(new AssistenteChatRequest("tem certeza?")))
+        .isInstanceOf(IllegalStateException.class);
+
+    verify(modeloLinguagem, never()).chamar(any());
+    assertThat(cota.reservas).isZero();
+    assertThat(cota.leituras).isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("#499/#511: reexecucao da continuidade, sem modelo, paga so a leitura da mensagem")
+  void reexecucaoPagaALeitura() {
+    ContinuidadeConversa continuidade = org.mockito.Mockito.mock(ContinuidadeConversa.class);
+    AssistenteProperties propriedades = new AssistenteProperties();
+    propriedades.setMaxConversasSimultaneas(1);
+    service = new AssistenteService(identidade, cota, orquestrador, auditoria, modeloLinguagem,
+        Clock.fixed(Instant.parse("2026-11-11T15:00:00Z"), ZoneOffset.UTC), propriedades,
+        continuidade);
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    when(continuidade.habilitada()).thenReturn(true);
+    Decisao decisao = new Decisao(DecisaoContinuidade.Caminho.CONFIRMACAO, CaminhoCota.SEM_MODELO,
+        HistoricoConferido.VAZIO, java.util.Optional.empty(),
+        MensagemContinuidade.Tipo.CONFIRMACAO, null);
+    when(continuidade.decidir(eq(produtorId), any(), any())).thenReturn(decisao);
+    when(orquestrador.responder(any(), any(), any(), eq(decisao), eq(true))).thenReturn(ok());
+    String mensagem = "tem certeza?";
+
+    service.conversar(new AssistenteChatRequest(mensagem));
+
+    long leitura = ContextoAssistente.tokensDaLeitura(mensagem);
+    assertThat(cota.reservas).isZero();
+    assertThat(cota.ultimoCaminho).isNull();
+    assertThat(cota.leituras).isEqualTo(1);
+    assertThat(cota.ultimaLeitura).isEqualTo(leitura);
+    assertThat(cota.acertos).isEqualTo(1);
+    assertThat(cota.ultimaEntrada).isEqualTo(leitura);
+    assertThat(cota.ultimaSaida).isZero();
+    verify(modeloLinguagem, never()).chamar(any());
+  }
+
+  @Test
+  @DisplayName("#499: a reserva segue o caminho da decisao")
+  void reservaPeloCaminho() {
+    ContinuidadeConversa continuidade = org.mockito.Mockito.mock(ContinuidadeConversa.class);
+    AssistenteProperties propriedades = new AssistenteProperties();
+    propriedades.setMaxConversasSimultaneas(1);
+    service = new AssistenteService(identidade, cota, orquestrador, auditoria, modeloLinguagem,
+        Clock.fixed(Instant.parse("2026-11-11T15:00:00Z"), ZoneOffset.UTC), propriedades,
+        continuidade);
+    when(identidade.produtorAutenticado()).thenReturn(produtorId);
+    Decisao decisao = new Decisao(DecisaoContinuidade.Caminho.REESCRITA, CaminhoCota.REESCRITA,
+        HistoricoConferido.VAZIO, java.util.Optional.empty(), MensagemContinuidade.Tipo.NENHUMA,
+        null);
+    when(continuidade.decidir(eq(produtorId), any(), any())).thenReturn(decisao);
+    // Flag desligada: o servico chama o orquestrador como antes, sem a decisao.
+    when(orquestrador.responder(any(), any(), any())).thenReturn(ok());
+
+    service.conversar(new AssistenteChatRequest("e algum credito?"));
+
+    assertThat(cota.ultimoCaminho).isEqualTo(CaminhoCota.REESCRITA);
+  }
+
   /** O acerto ou o estorno roda no fim da thread da Ceres: espera esse instante. */
   private void esperarCotaEncerrada() throws InterruptedException {
     long limite = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
@@ -943,6 +1129,7 @@ class AssistenteServiceTest {
     volatile long ultimaEntrada;
     volatile long ultimaSaida;
     volatile String ultimoModelo;
+    volatile CaminhoCota ultimoCaminho;
 
     @Override
     public synchronized ReservaCota reservar(UUID produtorId, String modelo) {
@@ -951,6 +1138,13 @@ class AssistenteServiceTest {
       }
       reservas++;
       return new ReservaCota(produtorId, java.time.LocalDate.of(2026, 9, 28), 73, true);
+    }
+
+    @Override
+    public synchronized ReservaCota reservar(UUID produtorId, String modelo,
+        CaminhoCota caminho) {
+      ultimoCaminho = caminho;
+      return reservar(produtorId, modelo);
     }
 
     @Override

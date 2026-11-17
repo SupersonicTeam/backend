@@ -109,6 +109,10 @@ public final class SeparacaoTreinoTeste {
    */
   static String textoDoPrompt() {
     StringBuilder textos = new StringBuilder(PromptsCeres.CLASSIFICACAO);
+    // Os prompts da continuidade (#499) tambem vao ao modelo.
+    textos.append(' ').append(PromptsCeres.REESCRITA_CONTINUIDADE)
+        .append(' ').append(PromptsCeres.sistemaReconferenciaLei(
+            java.time.LocalDate.of(2026, 1, 1), ""));
     // As descricoes das funcoes tambem vao ao modelo como prompt, com exemplos de pergunta.
     for (Method metodo : FerramentasDadosProdutor.class.getDeclaredMethods()) {
       Tool funcao = metodo.getAnnotation(Tool.class);

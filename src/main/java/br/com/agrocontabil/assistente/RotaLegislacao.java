@@ -196,7 +196,21 @@ public class RotaLegislacao {
    *         falharem
    */
   public ResultadoRota responder(String pergunta, ContextoAssistente contexto) {
-    return responder(pergunta, contexto, false, List.of());
+    return responder(pergunta, contexto, false, false, List.of(), FontePergunta.DA_PERGUNTA);
+  }
+
+  /**
+   * Responde com uma fonte de número escolhida pela continuidade (#499): a mensagem nova, a
+   * pergunta do par sem reescrita ou só os trechos ({@link FontePergunta#dosArgumentos()}).
+   *
+   * @param pergunta pergunta que a rota entende
+   * @param contexto contexto da pergunta
+   * @param fonte    o que da pergunta vale como fonte de número
+   * @return resposta com citações validadas
+   */
+  public ResultadoRota responder(String pergunta, ContextoAssistente contexto,
+      FontePergunta fonte) {
+    return responder(pergunta, contexto, false, false, List.of(), fonte);
   }
 
   /**
@@ -235,16 +249,28 @@ public class RotaLegislacao {
    */
   public ResultadoRota responderRegraGeral(String pergunta, ContextoAssistente contexto,
       List<TrechoRecuperado> complementares, boolean perguntaSeparada) {
-    return responder(pergunta, contexto, true, perguntaSeparada, complementares);
+    return responder(pergunta, contexto, true, perguntaSeparada, complementares,
+        FontePergunta.DA_PERGUNTA);
+  }
+
+  /**
+   * Parte de legislação do MISTO com a fonte de número da continuidade (#499).
+   *
+   * @param pergunta         pergunta que a parte de lei recebe
+   * @param contexto         contexto da pergunta
+   * @param complementares   trechos extras
+   * @param perguntaSeparada {@code pergunta} é a parte legal separada
+   * @param fonte            o que da pergunta vale como fonte de número
+   * @return regra geral com citações, ou só as citações
+   */
+  public ResultadoRota responderRegraGeral(String pergunta, ContextoAssistente contexto,
+      List<TrechoRecuperado> complementares, boolean perguntaSeparada, FontePergunta fonte) {
+    return responder(pergunta, contexto, true, perguntaSeparada, complementares, fonte);
   }
 
   private ResultadoRota responder(String pergunta, ContextoAssistente contexto,
-      boolean soRegraGeral, List<TrechoRecuperado> complementares) {
-    return responder(pergunta, contexto, soRegraGeral, false, complementares);
-  }
-
-  private ResultadoRota responder(String pergunta, ContextoAssistente contexto,
-      boolean soRegraGeral, boolean perguntaSeparada, List<TrechoRecuperado> complementares) {
+      boolean soRegraGeral, boolean perguntaSeparada, List<TrechoRecuperado> complementares,
+      FontePergunta fonte) {
     contexto.verificarAtiva();
     List<TrechoRecuperado> trechos =
         juntar(busca.buscar(pergunta, contexto.hoje()), complementares);
@@ -317,7 +343,11 @@ public class RotaLegislacao {
 
     List<String> fontes = new ArrayList<>();
     trechos.forEach(t -> fontes.add(t.texto()));
-    fontes.add(perguntaAoModelo);
+    // Fonte da pergunta (#499): a propria pergunta, a mensagem nova da continuidade ou nenhuma.
+    String fontePergunta = fonte.resolver(pergunta);
+    if (fontePergunta != null) {
+      fontes.add(DataSanitizer.mascarar(fontePergunta));
+    }
     // A resposta original (com as marcas) e a que o modelo escreveu; as referencias montadas pelo
     // backend nao entram na conferencia.
     ValidadorNumeros.Resultado numeros =
@@ -375,7 +405,8 @@ public class RotaLegislacao {
     contexto.registrarTrechosCitados(idsCitados);
     // Depois de todas as conferencias (#269): a linha do glossario e do backend, sem numero, e nao
     // pode ser lida como parte do que o modelo afirmou.
-    return ResultadoRota.aceita(LinhaGlossario.acrescentadaA(regra), citacao.citacoes());
+    return new ResultadoRota(LinhaGlossario.acrescentadaA(regra), DesfechoInteracao.RESPONDIDA,
+        citacao.citacoes(), List.of(), new DetalheLei(regra, texto, trechos));
   }
 
   /** O prompt de sistema: o de sempre, ou o com evidência por frase se a conferência está ligada. */
@@ -475,7 +506,7 @@ public class RotaLegislacao {
    * Tira o "Sim," ou "Não," do começo e põe a frase seguinte em maiúscula. Se nada sobrar, devolve o
    * texto como veio, e o verificador o descarta.
    */
-  static String semSimOuNaoInicial(String texto) {
+  public static String semSimOuNaoInicial(String texto) {
     java.util.regex.Matcher m = SIM_OU_NAO_INICIAL.matcher(texto);
     if (!m.find()) {
       return texto;
@@ -491,7 +522,7 @@ public class RotaLegislacao {
    * Trechos da busca seguidos dos complementares, sem repetir id, com as marcas refeitas na ordem
    * final — a marca é a posição na lista que o {@link ValidadorCitacao} recebe.
    */
-  static List<TrechoRecuperado> juntar(
+  public static List<TrechoRecuperado> juntar(
       List<TrechoRecuperado> principais, List<TrechoRecuperado> complementares) {
     Map<String, TrechoRecuperado> porId = new LinkedHashMap<>();
     for (TrechoRecuperado t : principais) {
@@ -509,7 +540,7 @@ public class RotaLegislacao {
   }
 
   /** Trechos como o modelo os vê: só a marca e o texto, sem a referência legal. */
-  static String formatar(List<TrechoRecuperado> trechos) {
+  public static String formatar(List<TrechoRecuperado> trechos) {
     StringBuilder sb = new StringBuilder();
     for (TrechoRecuperado t : trechos) {
       sb.append('[').append(t.marca()).append("] ").append(t.texto()).append("\n\n");
@@ -517,7 +548,7 @@ public class RotaLegislacao {
     return sb.toString().strip();
   }
 
-  private static String semMarcas(String texto) {
+  public static String semMarcas(String texto) {
     return texto.replaceAll("\\[\\s*T\\d+(?:\\s*[,;]\\s*T\\d+)*\\s*\\]", " ");
   }
 

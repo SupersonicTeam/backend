@@ -50,3 +50,6 @@ logging:
   level:
     root: WARN
     br.com.agrocontabil: DEBUG
+    # Ceres em INFO (#499): nada do historico da continuidade, da reescrita nem da reconferencia
+    # pode chegar ao log, nem em DEBUG.
+    br.com.agrocontabil.assistente: INFO

@@ -6,9 +6,11 @@ import br.com.agrocontabil.common.ErrorDetail;
 import br.com.agrocontabil.common.Sensivel;
 import br.com.agrocontabil.security.CookieRefresh;
 import br.com.agrocontabil.validation.SlugEscritorio;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -101,15 +103,32 @@ public class GlobalExceptionHandler {
     return resposta.contentType(tipoDoErro()).body(body);
   }
 
-  /** Bean Validation (@Valid). Cada FieldError vira um ErrorDetail com rejectedValue. */
+  /**
+   * Teto de {@link ErrorDetail} num 400 de validação (#499): um corpo com centenas de campos
+   * inválidos não vira centenas de erros. O último é "E mais N campos inválidos.".
+   */
+  static final int MAXIMO_ERROS_VALIDACAO = 20;
+
+  /**
+   * Bean Validation (@Valid). Cada FieldError vira um ErrorDetail com rejectedValue, até
+   * {@value #MAXIMO_ERROS_VALIDACAO} (#499).
+   */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiError> handleValidation(
       MethodArgumentNotValidException ex, HttpServletRequest request) {
     Object alvo = ex.getBindingResult().getTarget();
     Class<?> tipoAlvo = alvo == null ? null : alvo.getClass();
-    List<ErrorDetail> errors = ex.getBindingResult().getFieldErrors().stream()
-        .map(erro -> toErrorDetail(erro, tipoAlvo))
-        .toList();
+    List<FieldError> campos = ex.getBindingResult().getFieldErrors();
+    List<ErrorDetail> errors = new ArrayList<>();
+    for (FieldError erro : campos) {
+      if (errors.size() == MAXIMO_ERROS_VALIDACAO - 1
+          && campos.size() > MAXIMO_ERROS_VALIDACAO) {
+        errors.add(ErrorDetail.of(ErrorCode.VALIDATION_ERROR,
+            "E mais " + (campos.size() - errors.size()) + " campos inválidos."));
+        break;
+      }
+      errors.add(toErrorDetail(erro, tipoAlvo));
+    }
     ApiError body = ApiError.of(
         HttpStatus.BAD_REQUEST.value(),
         HttpStatus.BAD_REQUEST.getReasonPhrase(),
@@ -168,11 +187,18 @@ public class GlobalExceptionHandler {
     return ResponseEntity.badRequest().contentType(tipoDoErro()).body(body);
   }
 
-  /** Corpo da requisição ilegível (JSON malformado ou tipo incompatível no payload). HTTP 400. */
+  /**
+   * Corpo da requisição ilegível (JSON malformado ou tipo incompatível no payload). HTTP 400.
+   *
+   * <p>O log leva só a classe da causa e o caminho dos campos (#499): a mensagem do Jackson traz o
+   * valor lido, que pode ser uma pergunta, uma resposta da Ceres ou uma assinatura do histórico.
+   */
   @ExceptionHandler(HttpMessageNotReadableException.class)
   public ResponseEntity<ApiError> handleNotReadable(
       HttpMessageNotReadableException ex, HttpServletRequest request) {
-    log.warn("Corpo de requisicao ilegivel em {}: {}", request.getRequestURI(), ex.getMessage());
+    Throwable causa = ex.getMostSpecificCause();
+    log.warn("Corpo de requisicao ilegivel em {}: {} (campo: {})", request.getRequestURI(),
+        causa.getClass().getSimpleName(), caminhoDoCampo(causa));
     ApiError body = ApiError.of(
         HttpStatus.BAD_REQUEST.value(),
         HttpStatus.BAD_REQUEST.getReasonPhrase(),
@@ -551,8 +577,38 @@ public class GlobalExceptionHandler {
     return TRECHOS_CAMPO_SENSIVEL.stream().anyMatch(minusculo::contains);
   }
 
-  private static boolean anotadoSensivel(Class<?> tipo, String campo) {
-    if (tipo == null || campo == null || campo.contains(".") || campo.contains("[")) {
+  /**
+   * Caminho dos campos de uma falha do Jackson ({@code historico[3]}), sem o valor; {@code -} quando
+   * a falha não traz caminho (JSON malformado).
+   */
+  static String caminhoDoCampo(Throwable causa) {
+    if (!(causa instanceof JsonMappingException mapeamento) || mapeamento.getPath().isEmpty()) {
+      return "-";
+    }
+    StringBuilder caminho = new StringBuilder();
+    for (JsonMappingException.Reference referencia : mapeamento.getPath()) {
+      if (referencia.getFieldName() != null) {
+        if (!caminho.isEmpty()) {
+          caminho.append('.');
+        }
+        caminho.append(referencia.getFieldName());
+      } else if (referencia.getIndex() >= 0) {
+        caminho.append('[').append(referencia.getIndex()).append(']');
+      }
+    }
+    return caminho.isEmpty() ? "-" : caminho.toString();
+  }
+
+  /**
+   * A anotação {@link Sensivel} no campo do DTO. Num caminho aninhado ({@code historico[0].resposta},
+   * #499) vale a do primeiro segmento: a lista marcada esconde o valor de todos os itens.
+   */
+  private static boolean anotadoSensivel(Class<?> tipo, String campoOuCaminho) {
+    if (tipo == null || campoOuCaminho == null) {
+      return false;
+    }
+    String campo = primeiroSegmento(campoOuCaminho);
+    if (campo.isEmpty()) {
       return false;
     }
     for (Class<?> atual = tipo; atual != null && atual != Object.class;
@@ -564,6 +620,19 @@ public class GlobalExceptionHandler {
       }
     }
     return false;
+  }
+
+  private static String primeiroSegmento(String caminho) {
+    int fim = caminho.length();
+    int ponto = caminho.indexOf('.');
+    int colchete = caminho.indexOf('[');
+    if (ponto >= 0) {
+      fim = ponto;
+    }
+    if (colchete >= 0 && colchete < fim) {
+      fim = colchete;
+    }
+    return caminho.substring(0, fim);
   }
 
   static String resumirValorRejeitado(Object valor) {

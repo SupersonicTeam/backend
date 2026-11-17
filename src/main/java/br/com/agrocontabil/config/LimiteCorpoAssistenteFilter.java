@@ -38,10 +38,12 @@ import org.springframework.web.util.UrlPathHelper;
 public class LimiteCorpoAssistenteFilter extends OncePerRequestFilter {
 
   /**
-   * Teto do corpo, em bytes. A pergunta tem no máximo 1000 caracteres (até 4 bytes cada em UTF-8)
-   * mais o envelope JSON: 16 KB sobra.
+   * Teto do corpo, em bytes (#499). Com o histórico da continuidade, o maior corpo legítimo tem
+   * 75 544 bytes: 21 000 unidades UTF-16 das trocas anteriores × 3 bytes no {@code JSON.stringify},
+   * 6000 da pergunta nova com escapes, 6144 das assinaturas e uns 400 de pontuação. Vale também com
+   * a continuidade desligada, para não virar 413 quando ela for desligada com conversas abertas.
    */
-  public static final int LIMITE_BYTES = 16 * 1024;
+  public static final int LIMITE_BYTES = 80 * 1024;
 
   private static final String PREFIXO = "/api/assistente/";
 

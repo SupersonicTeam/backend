@@ -17,7 +17,7 @@ import java.util.List;
  */
 public record ResultadoRota(
     String texto, DesfechoInteracao desfecho, List<CitacaoLegal> citacoes,
-    List<TelaAtalho> atalhos) {
+    List<TelaAtalho> atalhos, DetalheLei detalheLei) {
 
   /** Cópias defensivas. */
   public ResultadoRota {
@@ -28,6 +28,19 @@ public record ResultadoRota(
   /** Resultado sem atalhos. */
   public ResultadoRota(String texto, DesfechoInteracao desfecho, List<CitacaoLegal> citacoes) {
     this(texto, desfecho, citacoes, List.of());
+  }
+
+  /**
+   * Resultado sem o detalhe de lei (#499): todas as rotas, menos a lei aceita.
+   *
+   * @param texto    texto
+   * @param desfecho desfecho
+   * @param citacoes citações
+   * @param atalhos  telas sugeridas
+   */
+  public ResultadoRota(String texto, DesfechoInteracao desfecho, List<CitacaoLegal> citacoes,
+      List<TelaAtalho> atalhos) {
+    this(texto, desfecho, citacoes, atalhos, null);
   }
 
   /** Resposta do modelo aprovada, sem citação (rota de dados). */

@@ -259,6 +259,36 @@ créditos com a configuração `justificativa` (40.448 com o juiz `atual`).
 **Reverter:** comente as cinco linhas (ou ponha `AI_FIDELIDADE_LEI_HABILITADA=false`) e rode
 `docker compose up -d --no-deps backend`. Não precisa de deploy de código.
 
+## Continuidade da conversa da Ceres (#499)
+
+Desligada por padrão (`AI_CONTINUIDADE_HABILITADA=false`). Ligada, vale para **todos os
+produtores**: a Ceres entende "tem certeza?", "e algum crédito?" e "e a segunda?" pelas até três
+trocas anteriores, que o Angular devolve assinadas. Nada é gravado no servidor.
+
+**Antes de ligar na VPS** (com o provedor por API, as trocas anteriores de **qualquer conta**,
+inclusive as do cadastro público, vão inteiras à Anthropic, fora do Brasil: valores, datas,
+números de nota e o texto livre que o escritório escreve, como o título de um pedido e o motivo de
+uma devolução; ver `docs/lgpd.md`, "Continuidade da conversa"):
+
+1. A política de dados nova no ar (`GET /api/politica-dados`, versão 2026-11-11 ou posterior).
+2. O aviso na tela da Ceres (o Angular lê `conversaVaiAoProvedor` de `GET /api/assistente/uso`).
+3. O prazo de retenção no provedor escrito na política e no `docs/lgpd.md` (conferir os termos da
+   organização no Console e pedir retenção zero, se houver).
+4. A medição da #499 e o OK do Murillo (o código entra na `main` com a flag desligada).
+
+**Ligar:** com o lock do deploy (`cd /opt/agrocontabil && flock -w 900 .deploy.lock bash`),
+acrescente `AI_CONTINUIDADE_HABILITADA=true` ao `.env` e confira que o compose em uso repassa a
+variável ao backend (`AI_CONTINUIDADE_HABILITADA`, `AI_TETO_REESCRITA` e `AI_TETO_RECONFERENCIA`,
+como no `deploy/compose.yaml`; o compose antigo não as repassa, e sem isso a variável do `.env`
+não chega ao container). Depois, `docker compose up -d --no-deps backend` e espere `healthy`. O log
+da subida mostra um `WARN` "continuidade da conversa LIGADA com o modelo por API".
+
+**Desligar:** comente a linha no `.env` e rode o mesmo `up`. As conversas abertas continuam
+funcionando (o histórico passa a ser ignorado); o limite de corpo de 80 KB vale nos dois estados.
+
+**Cota da demonstração:** com a flag ligada, a conta "cota no fim" fica com o teto da pergunta com
+reescrita (44 créditos) mais um; o job da segunda-feira e a subida ajustam a semana.
+
 ## Acessos da página inicial (#484)
 
 O QR do cartão de visita leva a `https://www.agroconia.com.br/?utm_source=cartao`. Para contar as

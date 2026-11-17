@@ -39,9 +39,23 @@ record PerguntaLei(String texto, boolean reescrita) {
    * @return a reescrita, se passou nas conferências; senão a original
    */
   static PerguntaLei escolher(String original, String reescrita) {
+    return escolher(original, reescrita, original);
+  }
+
+  /**
+   * Escolhe a pergunta da parte de lei com outra referência dos dígitos (#499): com a
+   * continuidade, a pergunta considerada pode ter saído de uma reescrita, e os dígitos da pergunta
+   * de lei só valem se estão na mensagem nova.
+   *
+   * @param original           pergunta considerada (a que a parte de lei recebe sem separação)
+   * @param reescrita          pergunta de lei do classificador
+   * @param referenciaDigitos  texto cujos dígitos a pergunta de lei pode ter
+   * @return a pergunta de lei
+   */
+  static PerguntaLei escolher(String original, String reescrita, String referenciaDigitos) {
     if (reescrita == null || reescrita.isBlank() || reescrita.length() > TAMANHO_MAXIMO
         || FiltroInjecao.pareceInjecao(reescrita)
-        || !digitos(original).containsAll(digitos(reescrita))) {
+        || !digitos(referenciaDigitos).containsAll(digitos(reescrita))) {
       return new PerguntaLei(original, false);
     }
     return new PerguntaLei(reescrita.strip(), true);

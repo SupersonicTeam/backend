@@ -31,6 +31,53 @@ class GlobalExceptionHandlerTest {
       new StaticListableBeanFactory().getBeanProvider(CookieRefresh.class));
 
   @Test
+  @DisplayName("#499: 400 de validacao com no maximo 20 erros, o ultimo com 'E mais N'")
+  void validacaoComTetoDeErros() throws Exception {
+    org.springframework.validation.BeanPropertyBindingResult resultado =
+        new org.springframework.validation.BeanPropertyBindingResult(
+            new br.com.agrocontabil.dto.AssistenteChatRequest("p"), "request");
+    for (int i = 0; i < 25; i++) {
+      resultado.addError(new org.springframework.validation.FieldError("request",
+          "historico[" + i + "]", null, false, null, null, "Item do histórico vazio."));
+    }
+    org.springframework.core.MethodParameter parametro = new org.springframework.core
+        .MethodParameter(Object.class.getMethod("equals", Object.class), 0);
+
+    ApiError body = handler.handleValidation(
+        new org.springframework.web.bind.MethodArgumentNotValidException(parametro, resultado),
+        new MockHttpServletRequest("POST", "/api/assistente/chat")).getBody();
+
+    assertThat(body).isNotNull();
+    assertThat(body.errors()).hasSize(20);
+    assertThat(body.errors().get(19).message()).isEqualTo("E mais 6 campos inválidos.");
+  }
+
+  @Test
+  @DisplayName("#499: caminho aninhado de campo @Sensivel nunca ecoa o valor")
+  void caminhoAninhadoSensivel() {
+    assertThat(GlobalExceptionHandler.campoSensivel(
+        br.com.agrocontabil.dto.AssistenteChatRequest.class, "historico[0].resposta")).isTrue();
+    assertThat(GlobalExceptionHandler.campoSensivel(
+        br.com.agrocontabil.dto.AssistenteChatRequest.class, "historico[2]")).isTrue();
+    assertThat(GlobalExceptionHandler.campoSensivel(
+        br.com.agrocontabil.dto.AssistenteChatRequest.class, "pergunta")).isFalse();
+  }
+
+  @Test
+  @DisplayName("#499: o caminho do campo ilegivel vai ao log, o valor nao")
+  void caminhoDoCampoIlegivel() {
+    com.fasterxml.jackson.databind.JsonMappingException falha =
+        new com.fasterxml.jackson.databind.JsonMappingException(null, "valor secreto lido");
+    falha.prependPath(new com.fasterxml.jackson.databind.JsonMappingException.Reference(null, 3));
+    falha.prependPath(new com.fasterxml.jackson.databind.JsonMappingException.Reference(
+        null, "historico"));
+
+    assertThat(GlobalExceptionHandler.caminhoDoCampo(falha)).isEqualTo("historico[3]");
+    assertThat(GlobalExceptionHandler.caminhoDoCampo(new IllegalStateException("x")))
+        .isEqualTo("-");
+  }
+
+  @Test
   @DisplayName("Upload acima do limite responde 413 com envelope errors[]")
   void uploadAcimaDoLimiteResponde413ComEnvelope() {
     MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/notas/importar");

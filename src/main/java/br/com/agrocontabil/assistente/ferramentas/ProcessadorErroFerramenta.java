@@ -44,7 +44,6 @@ public class ProcessadorErroFerramenta implements ToolExecutionExceptionProcesso
       return "Parametro invalido: " + parametro.getMessage();
     }
     log.warn("Falha na funcao {}: {}", funcao, causa == null ? "?" : causa.getClass().getName());
-    log.debug("Detalhe da falha na funcao {}", funcao, causa);
     return FALHA_GENERICA;
   }
 }

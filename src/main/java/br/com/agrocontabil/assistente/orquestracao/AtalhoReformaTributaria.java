@@ -62,6 +62,16 @@ public class AtalhoReformaTributaria {
   }
 
   /**
+   * Os dispositivos fixos do texto do atalho (#499): a reconferência de um par de atalho reanexa
+   * as citações deles, sem montar o texto de novo.
+   *
+   * @return {@code "norma|dispositivo"}
+   */
+  public static List<String> dispositivosFixos() {
+    return TextoReformaTributaria.DISPOSITIVOS_FIXOS;
+  }
+
+  /**
    * O que o texto sabe do produtor. Cada parte que falhar fica de fora, sem derrubar o atalho;
    * interrupção da pergunta sobe.
    */

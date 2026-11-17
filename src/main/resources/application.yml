@@ -559,6 +559,12 @@ app:
       # Prazo do embedding da pergunta; vencido, o modelo desempata e a camada pausa.
       timeout-embedding: ${AI_CLASSIFICACAO_TIMEOUT_EMBEDDING:500ms}
       pausa-apos-falha: ${AI_CLASSIFICACAO_PAUSA_APOS_FALHA:30s}
+    # Continuidade da conversa (#499): historico assinado das ultimas trocas (reescrita, autocorrecao
+    # dos dados, reconferencia da lei). Desligada, o servidor ignora o historico e nao emite turno.
+    # Ligada com o modelo por API, as trocas anteriores vao inteiras ao provedor, fora do Brasil
+    # (docs/lgpd.md): so ligue com a politica de dados nova no ar e o aviso na tela.
+    continuidade:
+      habilitada: ${AI_CONTINUIDADE_HABILITADA:false}
     # Cota semanal de creditos (issue #166). creditos = ceil((entrada x peso-entrada + saida x
     # peso-saida) x fator do modelo / tokens-por-credito). Desde a #511, 1 credito por token
     # ponderado (tokens-por-credito = 1) e as cotas em milhares de vezes as de antes. Semana de
@@ -590,6 +596,9 @@ app:
       classificacao: ${AI_TETO_CLASSIFICACAO:256}
       # Resposta de lei. Padrao = o teto unico de antes; 512 e o recomendado a confirmar na VPS.
       legislacao: ${AI_TETO_LEGISLACAO:1024}
+      # Continuidade (#499): reescrita da mensagem (JSON curto) e reconferencia de lei.
+      reescrita: ${AI_TETO_REESCRITA:192}
+      reconferencia: ${AI_TETO_RECONFERENCIA:1024}
       # Juiz da fidelidade da lei (#269, camada 2): um veredito por frase; so com o juiz ativo.
       juiz: ${AI_TETO_JUIZ:128}
       # O juiz na configuracao justificativa: uma justificativa curta antes de cada veredito.

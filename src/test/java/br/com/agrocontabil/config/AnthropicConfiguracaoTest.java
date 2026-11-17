@@ -84,6 +84,44 @@ class AnthropicConfiguracaoTest {
     contexto.run(ctx -> assertThat(ctx).hasNotFailed().doesNotHaveBean(AnthropicApiKeyConfig.class));
   }
 
+  @Test
+  @DisplayName("#499/#483: o pedido a API da Anthropic nao leva metadata.user_id, nem pelo yml "
+      + "nem pelas opcoes de cada chamada")
+  void pedidoSemMetadataUserId() throws IOException {
+    AnthropicChatOptions padrao = opcoesCom(new MockEnvironment());
+    assertThat(padrao.getMetadata()).isNull();
+
+    AnthropicApi api = org.mockito.Mockito.mock(AnthropicApi.class);
+    java.util.concurrent.atomic.AtomicReference<AnthropicApi.ChatCompletionRequest> enviado =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    org.mockito.stubbing.Answer<Object> capturar = inv -> {
+      enviado.set(inv.getArgument(0));
+      throw new IllegalStateException("pedido capturado");
+    };
+    org.mockito.Mockito.when(api.chatCompletionEntity(org.mockito.ArgumentMatchers.any()))
+        .thenAnswer(capturar);
+    org.mockito.Mockito.when(api.chatCompletionEntity(org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any())).thenAnswer(capturar);
+    org.springframework.ai.anthropic.AnthropicChatModel modelo =
+        org.springframework.ai.anthropic.AnthropicChatModel.builder()
+            .anthropicApi(api)
+            .defaultOptions(padrao)
+            .retryTemplate(org.springframework.retry.support.RetryTemplate.builder()
+                .maxAttempts(1).build())
+            .build();
+    // As opcoes de cada chamada sao as do ModeloLinguagem: so o teto de saida (#270).
+    org.springframework.ai.chat.prompt.Prompt prompt = new org.springframework.ai.chat.prompt.Prompt(
+        "quanto vendi de soja?",
+        br.com.agrocontabil.assistente.llm.ModeloLinguagem.comTeto(256));
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> modelo.call(prompt))
+        .hasMessageContaining("pedido capturado");
+
+    assertThat(enviado.get()).isNotNull();
+    assertThat(enviado.get().metadata()).isNull();
+    assertThat(enviado.get().maxTokens()).isEqualTo(256);
+  }
+
   /** Vincula o bloco do yml como o Boot faz, só com as variáveis do {@code ambiente}. */
   private static AnthropicChatOptions opcoesCom(MockEnvironment ambiente) throws IOException {
     for (PropertySource<?> fonte : new YamlPropertySourceLoader()

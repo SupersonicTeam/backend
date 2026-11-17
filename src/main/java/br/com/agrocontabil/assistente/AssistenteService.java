@@ -1,6 +1,8 @@
 package br.com.agrocontabil.assistente;
 
 import br.com.agrocontabil.assistente.auditoria.AuditoriaAssistente;
+import br.com.agrocontabil.assistente.continuidade.ContinuidadeConversa;
+import br.com.agrocontabil.assistente.continuidade.DecisaoContinuidade.Decisao;
 import br.com.agrocontabil.assistente.explicacao.ExplicacaoDaResposta;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
 import br.com.agrocontabil.assistente.orquestracao.Intencao;
@@ -10,9 +12,11 @@ import br.com.agrocontabil.assistente.porta.CotaUsoPorta;
 import br.com.agrocontabil.assistente.porta.IdentidadePorta;
 import br.com.agrocontabil.common.ApiError;
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.config.CaminhoCota;
 import br.com.agrocontabil.dto.AssistenteChatRequest;
 import br.com.agrocontabil.dto.AssistenteChatResponse;
 import br.com.agrocontabil.dto.AssistenteUsoResponse;
+import br.com.agrocontabil.dto.TurnoConversa;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
 import br.com.agrocontabil.exception.AssistenteOcupadoException;
 import br.com.agrocontabil.exception.AssistenteTempoEsgotadoException;
@@ -23,6 +27,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -143,9 +148,10 @@ public class AssistenteService implements DisposableBean {
   private final Set<UUID> produtoresComPergunta = ConcurrentHashMap.newKeySet();
   private final ThreadPoolTaskExecutor executor;
   private final ScheduledThreadPoolExecutor prazos;
+  private final ContinuidadeConversa continuidade;
   private final ExplicacaoDaResposta explicacao;
 
-  /** Constrói o serviço sem a explicação depois da resposta (testes que não a usam). */
+  /** Constrói o serviço sem a continuidade nem a explicação (testes de turno único). */
   public AssistenteService(
       IdentidadePorta identidade,
       CotaUsoPorta cota,
@@ -155,7 +161,35 @@ public class AssistenteService implements DisposableBean {
       Clock clock,
       AssistenteProperties propriedades) {
     this(identidade, cota, orquestrador, auditoria, modeloLinguagem, clock, propriedades,
-        ExplicacaoDaResposta.desligada());
+        ContinuidadeConversa.desligada(), ExplicacaoDaResposta.desligada());
+  }
+
+  /** Constrói o serviço com a continuidade (#499) e sem a explicação (testes da continuidade). */
+  public AssistenteService(
+      IdentidadePorta identidade,
+      CotaUsoPorta cota,
+      OrquestradorService orquestrador,
+      AuditoriaAssistente auditoria,
+      ModeloLinguagem modeloLinguagem,
+      Clock clock,
+      AssistenteProperties propriedades,
+      ContinuidadeConversa continuidade) {
+    this(identidade, cota, orquestrador, auditoria, modeloLinguagem, clock, propriedades,
+        continuidade, ExplicacaoDaResposta.desligada());
+  }
+
+  /** Constrói o serviço com a explicação (#268) e sem a continuidade (testes da explicação). */
+  public AssistenteService(
+      IdentidadePorta identidade,
+      CotaUsoPorta cota,
+      OrquestradorService orquestrador,
+      AuditoriaAssistente auditoria,
+      ModeloLinguagem modeloLinguagem,
+      Clock clock,
+      AssistenteProperties propriedades,
+      ExplicacaoDaResposta explicacao) {
+    this(identidade, cota, orquestrador, auditoria, modeloLinguagem, clock, propriedades,
+        ContinuidadeConversa.desligada(), explicacao);
   }
 
   /** Constrói o serviço e o pool de threads da Ceres. */
@@ -168,7 +202,9 @@ public class AssistenteService implements DisposableBean {
       ModeloLinguagem modeloLinguagem,
       Clock clock,
       AssistenteProperties propriedades,
+      ContinuidadeConversa continuidade,
       ExplicacaoDaResposta explicacao) {
+    this.continuidade = continuidade;
     this.explicacao = explicacao;
     this.identidade = identidade;
     this.cota = cota;
@@ -218,7 +254,7 @@ public class AssistenteService implements DisposableBean {
     // Cota (#166): reserva o teto na thread da requisicao, antes da vaga e do stream. Sem saldo,
     // 429 LIMITE_USO_ASSISTENTE como erro HTTP comum. Daqui em diante a reserva e acertada ou
     // estornada exatamente uma vez.
-    Execucao execucao = preparar(produtorId, request.pergunta());
+    Execucao execucao = preparar(produtorId, request);
     CompletableFuture<AssistenteChatResponse> resultado = new CompletableFuture<>();
     AtomicReference<AssistenteChatResponse> resposta = new AtomicReference<>();
     // A resposta auditada, antes da explicacao (#268): e o que sai se so a explicacao atrasar.
@@ -289,7 +325,7 @@ public class AssistenteService implements DisposableBean {
     // Cota (#166): reserva o teto na thread da requisicao, antes da vaga e do stream. Sem saldo,
     // 429 LIMITE_USO_ASSISTENTE como erro HTTP comum. Daqui em diante a reserva e acertada ou
     // estornada exatamente uma vez.
-    Execucao execucao = preparar(produtorId, request.pergunta());
+    Execucao execucao = preparar(produtorId, request);
     SseEmitter emissor = new SseEmitter(timeoutPergunta.plus(FOLGA_TIMEOUT_SSE).toMillis());
     abrirNaThreadDaRequisicao(emissor);
     execucao.contexto.aoChamarOModelo(() -> avisarAntesDaChamada(emissor, execucao));
@@ -348,7 +384,8 @@ public class AssistenteService implements DisposableBean {
   public AssistenteUsoResponse uso() {
     CotaUsoPorta.UsoCota uso = cota.consultar(identidade.produtorAutenticado());
     return new AssistenteUsoResponse(uso.plano(), uso.habilitada(), uso.creditosSemana(),
-        uso.consumidos(), uso.restantes(), uso.renovaEm(), uso.percentualUsado());
+        uso.consumidos(), uso.restantes(), uso.renovaEm(), uso.percentualUsado(),
+        continuidade.conversaVaiAoProvedor());
   }
 
   /**
@@ -536,26 +573,32 @@ public class AssistenteService implements DisposableBean {
   }
 
   /**
-   * Reserva da cota (#166) e contexto da pergunta. Atalho fixo da tela (#343), conversa leve
-   * (#493), recusa pelo filtro de injeção e recusa firme antes do classificador (#497) não chamam
-   * o modelo: reservam só a leitura da mensagem (#511), recebem 429
-   * {@code LIMITE_USO_ASSISTENTE} só sem saldo para ela, e o contexto recusa qualquer chamada ao
-   * modelo (#499). O orquestrador e a reserva usam os mesmos testes sobre o mesmo texto
-   * ({@link OrquestradorService#respondeSemModelo}).
+   * Reserva da cota (#166) e contexto da pergunta. Os caminhos sem modelo
+   * ({@link CaminhoCota#SEM_MODELO}: atalho fixo da tela, #343; conversa leve, #493; recusa pelo
+   * filtro de injeção e recusa firme antes do classificador, #497; e, na continuidade, #499, a
+   * reexecução sem modelo e os textos fixos) não chamam o modelo e pagam só a leitura da mensagem
+   * (#511): reservam esse custo, não o teto, recebem 429 {@code LIMITE_USO_ASSISTENTE} só sem
+   * saldo para ele, e o contexto recusa qualquer chamada ao modelo. A decisão da continuidade sai
+   * antes da reserva, e o mesmo objeto vai ao orquestrador; sem histórico, ela é sem modelo
+   * exatamente quando {@link OrquestradorService#respondeSemModelo} é verdadeiro.
    */
-  private Execucao preparar(UUID produtorId, String pergunta) {
+  private Execucao preparar(UUID produtorId, AssistenteChatRequest request) {
+    String pergunta = request.pergunta();
     ContextoAssistente contexto = novoContexto(produtorId);
+    // Continuidade (#499): a decisao sai antes da reserva; o mesmo objeto vai ao orquestrador.
+    Instant agora = clock.instant();
+    Decisao decisao = continuidade.decidir(produtorId, request, agora);
     CotaUsoPorta.ReservaCota reserva;
-    if (OrquestradorService.respondeSemModelo(pergunta)) {
+    if (decisao.custo() == CaminhoCota.SEM_MODELO) {
       // Sem modelo, mas com custo (#511): a reserva e so a leitura da mensagem, e sem saldo
       // para ela o 429 vale como nas outras.
       contexto.semReservaParaOModelo();
       reserva = cota.reservarLeitura(produtorId, modeloLinguagem.identificacao(),
           ContextoAssistente.tokensDaLeitura(pergunta));
     } else {
-      reserva = cota.reservar(produtorId, modeloLinguagem.identificacao());
+      reserva = cota.reservar(produtorId, modeloLinguagem.identificacao(), decisao.custo());
     }
-    return new Execucao(contexto, pergunta, reserva);
+    return new Execucao(contexto, pergunta, reserva, decisao, agora);
   }
 
   /**
@@ -607,10 +650,14 @@ public class AssistenteService implements DisposableBean {
     RuntimeException falha = null;
     execucao.entrar();
     try {
-      resultado = orquestrador.responder(pergunta, contexto, decidida -> {
+      Consumer<Intencao> avisar = decidida -> {
         rota.set(decidida);
         aoDecidirRota.accept(decidida);
-      });
+      };
+      // Flag desligada: a chamada de antes, byte a byte; ligada, com a decisao da continuidade.
+      resultado = continuidade.habilitada()
+          ? orquestrador.responder(pergunta, contexto, avisar, execucao.decisao, true)
+          : orquestrador.responder(pergunta, contexto, avisar);
     } catch (RuntimeException e) {
       falha = e;
     } finally {
@@ -657,9 +704,28 @@ public class AssistenteService implements DisposableBean {
         .map(c -> new AssistenteChatResponse.Citacao(
             c.norma(), c.dispositivo(), c.url(), c.trecho()))
         .toList();
+    // Continuidade (#499): o turno assinado e a pergunta considerada, so com a flag ligada.
+    String considerada = resultado.perguntaConsiderada() == null
+        ? pergunta : resultado.perguntaConsiderada();
+    TurnoConversa turno = emiteTurno(resultado)
+        ? continuidade.emitir(contexto.produtorId(), considerada, resultado.texto(),
+            resultado.rota(), contexto.registroTurno(), execucao.agora).orElse(null)
+        : null;
+    String interpretada = continuidade.habilitada() && !considerada.equals(pergunta)
+        ? considerada : null;
     return new AssistenteChatResponse(
         resultado.texto(), resultado.rota().name(), citacoes, fontes, resultado.modoFallback(),
-        resultado.atalhos().stream().map(Enum::name).toList());
+        resultado.atalhos().stream().map(Enum::name).toList(), interpretada, turno);
+  }
+
+  /**
+   * Há {@code turno} (#499) com a rota de dados, de lei ou mista, fora do modo fallback e fora da
+   * recusa firme da rota de dados. Conversa leve, recusa e fora de escopo não têm.
+   */
+  private static boolean emiteTurno(ResultadoOrquestracao resultado) {
+    Intencao rota = resultado.rota();
+    return (rota == Intencao.DADOS || rota == Intencao.LEGISLACAO || rota == Intencao.MISTO)
+        && !resultado.modoFallback() && !PromptsCeres.RECUSA_FIRME.equals(resultado.texto());
   }
 
   private ContextoAssistente novoContexto(UUID produtorId) {
@@ -786,6 +852,10 @@ public class AssistenteService implements DisposableBean {
 
     private final ContextoAssistente contexto;
     private final String pergunta;
+    /** Decisão da continuidade (#499), tomada antes da reserva. */
+    private final Decisao decisao;
+    /** Instante único da requisição (conferência do histórico e validade do turno). */
+    private final Instant agora;
     private final CotaUsoPorta.ReservaCota reserva;
     /** A reserva da cota é encerrada (acerto ou estorno) uma vez só, pelo primeiro que chegar. */
     private final AtomicBoolean cotaEncerrada = new AtomicBoolean();
@@ -795,11 +865,13 @@ public class AssistenteService implements DisposableBean {
     private volatile boolean auditada;
     private Thread trabalhador;
 
-    private Execucao(
-        ContextoAssistente contexto, String pergunta, CotaUsoPorta.ReservaCota reserva) {
+    private Execucao(ContextoAssistente contexto, String pergunta,
+        CotaUsoPorta.ReservaCota reserva, Decisao decisao, Instant agora) {
       this.contexto = contexto;
       this.pergunta = pergunta;
       this.reserva = reserva;
+      this.decisao = decisao;
+      this.agora = agora;
     }
 
     private void cobrarGasto() {

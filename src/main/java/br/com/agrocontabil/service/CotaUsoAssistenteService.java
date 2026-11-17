@@ -1,6 +1,7 @@
 package br.com.agrocontabil.service;
 
 import br.com.agrocontabil.config.AssistenteProperties;
+import br.com.agrocontabil.config.CaminhoCota;
 import br.com.agrocontabil.exception.LimiteUsoAssistenteException;
 import br.com.agrocontabil.model.TipoTitularCota;
 import br.com.agrocontabil.model.UsoSemanalAssistente;
@@ -87,7 +88,27 @@ public class CotaUsoAssistenteService {
    * @throws LimiteUsoAssistenteException sem saldo para o teto (429)
    */
   public Reserva reservar(TipoTitularCota tipo, UUID titularId, String modelo) {
-    return reservarTeto(tipo, titularId, tetoDaPergunta(modelo));
+    return reservar(tipo, titularId, modelo, CaminhoCota.NORMAL);
+  }
+
+  /**
+   * Reserva o teto do caminho da pergunta (#499): a continuidade tem caminhos mais baratos
+   * (reconferência) e um mais caro (reescrita) que a pergunta comum. O caminho sem modelo não
+   * passa por aqui: paga a leitura ({@link #reservarLeitura}, #511).
+   *
+   * @param tipo      produtor ou escritório
+   * @param titularId titular já autorizado por quem chama
+   * @param modelo    identificação do modelo (fator)
+   * @param caminho   caminho da pergunta
+   * @return a reserva
+   * @throws IllegalArgumentException com {@link CaminhoCota#SEM_MODELO}
+   */
+  public Reserva reservar(TipoTitularCota tipo, UUID titularId, String modelo,
+      CaminhoCota caminho) {
+    if (caminho == CaminhoCota.SEM_MODELO) {
+      throw new IllegalArgumentException("Caminho sem modelo reserva a leitura (#511)");
+    }
+    return reservarTeto(tipo, titularId, tetoDaPergunta(modelo, caminho));
   }
 
   /**
@@ -274,6 +295,18 @@ public class CotaUsoAssistenteService {
   public long tetoDaPergunta(String modelo) {
     // Com o juiz da fidelidade da lei ativo (#269), a chamada dele entra como parcela propria.
     return propriedades.tetoDaPergunta(fator(modelo));
+  }
+
+  /**
+   * Teto de uma pergunta pelo caminho dela (#499).
+   *
+   * @param modelo  identificação do modelo
+   * @param caminho caminho da pergunta
+   * @return créditos
+   */
+  public long tetoDaPergunta(String modelo, CaminhoCota caminho) {
+    // Com o juiz da lei (#269) quando ele pode rodar, como a pergunta comum.
+    return propriedades.tetoDaPergunta(fator(modelo), caminho);
   }
 
   /**

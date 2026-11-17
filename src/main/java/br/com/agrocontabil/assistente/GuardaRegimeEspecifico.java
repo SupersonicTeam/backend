@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
  * art. 307; o art. 308 abre os regimes diferenciados da CBS); as palavras do setor vêm do nome de
  * cada capítulo, e não de pergunta de avaliação. Função pura, sem Spring.
  */
-final class GuardaRegimeEspecifico {
+public final class GuardaRegimeEspecifico {
 
   /** Norma a que a faixa se aplica. */
   static final String NORMA = "LC 214/2025";
@@ -103,7 +103,7 @@ final class GuardaRegimeEspecifico {
    * @param citacoes  citações da resposta aceita
    * @return {@code true} para descartar
    */
-  static boolean barra(String pergunta, List<CitacaoLegal> citacoes) {
+  public static boolean barra(String pergunta, List<CitacaoLegal> citacoes) {
     if (pergunta == null || citacoes == null || citacoes.isEmpty()) {
       return false;
     }
