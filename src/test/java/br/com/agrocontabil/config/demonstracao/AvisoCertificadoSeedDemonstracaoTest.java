@@ -66,11 +66,13 @@ class AvisoCertificadoSeedDemonstracaoTest {
   }
 
   @Test
-  @DisplayName("alias sem chave privada: ERROR, sem a senha")
+  @DisplayName("alias sem chave privada: ERROR com o alias (esperado: a mensagem do provider o "
+      + "cita), sem a senha")
   void aliasSemChavePrivadaAvisa(CapturedOutput saida) {
     SeedDemonstracao.avisarSeCertificadoNaoCarrega(
         provider(TEST_P12, "changeit", "alias-que-nao-existe"));
 
-    assertThat(saida.getOut()).contains(AVISO).doesNotContain("changeit");
+    assertThat(saida.getOut()).contains(AVISO).contains("alias-que-nao-existe")
+        .doesNotContain("changeit");
   }
 }

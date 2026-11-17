@@ -308,8 +308,11 @@ public class SeedDemonstracao implements CommandLineRunner {
    * Confere o certificado antes de semear (#560): sem ele cada nota é recusada na assinatura e a
    * demonstração sobe sem nota, só com WARN por nota. Só avisa (a semeadura segue e a aplicação
    * sobe de qualquer jeito); não roda quando a demonstração já está semeada, porque aí as notas
-   * estão no banco e o certificado só faria falta numa emissão nova. Nunca imprime senha nem alias:
-   * a mensagem da exceção traz só o caminho e a causa.
+   * estão no banco e o certificado só faria falta numa emissão nova. A senha nunca entra na mensagem.
+   * O caminho e o alias configurados podem aparecer, porque a mensagem da exceção do provider os
+   * cita ("Alias '...' nao contem chave privada"), e é ela que ajuda quem lê o log. Tirar o alias
+   * do log exigiria mexer na mensagem do {@code KeyStoreCertificadoProvider}, fora do escopo da
+   * #560.
    */
   static void avisarSeCertificadoNaoCarrega(KeyStoreCertificadoProvider provider) {
     try {
