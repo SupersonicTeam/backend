@@ -341,6 +341,8 @@ mostre uma linha fixa de aviso: as trocas anteriores vão ao provedor do modelo,
 **SSE:** nenhum evento novo. Os comentários `:ceres` (linhas que começam com `:`) seguem
 ignorados.
 
+Contrato publicado para o frontend em SupersonicTeam/frontend#183.
+
 ## 5. Erros
 
 Todo erro usa o envelope padrão da API:
