@@ -112,10 +112,10 @@ conta: o que vale é o que a conta do AgroConIA aceitou (Termos Comerciais e DPA
 | Ponto | O que está publicado | O que isso permite afirmar |
 |---|---|---|
 | Papel | O DPA diz que o cliente é controlador e a Anthropic é a operadora, que trata os dados só para prestar o serviço e conforme as instruções do cliente | Operadora (LGPD, art. 5º, VII) |
-| Retenção padrão | **As duas páginas oficiais não dizem a mesma coisa.** A central de privacidade diz que apaga entradas e saídas em até **30 dias**. A documentação da plataforma diz que o conteúdo (prompts e saídas) "não é retido por padrão", com exceção dos modelos de retenção obrigatória de 30 dias (hoje a família Fable e Mythos; o Haiku 5.5, que a Ceres usa, não está na lista) | Nenhuma das duas é a configuração **da nossa conta**. A política diz "em verificação" e cita o prazo de até 30 dias; nunca "retenção zero" |
+| Retenção padrão | **As duas páginas oficiais não dizem a mesma coisa.** A central de privacidade diz que apaga entradas e saídas em até **30 dias**. A documentação da plataforma diz, em inglês, que o conteúdo (prompts e saídas) não é retido por padrão (paráfrase nossa), com exceção dos modelos de retenção obrigatória de 30 dias (hoje a família Fable e Mythos; o Haiku 5.5, que a Ceres usa, não está na lista) | Nenhuma das duas é a configuração **da nossa conta**. A política diz "em verificação" e cita o prazo de até 30 dias; nunca "retenção zero" |
 | Retenção zero (ZDR) | Só por acordo com a equipe comercial, por organização; não é self-serve | Não temos o acordo; não prometer |
-| Conteúdo sinalizado | Se os sistemas automáticos de segurança sinalizarem violação da política de uso: entradas e saídas por até **2 anos** e pontuações de classificação por até **7 anos**, mesmo com ZDR | Entra na política (2 anos) |
-| Transferência | O DPA incorpora as cláusulas-padrão da UE (módulos 2 e 3, lei irlandesa), o adendo do Reino Unido e o suíço. **Não menciona Brasil nem LGPD** e não lista os países de processamento nem os subprocessadores (remete a uma lista online) | Não há cláusula-padrão da ANPD nem mecanismo próprio da LGPD no contrato público |
+| Conteúdo sinalizado | Se os sistemas automáticos de segurança sinalizarem violação da política de uso: entradas e saídas por até **2 anos**, mesmo com ZDR (documentação da plataforma); a central de privacidade acrescenta pontuações de classificação por até **7 anos** | Entra na política (2 anos) |
+| Transferência | O DPA incorpora as cláusulas-padrão da UE (módulos 2 e 3, lei irlandesa), o adendo do Reino Unido e o suíço. Na leitura que fizemos (resumo da página, não o texto integral nem o contrato da conta), **não cita o Brasil nem a LGPD** e não lista os países de processamento nem os subprocessadores (remete a uma lista online) | O DPA público não traz cláusula-padrão da ANPD nem mecanismo próprio da LGPD. **Conferir o texto integral e o contrato da conta** antes de afirmar mais que isso |
 | Fim do contrato | Devolve e apaga os dados em até 30 dias do término | — |
 
 **Pendente (o Murillo, no Console, antes de ligar a continuidade na VPS):** em
@@ -165,7 +165,7 @@ desde 09/11) o envio é pela **Resend**, operadora nos Estados Unidos (`deploy/R
 | Enviado à Resend | O **endereço de e-mail do destinatário**; o assunto; o corpo em texto e HTML. Nenhum nome, CPF/CNPJ nem telefone do destinatário entra no e-mail |
 | No corpo | **Nova senha:** o link com o token de uso único no fragmento (`#token=`), válido 30 min. **Convite de equipe:** o link com o token, válido 7 dias. **Convite da carteira:** sem token (aceitar exige entrar com o e-mail convidado); leva o nome do escritório (livre; na conta pessoal é o nome do contador) e o CNPJ só se verificado (#520) |
 | Rastreamento | Desligado (abertura e clique): o link não é reescrito |
-| Onde | Estados Unidos. O domínio de envio está na região de São Paulo (`sa-east-1`), mas a Resend informa que isso só define de onde o e-mail sai: "não há configuração hoje que mude o dado guardado" de lugar |
+| Onde | Estados Unidos. O domínio de envio está na região de São Paulo (`sa-east-1`), mas a Resend informa, em inglês, que isso só define de onde o e-mail sai e que não há hoje ajuste que mude o lugar onde o dado fica guardado (paráfrase nossa) |
 | Retenção na Resend | **30 dias** (planos Free, Pro e Scale; Enterprise é flexível) para o conteúdo e os registros de envio, **inclusive o corpo com o link**. Conta encerrada: o que restar é apagado em até 90 dias (a exclusão pelo painel leva 7 dias e as cópias de segurança, mais 7) |
 | Exclusão de um e-mail | Não há endpoint para apagar um e-mail isolado. O pedido vai ao suporte da Resend com o identificador do e-mail (página Emails do painel); e-mail recebido não pode ser removido antes do fim da janela |
 | Contrato | DPA nos termos do art. 28 do GDPR, já assinado pela Resend para todas as contas, com as cláusulas-padrão da UE (módulos 1, 2 e 3), o adendo do Reino Unido e a participação no Data Privacy Framework UE–EUA. **A Resend diz expressamente que não assina DPA específico de outro país, e cita as cláusulas da LGPD** (página de GDPR, vista em 2026-11-17; a mesma posição que o `deploy/README.md` registrou em 2026-11-05). O DPA descreve o processamento principal nos EUA, com subprocessadores avisados 14 dias antes |
@@ -191,9 +191,10 @@ que a base é suficiente.
   adequar contratos acabou em 23/08/2025. Nenhuma cláusula equivalente de outro país foi aprovada.
   Decisão de adequação (art. 33, I): só a União Europeia (Resolução CD/ANPD nº 32/2026, segundo a
   página da ANPD); os Estados Unidos não têm.
-- **Nem a Resend nem a Anthropic assinam as cláusulas-padrão da ANPD.** O DPA de ambas usa as
-  cláusulas-padrão da UE, que a ANPD não reconhece como equivalentes. Então o caminho do art. 33, II,
-  b, está fechado para os dois enquanto o contrato não mudar (a Resend o recusa por escrito).
+- **A Resend recusa por escrito as cláusulas da LGPD; o DPA público da Anthropic não traz as
+  cláusulas-padrão da ANPD** (conferido só no texto público: o contrato da conta pode dizer mais).
+  O DPA dos dois usa as cláusulas-padrão da UE, que a ANPD não reconhece como equivalentes. Então o
+  caminho do art. 33, II, b, está fechado para a Resend e, até prova em contrário, para a Anthropic.
 - Os incisos VIII (consentimento específico e em destaque) e IX (necessidade, ligada ao art. 7º, II,
   V e VI) não dependem de regulamento da ANPD (o regulamento os trata como "outros mecanismos que
   não dependam de regulamentação"), e a ANPD ainda não detalhou como os lê para operadores
@@ -210,9 +211,10 @@ que a base é suficiente.
 
 **Recomendada: a 1**, e é a que a política escreve. É a única das três que o texto consegue afirmar
 com verdade hoje, sem prometer um aceite que não existe. Ela só afirma a base em que a GWNext se
-apoia, junto de tudo que a limita: a política diz que as cláusulas-padrão da ANPD não foram
-assinadas, que a retenção da Anthropic está em verificação e que a exclusão não alcança os
-operadores. **A 3 é o reforço natural da Ceres** (a parte mais exposta), e o aviso do
+apoia, junto de tudo que a limita: a política diz que a GWNext "entende" a transferência como
+necessária (não que ela esteja provada), que as cláusulas-padrão da ANPD não foram assinadas pela
+Resend nem constam no DPA público da Anthropic, que a retenção da Anthropic está em verificação e
+que a exclusão não alcança os operadores. **A 3 é o reforço natural da Ceres** (a parte mais exposta), e o aviso do
 frontend#183 (`conversaVaiAoProvedor`) já é metade dela; o que falta é o texto de consentimento, o
 registro do aceite e a recusa. Se o risco da 1 para o e-mail não for aceito, a saída é trocar para o
 SES em `sa-east-1` (sem transferência), não o consentimento.

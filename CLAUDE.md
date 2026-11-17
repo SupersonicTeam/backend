@@ -460,7 +460,7 @@ br.com.agrocontabil
 | POST | `/api/auth/senha/esqueci` | **Público.** `{email}` → **sempre 202** (#209); com conta ativa, link de uso único (30 min, token no fragmento `#token=`) vai por e-mail em segundo plano |
 | POST | `/api/auth/senha/redefinir` | **Público.** `{token, novaSenha}` → 204 e cookie apagado; encerra todas as sessões; link inválido/expirado/usado → 400 `TOKEN_REDEFINICAO_INVALIDO`; senha fraca → 400 `SENHA_FRACA` (o link segue valendo) |
 | POST | `/api/auth/senha/alterar` | Autenticado. `{senhaAtual, novaSenha}` → 204; encerra todas as sessões; senha atual errada (ou conta travada por tentativas) → 400 `SENHA_ATUAL_INCORRETA` |
-| GET | `/api/politica-dados` | **Público.** Política de tratamento de dados pessoais (LGPD art. 9º, #148) |
+| GET | `/api/politica-dados` | **Público.** Política de tratamento de dados pessoais (LGPD art. 9º, #148). Desde a #498 (versão 2026-11-17) traz também `operadoresExternos[]` (Resend e Anthropic: `nome`, `servico`, `localizacao`, `finalidade`, `dadosEnviados`, `dadosNaoEnviados`, `baseTransferencia`, `retencao`, `comoExercerDireitos`), campo aditivo |
 | DELETE | `/api/usuarios/{id}/dados` | Autenticado, só o próprio titular (404 para outro). `{senha}` → 204; anonimiza dados pessoais, mantém os fiscais (guarda de 5 anos), apaga a conta e encerra as sessões (#148) |
 | GET | `/api/auditoria?produtorId=&page=&size=` | Auditoria das operações críticas do produtor (#149, RNF012): só contador (produtor 403), só produtor da carteira (404 fora); padrão 50, máx. 200; corpo array + total em `X-Total-Count` |
 | POST | `/api/auth/logout-todos` | Autenticado. Revoga todas as sessões e invalida todos os access tokens já emitidos → 204 (#207) |

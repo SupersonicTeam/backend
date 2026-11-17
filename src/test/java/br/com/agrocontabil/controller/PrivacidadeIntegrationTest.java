@@ -106,7 +106,7 @@ class PrivacidadeIntegrationTest {
         .andExpect(jsonPath("$.operadoresExternos[0].nome").value("Resend"))
         .andExpect(jsonPath("$.operadoresExternos[1].nome").value("Anthropic"))
         .andExpect(jsonPath("$.operadoresExternos[0].baseTransferencia")
-            .value(org.hamcrest.Matchers.containsString("Art. 33, IX")))
+            .value(org.hamcrest.Matchers.containsString("art. 33, IX")))
         .andExpect(jsonPath("$.retencao[0]").value(org.hamcrest.Matchers.containsString("5 anos")))
         .andExpect(jsonPath("$.comoExercer").value(
             org.hamcrest.Matchers.containsString("/api/usuarios/{id}/dados")));

@@ -22,10 +22,25 @@ import org.springframework.stereotype.Service;
 @Service
 public class PoliticaDadosService {
 
-  /** Hipótese do art. 33 em que as duas transferências se apoiam (redação 1 da #498). */
+  /**
+   * Hipótese do art. 33 em que a GWNext se apoia nas duas transferências (redação 1 da #498). É a
+   * base escolhida pela equipe, não a conclusão de que ela está provada: não há revisão jurídica.
+   */
   static final String HIPOTESE_ART_33 =
-      "Art. 33, IX, da LGPD, combinado com o art. 7º, V: a transferência é necessária para "
-          + "executar o serviço que o titular usa. ";
+      "A GWNext se apoia no art. 33, IX, da LGPD, combinado com o art. 7º, V: entende que a "
+          + "transferência é necessária para executar o serviço que o titular usa. ";
+
+  /** Retenção na Resend: uma redação só, usada na lista de retenção e no operador. */
+  static final String RETENCAO_RESEND =
+      "30 dias para os registros de envio e o corpo do e-mail, com o link; até 90 dias depois "
+          + "de a conta do AgroConIA ser encerrada na Resend.";
+
+  /** Retenção na Anthropic: pendente da conferência no Console; uma redação só. */
+  static final String RETENCAO_ANTHROPIC =
+      "Em verificação para a conta do AgroConIA. O provedor publica que apaga as entradas e "
+          + "saídas em até 30 dias e que o que os sistemas automáticos de segurança dele "
+          + "sinalizarem como violação da política de uso pode ficar por até 2 anos. Esta "
+          + "política não promete retenção zero.";
 
   private final LgpdProperties propriedades;
 
@@ -78,10 +93,10 @@ public class PoliticaDadosService {
             "Cumprimento de obrigação legal (art. 7º, II): emissão e guarda de documentos "
                 + "fiscais.",
             "Legítimo interesse (art. 7º, IX): segurança da conta e prevenção de fraude.",
-            "Transferência internacional (art. 33, IX, combinado com o art. 7º, V): o envio de "
-                + "e-mail pela Resend e das perguntas da Ceres à Anthropic é necessário para "
-                + "executar o serviço que o titular usa. Detalhes de cada operador em "
-                + "\"operadoresExternos\"."),
+            "Transferência internacional (art. 33, IX, combinado com o art. 7º, V): é a base em "
+                + "que a GWNext se apoia para o envio de e-mail pela Resend e das perguntas da "
+                + "Ceres à Anthropic, por entender que são necessários para executar o serviço "
+                + "que o titular usa. Detalhes de cada operador em \"operadoresExternos\"."),
         List.of(
             "SEFAZ: notas fiscais, por obrigação legal.",
             "Escritório de contabilidade vinculado pelo produtor.",
@@ -104,13 +119,9 @@ public class PoliticaDadosService {
             "Documentos fiscais: 5 anos (CTN art. 173), mesmo após a exclusão da conta.",
             "Conta e contato: até o titular pedir a exclusão.",
             "Sessões: até 30 dias; links de redefinição de senha: 30 minutos.",
-            "Resend: 30 dias para os registros de envio e o corpo do e-mail, com o link. O link "
-                + "de nova senha vale 30 minutos e uma vez só; o de convite de equipe, 7 dias.",
-            "Anthropic: o prazo exato na conta do AgroConIA está em verificação. O provedor "
-                + "publica que apaga as entradas e saídas em até 30 dias e pode guardar por até "
-                + "2 anos o que os sistemas automáticos de segurança dele sinalizarem como "
-                + "violação da política de uso. Até a verificação terminar, esta política não "
-                + "promete retenção zero.",
+            "Resend: " + RETENCAO_RESEND + " O link de nova senha vale 30 minutos e uma vez só; "
+                + "o de convite de equipe, 7 dias.",
+            "Anthropic: " + RETENCAO_ANTHROPIC,
             "Endereço anterior do escritório: bloqueado por 90 dias depois da troca e apagado em "
                 + "seguida. A exclusão dos dados do titular apaga o endereço na hora, mas não "
                 + "alcança os registros públicos de certificados."),
@@ -148,15 +159,13 @@ public class PoliticaDadosService {
                 + "(que, na conta pessoal, é o nome do contador) e o CNPJ, só se verificado."),
         List.of(
             "Nome, CPF/CNPJ e telefone do destinatário.",
-            "Dados fiscais, notas e qualquer dado da Ceres.",
-            "Rastreamento de abertura e de clique (desligado)."),
+            "Dados fiscais, notas e qualquer dado da Ceres."),
         HIPOTESE_ART_33
             + "O contrato de tratamento de dados (DPA) da Resend usa as cláusulas-padrão da União "
             + "Europeia. A Resend informa que não assina acordos específicos de outros países, o "
             + "que inclui o da LGPD: as cláusulas-padrão da ANPD (Resolução CD/ANPD nº 19/2024) "
             + "não foram assinadas por ela.",
-        "30 dias para os registros de envio e o corpo do e-mail, com o link; até 90 dias depois "
-            + "de a conta do AgroConIA ser encerrada na Resend.",
+        RETENCAO_RESEND,
         "Pedidos ao encarregado (" + propriedades.contatoEncarregado() + "). A Resend não "
             + "tem como apagar um e-mail isolado pela API: o pedido vai ao suporte dela, com o "
             + "identificador do e-mail, e o AgroConIA o encaminha. A exclusão de dados do "
@@ -185,16 +194,13 @@ public class PoliticaDadosService {
                 + "mostrado ao produtor."),
         List.of(
             "Nome, documento, contato e endereço do produtor.",
-            "O XML das notas e os resultados brutos das consultas de dados.",
-            "O texto da pergunta e da resposta não ficam gravados no AgroConIA."),
+            "O XML das notas e os resultados brutos das consultas de dados."),
         HIPOTESE_ART_33
-            + "O contrato de tratamento de dados (DPA) da Anthropic inclui as cláusulas-padrão "
-            + "da União Europeia, mas não menciona a LGPD: as cláusulas-padrão da ANPD "
-            + "(Resolução CD/ANPD nº 19/2024) não foram assinadas por ela. A Ceres é opcional: "
-            + "quem não a usa não tem dado enviado à Anthropic.",
-        "Em verificação para a conta do AgroConIA. Prazo publicado pelo provedor: apaga as "
-            + "entradas e saídas em até 30 dias; o que os sistemas de segurança dele "
-            + "sinalizarem como violação da política de uso pode ficar por até 2 anos.",
+            + "O DPA público da Anthropic inclui as cláusulas-padrão da União Europeia e não "
+            + "traz as cláusulas-padrão da ANPD (Resolução CD/ANPD nº 19/2024); conferimos só o "
+            + "texto público, não um contrato próprio da conta. A Ceres é opcional: quem não a "
+            + "usa não tem dado enviado à Anthropic.",
+        RETENCAO_ANTHROPIC,
         "Pedidos ao encarregado (" + propriedades.contatoEncarregado() + "). O AgroConIA não "
             + "tem hoje procedimento para apagar da Anthropic uma pergunta isolada antes do prazo "
             + "dela. A exclusão de dados do AgroConIA não alcança o que já foi enviado.");

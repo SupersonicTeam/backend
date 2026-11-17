@@ -64,7 +64,8 @@ class PoliticaDadosServiceTest {
       assertThat(o.dadosEnviados()).as(o.nome()).isNotEmpty();
       assertThat(o.dadosNaoEnviados()).as(o.nome()).isNotEmpty();
       assertThat(o.baseTransferencia()).as(o.nome())
-          .contains("Art. 33, IX").contains("art. 7º, V").contains("Resolução CD/ANPD nº 19/2024");
+          .contains("se apoia no art. 33, IX").contains("art. 7º, V")
+          .contains("Resolução CD/ANPD nº 19/2024");
       assertThat(o.retencao()).as(o.nome()).isNotBlank();
       assertThat(o.comoExercerDireitos()).as(o.nome()).contains(ENCARREGADO)
           .contains("não alcança");
@@ -91,7 +92,7 @@ class PoliticaDadosServiceTest {
 
     assertThat(anthropic.retencao())
         .contains("Em verificação").contains("30 dias").contains("2 anos")
-        .doesNotContainIgnoringCase("retenção zero");
+        .contains("não promete retenção zero");
     assertThat(anthropic.dadosEnviados())
         .anyMatch(d -> d.contains("continuidade da conversa") && d.contains("motivo de uma devolução"))
         .anyMatch(d -> d.contains("não retira um nome escrito por extenso"));
@@ -107,9 +108,15 @@ class PoliticaDadosServiceTest {
 
     assertThat(String.join(" ", politica.compartilhamento()))
         .contains("Resend").contains("Anthropic");
-    assertThat(String.join(" ", politica.retencao()))
-        .contains("Resend: 30 dias").contains("Anthropic: o prazo exato");
-    assertThat(politica.basesLegais()).anyMatch(b -> b.contains("art. 33, IX"));
+    // A retenção de cada operador é uma redação só: a lista e o operador não podem divergir.
+    assertThat(politica.retencao())
+        .anyMatch(r -> r.startsWith("Resend: " + PoliticaDadosService.RETENCAO_RESEND))
+        .contains("Anthropic: " + PoliticaDadosService.RETENCAO_ANTHROPIC);
+    assertThat(operador("Resend").retencao()).isEqualTo(PoliticaDadosService.RETENCAO_RESEND);
+    assertThat(operador("Anthropic").retencao())
+        .isEqualTo(PoliticaDadosService.RETENCAO_ANTHROPIC);
+    assertThat(politica.basesLegais())
+        .anyMatch(b -> b.contains("art. 33, IX") && b.contains("se apoia"));
     assertThat(politica.comoExercer()).contains("Resend").contains("Anthropic")
         .contains("não apaga o que");
   }
