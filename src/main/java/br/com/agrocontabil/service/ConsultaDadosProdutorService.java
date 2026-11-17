@@ -27,6 +27,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -99,14 +100,13 @@ public class ConsultaDadosProdutorService {
       StatusNotaFiscal.DEVOLVIDA, StatusNotaFiscal.AGUARDANDO_APROVACAO,
       StatusNotaFiscal.APROVADA);
 
-  /** Candidatas a sinal que o resumo da Ceres examina (#266): o teto de consultas por pergunta. */
-  public static final int LIMITE_CANDIDATAS_A_SINAL = 10;
-
   /**
    * Notas próprias com sinal a conferir (#276), para o resumo da Ceres (#266): as ainda não
    * emitidas (rascunho até aprovada) e as autorizadas desde {@code autorizadasDesde} (dentro do
-   * prazo de cancelamento), das {@value #LIMITE_CANDIDATAS_A_SINAL} mais recentes. Só as que têm
-   * sinal saem.
+   * prazo de cancelamento). <strong>Todas as candidatas são examinadas</strong> (issue #579): o
+   * antigo teto de 10 antes de avaliar os sinais escondia a nota com sinal atrás das mais recentes
+   * sem sinal. O custo não cresce com o número de notas: os sinais saem em lote
+   * ({@link SinaisNotaConferirService#sinaisEmLote}). Só as que têm sinal saem.
    *
    * @param produtorId       produtor da sessão
    * @param autorizadasDesde início do prazo de cancelamento das autorizadas
@@ -114,12 +114,16 @@ public class ConsultaDadosProdutorService {
    */
   public List<NotaPorNumeroResultado> notasAConferir(UUID produtorId,
       OffsetDateTime autorizadasDesde) {
-    return notaFiscalRepository.findCandidatasASinal(produtorId,
-            NAO_EMITIDAS, autorizadasDesde,
-            PageRequest.of(0, LIMITE_CANDIDATAS_A_SINAL))
-        .stream()
-        .map(n -> soSinais(produtorId, n))
-        .filter(n -> !n.sinais().isEmpty())
+    List<NotaPorNumeroLinha> candidatas = notaFiscalRepository.findCandidatasASinal(produtorId,
+        NAO_EMITIDAS, autorizadasDesde);
+    Map<UUID, List<SinalNota>> sinais = sinaisService.sinaisEmLote(produtorId,
+        candidatas.stream()
+            .map(n -> new SinaisNotaConferirService.NotaParaSinal(n.id(), n.origem(), n.status(),
+                n.dataEmissao(), n.destinatarioCpfCnpj(), n.valorTotal()))
+            .toList());
+    return candidatas.stream()
+        .filter(n -> !sinais.getOrDefault(n.id(), List.of()).isEmpty())
+        .map(n -> soSinais(n, sinais.get(n.id())))
         .toList();
   }
 
@@ -127,13 +131,10 @@ public class ConsultaDadosProdutorService {
    * A nota só com os sinais: o resumo não usa o motivo da devolução nem as inconsistências, e
    * carregá-los custaria duas consultas a mais por candidata.
    */
-  private NotaPorNumeroResultado soSinais(UUID produtorId, NotaPorNumeroLinha n) {
+  private NotaPorNumeroResultado soSinais(NotaPorNumeroLinha n, List<SinalNota> sinais) {
     return new NotaPorNumeroResultado(n.numero(), n.serie(), n.dataEmissao(), n.origem(),
         n.status(), duasCasas(n.valorTotal()), duasCasas(n.valorIbs()), duasCasas(n.valorCbs()),
-        null, List.of(),
-        sinaisService.sinais(produtorId, new SinaisNotaConferirService.NotaParaSinal(
-            n.id(), n.origem(), n.status(), n.dataEmissao(), n.destinatarioCpfCnpj(),
-            n.valorTotal())));
+        null, List.of(), sinais);
   }
 
   /**

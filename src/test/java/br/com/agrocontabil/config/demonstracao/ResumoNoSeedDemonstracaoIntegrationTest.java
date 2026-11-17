@@ -87,10 +87,11 @@ class ResumoNoSeedDemonstracaoIntegrationTest {
     assertThat(texto).contains("devolvida pelo contador", "Extrato bancário de ");
     // Nota a conferir no seed (#276, #377): a invariante do cenario e "nenhum falso positivo", nao
     // "nenhuma nota a conferir". Os rascunhos de milho a destinatario sem IE ficam de proposito,
-    // para mostrar na banca o sinal ICMS_A_DEFINIR e o 422 da emissao. O resumo olha so as 10 notas
-    // mais recentes entre as nao emitidas e as autorizadas dos ultimos 30 dias, entao a contagem
-    // dele muda com o dia, e o isZero() antigo so passava porque essas vagas estavam tomadas por
-    // notas sem sinal. O teste trava propriedades, validas em qualquer data, nunca a contagem.
+    // para mostrar na banca o sinal ICMS_A_DEFINIR e o 422 da emissao. O resumo examina todas as
+    // notas nao emitidas e as autorizadas dos ultimos 30 dias (#579), entao a contagem dele nao
+    // depende mais do dia. Ate a #579 um teto de 10 candidatas, aplicado antes de avaliar os
+    // sinais, a fazia mudar com o dia, e o isZero() antigo so passava porque essas vagas estavam
+    // tomadas por notas sem sinal. O teste trava propriedades, nunca a contagem.
     List<SinalNota> sinais = sinaisDeTodasAsNotas(principal);
     assertThat(sinais).as("sinais das notas do seed")
         .extracting(SinalNota::codigo)
@@ -101,7 +102,7 @@ class ResumoNoSeedDemonstracaoIntegrationTest {
     assertThat(texto).contains("a conferir");
   }
 
-  /** Os sinais de toda nota do produtor, sem o teto de 10 candidatas do resumo. */
+  /** Os sinais de toda nota do produtor, avaliados nota a nota, sem passar pelo lote do resumo. */
   private List<SinalNota> sinaisDeTodasAsNotas(Produtor produtor) {
     return notaRepository.findByProdutorId(produtor.getId(), PageRequest.of(0, 1000)).stream()
         .flatMap(nota -> sinaisService.sinais(produtor.getId(), new NotaParaSinal(nota.getId(),
