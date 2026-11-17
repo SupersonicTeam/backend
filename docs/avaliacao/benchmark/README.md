@@ -19,9 +19,9 @@ e na #270), que não é reproduzível e fica só como origem da pergunta.
 
 **2 arquiteturas × 3 modelos locais = 6 células, mais 1 célula por API (Ceres 2.0 ×
 `claude-haiku-5-5`) = 7** (e, só com `--com-fidelidade-lei`, uma 8ª, opcional: o mesmo Haiku com a
-fidelidade da lei ligada, fora de toda comparação), cada uma com o **mesmo conjunto de 100 perguntas**
+fidelidade da lei ligada, fora de toda comparação), cada uma com o **mesmo conjunto de 140 perguntas**
 ([`perguntas-benchmark.json`](perguntas-benchmark.json), abaixo) em **3 repetições**
-(`--avaliacao.repeticoes=3`, a régua da #264): ~1.800 respostas. Configurada em
+(`--avaliacao.repeticoes=3`, a régua da #264): 420 respostas por célula, 2.940 nas 7. Configurada em
 [`matriz.json`](matriz.json).
 
 | Arquitetura | Commit | O que é |
@@ -313,7 +313,7 @@ retenções dão **os mesmos valores** nos dois. Diferem só os cenários que a 
 guias em atraso e a que vence no "hoje" (seed v3) e as notas 107 `DEVOLVIDA` e 108
 `COM_INCONSISTENCIAS` (v4). Com isso **D13 e D14 divergem** (R$ 4.778,00 × R$ 5.088,00 e
 R$ 2.268,00 × R$ 2.578,00: a GPS que vence em 15/09) e saem da capacidade comum na rodada real,
-que fica com **78 perguntas** (guias e vencimentos: 2). As de nota devolvida/inconsistente já são
+que fica com **118 perguntas**: as 121 `comum` menos D13 e D14 (guias e vencimentos) e a T10. As de nota devolvida/inconsistente já são
 `so_ceres_2` ou estão nas `remocoesExtras` (T10).
 
 **Treino × teste:** nenhuma pergunta do conjunto pode estar no treino do classificador
@@ -359,7 +359,7 @@ que saiu em `adaptacao-ceres-1.json`):
   `2463c27` não tem nota `DEVOLVIDA`, e o valor esperado seria 0.
 
 A adaptação foi conferida rodando o `ValoresEsperados` e a guarda de treino do `2463c27` contra a
-cópia adaptada do conjunto (100 perguntas aceitas, 20 adaptadas: 19 `so_ceres_2` e a T10). O
+cópia adaptada do conjunto, feita quando ele ainda tinha 100 perguntas (antes de as inéditas irem para o repositório cego, #387): 100 aceitas, 20 adaptadas, 19 `so_ceres_2` e a T10. O
 campo novo `semBecoSemSaida` e os do benchmark (`tema`, `capacidade`) são ignorados pelo leitor
 antigo.
 
@@ -370,7 +370,7 @@ O relatório mostra **dois recortes**:
 - **(c) Inéditas — generalização:** as 53 de `origem` `inedita_*`, menos as `contaminada`
   (e **(d) só as externas**, 40) (regra do conjunto inteiro: as 4
   `so_ceres_2` entre elas penalizam a Ceres 1 por capacidade);
-- **(b) Conjunto inteiro:** as 100. As `so_ceres_2` medem **ganho de capacidade da arquitetura,
+- **(b) Conjunto inteiro:** as 140. As `so_ceres_2` medem **ganho de capacidade da arquitetura,
   não de modelo**: função, parâmetros e número que a Ceres 1 não tinha como entregar contam como
   erro de capacidade ("pen." na tabela). A remoção da T10 (seed) não penaliza.
 
@@ -452,7 +452,7 @@ GPU grande, rode sem a opção: o relatório mostra onde cada um rodou.
 
 Estimativas, **não medidas**: a de CPU sai do teste manual de 2026-10-28 (mediana de 19 s no 4B e
 3,4 s no 0.6B); a de GPU supõe uma GPU de entrada (4–8 GB) com o modelo inteiro na VRAM. O tempo
-real vai no `celula.json`. Por célula = 100 perguntas × 3 rodadas + 1–2 min de subida.
+real vai no `celula.json`. Por célula = 140 perguntas × 3 rodadas (420 respostas) + 1–2 min de subida.
 
 | Célula | Com GPU | Só CPU |
 |---|---|---|

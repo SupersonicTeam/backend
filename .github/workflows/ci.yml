@@ -52,6 +52,10 @@ jobs:
       - name: Fidelidade da rota de lei (#269, testes do conjunto, do executor e da decisao)
         run: python3 -m unittest discover -s docs/avaliacao/fidelidade-lei -p "test_*.py"
 
+      # Conjunto, regra e executor da medicao da ressalva do enquadramento (#443): so biblioteca padrao.
+      - name: Ressalva do enquadramento (#443, testes do conjunto, dos detectores e da decisao)
+        run: python3 -m unittest discover -s docs/avaliacao/ressalva-tratamento-443 -p "test_*.py"
+
       # Harness da Ceres contra o ambiente publicado (#497): parada pela cota e pelo token, servidor falso.
       - name: Harness da API publicada (#497, testes da parada pela cota)
         run: python3 -m unittest discover -s docs/avaliacao/harness-api -p "test_*.py"

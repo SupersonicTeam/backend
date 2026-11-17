@@ -21,3 +21,5 @@ docs/avaliacao/fidelidade-lei/perguntas-fidelidade-lei.json -text
 docs/avaliacao/fidelidade-lei/perguntas-fidelidade-lei-v2.json -text
 # Conjunto v3 da fidelidade da lei (#269): o hash .sha256 é dos bytes, CRLF o quebraria.
 docs/avaliacao/fidelidade-lei/perguntas-fidelidade-lei-v3.json -text
+# Conjunto congelado da #443 (ressalva do enquadramento): o hash .sha256 e dos bytes, CRLF o quebraria.
+docs/avaliacao/ressalva-tratamento-443/perguntas-ressalva-443.json -text

@@ -39,8 +39,8 @@ import java.util.regex.Pattern;
  * de 14 caracteres terminado em 2 dígitos (hash, base64) sairia {@code [CNPJ]}, o mesmo tipo de
  * falso positivo que o PR #310 corrigiu no CPF. Só maiúsculas, que é o formato da RFB e do XML: o
  * log carrega hash em hex minúsculo, e com minúscula cerca de um em cada cem desses tokens viraria
- * {@code [CNPJ]}. O {@code DataSanitizer} da Ceres ganha a sua regra, em qualquer caixa, depois
- * da rodada do benchmark.
+ * {@code [CNPJ]}. O {@code DataSanitizer} da Ceres tem a sua regra, com a mesma conferência do DV
+ * mas em qualquer caixa (#313): lá o texto é a pergunta do usuário.
  *
  * <p>Diferente do {@code DataSanitizer} da Ceres, que mascara também a chave: lá o destino é o
  * provedor do modelo, onde nada fiscal precisa chegar.
@@ -58,9 +58,6 @@ public final class MascaraDadosPessoais {
     }
   }
 
-  /** Pontuação do CNPJ, tirada antes de conferir o DV do alfanumérico. */
-  private static final Pattern PONTUACAO_CNPJ = Pattern.compile("[./-]");
-
   /** Só caracteres de IP literal: o parse nunca vira consulta DNS. */
   private static final Pattern IP_LITERAL = Pattern.compile("[0-9A-Fa-f:.]+");
 
@@ -73,8 +70,7 @@ public final class MascaraDadosPessoais {
       // hex minusculo). Depois do numerico, que ja trocou os so de digitos, e antes do CPF.
       new Regra(Pattern.compile("(?<![A-Za-z0-9.])[0-9A-Z]{2}\\.?[0-9A-Z]{3}\\.?[0-9A-Z]{3}"
           + "/?[0-9A-Z]{4}-?\\d{2}(?![A-Za-z0-9])"), "[CNPJ]",
-          trecho -> DocumentoFiscalValidator.isCnpjAlfanumericoValido(
-              PONTUACAO_CNPJ.matcher(trecho).replaceAll(""))),
+          trecho -> DocumentoFiscalValidator.isCnpjAlfanumericoNoTextoValido(trecho, false)),
       new Regra(Pattern.compile(
           "(?<![A-Za-z0-9.])\\d{3}[.\\s]?\\d{3}[.\\s]?\\d{3}-?\\d{2}(?![A-Za-z0-9])"),
           "[CPF]"),

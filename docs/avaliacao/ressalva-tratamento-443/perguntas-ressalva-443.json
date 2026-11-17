@@ -1,0 +1,776 @@
+{
+  "versao": "2026-11-15.v1",
+  "issue": "SupersonicTeam/backend#443",
+  "descricao": "Conjunto de medição da #443 (ressalva do enquadramento com o contador na resposta sobre redução ou tratamento de um produto). Escrito e congelado antes de qualquer correção, por uma sessão que não leu o gabarito, o benchmark, os conjuntos de fidelidade nem o conjunto da #447. Conjunto de TESTE: quem escreve ou revisa a correção não lê este arquivo (ver README.md).",
+  "regra": "regra-de-decisao.md",
+  "perguntas": [
+    {
+      "id": "RS01",
+      "grupo": "DEFEITO",
+      "forma": "nome_termo_lei",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "queijo coalho",
+      "pergunta": "O IBS tem redução de alíquota para queijo coalho?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS02",
+      "grupo": "DEFEITO",
+      "forma": "nome_termo_lei",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "manteiga",
+      "pergunta": "A manteiga paga a CBS cheia ou tem desconto?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS03",
+      "grupo": "DEFEITO",
+      "forma": "nome_termo_lei",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "erva-mate",
+      "pergunta": "A CBS e o IBS são reduzidos na venda de erva-mate?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS04",
+      "grupo": "DEFEITO",
+      "forma": "nome_termo_lei",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "tapioca",
+      "pergunta": "Tem redução de IBS para tapioca?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS05",
+      "grupo": "DEFEITO",
+      "forma": "nome_termo_lei",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "açúcar",
+      "pergunta": "O açúcar que eu produzo paga IBS e CBS com alíquota reduzida?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS06",
+      "grupo": "DEFEITO",
+      "forma": "nome_termo_lei",
+      "estrato": "B",
+      "anexo": "IX",
+      "produto": "alevinos",
+      "pergunta": "O IBS é reduzido na venda de alevinos?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS07",
+      "grupo": "DEFEITO",
+      "forma": "ncm",
+      "estrato": "A",
+      "anexo": "VII",
+      "produto": "mel",
+      "pergunta": "O NCM 0409.00.00 tem redução de alíquota no IBS?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS08",
+      "grupo": "DEFEITO",
+      "forma": "ncm",
+      "estrato": "A",
+      "anexo": "in natura",
+      "produto": "soja",
+      "pergunta": "Qual é o tratamento do NCM 1201.90.00 na reforma tributária?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS09",
+      "grupo": "DEFEITO",
+      "forma": "ncm",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "margarina",
+      "pergunta": "Nota com NCM 1517.10.00: tem benefício de IBS e CBS?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS10",
+      "grupo": "DEFEITO",
+      "forma": "ncm",
+      "estrato": "A",
+      "anexo": "VII",
+      "produto": "massa alimentícia",
+      "pergunta": "O código 19022000 paga alíquota reduzida?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS11",
+      "grupo": "DEFEITO",
+      "forma": "ncm",
+      "estrato": "B",
+      "anexo": "XV",
+      "produto": "coco",
+      "pergunta": "Produto de NCM 0801.11.00 entra com desconto no IBS?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS12",
+      "grupo": "DEFEITO",
+      "forma": "ncm",
+      "estrato": "A",
+      "anexo": "VII",
+      "produto": "amido de milho",
+      "pergunta": "NCM 1108.12.00 tem alíquota menor na CBS?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS13",
+      "grupo": "DEFEITO",
+      "forma": "hipotese",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "farinha de milho",
+      "pergunta": "Se eu vender farinha de milho para padarias, pago menos imposto?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS14",
+      "grupo": "DEFEITO",
+      "forma": "hipotese",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "ricota",
+      "pergunta": "Caso eu venda ricota, tenho redução no imposto?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS15",
+      "grupo": "DEFEITO",
+      "forma": "hipotese",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "sal",
+      "pergunta": "Suponha que eu venda sal para consumo humano: o IBS é reduzido?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS16",
+      "grupo": "DEFEITO",
+      "forma": "hipotese",
+      "estrato": "A",
+      "anexo": "VII",
+      "produto": "polpa de fruta",
+      "pergunta": "Imagine que eu venda polpa de fruta congelada, entra algum desconto no tributo?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS17",
+      "grupo": "DEFEITO",
+      "forma": "hipotese",
+      "estrato": "B",
+      "anexo": "XV",
+      "produto": "inhame",
+      "pergunta": "Em tese, quem vende inhame paga o imposto inteiro?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS18",
+      "grupo": "DEFEITO",
+      "forma": "indireta",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "requeijão",
+      "pergunta": "Faço requeijão caseiro e vendo para o comércio da cidade. A reforma traz algum benefício para esse produto?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS19",
+      "grupo": "DEFEITO",
+      "forma": "indireta",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "café",
+      "pergunta": "Sou cafeicultor e torro e moo o meu próprio café. Esse café pesa menos no novo imposto?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS20",
+      "grupo": "DEFEITO",
+      "forma": "indireta",
+      "estrato": "A",
+      "anexo": "VII",
+      "produto": "óleo de soja",
+      "pergunta": "Prenso óleo de soja a frio para vender. O novo imposto sobre o consumo me favorece de alguma forma?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS21",
+      "grupo": "DEFEITO",
+      "forma": "indireta",
+      "estrato": "A",
+      "anexo": "VII",
+      "produto": "suco natural",
+      "pergunta": "Produzo suco natural de uva e quero saber se a reforma tributária me dá algum abatimento.",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS22",
+      "grupo": "DEFEITO",
+      "forma": "indireta",
+      "estrato": "B",
+      "anexo": "IX",
+      "produto": "inoculante",
+      "pergunta": "Revendo inoculante para os produtores de soja. Esse insumo tem algum benefício na reforma?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS23",
+      "grupo": "DEFEITO",
+      "forma": "contexto_venda",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "queijo mozarela",
+      "pergunta": "Vou emitir uma nota de venda de 500 kg de queijo mozarela para uma rede de supermercados. O IBS sai reduzido?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS24",
+      "grupo": "DEFEITO",
+      "forma": "contexto_venda",
+      "estrato": "A",
+      "anexo": "in natura",
+      "produto": "arroz em casca",
+      "pergunta": "Fechei a venda de 40 sacas de arroz em casca para uma cooperativa. Na nota, o IBS tem redução?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS25",
+      "grupo": "DEFEITO",
+      "forma": "contexto_venda",
+      "estrato": "A",
+      "anexo": "in natura",
+      "produto": "soja",
+      "pergunta": "Estou preparando a nota de venda da safra de soja para a trading. Que tratamento de IBS e CBS vale para a soja?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS26",
+      "grupo": "DEFEITO",
+      "forma": "contexto_venda",
+      "estrato": "A",
+      "anexo": "VII",
+      "produto": "suco natural",
+      "pergunta": "Entreguei 800 litros de suco natural de laranja para uma indústria. A nota deve sair com redução?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS27",
+      "grupo": "DEFEITO",
+      "forma": "contexto_venda",
+      "estrato": "B",
+      "anexo": "IX",
+      "produto": "vinhaça",
+      "pergunta": "Na venda de vinhaça para uma usina, a minha nota leva redução de IBS?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS28",
+      "grupo": "DEFEITO",
+      "forma": "lei_produto",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "leite em pó",
+      "pergunta": "O que a LC 214 diz sobre a alíquota do leite em pó?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS29",
+      "grupo": "DEFEITO",
+      "forma": "lei_produto",
+      "estrato": "A",
+      "anexo": "VII",
+      "produto": "extrato de tomate",
+      "pergunta": "Segundo a lei da reforma, o extrato de tomate tem redução de IBS e CBS?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS30",
+      "grupo": "DEFEITO",
+      "forma": "lei_produto",
+      "estrato": "A",
+      "anexo": "VII",
+      "produto": "bebida láctea",
+      "pergunta": "A legislação prevê alíquota reduzida para bebida láctea?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS31",
+      "grupo": "DEFEITO",
+      "forma": "lei_produto",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "farinha de aveia",
+      "pergunta": "Qual é a redução do IBS para a farinha de aveia, segundo a reforma tributária?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS32",
+      "grupo": "DEFEITO",
+      "forma": "lei_produto",
+      "estrato": "B",
+      "anexo": "XV",
+      "produto": "abacate",
+      "pergunta": "A lei complementar da reforma prevê redução de IBS para frutas frescas como o abacate?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS33",
+      "grupo": "DEFEITO",
+      "forma": "coloquial",
+      "estrato": "A",
+      "anexo": "VII",
+      "produto": "mel",
+      "pergunta": "mel paga ibs inteiro ou tem abatimento?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS34",
+      "grupo": "DEFEITO",
+      "forma": "coloquial",
+      "estrato": "A",
+      "anexo": "VII",
+      "produto": "pão de forma",
+      "pergunta": "pão de forma tem desconto de cbs?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS35",
+      "grupo": "DEFEITO",
+      "forma": "coloquial",
+      "estrato": "A",
+      "anexo": "I",
+      "produto": "farinha de mandioca",
+      "pergunta": "farinha de mandioca zerada na cbs?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "RS36",
+      "grupo": "DEFEITO",
+      "forma": "coloquial",
+      "estrato": "A",
+      "anexo": "VII",
+      "produto": "óleo de milho",
+      "pergunta": "óleo de milho tem isenção na reforma?",
+      "esperado": {
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "CL01",
+      "grupo": "CONTROLE_LEI",
+      "tipo": "comum",
+      "pergunta": "A partir de qual faturamento o produtor rural passa a ser contribuinte do IBS e da CBS?",
+      "esperado": {
+        "rota": "LEGISLACAO",
+        "normasAceitas": [
+          "LC 214/2025"
+        ]
+      }
+    },
+    {
+      "id": "CL02",
+      "grupo": "CONTROLE_LEI",
+      "tipo": "comum",
+      "pergunta": "Como funciona a não cumulatividade da CBS?",
+      "esperado": {
+        "rota": "LEGISLACAO",
+        "normasAceitas": [
+          "LC 214/2025",
+          "EC 132/2023"
+        ]
+      }
+    },
+    {
+      "id": "CL03",
+      "grupo": "CONTROLE_LEI",
+      "tipo": "comum",
+      "pergunta": "Quem são os não contribuintes do IBS e da CBS?",
+      "esperado": {
+        "rota": "LEGISLACAO",
+        "normasAceitas": [
+          "LC 214/2025"
+        ]
+      }
+    },
+    {
+      "id": "CL04",
+      "grupo": "CONTROLE_LEI",
+      "tipo": "comum",
+      "pergunta": "Quanto da receita bruta da venda o produtor rural pessoa física recolhe de contribuição previdenciária?",
+      "esperado": {
+        "rota": "LEGISLACAO",
+        "normasAceitas": [
+          "Lei 8.212/1991"
+        ]
+      }
+    },
+    {
+      "id": "CL05",
+      "grupo": "CONTROLE_LEI",
+      "tipo": "comum",
+      "pergunta": "Quem é obrigado a descontar a contribuição do produtor rural quando compra a produção dele?",
+      "esperado": {
+        "rota": "LEGISLACAO",
+        "normasAceitas": [
+          "Lei 8.212/1991"
+        ]
+      }
+    },
+    {
+      "id": "CL06",
+      "grupo": "CONTROLE_LEI",
+      "tipo": "comum",
+      "pergunta": "O SENAR é cobrado de quem e sobre o quê?",
+      "esperado": {
+        "rota": "LEGISLACAO",
+        "normasAceitas": [
+          "Lei 9.528/1997"
+        ]
+      }
+    },
+    {
+      "id": "CL07",
+      "grupo": "CONTROLE_LEI",
+      "tipo": "comum",
+      "pergunta": "O que é o split payment e como ele funciona?",
+      "esperado": {
+        "rota": "LEGISLACAO",
+        "normasAceitas": [
+          "LC 214/2025"
+        ]
+      }
+    },
+    {
+      "id": "CL08",
+      "grupo": "CONTROLE_LEI",
+      "tipo": "comum",
+      "pergunta": "Quais impostos a EC 132 extinguiu e o que entrou no lugar deles?",
+      "esperado": {
+        "rota": "LEGISLACAO",
+        "normasAceitas": [
+          "EC 132/2023"
+        ]
+      }
+    },
+    {
+      "id": "CL09",
+      "grupo": "CONTROLE_LEI",
+      "tipo": "comum",
+      "pergunta": "Como funciona o crédito presumido para o produtor rural na reforma?",
+      "esperado": {
+        "rota": "LEGISLACAO",
+        "normasAceitas": [
+          "LC 214/2025",
+          "LC 227/2026"
+        ]
+      }
+    },
+    {
+      "id": "CL10",
+      "grupo": "CONTROLE_LEI",
+      "tipo": "fronteira",
+      "pergunta": "O que é a cesta básica nacional de alimentos na reforma tributária?",
+      "esperado": {
+        "rota": "LEGISLACAO",
+        "normasAceitas": [
+          "LC 214/2025"
+        ]
+      }
+    },
+    {
+      "id": "CL11",
+      "grupo": "CONTROLE_LEI",
+      "tipo": "fronteira",
+      "pergunta": "A exportação de produtos agropecuários paga IBS e CBS?",
+      "esperado": {
+        "rota": "LEGISLACAO",
+        "normasAceitas": [
+          "LC 214/2025",
+          "EC 132/2023"
+        ]
+      }
+    },
+    {
+      "id": "CL12",
+      "grupo": "CONTROLE_LEI",
+      "tipo": "fronteira",
+      "pergunta": "O que são insumos agropecuários para a lei da reforma tributária?",
+      "esperado": {
+        "rota": "LEGISLACAO",
+        "normasAceitas": [
+          "LC 214/2025"
+        ]
+      }
+    },
+    {
+      "id": "CD01",
+      "grupo": "CONTROLE_DADOS",
+      "tipo": "tratamento",
+      "produto": "café",
+      "pergunta": "O café que eu vendo tem alíquota reduzida?",
+      "esperado": {
+        "rota": "DADOS",
+        "funcao": "consultarTratamentoProduto",
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "CD02",
+      "grupo": "CONTROLE_DADOS",
+      "tipo": "tratamento",
+      "produto": "farinha de trigo",
+      "pergunta": "A farinha de trigo tem redução no imposto?",
+      "esperado": {
+        "rota": "DADOS",
+        "funcao": "consultarTratamentoProduto",
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "CD03",
+      "grupo": "CONTROLE_DADOS",
+      "tipo": "tratamento",
+      "produto": "queijo mozarela",
+      "pergunta": "Queijo mozarela tem desconto no imposto?",
+      "esperado": {
+        "rota": "DADOS",
+        "funcao": "consultarTratamentoProduto",
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "CD04",
+      "grupo": "CONTROLE_DADOS",
+      "tipo": "tratamento",
+      "produto": "arroz em casca",
+      "pergunta": "O arroz em casca paga imposto cheio?",
+      "esperado": {
+        "rota": "DADOS",
+        "funcao": "consultarTratamentoProduto",
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "CD05",
+      "grupo": "CONTROLE_DADOS",
+      "tipo": "tratamento",
+      "produto": "extrato de tomate",
+      "pergunta": "O NCM 2002.90.00 tem redução?",
+      "esperado": {
+        "rota": "DADOS",
+        "funcao": "consultarTratamentoProduto",
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "CD06",
+      "grupo": "CONTROLE_DADOS",
+      "tipo": "tratamento",
+      "produto": "mel",
+      "pergunta": "O mel tem desconto no imposto?",
+      "esperado": {
+        "rota": "DADOS",
+        "funcao": "consultarTratamentoProduto",
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "CD07",
+      "grupo": "CONTROLE_DADOS",
+      "tipo": "tratamento",
+      "produto": "açúcar",
+      "pergunta": "O açúcar entra com redução?",
+      "esperado": {
+        "rota": "DADOS",
+        "funcao": "consultarTratamentoProduto",
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "CD08",
+      "grupo": "CONTROLE_DADOS",
+      "tipo": "tratamento",
+      "produto": "soja",
+      "pergunta": "A soja tem redução de alíquota?",
+      "esperado": {
+        "rota": "DADOS",
+        "funcao": "consultarTratamentoProduto",
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "CD09",
+      "grupo": "CONTROLE_DADOS",
+      "tipo": "tratamento",
+      "produto": "milho",
+      "pergunta": "O milho em grão é tributado com alíquota reduzida?",
+      "esperado": {
+        "rota": "DADOS",
+        "funcao": "consultarTratamentoProduto",
+        "tratamento": true,
+        "ressalva": true
+      }
+    },
+    {
+      "id": "CD10",
+      "grupo": "CONTROLE_DADOS",
+      "tipo": "dado-puro",
+      "produto": "soja",
+      "pergunta": "Quanto eu vendi de soja este ano?",
+      "esperado": {
+        "rota": "DADOS",
+        "semFuncao": "consultarTratamentoProduto",
+        "ressalva": false
+      }
+    },
+    {
+      "id": "CD11",
+      "grupo": "CONTROLE_DADOS",
+      "tipo": "dado-puro",
+      "produto": "milho",
+      "pergunta": "Tenho alguma nota de venda de milho parada?",
+      "esperado": {
+        "rota": "DADOS",
+        "semFuncao": "consultarTratamentoProduto",
+        "ressalva": false
+      }
+    },
+    {
+      "id": "CD12",
+      "grupo": "CONTROLE_DADOS",
+      "tipo": "dado-puro",
+      "produto": "café",
+      "pergunta": "Quanto vendi de café no último trimestre?",
+      "esperado": {
+        "rota": "DADOS",
+        "semFuncao": "consultarTratamentoProduto",
+        "ressalva": false
+      }
+    }
+  ]
+}

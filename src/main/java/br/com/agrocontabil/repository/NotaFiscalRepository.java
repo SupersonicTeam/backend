@@ -444,12 +444,12 @@ public interface NotaFiscalRepository
   /**
    * Notas próprias candidatas a sinal a conferir (#276) no resumo da Ceres (#266): as não emitidas
    * e as autorizadas desde {@code autorizadasDesde}, da mais recente para a mais antiga. Projeção
-   * sem XML.
+   * sem XML. <strong>Sem limite</strong> (issue #579): um teto aqui, antes de os sinais serem
+   * avaliados, escondia a nota com sinal atrás das mais recentes sem sinal.
    *
    * @param produtorId       produtor da sessão
    * @param naoEmitidas      situações antes da emissão
    * @param autorizadasDesde início do prazo de cancelamento
-   * @param pagina           limite
    * @return as candidatas
    */
   @Query("""
@@ -466,7 +466,7 @@ public interface NotaFiscalRepository
       """)
   List<NotaPorNumeroLinha> findCandidatasASinal(@Param("produtorId") UUID produtorId,
       @Param("naoEmitidas") Collection<StatusNotaFiscal> naoEmitidas,
-      @Param("autorizadasDesde") OffsetDateTime autorizadasDesde, Pageable pagina);
+      @Param("autorizadasDesde") OffsetDateTime autorizadasDesde);
 
   // --- Consultas da Ceres (issue #142). Fixas e parametrizadas: o modelo só escolhe a função e
   // preenche os parâmetros, nunca escreve SQL. Todas exigem o produtor (anti-IDOR, RN007).
@@ -935,4 +935,91 @@ public interface NotaFiscalRepository
       @Param("produtorId") UUID produtorId, @Param("notaId") UUID notaId,
       @Param("ncm") String ncm, @Param("unidade") String unidade,
       @Param("desde") OffsetDateTime desde, @Param("ate") OffsetDateTime ate, Pageable pagina);
+
+  // --- Avaliação dos sinais em lote (issue #579): as mesmas leituras das três consultas acima,
+  // para várias notas de uma vez. A regra continua uma só, no SinaisNotaConferirService: estas
+  // consultas só trazem os dados; a janela, o dia e a exclusão da própria nota são aplicados lá.
+
+  /**
+   * Itens de várias notas do produtor, só os campos dos sinais, como {@link #findItensParaSinais}
+   * (nota de outro produtor não devolve itens).
+   *
+   * @param notaIds    notas
+   * @param produtorId dono esperado
+   * @return itens por nota e por número do item
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.ItemDaNotaParaSinal(
+          n.id, i.numeroItem, i.descricao, i.cfop, i.ncm, i.unidade, i.quantidade, i.valorUnitario,
+          i.cstIcms, p.tipoProdutor, p.regimeTributario, p.estado, n.destinatarioEndereco.uf,
+          n.destinatarioIe, i.cClassTrib)
+      FROM NotaFiscalItem i JOIN i.notaFiscal n JOIN n.produtor p
+      WHERE n.id IN :notaIds AND p.id = :produtorId
+      ORDER BY n.id, i.numeroItem
+      """)
+  List<ItemDaNotaParaSinal> findItensParaSinaisDasNotas(
+      @Param("notaIds") Collection<UUID> notaIds, @Param("produtorId") UUID produtorId);
+
+  /**
+   * Notas próprias do produtor, nas situações que contam, com algum dos destinatários e dos valores
+   * pedidos e emitidas na faixa: superconjunto das candidatas de {@link #findPossiveisDuplicadas}
+   * para todas as notas do lote. O par destinatário e valor e o dia de cada nota são conferidos em
+   * memória, na ordem desta consulta (mais recente primeiro), que é a da consulta por nota.
+   *
+   * @param produtorId    produtor da sessão
+   * @param destinatarios documentos dos destinatários das notas do lote
+   * @param valores       valores totais das notas do lote
+   * @param inicio        começo do primeiro dia (BRT), inclusivo
+   * @param fim           começo do dia seguinte ao último, exclusivo
+   * @param situacoes     situações que contam (todas menos cancelada e rejeitada)
+   * @return as notas, a mais recente primeiro
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.OutraNotaDoDia(
+          n.id, n.numero, n.serie, n.destinatarioCpfCnpj, n.valorTotalNota, n.dataEmissao)
+      FROM NotaFiscal n
+      WHERE n.produtor.id = :produtorId
+        AND n.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND n.status IN :situacoes
+        AND n.destinatarioCpfCnpj IN :destinatarios
+        AND n.valorTotalNota IN :valores
+        AND n.dataEmissao >= :inicio AND n.dataEmissao < :fim
+      ORDER BY n.dataEmissao DESC, n.id DESC
+      """)
+  List<OutraNotaDoDia> findPossiveisDuplicadasDoLote(@Param("produtorId") UUID produtorId,
+      @Param("destinatarios") Collection<String> destinatarios,
+      @Param("valores") Collection<java.math.BigDecimal> valores,
+      @Param("inicio") OffsetDateTime inicio, @Param("fim") OffsetDateTime fim,
+      @Param("situacoes") Collection<StatusNotaFiscal> situacoes);
+
+  /**
+   * Como {@link #findValoresUnitariosDeReferencia}, mas sem excluir uma nota e com a emissão de
+   * cada linha, para uma janela que cobre as de várias notas; cada nota filtra a sua em memória, na
+   * mesma ordem (mais recente primeiro).
+   *
+   * @param produtorId produtor da sessão
+   * @param ncm        NCM do item
+   * @param unidade    unidade do item, já em maiúsculas e sem espaços nas pontas
+   * @param desde      emissão mínima, inclusiva
+   * @param ate        emissão máxima, inclusiva
+   * @param pagina     teto de itens lidos
+   * @return valores com a nota e a emissão de cada um
+   */
+  @Query("""
+      SELECT new br.com.agrocontabil.repository.ValorUnitarioNoTempo(
+          i.notaFiscal.id, i.notaFiscal.dataEmissao, i.valorUnitario)
+      FROM NotaFiscalItem i
+      WHERE i.notaFiscal.produtor.id = :produtorId
+        AND i.notaFiscal.origem = br.com.agrocontabil.model.OrigemNotaFiscal.PROPRIA
+        AND i.notaFiscal.status = br.com.agrocontabil.model.StatusNotaFiscal.AUTORIZADA
+        AND i.ncm = :ncm AND UPPER(TRIM(i.unidade)) = :unidade
+        AND i.cfop LIKE '_1__'
+        AND i.valorUnitario IS NOT NULL
+        AND i.notaFiscal.dataEmissao >= :desde AND i.notaFiscal.dataEmissao <= :ate
+      ORDER BY i.notaFiscal.dataEmissao DESC, i.id DESC
+      """)
+  List<ValorUnitarioNoTempo> findValoresUnitariosNoTempo(
+      @Param("produtorId") UUID produtorId, @Param("ncm") String ncm,
+      @Param("unidade") String unidade, @Param("desde") OffsetDateTime desde,
+      @Param("ate") OffsetDateTime ate, Pageable pagina);
 }

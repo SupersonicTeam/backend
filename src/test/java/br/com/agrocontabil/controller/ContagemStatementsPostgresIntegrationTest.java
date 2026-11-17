@@ -9,6 +9,8 @@ import br.com.agrocontabil.dto.CadastroRequest;
 import br.com.agrocontabil.dto.CadastroResponse;
 import br.com.agrocontabil.security.PapelUsuario;
 import br.com.agrocontabil.service.CadastroService;
+import br.com.agrocontabil.service.ConsultaDadosProdutorService;
+import br.com.agrocontabil.service.NotaPorNumeroResultado;
 import br.com.agrocontabil.support.PostgresIntegrationTestBase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManagerFactory;
@@ -16,7 +18,9 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import org.hibernate.SessionFactory;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.stat.Statistics;
@@ -65,11 +69,13 @@ class ContagemStatementsPostgresIntegrationTest extends PostgresIntegrationTestB
   @Autowired private ObjectMapper objectMapper;
   @Autowired private CadastroService cadastroService;
   @Autowired private EntityManagerFactory entityManagerFactory;
+  @Autowired private ConsultaDadosProdutorService consultaDados;
 
   private Statistics estatisticas;
   private CadastroResponse produtor;
   private String token;
   private int notasInseridas;
+  private int candidatasInseridas;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -85,6 +91,7 @@ class ContagemStatementsPostgresIntegrationTest extends PostgresIntegrationTestB
     token = "Bearer " + objectMapper.readTree(login.getResponse().getContentAsString())
         .get("accessToken").asText();
     notasInseridas = 0;
+    candidatasInseridas = 0;
   }
 
   @Test
@@ -112,6 +119,76 @@ class ContagemStatementsPostgresIntegrationTest extends PostgresIntegrationTestB
   void calendario() throws Exception {
     String caminho = "/api/calendario-fiscal/" + produtor.usuarioId() + "/vencimentos";
     comparar(caminho, caminho, PAGINA_PEQUENA, PAGINA_PEQUENA);
+  }
+
+  @Test
+  @DisplayName("notas a conferir da Ceres (#579): mesma contagem com 10 e com 60 candidatas, "
+      + "e toda nota com sinal sai (sem o antigo teto de 10)")
+  void notasAConferir() {
+    // Historico de vendas autorizadas: a referencia do valor fora do padrao.
+    inserirNotas(NOTAS_BASE_GRANDE);
+    OffsetDateTime desde = OffsetDateTime.now(BRASILIA).minusDays(30);
+    AtomicReference<List<NotaPorNumeroResultado>> saida = new AtomicReference<>();
+
+    inserirCandidatas(NOTAS_BASE_PEQUENA);
+    consultaDados.notasAConferir(produtor.usuarioId(), desde);
+    long pequena = contar(() -> saida.set(consultaDados.notasAConferir(produtor.usuarioId(),
+        desde)));
+    assertThat(saida.get()).as("notas com sinal entre 10 candidatas").hasSize(contarComServico(10));
+
+    inserirCandidatas(NOTAS_BASE_GRANDE - NOTAS_BASE_PEQUENA);
+    consultaDados.notasAConferir(produtor.usuarioId(), desde);
+    long grande = contar(() -> saida.set(consultaDados.notasAConferir(produtor.usuarioId(),
+        desde)));
+
+    // Cada quarta candidata parece servico: com 60 sao 15, mais que o teto antigo de 10.
+    assertThat(saida.get()).as("notas com sinal entre 60 candidatas")
+        .hasSize(contarComServico(NOTAS_BASE_GRANDE)).hasSizeGreaterThan(10);
+    assertThat(pequena).as("statements com 10 candidatas").isPositive();
+    assertThat(grande)
+        .as("statements com 60 candidatas contra 10: a avaliacao dos sinais e em lote, a "
+            + "contagem nao pode crescer com o numero de notas (N+1)")
+        .isLessThanOrEqualTo(pequena);
+  }
+
+  /** Candidatas de indice 1..n (acumulado) com cada quarta parecendo servico (CFOP 5949). */
+  private static int contarComServico(int candidatas) {
+    return candidatas / 4;
+  }
+
+  /**
+   * Notas próprias candidatas a sinal (rascunhos recentes), com um item cada. As de índice múltiplo
+   * de 4 têm descrição e CFOP de serviço ({@code PRODUTO_PARECE_SERVICO}); as demais não geram
+   * sinal. Valores e números únicos: nenhuma é duplicada de outra.
+   */
+  private void inserirCandidatas(int quantidade) {
+    UUID produtorId = produtor.usuarioId();
+    for (int i = 0; i < quantidade; i++) {
+      int indice = ++candidatasInseridas;
+      UUID notaId = UUID.randomUUID();
+      boolean servico = indice % 4 == 0;
+      jdbc.update("""
+          INSERT INTO nota_fiscal (id, chave_acesso, numero, serie, modelo, natureza_operacao,
+            data_emissao, produtor_id, destinatario_nome, destinatario_cpf_cnpj, dest_uf,
+            valor_total_produtos, valor_total_nota, valor_total_ibs, valor_total_cbs,
+            valor_total_credito_ibs, valor_total_credito_cbs, status, tipo_documento, origem,
+            version, created_at, updated_at)
+          VALUES (?, ?, ?, 1, '55', 'Venda de producao rural', ?, ?, ?,
+            '39053344705', 'MT', ?, ?, 1.00, 9.00, 0, 0, 'RASCUNHO', 'NFE', 'PROPRIA',
+            0, now(), now())
+          """, notaId, null, (long) (10_000 + indice),
+          OffsetDateTime.now(BRASILIA).minusHours(indice), produtorId,
+          "Comprador Candidato " + (indice % 7), BigDecimal.valueOf(2000 + indice),
+          BigDecimal.valueOf(2000 + indice));
+      jdbc.update("""
+          INSERT INTO nota_fiscal_item (id, nota_fiscal_id, numero_item, descricao, ncm, cfop,
+            unidade, quantidade, valor_unitario, valor_total, aliquota_ibs, valor_ibs,
+            aliquota_cbs, valor_cbs, natureza_operacao, cst_icms, created_at, updated_at)
+          VALUES (?, ?, 1, ?, ?, ?, 'KG', 250.0000, 2.0000, 500.00,
+            0.1000, 0.50, 0.9000, 4.50, 'DEBITO', '41', now(), now())
+          """, UUID.randomUUID(), notaId, servico ? "Servico de colheita" : "Produto sintetico",
+          NCMS[indice % NCMS.length], servico ? "5949" : "5101");
+    }
   }
 
   /**

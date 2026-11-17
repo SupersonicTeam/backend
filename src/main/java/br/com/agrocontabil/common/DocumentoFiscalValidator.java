@@ -1,5 +1,6 @@
 package br.com.agrocontabil.common;
 
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
@@ -30,6 +31,9 @@ public final class DocumentoFiscalValidator {
    * linha que tiver um candidato (#313).
    */
   private static final Pattern CNPJ_ALFANUMERICO = Pattern.compile("[0-9A-Z]{12}\\d{2}");
+
+  /** Pontuacao do CNPJ ({@code 12.ABC.345/01DE-35}), tirada antes de conferir o DV (#313). */
+  private static final Pattern PONTUACAO_CNPJ = Pattern.compile("[./-]");
 
   private DocumentoFiscalValidator() {}
 
@@ -103,6 +107,25 @@ public final class DocumentoFiscalValidator {
     int dv1 = digitoVerificadorCnpj(cnpj, 12);
     int dv2 = digitoVerificadorCnpj(cnpj, 13);
     return dv1 == charDigito(cnpj, 12) && dv2 == charDigito(cnpj, 13);
+  }
+
+  /**
+   * Confere o DV de um CNPJ alfanumerico <em>como aparece num texto</em>, com ou sem a pontuacao
+   * ({@code 12.ABC.345/01DE-35}): o ponto unico das duas mascaras de dado pessoal (a de log, que
+   * so aceita maiusculas, e a da Ceres, que aceita qualquer caixa), para a conferencia nao divergir
+   * entre elas (#313). Como o {@link #isCnpjAlfanumericoValido}, nao e porta de entrada.
+   *
+   * @param trecho trecho achado no texto, com ou sem pontuacao
+   * @param aceitaMinuscula {@code true} passa o trecho a maiusculas antes de conferir
+   * @return {@code true} se, sem a pontuacao, o formato e os dois digitos verificadores conferirem
+   */
+  public static boolean isCnpjAlfanumericoNoTextoValido(String trecho, boolean aceitaMinuscula) {
+    if (trecho == null) {
+      return false;
+    }
+    String semPontuacao = PONTUACAO_CNPJ.matcher(trecho).replaceAll("");
+    return isCnpjAlfanumericoValido(
+        aceitaMinuscula ? semPontuacao.toUpperCase(Locale.ROOT) : semPontuacao);
   }
 
   // -------------------------------------------------------------------------
