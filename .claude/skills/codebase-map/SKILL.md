@@ -100,7 +100,7 @@ Use este mapa para navegar sem precisar fazer `find` ou `ls` em cada pasta.
 | `auditoria/Auditado` + `AuditoriaAspect` | Auditoria das operações críticas (#149): anotação nos métodos de escrita; aspecto por fora do `@Transactional` grava sucesso/falha sem dado pessoal; `EstadoRecursoLeitor` lê o status "antes" |
 | `auditoria/AuditoriaService` | Grava (nunca lança) e lista (só contador, só carteira) |
 | `auditoria/RegistroAuditoriaRetencaoJob` | Retenção diária (ShedLock), corte no 1º de janeiro de (ano − `app.auditoria.retencao-anos`, mín. 5) |
-| `PoliticaDadosService` | Política de dados (#148) a partir de `app.lgpd.*` |
+| `PoliticaDadosService` | Política de dados (#148) a partir de `app.lgpd.*`. Desde a #498 cita a Resend e a Anthropic pelo nome (`operadoresExternos`, DTO `OperadorExternoResponse`: local, dados enviados e não enviados, hipótese do art. 33, retenção, como exercer) e traz acento; texto = decisão da equipe sem revisão jurídica (`docs/lgpd.md`). Mudou o texto, mude `app.lgpd.versao-politica` |
 | `SenhaService` | Recuperação/troca de senha (#209): `solicitarRedefinicao` (202 sempre, trabalho no pool `agro-email-`), `redefinir` (valida → BCrypt fora de tx → regrava sob lock), `alterar` (senha atual com a reserva antitentativa); troca = hash + links apagados + `revogarTodas` + bloqueio zerado. Só web |
 | `EnvioEmail` | Porta de e-mail (#209); implementação escolhida no `config/EmailConfig` (SMTP / LOG só dev / DESLIGADO) |
 | `BloqueioContaService` | Bloqueio por conta (#208): `reservarTentativa` (conta a tentativa sob lock pessimista **antes** do BCrypt; 5 → 15 min; vencido recomeça), `reservarFicticia` (e-mail sem conta, mesmo custo), `liberar` (sucesso zera) |

@@ -93,14 +93,20 @@ class PrivacidadeIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.controlador").value("GWNext"))
         .andExpect(jsonPath("$.contatoEncarregado").value("contato@gwnext.com.br"))
-        .andExpect(jsonPath("$.versao").value("2026-11-11"))
+        .andExpect(jsonPath("$.versao").value("2026-11-17"))
         // CRC, telefones, dados do escritorio e o aceite dos termos vem do cadastro (#519).
         .andExpect(jsonPath("$.dadosColetados").value(org.hamcrest.Matchers.hasItems(
             org.hamcrest.Matchers.containsString("registro no CRC"),
             org.hamcrest.Matchers.containsString("telefone, que pode ser informado no cadastro"),
-            org.hamcrest.Matchers.containsString("obrigatorios na conta empresarial e opcionais na pessoal"),
+            org.hamcrest.Matchers.containsString("obrigatórios na conta empresarial e opcionais na pessoal"),
             org.hamcrest.Matchers.containsString("Aceite dos termos de uso"))))
-        .andExpect(jsonPath("$.basesLegais.length()").value(3))
+        .andExpect(jsonPath("$.basesLegais.length()").value(4))
+        // Os dois operadores de fora do pais, pelo nome, com a hipotese do art. 33 (#498).
+        .andExpect(jsonPath("$.operadoresExternos.length()").value(2))
+        .andExpect(jsonPath("$.operadoresExternos[0].nome").value("Resend"))
+        .andExpect(jsonPath("$.operadoresExternos[1].nome").value("Anthropic"))
+        .andExpect(jsonPath("$.operadoresExternos[0].baseTransferencia")
+            .value(org.hamcrest.Matchers.containsString("Art. 33, IX")))
         .andExpect(jsonPath("$.retencao[0]").value(org.hamcrest.Matchers.containsString("5 anos")))
         .andExpect(jsonPath("$.comoExercer").value(
             org.hamcrest.Matchers.containsString("/api/usuarios/{id}/dados")));

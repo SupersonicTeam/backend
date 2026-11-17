@@ -17,6 +17,8 @@ import java.util.List;
  * @param retencao           por quanto tempo cada dado fica guardado
  * @param direitos           direitos do titular (art. 18)
  * @param comoExercer        como exercer os direitos
+ * @param operadoresExternos operadores de fora do Brasil que recebem dado pessoal, um por um
+ *                           (#498); o frontend que só lista os campos acima ignora este
  */
 @Schema(description = "Política de tratamento de dados pessoais (LGPD, art. 9º)")
 public record PoliticaDadosResponse(
@@ -39,5 +41,7 @@ public record PoliticaDadosResponse(
     @Schema(description = "Direitos do titular")
     List<String> direitos,
     @Schema(description = "Como exercer os direitos")
-    String comoExercer) {
+    String comoExercer,
+    @Schema(description = "Operadores de fora do Brasil que recebem dado pessoal")
+    List<OperadorExternoResponse> operadoresExternos) {
 }

@@ -119,8 +119,12 @@ Valores conferidos em 2026-11-09. Em qualquer divergência, vale o que o painel 
    4% e a reclamação abaixo de 0,08%, ou a Resend pode suspender a conta. A Resend não avisa
    sozinha perto do fim da cota; o aviso aos 80% sai no log do backend.
 6. **LGPD.** A Resend guarda nos EUA os dados da conta e os logs, com o corpo do e-mail (e o link)
-   por 30 dias, qualquer que seja a região de envio, e não assina as cláusulas-padrão da ANPD. O
-   envio só liga com a D7 da #460 resolvida pelo jurídico e com a política de dados atualizada.
+   por 30 dias, qualquer que seja a região de envio, e não assina as cláusulas-padrão da ANPD. A
+   política de dados de 2026-11-17 (#498) cita a Resend como operadora e a base do art. 33 em que a
+   GWNext se apoia (IX, com o art. 7º, V), **decisão da equipe sem revisão jurídica**; o mapa, a
+   retenção e as alternativas estão em `docs/lgpd.md`, seção "E-mail pela Resend". A exclusão de
+   dados do AgroConIA não alcança a Resend; um e-mail isolado só sai pelo suporte dela. Se o risco
+   não for aceito, a saída é o Amazon SES em `sa-east-1` (sem transferência).
 
 Os links dos e-mails apontam para `https://${SITE_HOST}`: `/redefinir-senha`, `/escritorio` (onde o
 produtor vê os convites) e `/equipe/convite`.
@@ -150,8 +154,9 @@ autenticação ou cota; sai na 3ª falha seguida e a cada 10), `Teto de e-mail` 
    SPRING_MAIL_USERNAME=resend
    SPRING_MAIL_PASSWORD=<API key re_... da Resend>
    ```
-3. Só depois da política de dados com a Resend como operadora e da decisão sobre a transferência
-   internacional (D7 da #460): `EMAIL_MODO=SMTP` e `docker compose up -d backend`. O aviso "Envio
+3. Só com a política de dados que cita a Resend como operadora (2026-11-17, #498) e a decisão
+   sobre a transferência internacional registradas (item 6 acima): `EMAIL_MODO=SMTP` e
+   `docker compose up -d backend`. O aviso "Envio
    de e-mail desligado" some do log. Se usar o Pro na janela da banca (D11), suba o
    `EMAIL_TETO_POR_DIA` enquanto ele durar e volte a `80` quando a conta voltar ao Free.
 4. Teste real: os três fluxos para uma caixa da equipe e para o mail-tester. No

@@ -151,12 +151,16 @@ benchmark da banca (#348), só na Ceres 2.0: a Ceres 1 (`2463c27`) não tem o pr
   na rota adversária, X01, X15 e X16 pioram nas 3 repetições e X09, X11 e X13 melhoram em 1 de 3;
   a recusa falha só em X09 e X11, na repetição 2. A comparação mistura modelo e código (#459 e
   #506 entraram entre as duas rodadas); diferença de um ou dois casos entre rodadas é ruído.
-- **Pendência de LGPD, do próprio #483:** com o provedor por API, a pergunta sanitizada e dados
-  de negócio do produtor (valores, datas, números de nota, categorias de produto e NCM) saem do
-  servidor; nome, documento, contato, endereço e o XML das notas não saem (`docs/lgpd.md`,
-  seção "Provedor externo do modelo da Ceres"). A transferência internacional (LGPD, art. 33) e a
-  política de dados ficam com o jurídico, junto da D7 do envio de e-mail (#460), e precisam estar
-  resolvidas antes de valer para produtores reais.
+- **LGPD do provedor por API (#483, #498):** com o provedor por API, a pergunta sanitizada, os
+  trechos de lei e, no MISTO, os itens de anexo das compras saem do servidor; com a continuidade
+  ligada, também as respostas inteiras das trocas anteriores (valores, datas, números de nota e
+  texto livre do escritório); nome, documento, contato, endereço e o XML das notas não saem
+  (`docs/lgpd.md`, seção "Provedor externo do modelo da Ceres"). A política de dados de
+  2026-11-17 cita a Anthropic (e a Resend, do e-mail) pelo nome, com a hipótese do art. 33 (IX, com
+  o art. 7º, V), **decisão da equipe sem revisão jurídica** (Murillo, 2026-11-17: "não temos
+  jurídico"). **Pendente:** a retenção da conta da Anthropic, que o Murillo confere no Console
+  (a política a diz "em verificação" e não promete retenção zero), o aviso na tela
+  (`conversaVaiAoProvedor`) e o texto dos termos de uso, que não existe.
 
 **Benchmark da banca (#348):** `python3 docs/avaliacao/benchmark/executar_matriz.py` roda a matriz
 2 arquiteturas (Ceres 1 = `2463c27`, Ceres 2.0 = `main`) × 3 modelos (`qwen3:0.6b`, `1.7b`,
@@ -962,8 +966,11 @@ no cadastro (decisão do Murillo, 2026-10-19).
   antes da verificação do CNPJ, e um cadastro que nunca é verificado ocupa o nome para sempre. Um job que
   libere o slug de escritório não verificado depois de N dias resolve; a verificação automática (e-mail
   no domínio do CNPJ, Receita/QSA) também fica para depois da banca.
-- **LGPD e o provedor da Ceres por API (#483):** política de dados e transferência internacional (art. 33) com o
-  jurídico, junto da D7 do envio de e-mail (#460); antes de a Ceres atender produtores reais no Haiku.
+- **LGPD e os operadores de fora do Brasil (#483, #498):** a política cita a Resend e a Anthropic com o
+  art. 33, IX, sem revisão jurídica; a Anthropic **não tem a retenção da conta conferida** e nenhum dos
+  dois assina as cláusulas-padrão da ANPD. Falta o advogado ler a seção "Transferência
+  internacional (art. 33)" do `docs/lgpd.md` (três redações, risco de cada uma) antes de a Ceres
+  atender produtores reais; o consentimento (redação 3) para a Ceres exige tela e registro do aceite.
 - **Haiku 5.5 e os casos adversários (#483):** investigado no PR #568 (ver acima): X01, X15 e X16
   são os casos estáveis que pioram; falta decidir se se corrige a regra ou o prompt do classificador.
   Rodar o qwen no `2bfb1ef3` separaria o efeito do modelo do efeito do código.
