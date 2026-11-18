@@ -1,0 +1,2 @@
+decisão: RISCO_RELEVANTE
+  núcleo: 5 de 74 corrigiram para pior (limite superior 95%: 0.149); exercitado 24%; atribuição: a formulação pesa: o núcleo afirma erro mais que o controle claro
