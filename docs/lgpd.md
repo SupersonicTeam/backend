@@ -1,7 +1,14 @@
 # LGPD — dados pessoais no AgroContabil (issue #148)
 
 Mapa do que é dado pessoal no backend, por que é tratado e o que acontece na exclusão.
-A versão para o titular é servida em `GET /api/politica-dados`.
+A versão para o titular é servida em `GET /api/politica-dados` (versão 2026-11-17, #498).
+
+> **Limitação declarada (#498).** O texto da política, em especial a base do art. 33 para a Resend
+> e a Anthropic, é **decisão da equipe de 2026-11-17, sem revisão jurídica**: a GWNext não tem
+> jurídico na equipe do projeto ("não temos jurídico, temos que fazer assim mesmo", Murillo). Nenhuma
+> linha deste documento nem da política é parecer. As hipóteses estudadas, o que cada uma exige e o
+> risco de cada uma estão na seção "Transferência internacional (art. 33)", abaixo. Quando houver
+> advogado, a primeira leitura dele é essa seção.
 
 ## Campos pessoais
 
@@ -86,10 +93,35 @@ por padrão), vai também o texto da resposta de dados já montado pelo backend,
 `DataSanitizer`, com o resumo das consultas: são os mesmos dados de negócio acima, já mostrados ao
 produtor.
 
-O que não vai: nome, documento, contato e endereço do produtor, e o XML das notas. A política
-pública (`GET /api/politica-dados`) declara o compartilhamento em "Provedor do modelo da Ceres,
-quando configurado por API". A retenção e o uso dos dados pelo provedor seguem o contrato dele;
-conferir os termos da conta antes de ligar para produtores reais.
+O que não vai: nome, documento, contato e endereço do produtor, e o XML das notas. **O que o
+`DataSanitizer` não pega:** o que o produtor escreve na própria pergunta, como um nome por
+extenso ("a safra do seu João"), vai ao provedor.
+
+A política pública (`GET /api/politica-dados`, versão 2026-11-17, #498) cita a **Anthropic pelo
+nome** como operadora fora do Brasil (campo `operadoresExternos` e as listas de compartilhamento e
+retenção), com o que sai, o que não sai, a hipótese do art. 33 e a retenção. A Ceres é opcional:
+quem não a usa não tem dado enviado.
+
+### Anthropic: o que o provedor publica (conferido em 2026-11-17)
+
+Fontes: `platform.claude.com/docs/en/manage-claude/api-and-data-retention`, a central de privacidade
+(`privacy.claude.com`, artigo 7996866, "última atualização 1º/07/2026") e o DPA em
+`anthropic.com/legal/data-processing-addendum`. São páginas públicas do provedor, não o contrato da
+conta: o que vale é o que a conta do AgroConIA aceitou (Termos Comerciais e DPA incorporado).
+
+| Ponto | O que está publicado | O que isso permite afirmar |
+|---|---|---|
+| Papel | O DPA diz que o cliente é controlador e a Anthropic é a operadora, que trata os dados só para prestar o serviço e conforme as instruções do cliente | Operadora (LGPD, art. 5º, VII) |
+| Retenção padrão | **As duas páginas oficiais não dizem a mesma coisa.** A central de privacidade diz que apaga entradas e saídas em até **30 dias**. A documentação da plataforma diz, em inglês, que o conteúdo (prompts e saídas) não é retido por padrão (paráfrase nossa), com exceção dos modelos de retenção obrigatória de 30 dias (hoje a família Fable e Mythos; o Haiku 5.5, que a Ceres usa, não está na lista) | Nenhuma das duas é a configuração **da nossa conta**. A política diz "em verificação" e cita o prazo de até 30 dias; nunca "retenção zero" |
+| Retenção zero (ZDR) | Só por acordo com a equipe comercial, por organização; não é self-serve | Não temos o acordo; não prometer |
+| Conteúdo sinalizado | Se os sistemas automáticos de segurança sinalizarem violação da política de uso: entradas e saídas por até **2 anos**, mesmo com ZDR (documentação da plataforma); a central de privacidade acrescenta pontuações de classificação por até **7 anos** | Entra na política (2 anos) |
+| Transferência | O DPA incorpora as cláusulas-padrão da UE (módulos 2 e 3, lei irlandesa), o adendo do Reino Unido e o suíço. Na leitura que fizemos (resumo da página, não o texto integral nem o contrato da conta), **não cita o Brasil nem a LGPD** e não lista os países de processamento nem os subprocessadores (remete a uma lista online) | O DPA público não traz cláusula-padrão da ANPD nem mecanismo próprio da LGPD. **Conferir o texto integral e o contrato da conta** antes de afirmar mais que isso |
+| Fim do contrato | Devolve e apaga os dados em até 30 dias do término | — |
+
+**Pendente (o Murillo, no Console, antes de ligar a continuidade na VPS):** em
+`platform.claude.com/settings/privacy`, ver a retenção da organização e do workspace usado pela Ceres
+e anotar aqui o valor e a data da conferência. Até lá, o prazo da conta fica escrito como "em
+verificação" na política, e este documento não afirma retenção zero nem 30 dias como fato da conta.
 
 ### Continuidade da conversa (#499)
 
@@ -112,11 +144,92 @@ histórico, por decisão do Murillo, para qualquer conta, inclusive as do cadast
 (#148) **não alcança o que já foi enviado** ao provedor.
 
 É item do relatório de impacto (art. 38). Ligar a flag na VPS exige antes: a política nova no ar
-(`app.lgpd.versao-politica` 2026-11-11, que já descreve o fluxo), o aviso na tela da Ceres
-(`GET /api/assistente/uso` devolve `conversaVaiAoProvedor`), o **prazo de retenção no provedor
-escrito aqui e na política** (pendente: o Murillo confere os termos da organização no Console e
-pede retenção zero, se houver) e o art. 33 e o contrato da #498. A subida registra um `WARN` com a
-flag ligada e o provedor por API fora de `dev`/`test` (`config/AvisoContinuidadeConfig`).
+(`app.lgpd.versao-politica` 2026-11-17: descreve o fluxo, o provedor pelo nome e o art. 33), o aviso
+na tela da Ceres (`GET /api/assistente/uso` devolve `conversaVaiAoProvedor`, frontend#183) e o
+**prazo de retenção da conta** conferido no Console (pendente, acima; a política o diz "em
+verificação" até lá). A subida registra um `WARN` com a flag ligada e o provedor por API fora de
+`dev`/`test` (`config/AvisoContinuidadeConfig`). O mecanismo do art. 33 da #498 cobre este fluxo no
+mesmo texto (hipótese 1, abaixo), mas é aqui que ele fica mais exposto: texto livre escrito por
+terceiros (o escritório) vai ao provedor, e a hipótese de "necessidade" é mais difícil de sustentar
+para o histórico do que para a pergunta do próprio produtor (ver o risco na redação 1).
+
+## E-mail pela Resend (#460, #498)
+
+Três e-mails saem do sistema (`MensagensEmail`): o link de nova senha (#209), o convite do
+escritório ao produtor (#177) e o convite de equipe (#228). Com `EMAIL_MODO=SMTP` (ligado na VPS
+desde 09/11) o envio é pela **Resend**, operadora nos Estados Unidos (`deploy/README.md`, seção
+"E-mail"). Com `DESLIGADO` (o padrão) ou `LOG` (só dev) nada sai do servidor.
+
+| Item | O que vai e onde fica |
+|---|---|
+| Enviado à Resend | O **endereço de e-mail do destinatário**; o assunto; o corpo em texto e HTML. Nenhum nome, CPF/CNPJ nem telefone do destinatário entra no e-mail |
+| No corpo | **Nova senha:** o link com o token de uso único no fragmento (`#token=`), válido 30 min. **Convite de equipe:** o link com o token, válido 7 dias. **Convite da carteira:** sem token (aceitar exige entrar com o e-mail convidado); leva o nome do escritório (livre; na conta pessoal é o nome do contador) e o CNPJ só se verificado (#520) |
+| Rastreamento | Desligado (abertura e clique): o link não é reescrito |
+| Onde | Estados Unidos. O domínio de envio está na região de São Paulo (`sa-east-1`), mas a Resend informa, em inglês, que isso só define de onde o e-mail sai e que não há hoje ajuste que mude o lugar onde o dado fica guardado (paráfrase nossa) |
+| Retenção na Resend | **30 dias** (planos Free, Pro e Scale; Enterprise é flexível) para o conteúdo e os registros de envio, **inclusive o corpo com o link**. Conta encerrada: o que restar é apagado em até 90 dias (a exclusão pelo painel leva 7 dias e as cópias de segurança, mais 7) |
+| Exclusão de um e-mail | Não há endpoint para apagar um e-mail isolado. O pedido vai ao suporte da Resend com o identificador do e-mail (página Emails do painel); e-mail recebido não pode ser removido antes do fim da janela |
+| Contrato | DPA nos termos do art. 28 do GDPR, já assinado pela Resend para todas as contas, com as cláusulas-padrão da UE (módulos 1, 2 e 3), o adendo do Reino Unido e a participação no Data Privacy Framework UE–EUA. **A Resend diz expressamente que não assina DPA específico de outro país, e cita as cláusulas da LGPD** (página de GDPR, vista em 2026-11-17; a mesma posição que o `deploy/README.md` registrou em 2026-11-05). O DPA descreve o processamento principal nos EUA, com subprocessadores avisados 14 dias antes |
+| Exclusão pelo AgroConIA (#148) | **Não alcança a Resend.** O titular que excluir a conta ainda tem o endereço e o link nos registros dela por até 30 dias |
+| Risco do link | O link de nova senha morre em 30 min e no primeiro uso, então o que a Resend guarda por 30 dias já está inerte. O token do convite de equipe vale 7 dias e fica 30 na Resend: quem tiver acesso aos registros dela nos 7 primeiros dias poderia usá-lo para entrar na equipe com aquele e-mail (o cadastro pelo convite não confirma a caixa de entrada). Risco aceito, a registrar na análise de impacto |
+
+Alternativa já estudada se o mecanismo do art. 33 para a Resend não for aceito: **Amazon SES em
+`sa-east-1`**, que processa no Brasil e troca só variáveis e DNS (#460). Os registros de DNS da
+Resend apontam para `amazonses.com`, ou seja, o envio dela passa pela infraestrutura da AWS, mas ela
+guarda o conteúdo nos EUA; com o SES direto, não haveria transferência para fora do Brasil.
+
+## Transferência internacional (art. 33): o que foi decidido e o que não foi
+
+**Decisão da equipe de 2026-11-17, sem revisão jurídica.** O texto da política cita a hipótese
+abaixo como a **base em que a GWNext se apoia**; isso é uma escolha de redação, não a conclusão de
+que a base é suficiente.
+
+**Fatos que limitam as hipóteses (conferidos em 2026-11-17):**
+
+- A ANPD só regulamentou os mecanismos do art. 33, II (Resolução CD/ANPD nº 19/2024): cláusulas-padrão
+  contratuais (Anexo II, **adotadas sem modificação**), cláusulas específicas (aprovação prévia da
+  ANPD, só se as padrão forem inviáveis) e normas corporativas globais. O prazo de 12 meses para
+  adequar contratos acabou em 23/08/2025. Nenhuma cláusula equivalente de outro país foi aprovada.
+  Decisão de adequação (art. 33, I): só a União Europeia (Resolução CD/ANPD nº 32/2026, segundo a
+  página da ANPD); os Estados Unidos não têm.
+- **A Resend recusa por escrito as cláusulas da LGPD; o DPA público da Anthropic não traz as
+  cláusulas-padrão da ANPD** (conferido só no texto público: o contrato da conta pode dizer mais).
+  O DPA dos dois usa as cláusulas-padrão da UE, que a ANPD não reconhece como equivalentes. Então o
+  caminho do art. 33, II, b, está fechado para a Resend e, até prova em contrário, para a Anthropic.
+- Os incisos VIII (consentimento específico e em destaque) e IX (necessidade, ligada ao art. 7º, II,
+  V e VI) não dependem de regulamento da ANPD (o regulamento os trata como "outros mecanismos que
+  não dependam de regulamentação"), e a ANPD ainda não detalhou como os lê para operadores
+  estrangeiros de tecnologia.
+
+### As três redações possíveis
+
+| | **1. Necessidade (IX + art. 7º, V)**, para os dois | **2. Consentimento (VIII)**, para os dois | **3. Mista:** e-mail por IX, Ceres por VIII |
+|---|---|---|---|
+| Como se escreve | "Transferência necessária para executar o serviço que o titular usa" | "O titular consente, de forma específica e em destaque, com o envio ao exterior" | E-mail como em 1; Ceres como em 2 |
+| O que a equipe precisaria ter em mãos | Registro (aqui) de por que o envio é necessário ao serviço: o link de nova senha e o convite só chegam por e-mail, e a Ceres é a funcionalidade que o produtor pediu; minimização (o e-mail sem dado pessoal além do endereço; a pergunta sem documento, contato nem CEP); o DPA de cada operador; política e aviso na tela | Tudo de 1, mais: aviso **antes** do primeiro uso, em destaque, separado do resto dos termos, dizendo que o dado vai para fora do Brasil; **registro do aceite** (quem, quando, qual texto); um caminho sem a transferência para quem recusar; como retirar o consentimento. **Não existe hoje no backend** (só o aceite dos termos, #519, sem texto) nem na tela | O de 1 para o e-mail e o de 2 só para a Ceres |
+| Risco | **"Necessário" é lido de forma estrita.** A Ceres roda local (Ollama é o padrão do código) e o e-mail tem alternativa no Brasil (SES `sa-east-1`): a ANPD, ou um titular, pode dizer que a transferência não era necessária, só conveniente. É mais frágil para o histórico da continuidade, que leva texto de terceiros. Sem nenhum outro mecanismo para o e-mail, o risco recai nele | **Para o e-mail o consentimento não é livre:** sem e-mail o titular não recupera a senha nem recebe o convite. O consentimento do VIII é revogável e o titular que recusar precisa de saída: para a Ceres é possível (ela é opcional); para o e-mail, não. Exige trabalho de frontend e backend, com o congelamento em 26/11 | Menos frágil na Ceres; mantém no e-mail o risco de 1. Exige o trabalho de 2 para a Ceres |
+| Dá para sustentar **hoje**? | **Sim:** só descreve o que o sistema faz | **Não:** a política afirmaria um aceite que o sistema não coleta | **Só em parte:** a metade do e-mail |
+
+**Recomendada: a 1**, e é a que a política escreve. É a única das três que o texto consegue afirmar
+com verdade hoje, sem prometer um aceite que não existe. Ela só afirma a base em que a GWNext se
+apoia, junto de tudo que a limita: a política diz que a GWNext "entende" a transferência como
+necessária (não que ela esteja provada), que as cláusulas-padrão da ANPD não foram assinadas pela
+Resend nem constam no DPA público da Anthropic, que a retenção da Anthropic está em verificação e
+que a exclusão não alcança os operadores. **A 3 é o reforço natural da Ceres** (a parte mais exposta), e o aviso do
+frontend#183 (`conversaVaiAoProvedor`) já é metade dela; o que falta é o texto de consentimento, o
+registro do aceite e a recusa. Se o risco da 1 para o e-mail não for aceito, a saída é trocar para o
+SES em `sa-east-1` (sem transferência), não o consentimento.
+
+**O que a política não faz:** não diz que o art. 33 está atendido, não cita "cláusulas-padrão da
+ANPD" como adotadas, não promete retenção zero na Anthropic e não promete apagar nos operadores
+mais cedo que o prazo deles.
+
+## Termos de uso (#498, #519)
+
+O backend grava o aceite (`credencial_usuario.termos_aceitos_em`, `termos_versao`) e a versão vem de
+`app.termos.versao` (2026-11-11, **provisória**). **O texto dos termos não existe no backend** (nem
+em `docs/`, nem em `resources/`, nem endpoint) e esta issue não o redige. Falta decidir onde ele
+mora (página da landing ou backend, como a política); quando existir, a versão dele vira o valor de
+`TERMOS_VERSAO`. Os aceites gravados até lá são de um texto que ainda não existia.
 
 ## Limites conhecidos
 
