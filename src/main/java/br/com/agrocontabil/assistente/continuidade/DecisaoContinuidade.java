@@ -120,7 +120,7 @@ public final class DecisaoContinuidade {
   /** Custo do caminho da confirmação pela rota do par. */
   static CaminhoCota custoDaConfirmacao(ParConferido par) {
     CargaTurno carga = par.carga();
-    boolean bate = consultaBate(par);
+    boolean bate = consultaSemContradicao(par);
     return switch (carga.rota()) {
       case DADOS -> bate ? CaminhoCota.SEM_MODELO : CaminhoCota.NORMAL;
       case LEGISLACAO -> leiPorTextoFixo(par) ? CaminhoCota.SEM_MODELO : CaminhoCota.RECONFERENCIA;
@@ -135,8 +135,13 @@ public final class DecisaoContinuidade {
     };
   }
 
-  /** A consulta assinada do par bate com a pergunta dele (no dia do par). */
-  public static boolean consultaBate(ParConferido par) {
+  /**
+   * A consulta assinada do par pode ser reexecutada: a pergunta dele não a contradiz (no dia do
+   * par). A palavra que não aparece (sinônimo, NCM, situação com outro nome) não é prova de erro
+   * (#591): sem contradição explícita não há motivo para o modelo escolher outra consulta nem para
+   * a Ceres afirmar que corrige a resposta.
+   */
+  public static boolean consultaSemContradicao(ParConferido par) {
     CargaTurno carga = par.carga();
     if (carga.consulta() == null) {
       return false;
@@ -147,7 +152,7 @@ public final class DecisaoContinuidade {
       // mandariam ao modelo uma pergunta que se refaz sem ele.
       return true;
     }
-    return ConferenciaConsulta.bate(par.pergunta(), carga.consulta(),
+    return !ConferenciaConsulta.contradiz(par.pergunta(), carga.consulta(),
         ConferenciaConsulta.diaDoPar(carga.exp()));
   }
 

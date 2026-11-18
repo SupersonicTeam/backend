@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -140,22 +141,64 @@ class OrquestradorContinuidadeTest {
   }
 
   @Test
-  @DisplayName("Consulta de milho para pergunta de soja: o modelo escolhe de novo e 'corrijo'")
-  void consultaQueNaoBateCorrige() {
-    ParConferido par = parDeDados("quanto vendi de soja?",
-        List.of(chamada("totalVendasPorProduto", "{\"descricaoOuNcm\":\"milho\"}")),
-        "Vendeu R$ 5,00 de milho.");
-    when(rotaDados.responder(eq("quanto vendi de soja?"), any(), any(FontePergunta.class)))
-        .thenAnswer(inv -> {
+  @DisplayName("Consulta de outro mês que a pergunta contradiz: o modelo escolhe de novo e 'corrijo'")
+  void consultaContradizidaCorrige() {
+    ParConferido par = parDeDados("quanto vendi de soja no mês passado?",
+        List.of(chamada("totalVendasPorProduto", "{\"descricaoOuNcm\":\"soja\","
+            + "\"dataInicio\":\"2026-09-01\",\"dataFim\":\"2026-09-30\"}")),
+        "Vendeu R$ 5,00 de soja.");
+    when(rotaDados.responder(eq("quanto vendi de soja no mês passado?"), any(),
+        any(FontePergunta.class))).thenAnswer(inv -> {
           ContextoAssistente c = inv.getArgument(1);
-          c.registroTurno().registrarConsulta(List.of(
-              chamada("totalVendasPorProduto", "{\"descricaoOuNcm\":\"soja\"}")));
+          c.registroTurno().registrarConsulta(List.of(chamada("totalVendasPorProduto",
+              "{\"descricaoOuNcm\":\"soja\",\"dataInicio\":\"2026-10-01\","
+                  + "\"dataFim\":\"2026-10-31\"}")));
           return ResultadoRota.aceita("Vendeu R$ 9,00 de soja.");
         });
 
     ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.NORMAL));
 
-    assertThat(r.texto()).startsWith(Autocorrecao.CORRIJO.formatted("vendas de soja"));
+    assertThat(r.texto()).startsWith(Autocorrecao.CORRIJO.formatted("vendas de soja de 01/10/2026"
+        + " a 31/10/2026"));
+    verifyNoInteractions(classificador);
+  }
+
+  @Test
+  @DisplayName("Nota de outro número na consulta: a pergunta contradiz, 'corrijo'")
+  void notaDeOutroNumeroCorrige() {
+    ParConferido par = parDeDados("e a nota 13?", List.of(chamada("consultarNota",
+        "{\"numero\":12}")), "A nota 12 está autorizada.");
+    when(rotaDados.responder(eq("e a nota 13?"), any(), any(FontePergunta.class)))
+        .thenAnswer(inv -> {
+          ContextoAssistente c = inv.getArgument(1);
+          c.registroTurno().registrarConsulta(List.of(chamada("consultarNota",
+              "{\"numero\":13}")));
+          return ResultadoRota.aceita("A nota 13 foi rejeitada.");
+        });
+
+    ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.NORMAL));
+
+    assertThat(r.texto()).startsWith(Autocorrecao.CORRIJO.formatted("a nota 13"));
+  }
+
+  @Test
+  @DisplayName("Sinônimo ou NCM na consulta anterior: reexecuta a mesma, sem modelo e sem 'corrijo'")
+  void semProvaReexecutaSemCorrigir() {
+    // A consulta anterior estava certa: o modelo traduziu "adubo" para "fertilizante". A palavra
+    // não aparece na pergunta, mas nada a contradiz (#591).
+    ParConferido par = parDeDados("quanto comprei de adubo?", List.of(chamada(
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"fertilizante\"}")),
+        "Comprou R$ 5,00 de fertilizante.");
+    // Mesmo que a reexecução devolva valor diferente, nunca é "corrijo".
+    when(rotaDados.reexecutar(eq(par.carga().consulta()), eq(par.pergunta()), any()))
+        .thenReturn(ResultadoRota.aceita("Comprou R$ 9,00 de fertilizante."));
+
+    ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.SEM_MODELO));
+
+    assertThat(r.texto()).startsWith("Repeti a mesma consulta").doesNotContain("corrijo");
+    // A confirmação segue a rota gravada no par, sem reclassificar: par de dados não vira MISTO.
+    assertThat(r.rota()).isEqualTo(Intencao.DADOS);
+    verify(rotaDados, never()).responder(anyString(), any(), any(FontePergunta.class));
     verifyNoInteractions(classificador);
   }
 

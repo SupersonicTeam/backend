@@ -314,7 +314,7 @@ public class OrquestradorService {
       ContextoAssistente contexto) {
     List<ChamadaAssinada> anterior = par.carga().consulta();
     String hashAnterior = par.carga().dados();
-    if (anterior != null && DecisaoContinuidade.consultaBate(par)) {
+    if (anterior != null && DecisaoContinuidade.consultaSemContradicao(par)) {
       // Reexecucao sem modelo: a mesma consulta, pagando so a leitura da mensagem (#511).
       ResultadoRota refeita = rotaDados.reexecutar(anterior, par.pergunta(), contexto);
       if (Autocorrecao.FALHA_REEXECUCAO.equals(refeita.texto())) {
@@ -325,8 +325,8 @@ public class OrquestradorService {
       String abertura = aberturaDaReexecucao(anterior, hashAnterior, tipo, refeita, contexto);
       return new DadosDaConfirmacao(refeita, abertura, false);
     }
-    // Consulta que nao bate (ou par sem consulta): o modelo escolhe de novo sobre a pergunta do
-    // par. Fonte de numero: a pergunta so sem reescrita; senao, os argumentos executados agora.
+    // Consulta que a pergunta contradiz (ou par sem consulta): o modelo escolhe de novo sobre a
+    // pergunta do par. Palavra que nao aparece nao entra aqui (#591): so a contradicao e prova. Fonte de numero: a pergunta so sem reescrita; senao, os argumentos executados agora.
     FontePergunta fonte = par.carga().reescrita()
         ? FontePergunta.dosArgumentos() : FontePergunta.texto(par.pergunta());
     log.info("Ceres: {}", DesfechoContinuidade.CONFIRMACAO_COM_MODELO);
@@ -346,8 +346,10 @@ public class OrquestradorService {
     String abertura;
     if (mesmaConsulta) {
       abertura = aberturaDaReexecucao(anterior, hashAnterior, tipo, nova, contexto);
-    } else if (!mesmoResultado && ConferenciaConsulta.bate(par.pergunta(), executada,
-        contexto.hoje())) {
+    } else if (!mesmoResultado && ConferenciaConsulta.contradiz(par.pergunta(), anterior,
+        ConferenciaConsulta.diaDoPar(par.carga().exp()))
+        && ConferenciaConsulta.bate(par.pergunta(), executada, contexto.hoje())) {
+      // "Corrijo" so com a prova de que a consulta anterior estava errada (#591) e a nova coerente.
       log.info("Ceres: {}", DesfechoContinuidade.CORRIGIDA);
       abertura = Autocorrecao.CORRIJO.formatted(descricao);
     } else if (mesmoResultado) {

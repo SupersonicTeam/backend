@@ -435,7 +435,7 @@ br.com.agrocontabil
 │                  #   (assinatura em security/AssinaturaHistoricoConversa), CargaTurno/CodecCarga,
 │                  #   EmissaoTurno, DecisaoContinuidade (caminho e custo antes da reserva),
 │                  #   MensagemContinuidade, GatilhoReescrita, ConferenciaConsulta, Autocorrecao,
-│                  #   ReescritaContinuidade e ReconferenciaLei; RotaDados.reexecutar; FontePergunta;
+│                  #   ReescritaContinuidade e ReconferenciaLei; ConferenciaConsulta (#591: cada regra dá `PASSA`, `SEM_PROVA` — a palavra não aparece, como sinônimo, NCM ou situação com outro nome — ou `CONTRADIZ`; só a contradição, `contradiz`, manda o modelo escolher de novo no "tem certeza?" de dados e autoriza o "corrijo"; sem ela a consulta anterior é reexecutada sem modelo, `DecisaoContinuidade.consultaSemContradicao`); RotaDados.reexecutar; FontePergunta;
 │                  #   ContextoAssistente.chamar = ponto único das chamadas ao modelo (#499);
 │                  # rag/ (FatiadorDispositivos, IngestaoLegislacaoService + runner no profile
 │                  # "ingestao", BuscaLegislacaoService, ValidadorCitacao,

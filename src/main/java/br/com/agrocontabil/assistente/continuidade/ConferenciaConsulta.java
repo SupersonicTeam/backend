@@ -37,6 +37,13 @@ import org.springframework.ai.chat.model.Generation;
  *
  * <p>Funções sem argumento passam. O erro de função não é pego aqui: a abertura diz o que foi
  * consultado, e o produtor pode contestar.
+ *
+ * <p>Cada regra dá um de três níveis (#591): {@link Nivel#PASSA}, {@link Nivel#SEM_PROVA} (a
+ * palavra não aparece na pergunta, mas nada nela contradiz a consulta: o modelo troca "adubo" por
+ * "fertilizante" e o produto por NCM de propósito) e {@link Nivel#CONTRADIZ} (a pergunta diz outra
+ * coisa: outra nota, outro mês, outra situação, compra no lugar de venda). {@link #bate} exige que
+ * todas passem; {@link #contradiz} é a **prova de que a consulta anterior estava errada**: só ela
+ * autoriza o modelo a escolher de novo e a Ceres a afirmar "corrijo".
  */
 public final class ConferenciaConsulta {
 
@@ -53,6 +60,10 @@ public final class ConferenciaConsulta {
       "aprov", Set.of("APROVADA", "AGUARDANDO_APROVACAO"),
       "revis", Set.of("AGUARDANDO_APROVACAO"));
 
+  /** A pergunta fala de um NCM: a palavra, ou um código com seis dígitos ou mais ou com ponto. */
+  private static final Pattern NCM_NA_PERGUNTA = Pattern.compile(
+      "\\bncm\\b|\\d{4}\\.\\d{2}|\\d{6,}");
+
   private static final Pattern NOTA_N = Pattern.compile("\\bnota (?:n |no |numero )?(\\d+)\\b");
 
   /** Mês nomeado na pergunta normalizada, com o ano opcional ("setembro de 2026"). */
@@ -61,6 +72,20 @@ public final class ConferenciaConsulta {
 
   private static final List<String> MESES = List.of("janeiro", "fevereiro", "marco", "abril",
       "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro");
+
+  /** O que uma regra conclui sobre a consulta, vista a partir da pergunta. */
+  enum Nivel {
+    /** A consulta é coerente com o que a regra lê na pergunta. */
+    PASSA,
+    /** O texto da pergunta não mostra a consulta, mas nada nele a contradiz. */
+    SEM_PROVA,
+    /** A pergunta diz explicitamente outra coisa. */
+    CONTRADIZ;
+
+    Nivel pior(Nivel outro) {
+      return outro.ordinal() > ordinal() ? outro : this;
+    }
+  }
 
   private ConferenciaConsulta() {
   }
@@ -89,15 +114,42 @@ public final class ConferenciaConsulta {
     if (consulta == null || consulta.isEmpty()) {
       return false;
     }
-    String normal = TextoContinuidade.normalizar(pergunta);
-    List<String> palavras = TextoContinuidade.palavras(normal);
-    return produtos(normal, palavras, consulta) && notas(normal, consulta)
-        && situacoes(palavras, consulta) && tipos(palavras, consulta)
-        && periodo(pergunta, consulta, diaDoPar);
+    return avaliar(pergunta, consulta, diaDoPar) == Nivel.PASSA;
   }
 
-  static boolean produtos(String normal, List<String> palavras, List<ChamadaAssinada> consulta) {
+  /**
+   * {@code true} se a pergunta contradiz a consulta: a prova de que ela estava errada (#591). A
+   * palavra que não aparece (produto ou situação com outro nome, NCM) não é prova. Consulta vazia
+   * ou ausente não tem o que contradizer.
+   *
+   * @param pergunta pergunta do par
+   * @param consulta consulta assinada
+   * @param diaDoPar dia do par, para o período relativo
+   * @return se alguma regra encontrou contradição explícita
+   */
+  public static boolean contradiz(String pergunta, List<ChamadaAssinada> consulta,
+      LocalDate diaDoPar) {
+    if (consulta == null || consulta.isEmpty()) {
+      return false;
+    }
+    return avaliar(pergunta, consulta, diaDoPar) == Nivel.CONTRADIZ;
+  }
+
+  /** O pior nível entre as cinco regras. */
+  private static Nivel avaliar(String pergunta, List<ChamadaAssinada> consulta,
+      LocalDate diaDoPar) {
+    String normal = TextoContinuidade.normalizar(pergunta);
+    List<String> palavras = TextoContinuidade.palavras(normal);
+    return produtos(normal, palavras, consulta)
+        .pior(notas(normal, consulta))
+        .pior(situacoes(palavras, consulta))
+        .pior(tipos(palavras, consulta))
+        .pior(periodo(pergunta, consulta, diaDoPar));
+  }
+
+  static Nivel produtos(String normal, List<String> palavras, List<ChamadaAssinada> consulta) {
     String digitosPergunta = normal.replaceAll("\\D", "");
+    Nivel nivel = Nivel.PASSA;
     for (ChamadaAssinada c : consulta) {
       for (String nome : List.of("descricaoOuNcm", "produtoOuNcm")) {
         String valor = c.argumento(nome);
@@ -110,46 +162,53 @@ public final class ConferenciaConsulta {
             if (palavra.length() >= 3 && !TextoContinuidade.VAZIAS.contains(palavra)
                 && !TextoContinuidade.numero(palavra)
                 && !TextoContinuidade.contemPorPrefixo(palavras, palavra)) {
-              return false;
+              // Sinônimo ("adubo" por "fertilizante") ou outro produto: o texto não distingue.
+              nivel = nivel.pior(Nivel.SEM_PROVA);
             }
           }
         } else {
           String digitos = normalValor.replaceAll("\\D", "");
           if (!digitos.isEmpty() && !digitosPergunta.contains(digitos)) {
-            return false;
+            // O NCM que o modelo escolheu para um nome não é erro; outro NCM dito na pergunta é.
+            nivel = nivel.pior(NCM_NA_PERGUNTA.matcher(normal).find() ? Nivel.CONTRADIZ
+                : Nivel.SEM_PROVA);
           }
         }
       }
     }
-    return true;
+    return nivel;
   }
 
-  static boolean notas(String normal, List<ChamadaAssinada> consulta) {
+  static Nivel notas(String normal, List<ChamadaAssinada> consulta) {
     Set<String> consultadas = new HashSet<>();
+    Nivel nivel = Nivel.PASSA;
+    List<String> numerosDaPergunta = TextoContinuidade.numeros(normal).stream()
+        .map(n -> n.replaceFirst("^0+(?=\\d)", "")).toList();
     for (ChamadaAssinada c : consulta) {
       if ("consultarNota".equals(c.funcao())) {
         String numero = c.argumento("numero");
         if (numero == null) {
-          return false;
+          nivel = nivel.pior(Nivel.SEM_PROVA);
+          continue;
         }
         String semZeros = numero.replaceFirst("^0+(?=\\d)", "");
         consultadas.add(semZeros);
-        if (!TextoContinuidade.numeros(normal).stream()
-            .map(n -> n.replaceFirst("^0+(?=\\d)", "")).toList().contains(semZeros)) {
-          return false;
+        if (!numerosDaPergunta.contains(semZeros)) {
+          // Sem número na pergunta ("nota doze") não há com o que comparar.
+          nivel = nivel.pior(numerosDaPergunta.isEmpty() ? Nivel.SEM_PROVA : Nivel.CONTRADIZ);
         }
       }
     }
     Matcher m = NOTA_N.matcher(normal);
     while (m.find()) {
       if (!consultadas.contains(m.group(1).replaceFirst("^0+(?=\\d)", ""))) {
-        return false;
+        nivel = nivel.pior(Nivel.CONTRADIZ);
       }
     }
-    return true;
+    return nivel;
   }
 
-  static boolean situacoes(List<String> palavras, List<ChamadaAssinada> consulta) {
+  static Nivel situacoes(List<String> palavras, List<ChamadaAssinada> consulta) {
     Set<String> pedidasNaPergunta = new HashSet<>();
     for (Map.Entry<String, Set<String>> e : SITUACAO_POR_RADICAL.entrySet()) {
       if (palavras.stream().anyMatch(p -> p.startsWith(e.getKey()))) {
@@ -158,15 +217,20 @@ public final class ConferenciaConsulta {
     }
     Set<String> situacoesConsultadas = new HashSet<>();
     boolean amplo = false;
+    boolean listaNotas = false;
+    Nivel nivel = Nivel.PASSA;
     for (ChamadaAssinada c : consulta) {
       if ("listarNotas".equals(c.funcao())) {
+        listaNotas = true;
         String situacao = c.argumento("situacao");
         if (situacao != null && !situacao.isBlank()) {
           String s = situacao.strip().toUpperCase(java.util.Locale.ROOT);
           boolean nomeada = SITUACAO_POR_RADICAL.entrySet().stream()
               .anyMatch(e -> e.getValue().contains(s) && pedidasNaPergunta.contains(e.getKey()));
           if (!nomeada) {
-            return false;
+            // A situação com outro nome ("deram problema") é só texto; a pergunta que nomeia
+            // outra situação contradiz.
+            nivel = nivel.pior(pedidasNaPergunta.isEmpty() ? Nivel.SEM_PROVA : Nivel.CONTRADIZ);
           }
           situacoesConsultadas.add(s);
         }
@@ -175,42 +239,46 @@ public final class ConferenciaConsulta {
       }
     }
     if (amplo) {
-      return true;
+      return nivel;
     }
     for (String radical : pedidasNaPergunta) {
       boolean coberta = SITUACAO_POR_RADICAL.get(radical).stream()
           .anyMatch(situacoesConsultadas::contains);
       if (!coberta) {
-        return false;
+        // Só a lista de notas carrega a situação; "aproveitamento do crédito" casa "aprov" e a
+        // consulta de crédito nunca teria o filtro.
+        nivel = nivel.pior(listaNotas ? Nivel.CONTRADIZ : Nivel.SEM_PROVA);
       }
     }
-    return true;
+    return nivel;
   }
 
-  static boolean tipos(List<String> palavras, List<ChamadaAssinada> consulta) {
+  static Nivel tipos(List<String> palavras, List<ChamadaAssinada> consulta) {
     boolean compra = palavras.stream().anyMatch(p -> p.startsWith("compr"));
     boolean venda = palavras.stream().anyMatch(p -> p.startsWith("vend"));
+    Nivel nivel = Nivel.PASSA;
     for (ChamadaAssinada c : consulta) {
       if ("listarNotas".equals(c.funcao())) {
         String tipo = c.argumento("tipo");
+        // As duas palavras juntas ("a compra que entrou na venda") não dizem qual é o tipo.
         if ("SAIDA".equalsIgnoreCase(tipo) && compra) {
-          return false;
+          nivel = nivel.pior(venda ? Nivel.SEM_PROVA : Nivel.CONTRADIZ);
         }
         if ("ENTRADA".equalsIgnoreCase(tipo) && venda) {
-          return false;
+          nivel = nivel.pior(compra ? Nivel.SEM_PROVA : Nivel.CONTRADIZ);
         }
       }
     }
-    return true;
+    return nivel;
   }
 
-  static boolean periodo(String pergunta, List<ChamadaAssinada> consulta, LocalDate diaDoPar) {
+  static Nivel periodo(String pergunta, List<ChamadaAssinada> consulta, LocalDate diaDoPar) {
     Optional<PeriodoDaPergunta.Periodo> periodo = PeriodoDaPergunta.resolver(pergunta, diaDoPar);
     if (periodo.isEmpty()) {
       // O PeriodoDaPergunta so resolve periodo relativo; o mes nomeado ("em setembro") fica com
       // o modelo. Sem esta conferencia, a consulta de outro mes "batia" e a confirmacao a
       // reexecutava dizendo que o resultado e o mesmo.
-      return mesesNomeados(pergunta, consulta);
+      return mesesNomeados(pergunta, consulta) ? Nivel.PASSA : Nivel.CONTRADIZ;
     }
     return comoPeriodoAplicado(consulta, periodo.get());
   }
@@ -263,7 +331,7 @@ public final class ConferenciaConsulta {
         && (n[1] == 0 || n[1] == data.getYear()));
   }
 
-  private static boolean comoPeriodoAplicado(List<ChamadaAssinada> consulta,
+  private static Nivel comoPeriodoAplicado(List<ChamadaAssinada> consulta,
       PeriodoDaPergunta.Periodo periodo) {
     List<AssistantMessage.ToolCall> chamadas = new ArrayList<>();
     for (int i = 0; i < consulta.size(); i++) {
@@ -279,8 +347,9 @@ public final class ConferenciaConsulta {
         .map(t -> ChamadaAssinada.de(t.name(), t.arguments()).orElse(null))
         .toList();
     if (depois.contains(null)) {
-      return false;
+      return Nivel.SEM_PROVA;
     }
-    return ChamadaAssinada.multiconjunto(depois).equals(ChamadaAssinada.multiconjunto(consulta));
+    return ChamadaAssinada.multiconjunto(depois).equals(ChamadaAssinada.multiconjunto(consulta))
+        ? Nivel.PASSA : Nivel.CONTRADIZ;
   }
 }
