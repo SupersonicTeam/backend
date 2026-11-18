@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,17 @@ public final class ConferenciaConsulta {
    */
   private static final Pattern NCM_NA_PERGUNTA = Pattern.compile(
       "\\bncm\\b|\\d{4}\\.\\d{2}|\\b\\d{8}\\b");
+
+  /** O código de NCM dito na pergunta: depois da palavra "ncm", com ponto ou corrido (8 dígitos). */
+  private static final Pattern NCM_CODIGO = Pattern.compile(
+      "\\bncm\\b[:\\s]*(\\d[\\d.]{3,})|(\\d{4}\\.\\d{2}[\\d.]*)|\\b(\\d{8})\\b");
+
+  /** Os argumentos de função que carregam o produto. */
+  private static final List<String> ARGUMENTOS_DE_PRODUTO = List.of("descricaoOuNcm",
+      "produtoOuNcm");
+
+  /** Quantas palavras da pergunta a resolução de produto consulta, no máximo. */
+  private static final int TERMOS_MAXIMOS = 10;
 
   private static final Pattern NOTA_N = Pattern.compile("\\bnota (?:n |no |numero )?(\\d+)\\b");
 
@@ -132,54 +144,181 @@ public final class ConferenciaConsulta {
    */
   public static boolean contradiz(String pergunta, List<ChamadaAssinada> consulta,
       LocalDate diaDoPar) {
+    return contradiz(pergunta, consulta, diaDoPar, ResolucaoProduto.NENHUMA);
+  }
+
+  /**
+   * Como {@link #contradiz(String, List, LocalDate)}, com a resolução de produto: o produto da
+   * consulta que a pergunta não traz só é erro se a tabela mostrar que a pergunta fala de outro
+   * produto. Termo que não se resolve não é prova.
+   *
+   * @param pergunta  pergunta do par
+   * @param consulta  consulta assinada
+   * @param diaDoPar  dia do par
+   * @param resolucao de que produto um termo fala
+   * @return se alguma regra encontrou contradição explícita
+   */
+  public static boolean contradiz(String pergunta, List<ChamadaAssinada> consulta,
+      LocalDate diaDoPar, ResolucaoProduto resolucao) {
     if (consulta == null || consulta.isEmpty()) {
       return false;
     }
-    return avaliar(pergunta, consulta, diaDoPar) == Nivel.CONTRADIZ;
+    return avaliar(pergunta, consulta, diaDoPar, resolucao) == Nivel.CONTRADIZ;
   }
 
-  /** O pior nível entre as cinco regras. */
+  /**
+   * A prova para afirmar "corrijo" (#591): a consulta anterior é contradita pelo que a pergunta
+   * diz (nota, mês, situação, tipo, NCM) ou, só pelo produto, quando a tabela mostra que o produto
+   * da consulta nova é outro, de outra posição de NCM, e não outro nome do mesmo.
+   *
+   * @param pergunta  pergunta do par
+   * @param anterior  consulta do par
+   * @param executada consulta que o modelo escolheu agora
+   * @param diaDoPar  dia do par
+   * @param resolucao de que produto um termo fala
+   * @return se a correção está provada
+   */
+  public static boolean correcaoProvada(String pergunta, List<ChamadaAssinada> anterior,
+      List<ChamadaAssinada> executada, LocalDate diaDoPar, ResolucaoProduto resolucao) {
+    if (contradiz(pergunta, anterior, diaDoPar, ResolucaoProduto.NENHUMA)) {
+      return true;
+    }
+    if (!contradiz(pergunta, anterior, diaDoPar, resolucao)) {
+      return false;
+    }
+    Set<String> doAnterior = familiasDosProdutos(anterior, diaDoPar, resolucao);
+    Set<String> daNova = familiasDosProdutos(executada, diaDoPar, resolucao);
+    return !doAnterior.isEmpty() && !daNova.isEmpty() && Collections.disjoint(doAnterior, daNova);
+  }
+
+  private static Set<String> familiasDosProdutos(List<ChamadaAssinada> consulta, LocalDate dia,
+      ResolucaoProduto resolucao) {
+    Set<String> familias = new HashSet<>();
+    for (ChamadaAssinada c : consulta) {
+      for (String nome : ARGUMENTOS_DE_PRODUTO) {
+        String valor = c.argumento(nome);
+        if (valor != null && !valor.isBlank()) {
+          familias.addAll(resolucao.familias(valor, dia));
+        }
+      }
+    }
+    return familias;
+  }
+
+  /** O pior nível entre as cinco regras, sem resolução de produto. */
   private static Nivel avaliar(String pergunta, List<ChamadaAssinada> consulta,
       LocalDate diaDoPar) {
+    return avaliar(pergunta, consulta, diaDoPar, ResolucaoProduto.NENHUMA);
+  }
+
+  private static Nivel avaliar(String pergunta, List<ChamadaAssinada> consulta,
+      LocalDate diaDoPar, ResolucaoProduto resolucao) {
     String normal = TextoContinuidade.normalizar(pergunta);
     List<String> palavras = TextoContinuidade.palavras(normal);
-    return produtos(normal, palavras, consulta)
+    return produtos(normal, palavras, consulta, resolucao, diaDoPar)
         .pior(notas(normal, consulta))
         .pior(situacoes(palavras, consulta))
         .pior(tipos(palavras, consulta))
         .pior(periodo(pergunta, consulta, diaDoPar));
   }
 
-  static Nivel produtos(String normal, List<String> palavras, List<ChamadaAssinada> consulta) {
+  static Nivel produtos(String normal, List<String> palavras, List<ChamadaAssinada> consulta,
+      ResolucaoProduto resolucao, LocalDate dia) {
     String digitosPergunta = normal.replaceAll("\\D", "");
     Nivel nivel = Nivel.PASSA;
     for (ChamadaAssinada c : consulta) {
-      for (String nome : List.of("descricaoOuNcm", "produtoOuNcm")) {
+      for (String nome : ARGUMENTOS_DE_PRODUTO) {
         String valor = c.argumento(nome);
         if (valor == null || valor.isBlank()) {
           continue;
         }
         String normalValor = TextoContinuidade.normalizar(valor);
+        boolean ausente = false;
         if (normalValor.chars().anyMatch(Character::isLetter)) {
           for (String palavra : TextoContinuidade.palavras(normalValor)) {
             if (palavra.length() >= 3 && !TextoContinuidade.VAZIAS.contains(palavra)
                 && !TextoContinuidade.numero(palavra)
                 && !TextoContinuidade.contemPorPrefixo(palavras, palavra)) {
-              // Sinônimo ("adubo" por "fertilizante") ou outro produto: o texto não distingue.
-              nivel = nivel.pior(Nivel.SEM_PROVA);
+              ausente = true;
             }
           }
         } else {
           String digitos = normalValor.replaceAll("\\D", "");
-          if (!digitos.isEmpty() && !digitosPergunta.contains(digitos)) {
-            // O NCM que o modelo escolheu para um nome não é erro; outro NCM dito na pergunta é.
-            nivel = nivel.pior(NCM_NA_PERGUNTA.matcher(normal).find() ? Nivel.CONTRADIZ
-                : Nivel.SEM_PROVA);
+          ausente = !digitos.isEmpty() && !digitosPergunta.contains(digitos);
+          if (ausente && NCM_NA_PERGUNTA.matcher(normal).find()) {
+            // Outro NCM dito na pergunta contradiz o da consulta.
+            nivel = nivel.pior(Nivel.CONTRADIZ);
+            continue;
           }
+        }
+        if (ausente) {
+          // A palavra ausente (sinônimo, NCM escolhido pelo modelo) não é erro. Só a tabela prova
+          // que a pergunta fala de outro produto.
+          nivel = nivel.pior(outroProduto(valor, normalValor, normal, resolucao, dia)
+              ? Nivel.CONTRADIZ : Nivel.SEM_PROVA);
         }
       }
     }
     return nivel;
+  }
+
+  /**
+   * A tabela mostra que a pergunta fala de outro produto que o da consulta (#591): o produto da
+   * consulta se resolve a uma posição de NCM e todo termo da pergunta que se resolve cai em outra.
+   * Termo da pergunta que é parte do produto da consulta ("farinha" em "farinha de trigo"), que
+   * coincide com ele ou que não se resolve não prova nada; sem termo resolvido, também não.
+   */
+  private static boolean outroProduto(String valor, String normalValor, String normal,
+      ResolucaoProduto resolucao, LocalDate dia) {
+    Set<String> doValor = resolucao.familias(valor, dia);
+    if (doValor.isEmpty()) {
+      return false;
+    }
+    List<String> palavrasDoValor = TextoContinuidade.palavras(normalValor).stream()
+        .filter(TextoContinuidade::conteudo).toList();
+    List<String> termos = termosDeProdutoDaPergunta(normal);
+    List<String> consultas = new ArrayList<>(termos);
+    List<String> palavras = termos.stream().filter(t -> !TextoContinuidade.numero(t)).toList();
+    if (palavras.size() > 1) {
+      // As palavras juntas acham o produto que as casa todas ("farelo" e "soja" dão o farelo de
+      // soja); cada uma sozinha só acha o que ela mais casa, entre muitos empates.
+      consultas.add(0, String.join(" ", palavras));
+    }
+    boolean resolveu = false;
+    for (String termo : consultas) {
+      if (palavrasDoValor.stream().anyMatch(p -> p.startsWith(termo) || termo.startsWith(p))) {
+        return false;
+      }
+      Set<String> familias = resolucao.familias(termo, dia);
+      if (familias.isEmpty()) {
+        continue;
+      }
+      if (!Collections.disjoint(doValor, familias)) {
+        return false;
+      }
+      resolveu = true;
+    }
+    return resolveu;
+  }
+
+  /** O NCM dito na pergunta e as palavras de conteúdo dela, até {@link #TERMOS_MAXIMOS}. */
+  private static List<String> termosDeProdutoDaPergunta(String normal) {
+    List<String> termos = new ArrayList<>();
+    Matcher codigo = NCM_CODIGO.matcher(normal);
+    while (codigo.find()) {
+      String bruto = codigo.group(1) != null ? codigo.group(1)
+          : codigo.group(2) != null ? codigo.group(2) : codigo.group(3);
+      termos.add(bruto.replaceAll("\\D", ""));
+    }
+    for (String palavra : TextoContinuidade.palavras(normal)) {
+      if (termos.size() >= TERMOS_MAXIMOS) {
+        break;
+      }
+      if (TextoContinuidade.conteudo(palavra) && !TextoContinuidade.numero(palavra)) {
+        termos.add(palavra);
+      }
+    }
+    return termos;
   }
 
   static Nivel notas(String normal, List<ChamadaAssinada> consulta) {

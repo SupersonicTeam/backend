@@ -80,6 +80,21 @@ public final class DecisaoContinuidade {
    */
   public static Decisao decidir(String mensagem, HistoricoConferido historico,
       boolean ultimaRespostaSemTurno) {
+    return decidir(mensagem, historico, ultimaRespostaSemTurno, ResolucaoProduto.NENHUMA);
+  }
+
+  /**
+   * Decide o caminho com a resolução de produto (#591): o produto da consulta anterior só é erro
+   * se a tabela mostrar que a pergunta fala de outro produto.
+   *
+   * @param mensagem              mensagem nova
+   * @param historico             histórico conferido
+   * @param ultimaRespostaSemTurno a última mensagem da Ceres na tela não trouxe {@code turno}
+   * @param resolucao             de que produto um termo fala
+   * @return a decisão
+   */
+  public static Decisao decidir(String mensagem, HistoricoConferido historico,
+      boolean ultimaRespostaSemTurno, ResolucaoProduto resolucao) {
     if (AtalhosFixos.ehAtalho(mensagem)) {
       return new Decisao(Caminho.ATALHO, CaminhoCota.SEM_MODELO, historico, Optional.empty(),
           MensagemContinuidade.Tipo.NENHUMA, null);
@@ -106,7 +121,7 @@ public final class DecisaoContinuidade {
     ParConferido par = historico.ultimo().orElseThrow();
     MensagemContinuidade.Tipo tipo = MensagemContinuidade.ler(mensagem, par);
     if (tipo.caminhoDaConfirmacao()) {
-      return new Decisao(Caminho.CONFIRMACAO, custoDaConfirmacao(par), historico,
+      return new Decisao(Caminho.CONFIRMACAO, custoDaConfirmacao(par, resolucao), historico,
           Optional.of(par), tipo, null);
     }
     if (GatilhoReescrita.dispara(mensagem, tipo)) {
@@ -119,8 +134,12 @@ public final class DecisaoContinuidade {
 
   /** Custo do caminho da confirmação pela rota do par. */
   static CaminhoCota custoDaConfirmacao(ParConferido par) {
+    return custoDaConfirmacao(par, ResolucaoProduto.NENHUMA);
+  }
+
+  static CaminhoCota custoDaConfirmacao(ParConferido par, ResolucaoProduto resolucao) {
     CargaTurno carga = par.carga();
-    boolean bate = consultaSemContradicao(par);
+    boolean bate = consultaSemContradicao(par, resolucao);
     return switch (carga.rota()) {
       case DADOS -> bate ? CaminhoCota.SEM_MODELO : CaminhoCota.NORMAL;
       case LEGISLACAO -> leiPorTextoFixo(par) ? CaminhoCota.SEM_MODELO : CaminhoCota.RECONFERENCIA;
@@ -142,6 +161,18 @@ public final class DecisaoContinuidade {
    * a Ceres afirmar que corrige a resposta.
    */
   public static boolean consultaSemContradicao(ParConferido par) {
+    return consultaSemContradicao(par, ResolucaoProduto.NENHUMA);
+  }
+
+  /**
+   * Como {@link #consultaSemContradicao(ParConferido)}, com a resolução de produto: o produto da
+   * consulta que a pergunta não traz só a contradiz se a tabela mostrar outro produto.
+   *
+   * @param par       par de dados
+   * @param resolucao de que produto um termo fala
+   * @return se a consulta pode ser reexecutada
+   */
+  public static boolean consultaSemContradicao(ParConferido par, ResolucaoProduto resolucao) {
     CargaTurno carga = par.carga();
     if (carga.consulta() == null) {
       return false;
@@ -153,7 +184,7 @@ public final class DecisaoContinuidade {
       return true;
     }
     return !ConferenciaConsulta.contradiz(par.pergunta(), carga.consulta(),
-        ConferenciaConsulta.diaDoPar(carga.exp()));
+        ConferenciaConsulta.diaDoPar(carga.exp()), resolucao);
   }
 
   /**

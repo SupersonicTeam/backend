@@ -6,7 +6,11 @@ import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.config.CaminhoCota;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -180,6 +184,167 @@ class ProvaDeIncoerenciaTest {
         new CargaTurno(EXP, Intencao.DADOS, false, null, null, null, false, null), 0, false);
 
     assertThat(DecisaoContinuidade.consultaSemContradicao(par)).isFalse();
+  }
+
+  // --- o que o backend sabe de produto (#591) ---
+
+  /** A tabela de produto do teste: termo → posições de NCM. */
+  private static ResolucaoProduto tabela(String... paresTermoFamilia) {
+    Map<String, Set<String>> mapa = new HashMap<>();
+    for (int i = 0; i < paresTermoFamilia.length; i += 2) {
+      mapa.computeIfAbsent(paresTermoFamilia[i], k -> new HashSet<>())
+          .add(paresTermoFamilia[i + 1]);
+    }
+    return (termo, dia) -> mapa.getOrDefault(termo, Set.of());
+  }
+
+  @Test
+  @DisplayName("Mesmo produto com outro nome: a tabela põe os dois na mesma família, sem prova")
+  void mesmoProdutoOutroNome() {
+    ResolucaoProduto tabela = tabela("fertilizante", "ncm:3105", "adubo", "ncm:3105");
+    List<ChamadaAssinada> consulta = List.of(chamada("totalComprasPorInsumo",
+        "{\"descricaoOuNcm\":\"fertilizante\"}"));
+
+    assertThat(ConferenciaConsulta.contradiz("quanto comprei de adubo?", consulta, DIA, tabela))
+        .isFalse();
+  }
+
+  @Test
+  @DisplayName("NCM do modelo para o nome da pergunta: a mesma posição, sem prova")
+  void ncmDoMesmoProduto() {
+    ResolucaoProduto tabela = tabela("soja", "ncm:1201", "12019000", "ncm:1201");
+    List<ChamadaAssinada> consulta = List.of(chamada("totalVendasPorProduto",
+        "{\"descricaoOuNcm\":\"12019000\"}"));
+
+    assertThat(ConferenciaConsulta.contradiz("quanto vendi de soja em grão?", consulta, DIA,
+        tabela)).isFalse();
+  }
+
+  @Test
+  @DisplayName("Outro produto: a tabela põe os dois em posições diferentes, é prova")
+  void outroProduto() {
+    ResolucaoProduto tabela = tabela("milho", "ncm:1005", "soja", "ncm:1201");
+    List<ChamadaAssinada> milho = List.of(chamada("totalVendasPorProduto",
+        "{\"descricaoOuNcm\":\"milho\"}"));
+
+    assertThat(ConferenciaConsulta.contradiz("quanto vendi de soja?", milho, DIA, tabela))
+        .isTrue();
+    // Sem a tabela, a mesma pergunta não prova nada.
+    assertThat(ConferenciaConsulta.contradiz("quanto vendi de soja?", milho, DIA)).isFalse();
+  }
+
+  @Test
+  @DisplayName("NCM dito na pergunta de outro produto que o nome da consulta é prova")
+  void ncmDaPerguntaDeOutroProduto() {
+    ResolucaoProduto tabela = tabela("milho", "ncm:1005", "12019000", "ncm:1201");
+    List<ChamadaAssinada> milho = List.of(chamada("totalVendasPorProduto",
+        "{\"descricaoOuNcm\":\"milho\"}"));
+
+    assertThat(ConferenciaConsulta.contradiz("vendas do produto de NCM 1201.90.00", milho, DIA,
+        tabela)).isTrue();
+  }
+
+  @Test
+  @DisplayName("Termo que a tabela não resolve, do lado da consulta ou da pergunta: sem prova")
+  void termoQueNaoSeResolve() {
+    List<ChamadaAssinada> consulta = List.of(chamada("totalComprasPorInsumo",
+        "{\"descricaoOuNcm\":\"fertilizante\"}"));
+
+    // O produto da consulta não se resolve.
+    assertThat(ConferenciaConsulta.contradiz("quanto comprei de adubo?", consulta, DIA,
+        tabela("adubo", "ncm:3105"))).isFalse();
+    // Nenhum termo da pergunta se resolve.
+    assertThat(ConferenciaConsulta.contradiz("quanto comprei de adubo?", consulta, DIA,
+        tabela("fertilizante", "ncm:3105"))).isFalse();
+  }
+
+  @Test
+  @DisplayName("Termo da pergunta que é parte do produto da consulta, e ano, não provam nada")
+  void parteDoProdutoEAno() {
+    ResolucaoProduto tabela = tabela("farinha", "ncm:1102", "trigo", "ncm:1101",
+        "farinha de trigo", "ncm:1101", "2026", "ncm:2026", "insumo", "ncm:9999",
+        "adubo", "ncm:3105");
+    List<ChamadaAssinada> farinhaDeTrigo = List.of(chamada("totalVendasPorProduto",
+        "{\"descricaoOuNcm\":\"farinha de trigo\"}"));
+
+    assertThat(ConferenciaConsulta.contradiz("quanto vendi de farinha?", farinhaDeTrigo, DIA,
+        tabela)).isFalse();
+    // "insumo" resolve a outra posição: prova. O ano não entra como NCM (próxima asserção).
+    assertThat(ConferenciaConsulta.contradiz("compras de insumo em 2026", List.of(chamada(
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"adubo\"}")), DIA, tabela))
+        .isTrue();
+    assertThat(ConferenciaConsulta.contradiz("compras em 2026", List.of(chamada(
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"adubo\"}")), DIA,
+        tabela("adubo", "ncm:3105", "2026", "ncm:2026"))).isFalse();
+  }
+
+  @Test
+  @DisplayName("Palavras sozinhas caem em outras posições, juntas no NCM da consulta: sem prova")
+  void fraseInteiraAchaOProduto() {
+    // "farelo" sozinho e "soja" sozinho acham outras posições; juntos, o farelo de soja (2304),
+    // que é o NCM que o modelo escolheu.
+    ResolucaoProduto tabela = (termo, dia) -> {
+      if (termo.contains("farelo") && termo.contains("soja")) {
+        return Set.of("ncm:2304");
+      }
+      return switch (termo) {
+        case "farelo" -> Set.of("ncm:2302");
+        case "soja" -> Set.of("ncm:1201");
+        case "23040090" -> Set.of("ncm:2304");
+        default -> Set.of();
+      };
+    };
+    List<ChamadaAssinada> consulta = List.of(chamada("totalVendasPorProduto",
+        "{\"descricaoOuNcm\":\"23040090\"}"));
+
+    assertThat(ConferenciaConsulta.contradiz("quanto vendi de farelo de soja?", consulta, DIA,
+        tabela)).isFalse();
+  }
+
+  @Test
+  @DisplayName("Correção provada: outro produto na tabela; mesma família na consulta nova, não")
+  void correcaoProvada() {
+    ResolucaoProduto tabela = tabela("milho", "ncm:1005", "soja", "ncm:1201",
+        "fertilizante", "ncm:3105", "fertilizante organico", "ncm:3105", "organico", "ncm:0709");
+    List<ChamadaAssinada> milho = List.of(chamada("totalVendasPorProduto",
+        "{\"descricaoOuNcm\":\"milho\"}"));
+    List<ChamadaAssinada> soja = List.of(chamada("totalVendasPorProduto",
+        "{\"descricaoOuNcm\":\"soja\"}"));
+
+    assertThat(ConferenciaConsulta.correcaoProvada("quanto vendi de soja?", milho, soja, DIA,
+        tabela)).isTrue();
+    // Mês nomeado diferente é prova sem a tabela.
+    assertThat(ConferenciaConsulta.correcaoProvada("quanto vendi de soja em setembro?",
+        List.of(chamada("totalVendasPorProduto", "{\"descricaoOuNcm\":\"soja\","
+            + "\"dataInicio\":\"2026-10-01\",\"dataFim\":\"2026-10-31\"}")), soja, DIA,
+        ResolucaoProduto.NENHUMA)).isTrue();
+    // A pergunta contradiz pelo produto, mas a consulta nova é da mesma família da anterior.
+    List<ChamadaAssinada> fertilizante = List.of(chamada("totalComprasPorInsumo",
+        "{\"descricaoOuNcm\":\"fertilizante\"}"));
+    List<ChamadaAssinada> organico = List.of(chamada("totalComprasPorInsumo",
+        "{\"descricaoOuNcm\":\"fertilizante organico\"}"));
+    assertThat(ConferenciaConsulta.contradiz("quanto comprei de insumo organico?", fertilizante,
+        DIA, tabela)).isTrue();
+    assertThat(ConferenciaConsulta.correcaoProvada("quanto comprei de insumo organico?",
+        fertilizante, organico, DIA, tabela)).isFalse();
+  }
+
+  @Test
+  @DisplayName("Decisão: outro produto vai ao modelo; mesmo produto com outro nome, não")
+  void decisaoComATabela() {
+    ResolucaoProduto tabela = tabela("milho", "ncm:1005", "soja", "ncm:1201",
+        "fertilizante", "ncm:3105", "adubo", "ncm:3105");
+    ParConferido outroProduto = par("quanto vendi de soja?", List.of(chamada(
+        "totalVendasPorProduto", "{\"descricaoOuNcm\":\"milho\"}")));
+    ParConferido outroNome = par("quanto comprei de adubo?", List.of(chamada(
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"fertilizante\"}")));
+
+    assertThat(DecisaoContinuidade.consultaSemContradicao(outroProduto, tabela)).isFalse();
+    assertThat(DecisaoContinuidade.custoDaConfirmacao(outroProduto, tabela))
+        .isEqualTo(CaminhoCota.NORMAL);
+    assertThat(DecisaoContinuidade.consultaSemContradicao(outroNome, tabela)).isTrue();
+    assertThat(DecisaoContinuidade.custoDaConfirmacao(outroNome, tabela))
+        .isEqualTo(CaminhoCota.SEM_MODELO);
   }
 
   private static ParConferido par(String pergunta, List<ChamadaAssinada> consulta) {
