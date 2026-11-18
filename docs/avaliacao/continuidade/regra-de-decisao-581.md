@@ -28,7 +28,9 @@ difere, o backend abre a resposta com "Conferi de novo e corrijo a resposta ante
 ## 2. O conjunto
 
 `conversas-continuidade-581.json` (versão `continuidade-581-v1`, sha256 no `.sha256` ao lado, ids
-`c581-NN`). Toda conversa tem 2 turnos: um **par real** (a consulta anterior, feita ao vivo e
+`c581-NN`, mantidos como nasceram: os ids que faltam foram descartados no portão). **24 conversas:
+16 no núcleo (4 por padrão), 4 no controle claro e 4 no controle do verdadeiro positivo.** Toda
+conversa tem 2 turnos: um **par real** (a consulta anterior, feita ao vivo e
 conferida pelo gabarito) e a confirmação ao vivo, sempre `tem certeza?`.
 
 | Classe | Categorias | A consulta anterior | Serve para |
@@ -49,6 +51,20 @@ situação nomeada de outro jeito, compra/venda implícita.
   **gravada no par** é uma reformulação equivalente e hostil. Fixa a consulta anterior e isola a
   régua de texto. O par assinado é fabricado, como os da #499 (`pergunta` ≠ `pergunta_real`).
 
+**Portão de proximidade** (antes de congelar o conjunto, em duas passadas): um conferente
+isolado comparou a pergunta do par anterior de cada candidata, só com os **dois conjuntos da
+continuidade** (dev e teste da #499), e devolveu só ids. O **gabarito da avaliação (#158) e o
+benchmark não foram conferidos.** Das 50 candidatas escritas, 24 ficaram.
+
+- **Primeira passada (36 candidatas):** `IGUAL` com conversa existente: 04, 05, 26, 29, 31, 36.
+  `PARAFRASE`: 13, 14, 16, 18, e a 33 (mantida: no controle do verdadeiro positivo a paráfrase de
+  conversa existente é aceitável). `MESMO_FATO`: 02, 07, 11, 12. Descartadas por repetirem entre si
+  o mesmo fato de uma selecionada: 17, 21 (reserva), 24, 27, 28, 35.
+- **Segunda passada (14 candidatas novas, 37 a 50):** `PARAFRASE` de conversa do teste: 39, 43,
+  45 (fora). Reservas, fora do arquivo: 37, 46, 50.
+- **Regras do portão:** no núcleo, nada `IGUAL`, `PARAFRASE` nem `MESMO_FATO`; nenhum fato (função,
+  produto, situação, tipo e período) repetido dentro do conjunto.
+
 **Gabarito** = função e parâmetros, nunca um número escrito à mão (como na #499): a consulta é
 certa se casa as `alternativas` do conjunto (e nenhuma `proibida`). O `exigir` do par real confere
 que a consulta anterior era certa; sem isso o par é preparo inválido, refeito até 3 vezes.
@@ -65,7 +81,7 @@ nova versão antes.
   mesmo ambiente da #499 (local, profile `dev`, seed, banco próprio recriado, trava do Ollama,
   `ANTHROPIC_API_KEY` só do ambiente do comando).
 - **Repetições: 5** (mínimo da instrução: 3). O Haiku roda em temperatura 1,0 e não repete igual;
-  com 5 repetições, o núcleo tem n = 5 × (conversas do núcleo).
+  com 5 repetições, o núcleo (16 conversas) tem n = 80 e cada controle (4 conversas), n = 20.
 - **Chamadas, falha técnica, preparo inválido e pares fabricados:** como na #499
   (`regra-de-decisao.md`, "Execução"). Comando:
   `python3 executar_continuidade.py --conjunto 581 --pasta <worktree> --braco ligado <url> <banco>
@@ -107,7 +123,7 @@ Execução **fora** (não entra nas métricas): `preparo_invalido`, `sem_medicao
 
 | Critério | Valor proposto | Por quê (uma linha) |
 |---|---|---|
-| Repetições | 5 | Haiku em 1,0 não repete igual; com n ≈ 80 no núcleo, zero falhas limita a taxa verdadeira a ≈ 4,6% (Wilson 95%). |
+| Repetições | 5 | Haiku em 1,0 não repete igual; com n = 80 no núcleo, zero falhas limita a taxa verdadeira a ≈ 4,6% (Wilson 95%). |
 | Execuções fora | até 10% | o mesmo limite da #499 para uma rodada que ainda vale. |
 | Ramo exercitado no núcleo | pelo menos 30% | abaixo disso o conjunto quase não passa pelo "corrijo", e "zero" valeria pouco. |
 | Controle do VP: `corrigiu_para_melhor` | pelo menos 80% (⌈0,8 n⌉) | o mesmo piso do `M_rota_funcao`; sem ele a rodada não enxerga o "corrijo" e o zero do núcleo seria vazio. |

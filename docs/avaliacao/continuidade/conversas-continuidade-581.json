@@ -1,0 +1,1479 @@
+{
+  "versao": "continuidade-581-v1",
+  "parte": "c581",
+  "escrito_em": "2026-11-18",
+  "issue": 581,
+  "produtor": "carlos.rossi@example.com",
+  "regra": "docs/avaliacao/continuidade/regra-de-decisao-581.md",
+  "preparo": [],
+  "conversas": [
+    {
+      "id": "c581-01",
+      "categoria": "dados_certa_sinonimo_ncm",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto comprei de fertilizante NPK em julho?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "npk",
+                    "fertilizante",
+                    "3105"
+                  ],
+                  "inicio": [
+                    "nomeado:7:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:7:fim"
+                  ]
+                }
+              ]
+            ]
+          },
+          "pergunta": "Quanto comprei de adubo em julho?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "npk",
+                    "fertilizante",
+                    "3105"
+                  ],
+                  "inicio": [
+                    "nomeado:7:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:7:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-03",
+      "categoria": "dados_certa_sinonimo_ncm",
+      "mecanismo": "natural",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto vendi do NCM 1201.90.00 em agosto?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "soja",
+                    "1201"
+                  ],
+                  "inicio": [
+                    "nomeado:8:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:8:fim"
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "soja",
+                    "1201"
+                  ],
+                  "inicio": [
+                    "nomeado:8:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:8:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-06",
+      "categoria": "dados_certa_sinonimo_ncm",
+      "mecanismo": "natural",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto comprei de fungicidas em maio?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "fungicida",
+                    "38089219"
+                  ],
+                  "inicio": [
+                    "nomeado:5:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:5:fim"
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "fungicida",
+                    "38089219"
+                  ],
+                  "inicio": [
+                    "nomeado:5:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:5:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-08",
+      "categoria": "dados_certa_periodo_relativo",
+      "mecanismo": "natural",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto vendi de milho no mês passado?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "milho",
+                    "1005"
+                  ],
+                  "inicio": [
+                    "mes:-1:inicio"
+                  ],
+                  "fim": [
+                    "mes:-1:fim"
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "milho",
+                    "1005"
+                  ],
+                  "inicio": [
+                    "mes:-1:inicio"
+                  ],
+                  "fim": [
+                    "mes:-1:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-09",
+      "categoria": "dados_certa_periodo_relativo",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto comprei de herbicida em junho?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "herbicida",
+                    "glifosato",
+                    "38089329"
+                  ],
+                  "inicio": [
+                    "nomeado:6:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:6:fim"
+                  ]
+                }
+              ]
+            ]
+          },
+          "pergunta": "Quanto comprei de herbicida há cinco meses?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "herbicida",
+                    "glifosato",
+                    "38089329"
+                  ],
+                  "inicio": [
+                    "nomeado:6:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:6:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-10",
+      "categoria": "dados_certa_periodo_relativo",
+      "mecanismo": "natural",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto vendi de algodão dois meses atrás?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "algodao",
+                    "5201"
+                  ],
+                  "inicio": [
+                    "mes:-2:inicio"
+                  ],
+                  "fim": [
+                    "mes:-2:fim"
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "algodao",
+                    "5201"
+                  ],
+                  "inicio": [
+                    "mes:-2:inicio"
+                  ],
+                  "fim": [
+                    "mes:-2:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-15",
+      "categoria": "dados_certa_situacao_outro_nome",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Tenho nota aguardando aprovação do contador?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarNotas"
+                  ],
+                  "situacao": "AGUARDANDO_APROVACAO"
+                }
+              ]
+            ]
+          },
+          "pergunta": "Tenho alguma nota esperando o OK do contador?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarNotas"
+                  ],
+                  "situacao": "AGUARDANDO_APROVACAO"
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-19",
+      "categoria": "dados_certa_compra_venda_implicita",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto comprei de inseticida em outubro?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "inseticida",
+                    "38089199"
+                  ],
+                  "inicio": [
+                    "nomeado:10:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:10:fim"
+                  ]
+                }
+              ]
+            ]
+          },
+          "pergunta": "Quanto gastei com inseticida em outubro?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "inseticida",
+                    "38089199"
+                  ],
+                  "inicio": [
+                    "nomeado:10:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:10:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-20",
+      "categoria": "dados_certa_compra_venda_implicita",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto vendi de milho em julho?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "milho",
+                    "1005"
+                  ],
+                  "inicio": [
+                    "nomeado:7:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:7:fim"
+                  ]
+                }
+              ]
+            ]
+          },
+          "pergunta": "Quanto faturei com milho em julho?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "milho",
+                    "1005"
+                  ],
+                  "inicio": [
+                    "nomeado:7:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:7:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-22",
+      "categoria": "dados_certa_compra_venda_implicita",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto vendi de soja em julho?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "soja",
+                    "1201"
+                  ],
+                  "inicio": [
+                    "nomeado:7:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:7:fim"
+                  ]
+                }
+              ]
+            ]
+          },
+          "pergunta": "Quanto a soja me rendeu em julho?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "soja",
+                    "1201"
+                  ],
+                  "inicio": [
+                    "nomeado:7:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:7:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-23",
+      "categoria": "dados_certa_compra_venda_implicita",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto comprei de semente de soja em agosto?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "semente",
+                    "12011000"
+                  ],
+                  "inicio": [
+                    "nomeado:8:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:8:fim"
+                  ]
+                }
+              ]
+            ]
+          },
+          "pergunta": "Quanto desembolsei com semente de soja em agosto?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "semente",
+                    "12011000"
+                  ],
+                  "inicio": [
+                    "nomeado:8:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:8:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-25",
+      "categoria": "controle_certa_clara",
+      "mecanismo": "natural",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto comprei de diesel em junho?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "diesel",
+                    "2710"
+                  ],
+                  "inicio": [
+                    "nomeado:6:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:6:fim"
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "diesel",
+                    "2710"
+                  ],
+                  "inicio": [
+                    "nomeado:6:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:6:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_controle_claro"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-30",
+      "categoria": "controle_certa_clara",
+      "mecanismo": "natural",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto vendi de soja em maio?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "soja",
+                    "1201"
+                  ],
+                  "inicio": [
+                    "nomeado:5:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:5:fim"
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalVendasPorProduto"
+                  ],
+                  "produto": [
+                    "soja",
+                    "1201"
+                  ],
+                  "inicio": [
+                    "nomeado:5:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:5:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_controle_claro"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-32",
+      "categoria": "controle_errada_vp",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto comprei de diesel em julho?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "diesel",
+                    "2710"
+                  ],
+                  "inicio": [
+                    "nomeado:7:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:7:fim"
+                  ]
+                }
+              ]
+            ]
+          },
+          "pergunta": "Quanto comprei de diesel em agosto?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "diesel",
+                    "2710"
+                  ],
+                  "inicio": [
+                    "nomeado:8:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:8:fim"
+                  ]
+                }
+              ]
+            ],
+            "proibidas": [
+              {
+                "funcoes": [
+                  "totalComprasPorInsumo"
+                ],
+                "produto": [
+                  "diesel",
+                  "2710"
+                ],
+                "inicio": [
+                  "nomeado:7:inicio"
+                ]
+              }
+            ],
+            "metricas": [
+              "M581_controle_vp"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-33",
+      "categoria": "controle_errada_vp",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Existe nota devolvida para mim?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarNotas"
+                  ],
+                  "situacao": "DEVOLVIDA"
+                }
+              ]
+            ]
+          },
+          "pergunta": "Existe nota cancelada para mim?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarNotas"
+                  ],
+                  "situacao": "CANCELADA"
+                }
+              ]
+            ],
+            "proibidas": [
+              {
+                "funcoes": [
+                  "listarNotas"
+                ],
+                "situacao": "DEVOLVIDA"
+              }
+            ],
+            "metricas": [
+              "M581_controle_vp"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-34",
+      "categoria": "controle_errada_vp",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto comprei de NPK em julho?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "npk",
+                    "fertilizante",
+                    "3105"
+                  ],
+                  "inicio": [
+                    "nomeado:7:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:7:fim"
+                  ]
+                }
+              ]
+            ]
+          },
+          "pergunta": "Quanto comprei de diesel em julho?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "totalComprasPorInsumo"
+                  ],
+                  "produto": [
+                    "diesel",
+                    "2710"
+                  ],
+                  "inicio": [
+                    "nomeado:7:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:7:fim"
+                  ]
+                }
+              ]
+            ],
+            "proibidas": [
+              {
+                "funcoes": [
+                  "totalComprasPorInsumo"
+                ],
+                "produto": [
+                  "npk",
+                  "fertilizante",
+                  "3105"
+                ]
+              }
+            ],
+            "metricas": [
+              "M581_controle_vp"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-38",
+      "categoria": "dados_certa_sinonimo_ncm",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto tenho de crédito de IBS e CBS em agosto?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "consultarCreditos"
+                  ],
+                  "inicio": [
+                    "nomeado:8:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:8:fim"
+                  ]
+                }
+              ]
+            ]
+          },
+          "pergunta": "Quanto de imposto posso abater das minhas compras em agosto?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "consultarCreditos"
+                  ],
+                  "inicio": [
+                    "nomeado:8:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:8:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-40",
+      "categoria": "dados_certa_periodo_relativo",
+      "mecanismo": "natural",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto foi retido de Funrural nas minhas vendas no mês passado?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "consultarRetencoes"
+                  ],
+                  "inicio": [
+                    "mes:-1:inicio"
+                  ],
+                  "fim": [
+                    "mes:-1:fim"
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "consultarRetencoes"
+                  ],
+                  "inicio": [
+                    "mes:-1:inicio"
+                  ],
+                  "fim": [
+                    "mes:-1:fim"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-41",
+      "categoria": "dados_certa_situacao_outro_nome",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Tenho nota com inconsistências?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarNotas"
+                  ],
+                  "situacao": "COM_INCONSISTENCIAS"
+                }
+              ]
+            ]
+          },
+          "pergunta": "Alguma nota minha travou na validação?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarNotas"
+                  ],
+                  "situacao": "COM_INCONSISTENCIAS"
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-42",
+      "categoria": "dados_certa_situacao_outro_nome",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Alguma nota foi rejeitada pela SEFAZ?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarNotas"
+                  ],
+                  "situacao": "REJEITADA"
+                }
+              ]
+            ]
+          },
+          "pergunta": "Alguma nota minha foi barrada pela Receita?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarNotas"
+                  ],
+                  "situacao": "REJEITADA"
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-44",
+      "categoria": "dados_certa_situacao_outro_nome",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quais notas o contador já aprovou?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarNotas"
+                  ],
+                  "situacao": "APROVADA"
+                }
+              ]
+            ]
+          },
+          "pergunta": "Quais notas foram liberadas pelo escritório?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarNotas"
+                  ],
+                  "situacao": "APROVADA"
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_nucleo"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-47",
+      "categoria": "controle_certa_clara",
+      "mecanismo": "natural",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto devo de IBS e CBS em agosto?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "consultarApuracao"
+                  ],
+                  "mes": "nomeado:8"
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "consultarApuracao"
+                  ],
+                  "mes": "nomeado:8"
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_controle_claro"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-48",
+      "categoria": "controle_certa_clara",
+      "mecanismo": "natural",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Tenho algum alerta tributário?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarAlertas"
+                  ]
+                }
+              ]
+            ]
+          }
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "listarAlertas"
+                  ]
+                }
+              ]
+            ],
+            "consulta_igual_ao_turno": 1,
+            "metricas": [
+              "M581_controle_claro"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c581-49",
+      "categoria": "controle_errada_vp",
+      "mecanismo": "texto_do_par",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Quanto foi retido de Funrural nas minhas vendas em julho?",
+          "exigir": {
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "consultarRetencoes"
+                  ],
+                  "inicio": [
+                    "nomeado:7:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:7:fim"
+                  ]
+                }
+              ]
+            ]
+          },
+          "pergunta": "Quanto foi retido de Funrural nas minhas vendas em agosto?"
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "DADOS"
+            ],
+            "alternativas": [
+              [
+                {
+                  "funcoes": [
+                    "consultarRetencoes"
+                  ],
+                  "inicio": [
+                    "nomeado:8:inicio"
+                  ],
+                  "fim": [
+                    "nomeado:8:fim"
+                  ]
+                }
+              ]
+            ],
+            "proibidas": [
+              {
+                "funcoes": [
+                  "consultarRetencoes"
+                ],
+                "inicio": [
+                  "nomeado:7:inicio"
+                ]
+              }
+            ],
+            "metricas": [
+              "M581_controle_vp"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
