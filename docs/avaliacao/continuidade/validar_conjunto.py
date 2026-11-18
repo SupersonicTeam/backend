@@ -26,6 +26,12 @@ import pontuar  # noqa: E402  (tokens de data, a mesma gramática da #452)
 
 ARQUIVOS = (AQUI / "conversas-continuidade-dev.json", AQUI / "conversas-continuidade-teste.json")
 VERSAO_BASE = "continuidade-v2"
+# Conjunto da #581 (falso positivo do "corrijo" nos dados): arquivo, versão e regra próprios. Não
+# entra em ARQUIVOS: o dev e o teste da #499 seguem como estavam, com o sha256 que têm.
+ARQUIVO_581 = AQUI / "conversas-continuidade-581.json"
+VERSAO_581 = "continuidade-581-v1"
+PARTES = ("dev", "teste", "c581")
+PREFIXO_POR_PARTE = {"dev": "d-", "teste": "t-", "c581": "c581-"}
 
 # Categorias de conversa, pela seção "Medição" da #499.
 CATEGORIAS = {
@@ -67,6 +73,21 @@ CATEGORIAS = {
     "adversario_par_alheio",
     "adversario_par_vencido",
 }
+
+# Categorias do conjunto da #581: a consulta anterior estava certa (núcleo, em quatro padrões de
+# formulação que as heurísticas de texto podem ler mal, e o controle de formulação clara) ou errada
+# (o verdadeiro positivo, controle de que a rodada consegue ver o "corrijo").
+CATEGORIA_METRICA_581 = {
+    "dados_certa_sinonimo_ncm": "M581_nucleo",
+    "dados_certa_periodo_relativo": "M581_nucleo",
+    "dados_certa_situacao_outro_nome": "M581_nucleo",
+    "dados_certa_compra_venda_implicita": "M581_nucleo",
+    "controle_certa_clara": "M581_controle_claro",
+    "controle_errada_vp": "M581_controle_vp",
+}
+CATEGORIAS_581 = set(CATEGORIA_METRICA_581)
+METRICAS_581 = set(CATEGORIA_METRICA_581.values())
+MECANISMOS_581 = {"natural", "texto_do_par"}
 
 # Toda categoria que a regra de decisão usa tem de estar no teste.
 CATEGORIAS_OBRIGATORIAS_NO_TESTE = CATEGORIAS - {"tem_certeza_depois_de_sem_confirmacao"}
@@ -326,7 +347,7 @@ def _esperado(erro: Erros, onde: str, esperado: object, turno: int, turnos: list
     if "lei_d" in esperado and esperado["lei_d"] not in LEI_D:
         erro(onde, f"'lei_d' inválida: {esperado['lei_d']!r}")
     metricas = set(esperado.get("metricas", []))
-    desconhecidas = metricas - METRICAS
+    desconhecidas = metricas - METRICAS - METRICAS_581
     if desconhecidas:
         erro(onde, f"métricas desconhecidas: {sorted(desconhecidas)}")
     if "se_anterior" in esperado:
@@ -446,6 +467,40 @@ def _revisao(erro: Erros, onde: str, conjunto: dict) -> None:
                    "outro conteúdo")
 
 
+def _conversa_581(erro: Erros, ident: str, conversa: dict, turnos: list, metricas: set) -> None:
+    """Forma das conversas da #581: um par real (a consulta anterior, conferida pelo gabarito) e a
+    confirmação ao vivo, que traz a consulta certa e a métrica da categoria."""
+    esperada = CATEGORIA_METRICA_581.get(conversa.get("categoria"))
+    if esperada and metricas != {esperada}:
+        erro(ident, f"a categoria {conversa.get('categoria')} alimenta só {esperada}: "
+                    f"{sorted(metricas)}")
+    if conversa.get("mecanismo") not in MECANISMOS_581:
+        erro(ident, f"'mecanismo' fora de {sorted(MECANISMOS_581)}: {conversa.get('mecanismo')!r}")
+    if len(turnos) != 2 or turnos[0].get("tipo") != "par" or turnos[0].get("origem") != "real":
+        erro(ident, "a conversa da #581 é um par real e a confirmação ao vivo (2 turnos)")
+        return
+    exigir = turnos[0].get("exigir", {})
+    if "alternativas" not in exigir:
+        erro(ident, "o par real precisa de 'exigir.alternativas': a consulta anterior é conferida")
+    if conversa.get("mecanismo") == "texto_do_par" and not turnos[0].get("pergunta"):
+        erro(ident, "mecanismo texto_do_par exige a 'pergunta' do par, diferente da real")
+    if conversa.get("mecanismo") == "natural" and "pergunta" in turnos[0]:
+        erro(ident, "mecanismo natural usa a pergunta real como a do par (sem 'pergunta')")
+    final = turnos[1].get("esperado", {})
+    if "alternativas" not in final or final.get("rotas") != ["DADOS"]:
+        erro(ident, "a confirmação precisa de 'rotas' DADOS e 'alternativas' (a consulta certa)")
+    certa = conversa.get("categoria") != "controle_errada_vp"
+    if certa and final.get("alternativas") != exigir.get("alternativas"):
+        erro(ident, "com a anterior certa, a consulta certa da confirmação é a do 'exigir'")
+    if certa and final.get("consulta_igual_ao_turno") != 1:
+        erro(ident, "com a anterior certa, a confirmação confere 'consulta_igual_ao_turno': 1")
+    if not certa and (not final.get("proibidas")
+                      or final.get("alternativas") == exigir.get("alternativas")):
+        erro(ident, "com a anterior errada, a confirmação traz outra consulta e 'proibidas'")
+    if turnos[1].get("texto") != "tem certeza?":
+        erro(ident, "a confirmação da #581 é sempre 'tem certeza?' (só a consulta anterior varia)")
+
+
 def validar(caminho: Path) -> tuple[dict, list[str]]:
     """Devolve o conjunto lido e a lista de erros (vazia = válido)."""
     erro = Erros()
@@ -454,11 +509,13 @@ def validar(caminho: Path) -> tuple[dict, list[str]]:
     except (OSError, json.JSONDecodeError) as falha:
         return {}, [f"{caminho.name}: não deu para ler: {falha}"]
     parte = conjunto.get("parte")
-    if parte not in ("dev", "teste"):
-        erro(caminho.name, f"'parte' fora de dev/teste: {parte!r}")
-    if conjunto.get("versao") != f"{VERSAO_BASE}-{parte}":
-        erro(caminho.name, f"'versao' precisa ser {VERSAO_BASE}-{parte}: {conjunto.get('versao')!r}")
-    _revisao(erro, caminho.name, conjunto)
+    if parte not in PARTES:
+        erro(caminho.name, f"'parte' fora de dev/teste/c581: {parte!r}")
+    versao_certa = VERSAO_581 if parte == "c581" else f"{VERSAO_BASE}-{parte}"
+    if conjunto.get("versao") != versao_certa:
+        erro(caminho.name, f"'versao' precisa ser {versao_certa}: {conjunto.get('versao')!r}")
+    if parte != "c581":  # o conjunto da #581 não tem fato de lei a revisar
+        _revisao(erro, caminho.name, conjunto)
     for i, passo in enumerate(conjunto.get("preparo", [])):
         acao = passo.get("acao")
         if acao == "pedido_do_escritorio":
@@ -475,7 +532,7 @@ def validar(caminho: Path) -> tuple[dict, list[str]]:
     if not isinstance(conversas, list) or not conversas:
         erro(caminho.name, "sem conversas")
         return conjunto, erro.lista
-    prefixo = "t-" if parte == "teste" else "d-"
+    prefixo = PREFIXO_POR_PARTE.get(parte, "?-")
     vistos: set[str] = set()
     for conversa in conversas:
         ident = conversa.get("id", "?")
@@ -484,7 +541,7 @@ def validar(caminho: Path) -> tuple[dict, list[str]]:
         if ident in vistos:
             erro(ident, "id repetido")
         vistos.add(ident)
-        if conversa.get("categoria") not in CATEGORIAS:
+        if conversa.get("categoria") not in (CATEGORIAS_581 if parte == "c581" else CATEGORIAS):
             erro(ident, f"categoria desconhecida: {conversa.get('categoria')!r}")
         turnos = conversa.get("turnos")
         if not isinstance(turnos, list) or not 2 <= len(turnos) <= 3:
@@ -513,10 +570,18 @@ def validar(caminho: Path) -> tuple[dict, list[str]]:
                 erro(onde, f"tipo de turno desconhecido: {turno.get('tipo')!r}")
         if not metricas:
             erro(ident, "nenhum turno alimenta métrica: a conversa não conta para a regra")
+        if parte == "c581":
+            _conversa_581(erro, ident, conversa, turnos, metricas)
+        elif metricas & METRICAS_581:
+            erro(ident, "métrica da #581 fora do conjunto da #581")
     if parte == "teste":
         faltam = CATEGORIAS_OBRIGATORIAS_NO_TESTE - {c.get("categoria") for c in conversas}
         if faltam:
             erro(caminho.name, f"categorias obrigatórias ausentes do teste: {sorted(faltam)}")
+    if parte == "c581":
+        faltam = CATEGORIAS_581 - {c.get("categoria") for c in conversas}
+        if faltam:
+            erro(caminho.name, f"categorias ausentes do conjunto da #581: {sorted(faltam)}")
     return conjunto, erro.lista
 
 
