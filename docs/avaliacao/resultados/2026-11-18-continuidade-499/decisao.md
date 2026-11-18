@@ -9,7 +9,7 @@ Rodada oficial de 2026-11-18, regra de decisão v3 (`docs/avaliacao/continuidade
 | Braços | desligado (`AI_CONTINUIDADE_HABILITADA=false`, porta 8501) × ligado (`true`, porta 8502), um JAR, bancos próprios e recriados, seed da demonstração, base de lei copiada (8.304 trechos) |
 | Repetições | 3, ordem alternada (desligado primeiro nas 1 e 3), mais a lei sozinha (5 vezes por pergunta) |
 | Dia | 2026-11-18, todas as repetições |
-| Relógio | 13:30 a 14:06 (build e subida incluídos; 13:34 a 14:04 de execução) |
+| Relógio | 13:30 a 14:06 (build e subida incluídos; execução das 13:34 às 14:06: as 3 repetições até cerca de 14:04 e a lei sozinha de 14:04 a 14:06) |
 | Decisão | **ENTRA** |
 
 ## Métricas do braço ligado (teste)
@@ -72,7 +72,9 @@ Rodada oficial de 2026-11-18, regra de decisão v3 (`docs/avaliacao/continuidade
   (`partes.teste.ligado.caminhos`).
 - **Reconferências que caem no apoio (`LEI_APOIO`):** 15 turnos, de 42 reconferências de lei do braço ligado.
 - **p95 de tokens de entrada (auditoria do banco do braço ligado, todas as chamadas com modelo da
-  rodada, teste e dev):** 6.920 (237 chamadas; máximo 8.250).
+  rodada, inclusive aquecimento e pergunta de base dos pares; `tokens_entrada > 0`, p95 interpolado
+  do PostgreSQL):** 6.920 (237 chamadas; máximo 8.250). Os p95 por caminho da tabela acima vêm do
+  `resumo.json`, calculados pelo pontuador, e só contam as perguntas pontuadas.
 - **Respostas acima de 6.000 caracteres:** só `t-fixo-01` (texto fixo de 6.128 caracteres), nas 3
   repetições de cada braço. As respostas dos modelos não passaram de 6.000.
 - **Lei sozinha (braço desligado, 5 vezes cada):** `t-lei-01`, `t-lei-02`, `t-lei-03`, `t-lei-08`,
