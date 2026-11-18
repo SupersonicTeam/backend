@@ -326,7 +326,8 @@ public class OrquestradorService {
       return new DadosDaConfirmacao(refeita, abertura, false);
     }
     // Consulta que a pergunta contradiz (ou par sem consulta): o modelo escolhe de novo sobre a
-    // pergunta do par. Palavra que nao aparece nao entra aqui (#591): so a contradicao e prova. Fonte de numero: a pergunta so sem reescrita; senao, os argumentos executados agora.
+    // pergunta do par. Palavra que nao aparece nao entra aqui (#591): so a contradicao e prova.
+    // Fonte de numero: a pergunta so sem reescrita; senao, os argumentos executados agora.
     FontePergunta fonte = par.carga().reescrita()
         ? FontePergunta.dosArgumentos() : FontePergunta.texto(par.pergunta());
     log.info("Ceres: {}", DesfechoContinuidade.CONFIRMACAO_COM_MODELO);

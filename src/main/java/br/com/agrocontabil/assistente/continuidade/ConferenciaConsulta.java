@@ -60,9 +60,12 @@ public final class ConferenciaConsulta {
       "aprov", Set.of("APROVADA", "AGUARDANDO_APROVACAO"),
       "revis", Set.of("AGUARDANDO_APROVACAO"));
 
-  /** A pergunta fala de um NCM: a palavra, ou um código com seis dígitos ou mais ou com ponto. */
+  /**
+   * A pergunta fala de um NCM: a palavra, o código com ponto ou o código corrido de oito dígitos.
+   * Número de nota ou de CPF não conta como NCM.
+   */
   private static final Pattern NCM_NA_PERGUNTA = Pattern.compile(
-      "\\bncm\\b|\\d{4}\\.\\d{2}|\\d{6,}");
+      "\\bncm\\b|\\d{4}\\.\\d{2}|\\b\\d{8}\\b");
 
   private static final Pattern NOTA_N = Pattern.compile("\\bnota (?:n |no |numero )?(\\d+)\\b");
 

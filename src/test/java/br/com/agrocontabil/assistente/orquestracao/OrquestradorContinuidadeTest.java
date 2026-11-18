@@ -182,6 +182,24 @@ class OrquestradorContinuidadeTest {
   }
 
   @Test
+  @DisplayName("Consulta contradita, nova também não bate: 'refiz', nunca 'corrijo'")
+  void contradicaoSemConsultaNovaCoerenteRefaz() {
+    ParConferido par = parDeDados("e a nota 13?", List.of(chamada("consultarNota",
+        "{\"numero\":12}")), "A nota 12 está autorizada.");
+    when(rotaDados.responder(eq("e a nota 13?"), any(), any(FontePergunta.class)))
+        .thenAnswer(inv -> {
+          ContextoAssistente c = inv.getArgument(1);
+          c.registroTurno().registrarConsulta(List.of(chamada("consultarNota",
+              "{\"numero\":14}")));
+          return ResultadoRota.aceita("A nota 14 foi rejeitada.");
+        });
+
+    ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.NORMAL));
+
+    assertThat(r.texto()).startsWith("Refiz a consulta").doesNotContain("corrijo");
+  }
+
+  @Test
   @DisplayName("Sinônimo ou NCM na consulta anterior: reexecuta a mesma, sem modelo e sem 'corrijo'")
   void semProvaReexecutaSemCorrigir() {
     // A consulta anterior estava certa: o modelo traduziu "adubo" para "fertilizante". A palavra

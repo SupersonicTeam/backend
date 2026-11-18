@@ -55,6 +55,17 @@ class ProvaDeIncoerenciaTest {
 
     assertThat(ConferenciaConsulta.contradiz("vendas do NCM 1005.90.10", consulta, DIA)).isTrue();
     assertThat(ConferenciaConsulta.contradiz("vendas do NCM 1201.90.00", consulta, DIA)).isFalse();
+    assertThat(ConferenciaConsulta.contradiz("vendas do NCM 10059010", consulta, DIA)).isTrue();
+  }
+
+  @Test
+  @DisplayName("Número de nota na pergunta não vira NCM: o NCM do modelo segue sem prova")
+  void numeroDeNotaNaoEhNcm() {
+    List<ChamadaAssinada> consulta = List.of(chamada("totalVendasPorProduto",
+        "{\"descricaoOuNcm\":\"1201\"}"));
+
+    assertThat(ConferenciaConsulta.contradiz("quanto vendi de soja no pedido 123456?", consulta,
+        DIA)).isFalse();
   }
 
   @Test
