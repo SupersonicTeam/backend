@@ -35,12 +35,19 @@ Rodada de 2026-11-18, regra de decisão `2026-11-18.1`
 repetições (reproduz). A terceira condição da regra (2 conversas distintas) não se cumpre.
 
 **O que aconteceu em c581-01 (categoria sinônimo/NCM, mecanismo `texto_do_par`):** a consulta anterior
-era certa para a pergunta. A pergunta gravada no par usava um termo geral para o produto. A régua de
-texto leu a consulta antiga como incoerente, o modelo refez a consulta com o termo geral no lugar do
-nome do produto, a nova consulta não achou nada, e a resposta saiu com a frase "corrijo a resposta
-anterior" seguida de "não encontrei compras". As 5 repetições fizeram o mesmo. Ou seja, o valor
-certo foi trocado por um vazio, com a frase de correção na frente. O arquivo `resumo.json` traz a
-consulta anterior e a nova de cada ocorrência (`medido.classes.nucleo.detalhes`).
+casava o gabarito (função e parâmetros certos para a pergunta), mas **a resposta de base já era "Não
+encontrei compras" nas 5 repetições**: a busca pelo termo da pergunta de base não achou compras no
+seed. A pergunta gravada no par usava um termo geral para o produto. A régua de texto leu a consulta
+antiga como incoerente, o modelo refez a consulta com o termo geral, a nova consulta também não
+achou nada, e a resposta saiu com "corrijo a resposta anterior" seguida do mesmo "não encontrei
+compras". As 5 repetições fizeram o mesmo.
+
+**Ressalva importante sobre o que esses 5 casos medem:** o valor **não piorou** (vazio nos dois
+lados). O que a Ceres afirmou foi uma correção que não corrigiu nada. A métrica os conta como
+"corrigiu para pior" porque o gabarito é função e parâmetros (como a regra aprovada define), e não
+o valor final. Nenhuma ocorrência desta rodada trocou um valor com conteúdo por outro pior. O
+`resumo.json` traz a consulta anterior e a nova de cada ocorrência
+(`medido.classes.nucleo.detalhes`).
 
 ### Por categoria e por mecanismo (núcleo)
 
@@ -88,9 +95,10 @@ vem de c581-01.
 
 ## Relatados (item 4 da #581)
 
-- **"Corrijo" por dia:** 22 em 2026-11-18 (5 do núcleo, 17 do controle do verdadeiro positivo).
-- **Por reescrita (`perguntaInterpretada` presente e diferente da mensagem):** 22 de 22. A
-  confirmação "tem certeza?" é sempre reescrita pelo backend; não separa os casos.
+- **"Corrijo" por dia:** 22 nas execuções medidas, todas em 2026-11-18 (5 do núcleo, 17 do controle
+  do verdadeiro positivo); há mais 3 nas execuções fora de c581-49 (rota `MISTO`), no total de 25.
+- **Por reescrita (`perguntaInterpretada` presente e diferente da mensagem):** 22 de 22. Todas as
+  118 confirmações com resposta trazem `perguntaInterpretada`, então o dado não separa os casos.
 - **Por par distinto:** o único par com "corrijo" indevido é c581-01.
 
 ## O que a regra manda fazer (aprovado pelo Murillo em 2026-11-18)
@@ -108,8 +116,13 @@ correção**. Quem corrige não lê o conjunto: mensagem a quem corrige cita só
   têm o problema. As outras 3 conversas de sinônimo/NCM (c581-03, 06 e 38) não corrigiram para pior.
 - O ramo exercitado é só 24% do núcleo: nas outras execuções a régua de texto leu a consulta como
   coerente e o backend repetiu a mesma consulta.
-- O gabarito é a função e os parâmetros da consulta, e não o número final. Um "corrijo" sem consulta
-  nova também contaria como "para pior"; nesta rodada não houve esse caso (`sem_consulta`: 0).
+- O gabarito é a função e os parâmetros da consulta, e não o valor final. Por isso as 5 ocorrências
+  de c581-01 contam como "para pior" mesmo com a resposta vazia nos dois lados (ver a ressalva
+  acima). Um "corrijo" sem consulta nova também contaria; nesta rodada não houve esse caso
+  (`sem_consulta`: 0). A base também veio vazia em c581-41, 42 e 44 (nota nessas situações que o
+  seed não tem); nelas a Ceres manteve a resposta, sem "corrijo".
+- O veredito segue a regra aprovada, mas a única conversa com ocorrência é de resposta vazia dos dois
+  lados: uma medição por valor (e não por consulta) daria 0 casos de valor pior nesta rodada.
 - 9 execuções fora, 7 delas por a rota ser `MISTO` nas conversas de retenções.
 
 ## Arquivos
