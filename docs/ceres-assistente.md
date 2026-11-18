@@ -333,7 +333,8 @@ existe e o `ValidadorNumeros` só confere número, então nenhum dos dois pega.
 `0.7`, maior que 0 e no máximo 1, conferida na subida). Desligada, a rota de lei é a de antes: o
 mesmo prompt (`PromptsCeres.sistemaLegislacao`) e o mesmo resultado, provados pelo
 `RotaLegislacaoFidelidadeTest` contra a rota construída sem a conferência. A medição já foi feita e a
-configuração escolhida está em "Configuração escolhida", abaixo; ligar na VPS é decisão à parte.
+configuração escolhida está em "Configuração escolhida", abaixo. O padrão do código segue desligado;
+na VPS ela está ligada desde 2026-11-16, por decisão do Murillo.
 
 **Como funciona (ligada).** Sem chamada a mais ao modelo; o modelo não julga o próprio texto.
 
@@ -578,9 +579,17 @@ cortes no teto de 512, que levaram ao de 1.024). O juiz `atual` é o mais rigoro
 **Configuração escolhida (decisão do Murillo, 2026-11-13, pela terceira medição).** O desenho que
 entra quando a fidelidade for ligada é `camada1+juiz+resgate`: a camada 1 com o piso de cobertura do
 juiz, o juiz na configuração `justificativa`, vetando as aprovadas e resgatando as reprovadas por número e
-por polaridade. **Os padrões do código não mudam: tudo segue desligado.** Ligar na VPS é decisão à parte,
-ainda não tomada; quando for, é só configuração, com estas variáveis no `.env` de lá (os booleanos em
-minúsculas; o provedor é o de sempre, `AI_CHAT_PROVIDER=anthropic`, `AI_ANTHROPIC_MODEL=claude-haiku-5-5`,
+por polaridade. **Os padrões do código não mudam: tudo segue desligado**, e sem as variáveis nada muda em
+nenhum ambiente. **Na VPS a fidelidade está ligada desde 2026-11-16**, por decisão do Murillo, com esta
+configuração: as cinco variáveis abaixo estão no `.env` de lá e a conferência foi feita pela tela (o
+`.env` da VPS é a fonte: confira-o antes de assumir o estado). Os números oficiais do benchmark de
+2026-11-14 (a célula do Haiku que entra em média e conclusão) foram medidos **sem** ela. A célula opcional
+`claude-haiku-5-5+fidelidade-lei`, fora de toda comparação, usa as mesmas flags, mas foi medida localmente
+no `2bfb1ef3`, não no código que a VPS roda hoje (`docs/avaliacao/benchmark/resultados-2026-11-14.md`, "A
+célula com a fidelidade da rota de lei"). O tempo da rota de lei na VPS com a fidelidade ligada não foi medido (a
+medição de `docs/avaliacao/medicao-vps-tempo-2026-11-15.md` é anterior), e a combinação com a continuidade
+da conversa (#499) também não: a decisão é da #584. Ligar é só configuração, com estas variáveis no `.env`
+(os booleanos em minúsculas; o provedor é o de sempre, `AI_CHAT_PROVIDER=anthropic`, `AI_ANTHROPIC_MODEL=claude-haiku-5-5`,
 `AI_ANTHROPIC_THINKING=disabled`). Na VPS o `deploy/compose.yaml` precisa repassar essas variáveis ao
 backend (repassa desde o #269) antes de o `.env` ter efeito; passo a passo e reversão em
 `deploy/README.md`, "Fidelidade da rota de lei":
