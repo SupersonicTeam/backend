@@ -8,6 +8,13 @@ quando fica nas tabelas de `docs/ceres-assistente.md` (números oficiais, Fase B
 Revisado em 2026-11-07 contra o código da `main` (`4a0b3a8`): as correções em relação à primeira
 versão estão na seção "O que mudou nesta revisão".
 
+**Estado em 2026-11-17 (leia antes do resto).** O roteiro foi escrito para o chat no Ollama. Desde
+2026-11-10 a Ceres usa o `claude-haiku-5-5` pela API da Anthropic (#483) e o Ollama ficou só com o
+embedding (`bge-m3`); desde 2026-11-16 a fidelidade da rota de lei (#269) está ligada na VPS. O que
+isso muda aqui, e o que continua sem medir, está na seção "Estado em 2026-11-17: Ceres no Haiku",
+logo abaixo das regras. Os passos 1 a 4 e os trechos que falam do modelo de chat no Ollama ficam
+como registro.
+
 ## Duas fases
 
 A rota de lei ainda pode mudar até 2026-11-19 (#436, PR #425). Por isso a S5 começa pelo que não
@@ -29,8 +36,13 @@ depende dela.
    confirmação de que os merges estão segurados; no fim, avisar que acabou. Anote o SHA em
    `docker compose images backend` no início e no fim; mudou, a medição vale só até a troca.
 2. **Uma coisa por vez, 3 repetições** de cada variante. Entre variantes, mude **uma** variável.
-3. **Modelo:** `MODELO='qwen3:4b-instruct'` (decisão do Murillo de 2026-11-07, mantido até a banca).
-   O 30B já foi comparado (#426) e não entra; o `qwen3:8b` é a medição extra do passo 2.
+3. **Modelo:** o chat da Ceres na VPS é o `claude-haiku-5-5` pela API da Anthropic
+   (`AI_CHAT_PROVIDER=anthropic`, `AI_ANTHROPIC_MODEL`; decisão do Murillo de 2026-11-10, #483, que
+   substitui a de 2026-11-07, "`qwen3:4b-instruct` mantido até a banca"). O Ollama segue no ar só
+   para o embedding (`bge-m3`). **A janela não troca o modelo nem o provedor**, e não liga nem
+   desliga a fidelidade da rota de lei (ligada na VPS desde 2026-11-16) nem a continuidade
+   (desligada). O `qwen3:4b-instruct` continua baixado só para a reversão (`deploy/README.md`); o
+   30B já foi comparado (#426) e não entra.
 4. **Configuração de produção, sem atalhos.** A medição usa o que o `deploy/compose.yaml` passa ao
    backend. O compose **não repassa** `AI_READ_TIMEOUT` (nem `AI_TIMEOUT_PERGUNTA`): valem os padrões
    do `application.yml` (120 s por chamada ao modelo, 5 min por pergunta). Não os mude na janela.
@@ -184,6 +196,45 @@ depende dela.
     caminhos **absolutos fora de `/opt/agrocontabil`**, e o registro diz a origem das requisições
     (hostname e se passou pelo Caddy). Sem registro da origem, a latência não se compara.
 
+## Estado em 2026-11-17: Ceres no Haiku
+
+**O que perdeu o objeto.** A otimização do modelo local (#270) perdeu o objeto com a troca do chat
+para a API (#497). Os passos 1 (Q4_0), 2 (`qwen3:8b`), 3 (`prompt_eval_count` do Ollama) e 4
+(`AI_OLLAMA_NUM_CTX`) medem o modelo de chat no Ollama: não se executam enquanto o chat for por
+API e ficam aqui como registro, para o caso de uma reversão. Pelo mesmo motivo, onde as regras
+falam de `AI_CHAT_MODEL`, do cache de prefixo, de `OLLAMA_NUM_PARALLEL=1` como vaga do chat e do
+`ollama-init` com o modelo de chat, leia como texto da época do Ollama. O passo 5
+(`AI_TETO_LEGISLACAO`) não foi revisto para o Haiku. O passo 7 (k6 da #153) não é da Ceres e não
+muda.
+
+**As contas de créditos das regras 5 e 8 estão desatualizadas.** Elas são anteriores à #511: hoje
+1 crédito é 1 token ponderado, a cota do produtor é de 1.000.000 por semana e a reserva por
+pergunta com a fidelidade ligada é de 44.032 (`deploy/README.md`, "Fidelidade da rota de lei"). O
+orçamento por conta e o consumo esperado da conta "cota no fim" não foram refeitos: refaça antes
+de qualquer rodada pelo harness.
+
+**Tempo da Ceres: o que já foi medido.** O tempo por rota no ambiente publicado está em
+`docs/avaliacao/medicao-vps-tempo-2026-11-15.md` (PR #574; item 3 da #497): 18 perguntas × 3
+repetições pelo `POST /api/assistente/chat` público, com o Haiku, de fora da VPS. Não repita essa
+medição na janela para obter o mesmo número; use o documento. A medição é de 2026-11-15, **anterior
+à fidelidade ligada na VPS**, de uma rodada, um horário e uma conta.
+
+**O que continua sem medir** (nenhum destes tem número na `main`):
+
+| Item | Situação |
+|---|---|
+| p95 das camadas de classificação (regras e embeddings, meta < 300 ms), com o `bge-m3` em CPU ARM | não medido; só existe dentro da VPS (passo 6 deste roteiro) |
+| Memória da VM com a configuração adotada (chat por API, só o `bge-m3` no Ollama) | não medido; o número de 2026-11-07 é de antes da troca |
+| `/healthz` e health detalhado da VM (`ollama`, `clamav`) | só o público foi lido, de fora |
+| `POST /api/assistente/chat/stream` (SSE), que a tela usa | não medido |
+| Tempo da rota de lei (e do MISTO) com a fidelidade ligada: o juiz é uma chamada a mais ao modelo por pergunta de lei | não medido na VPS |
+| Custo de cota por rota e custo em dinheiro da API | não medido |
+| Continuidade da conversa (#499), sozinha ou junto com a fidelidade, na VPS | não medido; a decisão de ligar é da #584 |
+
+O passo 6 (classificador) segue valendo para o primeiro item, com uma diferença: com o chat por
+API, a condição "ocupado" deixa de ser o modelo de chat disputando o Ollama; o que disputa o
+`bge-m3` é só outra classificação.
+
 ## Preparação (uma vez)
 
 ```bash
@@ -327,8 +378,9 @@ O comando não passa pelo Caddy nem pela cota: mede o modelo e o orquestrador, e
 
 ### 0. Linha de base (obrigatória, uma por variante e noite)
 
-Variante: padrões do `deploy/.env.example` (`AI_CHAT_MODEL=$MODELO`, `AI_OLLAMA_NUM_CTX=8192`,
-tetos 512/256/1024).
+Variante: a configuração em uso na VPS, sem mudar nada (chat no `claude-haiku-5-5` pela API,
+fidelidade da rota de lei ligada, continuidade desligada); registre-a no bloco da noite. O texto
+original deste passo fixava `AI_CHAT_MODEL` e `AI_OLLAMA_NUM_CTX=8192`, do chat no Ollama.
 
 - Harness (3 rodadas) e `dev,avaliacao` (3 repetições), **um depois do outro**, nunca juntos
   (uma vaga no Ollama).
@@ -339,6 +391,8 @@ tetos 512/256/1024).
   para a #265, as consultas do passo 6.
 
 ### 1. Q4_0 contra Q4_K_M (#270, item 1)
+
+> Sem objeto desde 2026-11-10 (chat por API). Fica como registro; ver "Estado em 2026-11-17".
 
 Variante: só `AI_CHAT_MODEL`. O caminho é o do Modelfile (reaproveita o template da tag oficial,
 de que as chamadas de função dependem). **A regra 5 deste roteiro prevalece** sobre a seção
@@ -370,10 +424,15 @@ Murillo mandar remover (`ollama rm`, outra escrita).
 
 ### 2. `qwen3:8b` (#270, item 4, medição)
 
+> Sem objeto desde 2026-11-10 (chat por API). Fica como registro.
+
 Mesma coisa com `AI_CHAT_MODEL=qwen3:8b` (`ollama pull qwen3:8b` antes). Descarregue o 4B para medir a
 RAM do 8B sozinho e meça também os dois juntos (é o que ocorreria sem o `ollama stop`).
 
 ### 3. `prompt_eval_count` com prefixo em cache, cota e auditoria (#270)
+
+> Sem objeto desde 2026-11-10: o `prompt_eval_count` é do Ollama e o chat é por API. Fica como
+> registro.
 
 Objetivo: saber se, com o prefixo no cache, o Ollama conta só a parte nova em `prompt_eval_count`
 (muda o que a cota #166 e a auditoria registram).
@@ -405,6 +464,8 @@ modelo no Ollama: nenhuma das duas o substitui. O desenho vira outro:
    `docs/ceres-assistente.md`, linha "Tokens com cache".
 
 ### 4. `AI_OLLAMA_NUM_CTX=6144` (#270)
+
+> Sem objeto desde 2026-11-10: a variável é do chat no Ollama. Fica como registro.
 
 A conta é **prompt + teto de saída da chamada ≤ 6.144, com folga**: lei ≤ ~5.000 (como no
 `deploy/.env.example`, o teto de lei é 1.024) e dados ≤ ~5.500 (teto de funções 512). **A maior
@@ -557,6 +618,7 @@ Observações:
 ## O que mudou nesta revisão (2026-11-07)
 
 - Duas fases (A e B) e modelo fixo em `qwen3:4b-instruct`; o 30B saiu (já comparado na #426).
+  (Superado em 2026-11-10 pelo `claude-haiku-5-5` por API; ver a revisão de 2026-11-17, abaixo.)
 - Configuração de produção: o compose não repassa `AI_READ_TIMEOUT` (valem 120 s e 5 min).
 - Variável por ambiente do shell em vez de editar o `.env` (o `deploy.sh` regrava `BACKEND_TAG`
   nele); lock do deploy enquanto se mexe no serviço.
@@ -594,3 +656,13 @@ Observações:
   João e Maria contra o enviado e avisa a equipe do frontend; datas em `YYYY-MM-DD`; MISTO soma
   as chamadas. A suspeita de que `AI_TETO_LEGISLACAO` não chega ao backend não procede: o
   `deploy/compose.yaml` a repassa (linha `AI_TETO_LEGISLACAO`).
+
+## O que mudou na revisão de 2026-11-17 (#497, item 4)
+
+- Regra 3: o chat é o `claude-haiku-5-5` pela API da Anthropic desde 2026-11-10 (#483); o Ollama
+  ficou só com o embedding. A janela não troca modelo, provedor nem flag.
+- Seção nova "Estado em 2026-11-17: Ceres no Haiku": passos 1 a 4 sem objeto, contas de créditos
+  anteriores à #511, o tempo por rota já medido na VPS (PR #574) e a lista do que segue sem medir,
+  inclusive o tempo da rota de lei com a fidelidade ligada (na VPS desde 2026-11-16).
+- Passo 0: a linha de base é a configuração em uso na VPS, registrada no bloco da noite.
+- Só documentação: nenhum passo foi executado nesta revisão e o "Registro das noites" segue vazio.

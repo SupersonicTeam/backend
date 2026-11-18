@@ -119,7 +119,7 @@ em conjunto novo, por outra sessão que nunca leu o gabarito).
 **Modelo da Ceres (decisão do Murillo, 2026-11-10; #483):** a Ceres passa a usar o
 `claude-haiku-5-5` pela API da Anthropic (o código do #483 está na `main`). **Na VPS a troca foi
 feita em 2026-11-10 e conferida pela auditoria:** as interações saem como
-`anthropic/claude-haiku-5-5`, sem fallback (quatro chamadas ao modelo, de 1,0 a 1,4 s; lei e misto não foram medidos lá). É só configuração: `AI_CHAT_PROVIDER=anthropic` e
+`anthropic/claude-haiku-5-5`, sem fallback (quatro chamadas ao modelo, de 1,0 a 1,4 s; o tempo por rota na VPS, com lei e misto, foi medido em 2026-11-15, antes de a fidelidade da rota de lei ser ligada lá: `docs/avaliacao/medicao-vps-tempo-2026-11-15.md`). É só configuração: `AI_CHAT_PROVIDER=anthropic` e
 `ANTHROPIC_API_KEY` no `.env` da VPS (chave ligada a um workspace; sem ela a aplicação não sobe,
 `config/AnthropicApiKeyConfig`). O **padrão do código continua `ollama`**: sem as variáveis, nada
 muda em nenhum ambiente. O Ollama segue no ar para o embedding (`bge-m3`). Temperatura 1.0 (o
@@ -369,8 +369,11 @@ br.com.agrocontabil
 │                  #   assistente_interacao.fidelidade_lei (changeSet 0065). Desligada = prompt e resultado da main
 │                  #   (RotaLegislacaoFidelidadeTest). Configuração escolhida (Murillo, 2026-11-13, terceira
 │                  #   medição, 6b5cd4ac): camada 1 + juiz justificativa com veto + resgate com polaridade
-│                  #   (docs/ceres-assistente.md, "Configuração escolhida"); tudo segue desligado no código, e
-│                  #   ligar na VPS é decisão à parte;
+│                  #   (docs/ceres-assistente.md, "Configuração escolhida"); tudo segue desligado no código.
+│                  #   Na VPS está ligada desde 2026-11-16, por decisão do Murillo, com essa configuração (cinco
+│                  #   variáveis AI_FIDELIDADE_LEI_* no .env de lá, conferida pela tela); os números oficiais do
+│                  #   benchmark de 14/11 são sem ela (a célula com ela é a opcional, fora de toda comparação), e o
+│                  #   tempo da rota de lei na VPS com ela ligada não foi medido;
 │                  #   camada 2, o juiz (fidelidade/JuizFidelidadeLei; app.assistente.fidelidade-lei.juiz.enabled /
 │                  #   AI_FIDELIDADE_LEI_JUIZ_HABILITADO, DESLIGADO por padrão, só com a camada 1): uma chamada ao
 │                  #   modelo com as frases e os dispositivos citados (com o contexto de cima, lidos em sequência),

@@ -217,8 +217,10 @@ já mascarados, saem do servidor (`docs/lgpd.md`, "Provedor externo do modelo da
 
 Medido na VPS em 2026-11-10: nas quatro primeiras chamadas ao modelo (duas perguntas fora de
 escopo e duas de dados), de 1,0 a 1,4 s cada, e cerca de 6.000 tokens de entrada por pergunta de
-dados. Lei e misto não foram medidos na VPS; na medição local com o gabarito (87 × 3), p50 de
-1,4 s e p95 de 4,2 s no geral, com o misto em 4,2 s de p50.
+dados. Na medição local com o gabarito (87 × 3), p50 de 1,4 s e p95 de 4,2 s no geral, com o misto
+em 4,2 s de p50. O tempo por rota na VPS (dados, lei e misto, pela API pública) foi medido em
+2026-11-15, antes de a fidelidade da rota de lei ser ligada lá:
+`docs/avaliacao/medicao-vps-tempo-2026-11-15.md`.
 
 **Reverter:** comente `AI_CHAT_PROVIDER` no `.env` e rode `docker compose up -d --no-deps backend`.
 O backend volta ao `qwen3:4b-instruct` do Ollama, que segue baixado. Se ele ficou mais de 24 horas
@@ -230,7 +232,9 @@ a ser carregado na memória.
 A correção da rota de lei (conferência em código mais o juiz, uma segunda chamada ao modelo) está
 **desligada por padrão**, no código e no `compose.yaml`: copiar o compose não liga nada. Quem liga é o
 `.env`, com a configuração escolhida pelo Murillo em 2026-11-13 (`docs/ceres-assistente.md`,
-"Configuração escolhida"; booleanos em minúsculas):
+"Configuração escolhida"; booleanos em minúsculas). **Estado na VPS:** ligada desde 2026-11-16, por
+decisão do Murillo, com estas cinco variáveis (conferida pela tela). O tempo da rota de lei com ela
+ligada não foi medido na VPS.
 
 ```
 AI_FIDELIDADE_LEI_HABILITADA=true
@@ -274,7 +278,19 @@ uma devolução; ver `docs/lgpd.md`, "Continuidade da conversa"):
 2. O aviso na tela da Ceres (o Angular lê `conversaVaiAoProvedor` de `GET /api/assistente/uso`).
 3. O prazo de retenção no provedor escrito na política e no `docs/lgpd.md` (conferir os termos da
    organização no Console e pedir retenção zero, se houver).
-4. A medição da #499 e o OK do Murillo (o código entra na `main` com a flag desligada).
+4. A medição da #499 e o OK do Murillo (o código está na `main` com a flag desligada, #505).
+5. A transferência internacional (LGPD, art. 33) e o contrato da #498 (política de dados)
+   resolvidos, como exige o `docs/lgpd.md`, "Continuidade da conversa".
+6. **A continuidade junto com a fidelidade da rota de lei** (ligada na VPS desde 2026-11-16): a
+   medição da #499 roda com a fidelidade desligada, e a combinação das duas flags não foi medida.
+   Com as duas ligadas, a frase do "corrijo" da reconferência de lei é texto do modelo que sai sem
+   passar pelo juiz da fidelidade (comentário de 2026-11-13 na #499). Antes de ligar, o Murillo
+   decide entre (a) passar a frase corrigida pela conferência de fidelidade (camada 1 e juiz),
+   (b) aceitar a concordância da segunda amostra como conferência suficiente ou (c) com a
+   fidelidade ligada, a reconferência só confirmar ou apontar o apoio, sem corrigir por texto do
+   modelo; e a combinação é medida. Nenhuma das três está implementada.
+
+A lista completa dos pré-requisitos e a decisão de ligar para a banca são controladas pela #584.
 
 **Ligar:** com o lock do deploy (`cd /opt/agrocontabil && flock -w 900 .deploy.lock bash`),
 acrescente `AI_CONTINUIDADE_HABILITADA=true` ao `.env` e confira que o compose em uso repassa a
