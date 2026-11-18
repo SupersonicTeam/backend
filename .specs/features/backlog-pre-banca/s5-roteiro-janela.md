@@ -210,8 +210,17 @@ muda.
 **As contas de créditos das regras 5 e 8 estão desatualizadas.** Elas são anteriores à #511: hoje
 1 crédito é 1 token ponderado, a cota do produtor é de 1.000.000 por semana e a reserva por
 pergunta com a fidelidade ligada é de 44.032 (`deploy/README.md`, "Fidelidade da rota de lei"). O
-orçamento por conta e o consumo esperado da conta "cota no fim" não foram refeitos: refaça antes
-de qualquer rodada pelo harness.
+orçamento por conta de medição e o consumo esperado da cota do Rogério (o cenário do 429 da banca,
+regra 5) não foram refeitos: refaça antes de qualquer rodada pelo harness.
+
+**O `dev,avaliacao` (opções A e B, acima da "Ordem das medições") não foi revisto para o Haiku.**
+Como está escrito, a opção A usa o chat do Ollama por túnel: sem `AI_CHAT_PROVIDER=anthropic` e a
+`ANTHROPIC_API_KEY` no ambiente do processo (nunca em arquivo), o padrão do código é `ollama` e a
+rodada mede o `qwen3`, não o Haiku. A opção B herda as variáveis do serviço `backend`; se o compose
+em uso repassa o provedor e a chave, as perguntas do gabarito saem para a API. O acerto de rota,
+número e citação com o Haiku já tem medição auditável, local, no `2bfb1ef3`:
+`docs/avaliacao/resultados/2026-11-15-0614-anthropic-claude-haiku-5-5.md` (PR #568). Antes de
+rodar o `dev,avaliacao` de novo, revise o procedimento e combine com o Murillo.
 
 **Tempo da Ceres: o que já foi medido.** O tempo por rota no ambiente publicado está em
 `docs/avaliacao/medicao-vps-tempo-2026-11-15.md` (PR #574; item 3 da #497): 18 perguntas × 3
@@ -219,7 +228,8 @@ repetições pelo `POST /api/assistente/chat` público, com o Haiku, de fora da 
 medição na janela para obter o mesmo número; use o documento. A medição é de 2026-11-15, **anterior
 à fidelidade ligada na VPS**, de uma rodada, um horário e uma conta.
 
-**O que continua sem medir** (nenhum destes tem número na `main`):
+**O que continua sem medir na VPS** (o que existe na `main` para estes itens é local ou anterior à
+configuração atual, e está dito em cada linha):
 
 | Item | Situação |
 |---|---|
@@ -227,13 +237,15 @@ medição na janela para obter o mesmo número; use o documento. A medição é 
 | Memória da VM com a configuração adotada (chat por API, só o `bge-m3` no Ollama) | não medido; o número de 2026-11-07 é de antes da troca |
 | `/healthz` e health detalhado da VM (`ollama`, `clamav`) | só o público foi lido, de fora |
 | `POST /api/assistente/chat/stream` (SSE), que a tela usa | não medido |
-| Tempo da rota de lei (e do MISTO) com a fidelidade ligada: o juiz é uma chamada a mais ao modelo por pergunta de lei | não medido na VPS |
+| Tempo da rota de lei (e do MISTO) com a fidelidade ligada: o juiz é uma chamada a mais ao modelo por pergunta de lei | não medido na VPS; só há número local: p50 de 1,35 s por chamada do juiz `justificativa` (`docs/ceres-assistente.md`) e p50 de 1,9 s com a fidelidade contra 1,7 s sem ela na célula opcional do benchmark (`docs/avaliacao/benchmark/resultados-2026-11-14.md`) |
 | Custo de cota por rota e custo em dinheiro da API | não medido |
 | Continuidade da conversa (#499), sozinha ou junto com a fidelidade, na VPS | não medido; a decisão de ligar é da #584 |
 
 O passo 6 (classificador) segue valendo para o primeiro item, com uma diferença: com o chat por
-API, a condição "ocupado" deixa de ser o modelo de chat disputando o Ollama; o que disputa o
-`bge-m3` é só outra classificação.
+API, o modelo de chat não disputa mais o Ollama. O que disputa o `bge-m3` são outras chamadas de
+embedding: a classificação de outra pergunta e a busca da rota de lei. A condição "ocupado" do
+passo 6 (o harness de dados em paralelo) foi escrita para o chat no Ollama e não foi redesenhada:
+defina a carga concorrente antes de medir.
 
 ## Preparação (uma vez)
 

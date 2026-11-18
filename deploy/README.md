@@ -233,8 +233,8 @@ A correção da rota de lei (conferência em código mais o juiz, uma segunda ch
 **desligada por padrão**, no código e no `compose.yaml`: copiar o compose não liga nada. Quem liga é o
 `.env`, com a configuração escolhida pelo Murillo em 2026-11-13 (`docs/ceres-assistente.md`,
 "Configuração escolhida"; booleanos em minúsculas). **Estado na VPS:** ligada desde 2026-11-16, por
-decisão do Murillo, com estas cinco variáveis (conferida pela tela). O tempo da rota de lei com ela
-ligada não foi medido na VPS.
+decisão do Murillo, com estas cinco variáveis (conferida pela tela; o `.env` de lá é a fonte:
+confira-o antes de assumir o estado). O tempo da rota de lei com ela ligada não foi medido na VPS.
 
 ```
 AI_FIDELIDADE_LEI_HABILITADA=true
@@ -279,8 +279,8 @@ uma devolução; ver `docs/lgpd.md`, "Continuidade da conversa"):
 3. O prazo de retenção no provedor escrito na política e no `docs/lgpd.md` (conferir os termos da
    organização no Console e pedir retenção zero, se houver).
 4. A medição da #499 e o OK do Murillo (o código está na `main` com a flag desligada, #505).
-5. A transferência internacional (LGPD, art. 33) e o contrato da #498 (política de dados)
-   resolvidos, como exige o `docs/lgpd.md`, "Continuidade da conversa".
+5. A base legal da transferência internacional (LGPD, art. 33) e o contrato, da #498, resolvidos,
+   como exige o `docs/lgpd.md`, "Continuidade da conversa".
 6. **A continuidade junto com a fidelidade da rota de lei** (ligada na VPS desde 2026-11-16): a
    medição da #499 roda com a fidelidade desligada, e a combinação das duas flags não foi medida.
    Com as duas ligadas, a frase do "corrijo" da reconferência de lei é texto do modelo que sai sem
@@ -288,7 +288,8 @@ uma devolução; ver `docs/lgpd.md`, "Continuidade da conversa"):
    decide entre (a) passar a frase corrigida pela conferência de fidelidade (camada 1 e juiz),
    (b) aceitar a concordância da segunda amostra como conferência suficiente ou (c) com a
    fidelidade ligada, a reconferência só confirmar ou apontar o apoio, sem corrigir por texto do
-   modelo; e a combinação é medida. Nenhuma das três está implementada.
+   modelo; e a combinação é medida. A (b) é o que o código faz hoje; a (a) e a (c) não estão
+   implementadas.
 
 A lista completa dos pré-requisitos e a decisão de ligar para a banca são controladas pela #584.
 

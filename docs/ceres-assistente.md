@@ -581,11 +581,12 @@ entra quando a fidelidade for ligada é `camada1+juiz+resgate`: a camada 1 com o
 juiz, o juiz na configuração `justificativa`, vetando as aprovadas e resgatando as reprovadas por número e
 por polaridade. **Os padrões do código não mudam: tudo segue desligado**, e sem as variáveis nada muda em
 nenhum ambiente. **Na VPS a fidelidade está ligada desde 2026-11-16**, por decisão do Murillo, com esta
-configuração: ele pôs as cinco variáveis abaixo no `.env` de lá e a conferência foi feita pela tela. Os
-números oficiais do benchmark de 2026-11-14 (a célula do Haiku que entra em média e conclusão) foram
-medidos **sem** ela; o que a VPS serve corresponde à célula opcional `claude-haiku-5-5+fidelidade-lei`,
-que fica fora de toda comparação (`docs/avaliacao/benchmark/resultados-2026-11-14.md`, "A célula com a
-fidelidade da rota de lei"). O tempo da rota de lei na VPS com a fidelidade ligada não foi medido (a
+configuração: as cinco variáveis abaixo estão no `.env` de lá e a conferência foi feita pela tela (o
+`.env` da VPS é a fonte: confira-o antes de assumir o estado). Os números oficiais do benchmark de
+2026-11-14 (a célula do Haiku que entra em média e conclusão) foram medidos **sem** ela. A célula opcional
+`claude-haiku-5-5+fidelidade-lei`, fora de toda comparação, usa as mesmas flags, mas foi medida localmente
+no `2bfb1ef3`, não no código que a VPS roda hoje (`docs/avaliacao/benchmark/resultados-2026-11-14.md`, "A
+célula com a fidelidade da rota de lei"). O tempo da rota de lei na VPS com a fidelidade ligada não foi medido (a
 medição de `docs/avaliacao/medicao-vps-tempo-2026-11-15.md` é anterior), e a combinação com a continuidade
 da conversa (#499) também não: a decisão é da #584. Ligar é só configuração, com estas variáveis no `.env`
 (os booleanos em minúsculas; o provedor é o de sempre, `AI_CHAT_PROVIDER=anthropic`, `AI_ANTHROPIC_MODEL=claude-haiku-5-5`,

@@ -371,7 +371,7 @@ br.com.agrocontabil
 │                  #   medição, 6b5cd4ac): camada 1 + juiz justificativa com veto + resgate com polaridade
 │                  #   (docs/ceres-assistente.md, "Configuração escolhida"); tudo segue desligado no código.
 │                  #   Na VPS está ligada desde 2026-11-16, por decisão do Murillo, com essa configuração (cinco
-│                  #   variáveis AI_FIDELIDADE_LEI_* no .env de lá, conferida pela tela); os números oficiais do
+│                  #   variáveis AI_FIDELIDADE_LEI_* no .env de lá, conferida pela tela; confira o .env antes de assumir); os números oficiais do
 │                  #   benchmark de 14/11 são sem ela (a célula com ela é a opcional, fora de toda comparação), e o
 │                  #   tempo da rota de lei na VPS com ela ligada não foi medido;
 │                  #   camada 2, o juiz (fidelidade/JuizFidelidadeLei; app.assistente.fidelidade-lei.juiz.enabled /
