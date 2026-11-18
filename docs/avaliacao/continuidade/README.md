@@ -25,6 +25,26 @@ os testes do PR da continuidade. A sessão só seguiu o contrato da issue. Fica 
   ainda pendente). O validador refaz o arquivo assim e compara, e a rodada oficial exige o
   registro.
 
+## Conjunto da #581 (falso positivo do "corrijo" nos dados)
+
+Medição à parte, que **não muda** a regra da #499 nem os conjuntos acima (o sha256 deles continua
+o mesmo). O `M_dados_correcao` da #499 já cobre o verdadeiro positivo (a consulta anterior estava
+errada e a Ceres corrige); aqui se mede o **falso positivo**: a consulta anterior estava certa, a
+régua de texto da continuidade a leu como incoerente, e a Ceres "corrige" para um valor pior.
+
+| Arquivo | O que é |
+|---|---|
+| `conversas-continuidade-581.json` (+ `.sha256`) | o conjunto (`continuidade-581-v1`, 24 conversas, ids `c581-NN`); cego para as sessões de código |
+| `regra-de-decisao-581.md` | métricas, limiares (aprovados pelo Murillo em 2026-11-18) e vereditos, gravados antes da rodada |
+| `pontuar_581.py` | a pontuação; importa os pedaços comuns do `pontuar_continuidade.py` |
+| `rodar_medicao_581.sh` | a rodada: só o braço ligado, 5 repetições, Haiku, local |
+| `test_581.py` | testes do validador, do executor e da pontuação, rodados na CI |
+
+O executor é o mesmo da #499, com `--conjunto 581` (só o braço `ligado`, 5 repetições, sem a lei
+sozinha); sem a opção, nada muda. O `validar_conjunto.py` aceita a parte `c581` pelo caminho
+`python3 validar_conjunto.py conversas-continuidade-581.json`; a conferência do dev e do teste
+(sem argumento) segue só com os dois.
+
 ## Versões
 
 ### Revisão de lei registrada (2026-11-13), com a regra v3 e o conjunto na v2

@@ -19,6 +19,14 @@ chamada, para o pontuar_continuidade.py. Só biblioteca padrão. Segue regra-de-
       --braco desligado http://localhost:8501 agroconia_499_desligado \\
       --braco ligado http://localhost:8502 agroconia_499_ligado \\
       --modelo anthropic/claude-haiku-5-5 --saida-dir <pasta>
+
+Conjunto da #581 (`--conjunto 581`, regra-de-decisao-581.md): só o braço `ligado`, porque o
+"corrijo" que se mede só existe com o histórico; 5 repetições por padrão, sem a lei sozinha e sem
+o braço desligado. O comportamento para o conjunto da #499 (o padrão) não muda.
+
+  CERES_SENHA=... python3 executar_continuidade.py --conjunto 581 --pasta <worktree> \\
+      --braco ligado http://localhost:8502 agroconia_581_ligado \\
+      --modelo anthropic/claude-haiku-5-5 --saida-dir <pasta>
 """
 
 from __future__ import annotations
@@ -51,6 +59,7 @@ AUTOTESTE = "Quanto vendi de soja em outubro?"
 CAMPOS_AUDITORIA = ("rota", "desfecho", "camada_classificacao", "latencia_ms",
                     "tokens_entrada", "tokens_saida", "modelo")
 ROTAS_TECNICAS = {0, 429, 500, 502, 503, 504}
+REPETICOES_581 = 5
 
 
 def agora() -> dt.datetime:
@@ -498,7 +507,7 @@ class Rodada:
 
     def repeticao(self, numero: int) -> None:
         ordem = ("desligado", "ligado") if numero in (1, 3) else ("ligado", "desligado")
-        for nome in ordem:
+        for nome in (n for n in ordem if n in self.bracos):  # #581: só o ligado
             self.bracos[nome].renovar()
             print(f"repetição {numero}, braço {nome}: {agora():%H:%M:%S}", flush=True)
             for conjunto, sha in self.conjuntos:
@@ -564,7 +573,11 @@ def main(argv=None) -> int:
                             metavar=("NOME", "URL", "BANCO"))
     analisador.add_argument("--modelo", required=True)
     analisador.add_argument("--saida-dir", required=True)
-    analisador.add_argument("--repeticoes", type=int, default=3)
+    analisador.add_argument("--conjunto", choices=("499", "581"), default="499",
+                            help="499: dev e teste, dois braços (padrão); 581: o conjunto do "
+                                 "falso positivo do corrijo, só o braço ligado")
+    analisador.add_argument("--repeticoes", type=int, default=None,
+                            help="padrão: 3 no conjunto da 499 e 5 no da 581")
     analisador.add_argument("--tentativas", type=int, default=3)
     analisador.add_argument("--lei-sozinha", type=int, default=5)
     analisador.add_argument("--intervalo", type=float, default=3.2)
@@ -574,10 +587,16 @@ def main(argv=None) -> int:
     if not senha:
         raise SystemExit("CERES_SENHA ausente")
     nomes = {b[0] for b in args.braco}
-    if nomes != {"desligado", "ligado"}:
-        raise SystemExit("os braços precisam ser 'desligado' e 'ligado'")
+    esperados = {"ligado"} if args.conjunto == "581" else {"desligado", "ligado"}
+    if nomes != esperados:
+        raise SystemExit(f"os braços precisam ser {sorted(esperados)} no conjunto {args.conjunto}")
+    if args.repeticoes is None:
+        args.repeticoes = REPETICOES_581 if args.conjunto == "581" else 3
+    if args.conjunto == "581":
+        args.lei_sozinha = 0
     commit = commit_limpo(args.pasta)
-    conjuntos = [carregar(vc.ARQUIVOS[1]), carregar(vc.ARQUIVOS[0])]
+    conjuntos = [carregar(vc.ARQUIVO_581)] if args.conjunto == "581" \
+        else [carregar(vc.ARQUIVOS[1]), carregar(vc.ARQUIVOS[0])]
     bracos = {nome: Braco(nome, url.rstrip("/"), banco, senha, args.intervalo)
               for nome, url, banco in args.braco}
     saida_dir = Path(args.saida_dir)
@@ -585,7 +604,7 @@ def main(argv=None) -> int:
     with (saida_dir / "rodada.jsonl").open("a", encoding="utf-8") as saida:
         rodada = Rodada(args, bracos, conjuntos, commit, saida)
         rodada.preparar()
-        for nome in ("desligado", "ligado"):
+        for nome in (n for n in ("desligado", "ligado") if n in bracos):
             bracos[nome].renovar()
             rodada.aquecer(nome)
         rodada.autoteste()
