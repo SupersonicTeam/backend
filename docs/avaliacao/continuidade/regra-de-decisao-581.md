@@ -1,9 +1,11 @@
 # Regra de decisão da medição do falso positivo do "corrijo" nos dados (#581)
 
 **Versão da regra:** `2026-11-18.1`. Gravada em 2026-11-18, **antes** de qualquer rodada. Mudar esta
-regra depois de ver um resultado invalida a medição. **Os limiares da seção 5 estão marcados
-"a aprovar": são proposta da sessão que escreveu o conjunto, e a decisão é do Murillo, antes da
-rodada, com uma versão nova desta regra se ele os mudar.**
+regra depois de ver um resultado invalida a medição. **Aprovação:** o Murillo aprovou os limiares
+da seção 5, como propostos e sem mudança, em 2026-11-18, inclusive a consequência do
+`RISCO_RELEVANTE` (não ligar a continuidade na VPS antes da correção). Os valores não mudaram, por
+isso a versão da regra continua `2026-11-18.1`. Mudar um limiar, uma métrica ou o conjunto depois
+disso pede nova decisão dele e nova versão.
 
 Isto **não** altera a regra da #499 (`regra-de-decisao.md`, v3), nem os conjuntos dela
 (`conversas-continuidade-dev.json` e `-teste.json`, com o sha256 que têm). É uma medição à parte,
@@ -119,9 +121,9 @@ Execução **fora** (não entra nas métricas): `preparo_invalido`, `sem_medicao
   `CONFERI`, `CONFERI_MESMO`) ou quando a consulta final difere da de base. É o que mostra que a
   régua de texto leu a consulta antiga como incoerente.
 
-## 5. Limiares (a aprovar pelo Murillo)
+## 5. Limiares (aprovados pelo Murillo em 2026-11-18)
 
-| Critério | Valor proposto | Por quê (uma linha) |
+| Critério | Valor | Por quê (uma linha) |
 |---|---|---|
 | Repetições | 5 | Haiku em 1,0 não repete igual; com n = 80 no núcleo, zero falhas limita a taxa verdadeira a ≈ 4,6% (Wilson 95%). |
 | Execuções fora | até 10% | o mesmo limite da #499 para uma rodada que ainda vale. |
@@ -140,7 +142,7 @@ mexer no que a banca mede.
 | Veredito | Quando | Implica |
 |---|---|---|
 | `INCONCLUSIVA` | commits, modelos, sha256 ou dia diferentes; braço desligado nas linhas; mais de 10% de execuções fora; classe sem execução válida; controle do VP abaixo de 80% | a rodada se refaz inteira, no mesmo dia, em pasta nova. Controle do VP abaixo de 80% quer dizer que a rodada não vê o "corrijo" devido: não vale como medida do falso positivo. |
-| `RISCO_RELEVANTE` | `corrigiu_para_pior` acima de 5%, ou reproduzido, ou em 2+ conversas | o falso positivo existe e é mensurável. Abre issue de conserto: guarda de apoio nos dados, análoga à g da lei, **ou** "Refiz" no lugar de "Corrijo" quando não há como provar que o valor antigo estava errado. **Proposta (a aprovar):** não ligar `AI_CONTINUIDADE_HABILITADA` na VPS antes da correção. Quem corrige não lê o conjunto: a mensagem cita só ids. |
+| `RISCO_RELEVANTE` | `corrigiu_para_pior` acima de 5%, ou reproduzido, ou em 2+ conversas | o falso positivo existe e é mensurável. Abre issue de conserto: guarda de apoio nos dados, análoga à g da lei, **ou** "Refiz" no lugar de "Corrijo" quando não há como provar que o valor antigo estava errado. **Aprovado (Murillo, 2026-11-18):** não ligar `AI_CONTINUIDADE_HABILITADA` na VPS antes da correção. Quem corrige não lê o conjunto: a mensagem cita só ids. |
 | `INCERTO` | exatamente 1 `corrigiu_para_pior` | repetir as conversas com ocorrência 10 vezes cada, com a mesma regra, antes de decidir. Sem mudança de código nesse meio tempo. |
 | `NAO_EXERCITADO` | nenhum `corrigiu_para_pior`, mas menos de 30% do núcleo passou pelo modelo | não é falha da rodada: as heurísticas leram os quatro padrões como coerentes em pelo menos 70%. O zero vale só para o que foi exercitado. O Murillo decide fechar a #581 com o número ou pedir formulações novas (por outro autor, sem ler estes resultados). |
 | `SEM_RISCO_MEDIDO` | nenhum `corrigiu_para_pior` e pelo menos 30% exercitado | fecha a #581 com o número (e o limite superior de 95%); a decisão da #499 e a flag não mudam. |

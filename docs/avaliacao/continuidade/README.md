@@ -35,7 +35,7 @@ régua de texto da continuidade a leu como incoerente, e a Ceres "corrige" para 
 | Arquivo | O que é |
 |---|---|
 | `conversas-continuidade-581.json` (+ `.sha256`) | o conjunto (`continuidade-581-v1`, 24 conversas, ids `c581-NN`); cego para as sessões de código |
-| `regra-de-decisao-581.md` | métricas, limiares (a aprovar pelo Murillo) e vereditos, gravados antes da rodada |
+| `regra-de-decisao-581.md` | métricas, limiares (aprovados pelo Murillo em 2026-11-18) e vereditos, gravados antes da rodada |
 | `pontuar_581.py` | a pontuação; importa os pedaços comuns do `pontuar_continuidade.py` |
 | `rodar_medicao_581.sh` | a rodada: só o braço ligado, 5 repetições, Haiku, local |
 | `test_581.py` | testes do validador, do executor e da pontuação, rodados na CI |
