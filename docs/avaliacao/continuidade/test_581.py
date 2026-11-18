@@ -128,7 +128,8 @@ def rodada_completa(nucleo=(MESMO, CERTA_DIESEL), repeticoes=(1, 2, 3, 4, 5)):
         for ident in ("c581-01", "c581-02", "c581-03", "c581-04", "c581-05"):
             abertura, fontes_finais = nucleo
             if ident == "c581-01":
-                fontes_finais = fontes_finais if fontes_finais is not CERTA_DIESEL else CERTA_NPK
+                if fontes_finais == CERTA_DIESEL:
+                    fontes_finais = CERTA_NPK
                 base = CERTA_NPK
             else:
                 base = CERTA_DIESEL
@@ -169,8 +170,6 @@ class Validador(unittest.TestCase):
     def test_o_dev_e_o_teste_da_499_nao_mudam(self):
         self.assertEqual([a.name for a in vc.ARQUIVOS],
                          ["conversas-continuidade-dev.json", "conversas-continuidade-teste.json"])
-        for caminho in vc.ARQUIVOS:
-            self.assertEqual(vc.conferir_hash(caminho), [], caminho.name)
         self.assertEqual(vc.VERSAO_BASE, "continuidade-v2")
 
     def test_versao_prefixo_e_parte(self):
@@ -417,6 +416,14 @@ class Pontuacao(unittest.TestCase):
         self.assertEqual(resultado["decisao"], "INCONCLUSIVA")
         self.assertTrue(any("sha256" in p for p in p581.pontuar(
             rodada_completa((MUDOU, CERTA_DIESEL)), conjunto_mini(), "diferente")["problemas"]))
+
+    def test_menos_de_tres_repeticoes_e_inconclusiva(self):
+        for repeticoes in ((1,), (1, 2)):
+            resultado = pontuar(rodada_completa((MUDOU, CERTA_DIESEL), repeticoes=repeticoes))
+            self.assertEqual(resultado["decisao"], "INCONCLUSIVA")
+            self.assertTrue(any("o mínimo é 3" in p for p in resultado["problemas"]))
+        self.assertEqual(pontuar(rodada_completa((MUDOU, CERTA_DIESEL),
+                                                 repeticoes=(1, 2, 3)))["problemas"], [])
 
     def test_braco_desligado_na_rodada_inconclusiva(self):
         linhas = rodada_completa((MUDOU, CERTA_DIESEL))

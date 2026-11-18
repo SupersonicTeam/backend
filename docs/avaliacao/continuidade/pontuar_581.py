@@ -33,6 +33,7 @@ import validar_conjunto as vc  # noqa: E402
 
 VERSAO_REGRA = "2026-11-18.1"
 # Limiares aprovados pelo Murillo em 2026-11-18, como propostos (regra-de-decisao-581.md, seção 5).
+REPETICOES_MINIMAS = 3      # a regra pede 5 e aceita no mínimo 3; menos que isso não vale como rodada
 LIMITE_FORA = 0.10          # execuções fora (preparo inválido, sem medição, confirmação fora da rota)
 EXERCITADO_MINIMO = 0.30    # núcleo: pelo menos 30% passam pelo ramo em que o modelo refaz a consulta
 VP_MINIMO = 0.80            # controle do verdadeiro positivo: corrige para melhor em pelo menos 80%
@@ -229,6 +230,11 @@ def pontuar(linhas: list[dict], conjunto: dict, sha: str) -> dict:
              if l.get("tipo") == "pergunta" and l.get("parte") == "c581"}
     if len(datas) != 1:
         problemas.append(f"as repetições não são do mesmo dia: {sorted(d for d in datas if d)}")
+    repeticoes = {l["repeticao"] for l in linhas
+                  if l.get("tipo") == "pergunta" and l.get("parte") == "c581"}
+    if len(repeticoes) < REPETICOES_MINIMAS:
+        problemas.append(f"{len(repeticoes)} repetições (o mínimo é {REPETICOES_MINIMAS}): "
+                         "um ensaio não vale como rodada")
     vistos = {l.get("conjunto_sha256") for l in linhas if l.get("parte") == "c581"}
     if vistos != {sha}:
         problemas.append(f"execuções com outro sha256: {sorted(v for v in vistos if v)}")
