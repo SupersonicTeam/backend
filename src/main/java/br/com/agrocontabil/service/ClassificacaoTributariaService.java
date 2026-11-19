@@ -59,10 +59,16 @@ import org.springframework.transaction.annotation.Transactional;
  * regra por NCM. O Anexo I continua nos {@link TratamentoTributarioNcm#enquadramentos()}, para a
  * explicação. A exceção é só desse item: nos outros produtos o "mais benéfico vence" segue.
  *
- * <p><strong>Pendência de validação (#284):</strong> venda a cooperativa optante (pergunta 6:
- * cClassTrib 200020 depende da opção da cooperativa, não do NCM). A marca in natura não é dado
- * oficial: é da referência do projeto (o art. 137 não tem lista); o arroz em casca não
- * parboilizado (pergunta 3) a recebeu pela resposta do escritório (changeSet 0051).
+ * <p><strong>Cooperativa optante (#299; #284, pergunta 6, respondida em 2026-11-19):</strong> a
+ * venda do associado à cooperativa que optou pelo regime específico (LC 214/2025, art. 271) tem
+ * alíquota zero pelo cClassTrib {@link #COOPERATIVA_OPTANTE} (200020, CST 200, redução de 100%).
+ * Ele vale pela operação, não pelo NCM: a regra por NCM nunca o escolhe, e ele só se aplica
+ * <strong>informado</strong> no item, porque a opção da cooperativa é dado que ela passa ao
+ * produtor e o sistema não o confere. O {@code FiscalRulesValidator} exige destinatário com CNPJ e
+ * CFOP de saída no país; o aviso não bloqueante {@code COOPERATIVA_OPTANTE_A_CONFIRMAR} lembra o
+ * que fica com o produtor. A marca in natura não é dado oficial: é da referência do projeto (o
+ * art. 137 não tem lista); o arroz em casca não parboilizado (pergunta 3) a recebeu pela resposta
+ * do escritório (changeSet 0051).
  */
 @Service
 public class ClassificacaoTributariaService {
@@ -74,6 +80,12 @@ public class ClassificacaoTributariaService {
 
   /** Cesta básica (Anexo I, art. 125): alíquota zero. */
   public static final String CESTA_BASICA = "200003";
+
+  /**
+   * Venda do associado à cooperativa optante pelo regime específico (LC 214/2025, art. 271;
+   * #299): alíquota zero, só informado no item.
+   */
+  public static final String COOPERATIVA_OPTANTE = "200020";
 
   /**
    * NCMs do leite do Anexo I, item 2, da LC 214/2025 que servem tanto ao leite cru quanto ao de
@@ -259,11 +271,13 @@ public class ClassificacaoTributariaService {
    * Confere um {@code cClassTrib} informado contra o NCM do item (issue #375). São admitidos: o
    * tratamento da regra por NCM, todo anexo em que o NCM se enquadra na data (linha
    * {@code PERMITIDO} sem {@code VEDADO}, a mesma regra dos {@link #enquadramentos} — o 200003 do
-   * leite, por exemplo), a tributação integral ({@code 000001}) e o in natura ({@code 200036}:
+   * leite, por exemplo), a tributação integral ({@code 000001}), o in natura ({@code 200036}:
    * o art. 137 vale pela condição e não tem lista de NCM, então o código informado é a declaração
-   * de quem emite). Qualquer outro código de redução (de anexo que não inclui o NCM, ou de outra
-   * hipótese de CST 200 — medicamentos, saúde... — que o NCM do produtor não alcança) é recusado:
-   * sem isso, qualquer produto teria alíquota zero informando o código.
+   * de quem emite) e a venda à cooperativa optante ({@code 200020}: vale pela operação, e o
+   * {@code FiscalRulesValidator} confere o destinatário e o CFOP, #299). Qualquer outro código de
+   * redução (de anexo que não inclui o NCM, ou de outra hipótese de CST 200 — medicamentos,
+   * saúde... — que o NCM do produtor não alcança) é recusado: sem isso, qualquer produto teria
+   * alíquota zero informando o código.
    *
    * @param cClassTrib código informado no item
    * @param ncm NCM do item
@@ -275,7 +289,7 @@ public class ClassificacaoTributariaService {
   public Optional<CodigoNaoAdmitido> codigoNaoAdmitido(String cClassTrib, String ncm,
       LocalDate data) {
     if (cClassTrib == null || INTEGRAL.equals(cClassTrib) || IN_NATURA.equals(cClassTrib)
-        || ncm == null || ncm.isBlank()) {
+        || COOPERATIVA_OPTANTE.equals(cClassTrib) || ncm == null || ncm.isBlank()) {
       return Optional.empty();
     }
     List<EnquadramentoAnexo> enquadramentos = enquadramentos(ncm, data);
@@ -295,7 +309,8 @@ public class ClassificacaoTributariaService {
    *
    * @param regra tratamento da regra por NCM (a sugestão principal)
    * @param admitidos códigos de redução que valem para o NCM na data, a regra primeiro (além do
-   *     integral {@code 000001} e do in natura {@code 200036}, sempre aceitos)
+   *     integral {@code 000001}, do in natura {@code 200036} e da cooperativa optante
+   *     {@code 200020}, sempre aceitos)
    */
   public record CodigoNaoAdmitido(TratamentoTributarioNcm regra, List<String> admitidos) {}
 

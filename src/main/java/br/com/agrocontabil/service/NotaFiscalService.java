@@ -451,18 +451,17 @@ public class NotaFiscalService {
   }
 
   /**
-   * Resposta da gravacao do rascunho com os avisos nao bloqueantes (issue #389): hoje o
-   * cClassTrib informado que o NCM do item nao admite, que o {@code gerar-xml} recusaria com 422.
-   * Salvar nunca e impedido por isso; so a tela deixa de mostrar o imposto como definitivo.
+   * Resposta da gravacao do rascunho com os avisos nao bloqueantes (issues #389 e #299): o
+   * cClassTrib informado que o NCM do item nao admite, que o {@code gerar-xml} recusaria com 422,
+   * e o 200020 (cooperativa optante), que o sistema nao confere. Salvar nunca e impedido por isso;
+   * cada aviso traz a mensagem do proprio codigo ({@link AvisoRascunho#mensagem()}).
    */
   private NotaFiscalResponse comAvisos(NotaFiscal salva) {
     List<AvisoNotaResponse> avisos;
     try {
       avisos = sinaisService.avisosDoRascunho(salva).stream()
-          .map(s -> new AvisoNotaResponse(s.codigo().name(), s.numeroItem(), "cClassTrib",
-              "O cClassTrib informado no item " + s.numeroItem() + " não vale para o NCM dele: "
-                  + "o imposto mostrado não vale na emissão e o gerar-xml será recusado. "
-                  + "Corrija o cClassTrib ou retire-o do item."))
+          .map(a -> new AvisoNotaResponse(a.codigo().name(), a.numeroItem(), a.campo(),
+              a.mensagem()))
           .toList();
     } catch (RuntimeException falha) {
       // O aviso e um extra: uma falha na tabela oficial nunca pode impedir de salvar a nota.

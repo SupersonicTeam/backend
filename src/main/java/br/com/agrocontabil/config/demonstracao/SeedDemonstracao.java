@@ -761,6 +761,12 @@ public class SeedDemonstracao implements CommandLineRunner {
           new VendaPlanejada(noDia(hoje.minusDays(27), 10),
               CenarioDemonstracao.graneleiraTelesPires(), soja, new BigDecimal("36850"),
               soja.preco(), Especial.NO_PRAZO),
+          // Venda a cooperativa optante (#299): a mesma quantidade e o mesmo preco da nota "no
+          // prazo" a Graneleira, com o 200020 (aliquota zero) no lugar do 200036 (60%). Fora da
+          // janela do alerta de fim do prazo de cancelamento.
+          new VendaPlanejada(noDia(hoje.minusDays(20), 10),
+              CenarioDemonstracao.cooperativaCeleste(), CenarioDemonstracao.sojaCooperativa(),
+              new BigDecimal("36850"), soja.preco(), Especial.NENHUM),
           new VendaPlanejada(noDia(hoje.minusDays(52), 15),
               CenarioDemonstracao.graneleiraTelesPires(), soja, new BigDecimal("37120"),
               soja.preco(), Especial.CANCELADA),

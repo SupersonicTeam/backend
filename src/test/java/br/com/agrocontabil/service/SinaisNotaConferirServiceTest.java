@@ -353,10 +353,31 @@ class SinaisNotaConferirServiceTest {
         .thenReturn(Optional.of(new ClassificacaoTributariaService.CodigoNaoAdmitido(null,
             List.of("200036"))));
 
-    assertThat(service.avisosDoRascunho(nota)).extracting(SinalNota::numeroItem)
+    assertThat(service.avisosDoRascunho(nota)).extracting(AvisoRascunho::numeroItem)
         .containsExactly(1);
     // Nenhuma consulta de nota, de item ou de referencia: e a checagem barata.
     verifyNoInteractions(notas);
+
+    nota.setOrigem(OrigemNotaFiscal.IMPORTADA);
+    assertThat(service.avisosDoRascunho(nota)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("avisosDoRascunho: o 200020 informado avisa a cooperativa optante a confirmar (#299)")
+  void avisoDaCooperativaOptante() {
+    NotaFiscal nota = NotaFiscal.builder().origem(OrigemNotaFiscal.PROPRIA)
+        .dataEmissao(EMISSAO).build();
+    nota.addItem(NotaFiscalItem.builder().numeroItem(1).descricao("Soja").ncm("12019000")
+        .build());
+    nota.addItem(NotaFiscalItem.builder().numeroItem(2).descricao("Soja").ncm("12019000")
+        .cClassTrib("200020").build());
+
+    assertThat(service.avisosDoRascunho(nota))
+        .extracting(AvisoRascunho::codigo, AvisoRascunho::numeroItem, AvisoRascunho::campo)
+        .containsExactly(org.assertj.core.groups.Tuple.tuple(
+            AvisoRascunho.Codigo.COOPERATIVA_OPTANTE_A_CONFIRMAR, 2, "cClassTrib"));
+    assertThat(service.avisosDoRascunho(nota).get(0).mensagem())
+        .contains("200020", "alíquota zero", "art. 271", "associado", "não confere");
 
     nota.setOrigem(OrigemNotaFiscal.IMPORTADA);
     assertThat(service.avisosDoRascunho(nota)).isEmpty();

@@ -176,18 +176,25 @@ class NotaFiscalServiceTest {
     when(tributacaoService.calcular(any(NotaFiscal.class)))
         .thenAnswer(inv -> inv.getArgument(0));
     when(notaFiscalRepository.save(any(NotaFiscal.class))).thenReturn(notaSalva);
-    when(sinaisService.avisosDoRascunho(notaSalva)).thenReturn(List.of(new SinalNota(
-        SinalNota.CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO,
-        SinalNota.Motivo.CODIGO_NAO_VALE_PARA_O_NCM, SinalNota.Momento.ANTES_DE_EMITIR, 1,
-        "Soja", "5101", null)));
+    when(sinaisService.avisosDoRascunho(notaSalva)).thenReturn(List.of(
+        new AvisoRascunho(AvisoRascunho.Codigo.CCLASSTRIB_NAO_ADMITIDO, 1),
+        new AvisoRascunho(AvisoRascunho.Codigo.COOPERATIVA_OPTANTE_A_CONFIRMAR, 2)));
 
     NotaFiscalResponse response = notaFiscalService.create(buildRequest());
 
     assertThat(response.id()).isEqualTo(notaSalva.getId());
-    assertThat(response.avisos()).singleElement().satisfies(a -> {
+    assertThat(response.avisos()).hasSize(2);
+    assertThat(response.avisos().get(0)).satisfies(a -> {
       assertThat(a.codigo()).isEqualTo("CCLASSTRIB_NAO_ADMITIDO");
       assertThat(a.numeroItem()).isEqualTo(1);
       assertThat(a.campo()).isEqualTo("cClassTrib");
+      assertThat(a.mensagem()).startsWith("O cClassTrib informado no item 1 não vale");
+    });
+    // #299: cada codigo com a propria mensagem.
+    assertThat(response.avisos().get(1)).satisfies(a -> {
+      assertThat(a.codigo()).isEqualTo("COOPERATIVA_OPTANTE_A_CONFIRMAR");
+      assertThat(a.numeroItem()).isEqualTo(2);
+      assertThat(a.mensagem()).contains("200020", "cooperativa");
     });
   }
 
@@ -414,9 +421,7 @@ class NotaFiscalServiceTest {
         .thenAnswer(inv -> inv.getArgument(0));
     when(notaFiscalRepository.save(any(NotaFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
     when(sinaisService.avisosDoRascunho(any(NotaFiscal.class)))
-        .thenReturn(List.of(new SinalNota(SinalNota.CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO,
-            SinalNota.Motivo.CODIGO_NAO_VALE_PARA_O_NCM, SinalNota.Momento.ANTES_DE_EMITIR, 1,
-            "Soja", "5101", null)))
+        .thenReturn(List.of(new AvisoRascunho(AvisoRascunho.Codigo.CCLASSTRIB_NAO_ADMITIDO, 1)))
         .thenThrow(new IllegalStateException("tabela oficial indisponivel"));
 
     NotaFiscalResponse comAviso = notaFiscalService.update(notaId, request);

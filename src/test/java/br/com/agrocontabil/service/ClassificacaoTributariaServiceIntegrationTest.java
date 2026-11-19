@@ -154,7 +154,10 @@ class ClassificacaoTributariaServiceIntegrationTest {
       "04012090, 200003, ,       2026-10-29",  // leite esta no Anexo I
       "04012090, 200036, ,       2026-10-29",  // a regra do leite
       "12019000, 200036, ,       2026-10-29",  // in natura: o art. 137 nao tem lista de NCM
-      "99999999, 000001, ,       2026-10-29"   // integral sempre vale
+      "99999999, 000001, ,       2026-10-29",  // integral sempre vale
+      // #299: venda do associado a cooperativa optante vale pela operacao, nao pelo NCM
+      "12019000, 200020, ,       2026-10-29",
+      "04072100, 200020, ,       2026-10-29"
   })
   @DisplayName("#375: codigoNaoAdmitido confere o cClassTrib informado contra o NCM")
   void codigoNaoAdmitido(String ncm, String informado, String sugestao, LocalDate data) {

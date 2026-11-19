@@ -148,8 +148,12 @@ As validações de contador da issue #284 podem ajustar este texto:
   3); o diferimento é opção do produtor;
 - **perguntas 10 a 14 e 16:** regras das respostas da Ceres, sinais de nota e CRT 3.
 
-**Respondido, em implementação:** pergunta 6, venda a cooperativa optante (cClassTrib 200020): a
-cooperativa informa ao produtor que optou, e o cenário está em implementação na #299.
+**Pergunta 6, implementada na #299:** venda do associado à cooperativa optante pelo regime
+específico (LC 214/2025, art. 271): alíquota zero pelo cClassTrib **200020 informado no item**. A
+cooperativa informa ao produtor que optou; o sistema **não confere** a opção nem a associação, e o
+avisa ao salvar a nota (`COOPERATIVA_OPTANTE_A_CONFIRMAR`). A emissão exige destinatário com CNPJ e
+venda no país. A compra do associado **à** cooperativa optante (também 200020) ainda entra pela
+regra do NCM na importação, com crédito a maior: limitação declarada, #597.
 
 **Limitações declaradas** (decisão de 2026-11-19: as perguntas complementares A, C, D e E da #284
 não vão ao contador, e o texto não promete resposta):

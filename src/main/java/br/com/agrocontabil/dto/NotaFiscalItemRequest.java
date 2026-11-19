@@ -93,7 +93,11 @@ public record NotaFiscalItemRequest(
         description =
             "Codigo de Classificacao Tributaria — cClassTrib (6 digitos). "
                 + "Opcional: sem ele, vale o da regra pelo NCM (tabela oficial, IT 2025.002). "
-                + "Informado, a reducao e a oficial do codigo; a emissao confere que ele existe.",
+                + "Informado, a reducao e a oficial do codigo; a emissao confere que ele existe "
+                + "e vale para o NCM. 200020 = venda do associado a cooperativa optante pelo "
+                + "regime especifico (LC 214/2025, art. 271): aliquota zero, so a destinatario "
+                + "com CNPJ no pais; a opcao da cooperativa nao e conferida (aviso "
+                + "COOPERATIVA_OPTANTE_A_CONFIRMAR).",
         example = "200036")
     @Pattern(
         regexp = "\\d{6}",

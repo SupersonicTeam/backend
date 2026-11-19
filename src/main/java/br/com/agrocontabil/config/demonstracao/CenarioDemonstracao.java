@@ -167,6 +167,14 @@ final class CenarioDemonstracao {
       "Trading de Graos Chapadao do Norte Ltda", cnpj("361904570001"), "134072958",
       new Endereco("Rodovia BR-163", "KM 690", "Distrito Industrial", "5105259",
           "Lucas do Rio Verde", "MT", "78455000"));
+  // Cooperativa de MT, com IE, optante pelo regime especifico do IBS/CBS (LC 214/2025, art. 271),
+  // de que o Carlos e associado (#299; #284, pergunta 6): a venda de soja a ela sai com o
+  // cClassTrib 200020 informado (aliquota zero), ao lado da mesma venda a Graneleira (60%). A opcao
+  // e dado que a cooperativa passa ao produtor: o sistema nao a confere.
+  private static final Parte COOPERATIVA_CELESTE = new Parte(
+      "Cooperativa Agroindustrial Celeste", cnpj("702581940001"), "133904726",
+      new Endereco("Rodovia MT-242", "KM 15", "Zona Rural", "5107925", "Sorriso", "MT",
+          "78890000"));
   private static final Parte ALGODOEIRA_PRIMAVERA = new Parte(
       "Algodoeira Primavera do Leste Ltda", cnpj("509127330001"), "132904185",
       new Endereco("Avenida Sao Joao", "3150", "Parque Industrial", "5107040",
@@ -261,6 +269,9 @@ final class CenarioDemonstracao {
 
   private static final Produto SOJA = new Produto("SOJA-GR",
       "Soja em grao a granel, safra 2025/26", "12019000", "KG", new BigDecimal("2.12"));
+  /** A mesma soja, vendida a cooperativa optante: cClassTrib 200020 informado (#299). */
+  private static final Produto SOJA_COOPERATIVA = new Produto(SOJA.codigo(), SOJA.descricao(),
+      SOJA.ncm(), SOJA.unidade(), SOJA.preco(), "200020");
   private static final Produto MILHO = new Produto("MILHO-GR",
       "Milho em grao a granel, segunda safra 2026", "10059010", "KG", new BigDecimal("0.96"));
   private static final Produto ALGODAO = new Produto("ALG-CAR",
@@ -458,6 +469,10 @@ final class CenarioDemonstracao {
     return GRANELEIRA_TELES_PIRES;
   }
 
+  static Parte cooperativaCeleste() {
+    return COOPERATIVA_CELESTE;
+  }
+
   static Parte distribuidoraSaoPaulo() {
     return DISTRIBUIDORA_SP;
   }
@@ -472,6 +487,10 @@ final class CenarioDemonstracao {
 
   static Produto soja() {
     return SOJA;
+  }
+
+  static Produto sojaCooperativa() {
+    return SOJA_COOPERATIVA;
   }
 
   static Produto tomate() {
