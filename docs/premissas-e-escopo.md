@@ -29,9 +29,11 @@ O que a #281 precisa modelar e o sistema hoje **não** trata (todos no texto da 
 - **Diferimento dos insumos** (art. 138, § 2º, inciso I, alínea a): na venda de insumo
   agropecuário do Anexo IX (fertilizantes, defensivos, sementes etc.) entre contribuintes do
   regime regular, o recolhimento do IBS/CBS fica diferido. O encerramento do diferimento, quem
-  recolhe (§§ 5º a 7º) e o efeito sobre o crédito estão com o contador (#284, pergunta C). O
-  `CreditoTributarioService` não modela o diferimento: numa compra de insumo do Anexo IX ele estima
-  crédito como numa compra comum, o que pode não corresponder ao caso (#356).
+  recolhe (§§ 5º a 7º) e o efeito sobre o crédito não estão modelados. **Limitação declarada**
+  (decisão de 2026-11-19: a pergunta C da #284 não vai ao contador): o
+  `CreditoTributarioService` não considera o diferimento e, numa compra de insumo do Anexo IX, estima
+  crédito como numa compra comum, o que pode não corresponder ao caso. Fica para depois da banca
+  (#356).
 
 Por que assim até a banca: modelar a situação exige histórico por ano-calendário, as regras de
 opção e renúncia, nota sem destaque para o não contribuinte (CST/cClassTrib, relacionada à #278) e
@@ -127,8 +129,8 @@ O AgroContábil trata da **reforma** (IBS/CBS). Os tributos atuais ficam com o c
   complementares** (`infCpl`) e nos Dados Adicionais do DANFE: base, 1,2% + 0,1% + 0,2% por
   parcela, total e a base legal, com o recolhimento pelo adquirente. Venda a pessoa física,
   exportação e produtor pessoa jurídica não levam o texto. O recolhimento segue por guia (tipo
-  `FUNRURAL` ou `GPS`). O contador falou em 1,63%; o sistema segue com 1,5% e a base legal até a
-  resposta da pergunta A da #284.
+  `FUNRURAL` ou `GPS`). O contador falou em 1,63%; o sistema destaca 1,5% e a base legal
+  (decisão de 2026-11-19: a pergunta A da #284 não vai ao contador). **Limitação declarada.**
 
 ## 4. O que pode mudar
 
@@ -149,8 +151,15 @@ As validações de contador da issue #284 podem ajustar este texto:
 **Respondido, em implementação:** pergunta 6, venda a cooperativa optante (cClassTrib 200020): a
 cooperativa informa ao produtor que optou, e o cenário está em implementação na #299.
 
-**Segue pendente (sem resposta do contador):** diferimento dos insumos do Anexo IX (pergunta C,
-bloqueia a #356), arroz parboilizado 1006.10.91 (D), Funrural 1,5% × 1,63% (A) e CST do ICMS dos
-demais pares de UF e produto (E).
+**Limitações declaradas** (decisão de 2026-11-19: as perguntas complementares A, C, D e E da #284
+não vão ao contador, e o texto não promete resposta):
+
+- **A, Funrural/Senar:** a NF-e destaca 1,5% (1,2% + 0,1% + 0,2%) com a base legal; o contador
+  citou 1,63%.
+- **C, insumos do Anexo IX:** o crédito é estimado sem considerar o diferimento do art. 138, § 2º
+  (#356, depois da banca).
+- **D, arroz parboilizado em casca (1006.10.91):** fica fora da marca *in natura*.
+- **E, ICMS:** o CST 51 está confirmado só para MT + soja; fora desse par, o sinal
+  `ICMS_PADRAO_A_CONFIRMAR` avisa para conferir com o contador (#334, depois da banca).
 
 Roteiro de resposta para a banca: [`roteiro-banca-regime-regular.md`](roteiro-banca-regime-regular.md).
