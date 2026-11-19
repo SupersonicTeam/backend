@@ -23,9 +23,10 @@ class FrasesSinaisNotaTest {
         null)));
 
     assertThat(texto).isEqualTo("Na nota 116, o item 'Frete' saiu com CFOP 6.949 (outra saída não"
-        + " especificada) e parece um serviço. Serviço normalmente não sai em nota de produto"
-        + " (NF-e), e sim em NFS-e de padrão nacional (LC 214/2025, art. 62, § 1º, inciso I):"
-        + " confira com seu contador. A nota já foi autorizada: se for preciso, dá para"
+        + " especificada) e parece um serviço. Serviço de frete não sai em nota de produto"
+        + " (NF-e): dentro do mesmo município vai em NFS-e de padrão nacional (LC 214/2025,"
+        + " art. 62, § 1º, inciso I); entre municípios, o documento é o CT-e (conhecimento de"
+        + " transporte eletrônico): confira com seu contador. A nota já foi autorizada: se for preciso, dá para"
         + " cancelá-la até 26/11/2026, às 10:00 (horário de Brasília).");
     assertThat(texto.toLowerCase(Locale.ROOT)).doesNotContain("errad");
   }
@@ -58,6 +59,26 @@ class FrasesSinaisNotaTest {
           motivo, "ANTES_DE_EMITIR", 1, "Frete", "5949", null, "H", null, null, null, null))))
           .as(motivo).contains("NFS-e de padrão nacional").contains("art. 62, § 1º, inciso I")
           .contains("confira com seu contador");
+    }
+  }
+
+  @Test
+  @DisplayName("#284 resposta 13: só o frete cita o CT-e; os demais termos seguem só com a NFS-e")
+  void freteCitaOCteEOsDemaisSoANfse() {
+    for (String frete : List.of("Frete", "Serviço de frete de soja", "FRETES do mês")) {
+      assertThat(FrasesSinaisNota.texto(9, null, List.of(new Sinal("PRODUTO_PARECE_SERVICO",
+          "CFOP_GENERICO", "ANTES_DE_EMITIR", 1, frete, "5949", null, null, null, null, null,
+          null))))
+          .as(frete).contains("NFS-e de padrão nacional").contains("entre municípios")
+          .contains("CT-e (conhecimento de transporte eletrônico)")
+          .endsWith("confira com seu contador antes de emitir.");
+    }
+    for (String outro : List.of("Colheita de soja", "Plantio", "Pulverização aérea",
+        "Aluguel de colheitadeira", "Armazenagem de grãos", "Fretamento")) {
+      assertThat(FrasesSinaisNota.texto(9, null, List.of(new Sinal("PRODUTO_PARECE_SERVICO",
+          "CFOP_GENERICO", "ANTES_DE_EMITIR", 1, outro, "5949", null, null, null, null, null,
+          null))))
+          .as(outro).contains("e sim em NFS-e de padrão nacional").doesNotContain("CT-e");
     }
   }
 

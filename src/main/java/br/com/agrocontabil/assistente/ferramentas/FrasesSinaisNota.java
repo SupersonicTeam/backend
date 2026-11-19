@@ -1,9 +1,11 @@
 package br.com.agrocontabil.assistente.ferramentas;
 
 import br.com.agrocontabil.assistente.porta.DadosProdutorPorta.Sinal;
+import java.text.Normalizer;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -21,6 +23,10 @@ public final class FrasesSinaisNota {
   private static final int DESCRICAO_MAXIMA = 60;
   /** A NFS-e de padrão nacional: os Municípios autorizam o contribuinte a emiti-la (#364). */
   private static final String ARTIGO_NFSE = "LC 214/2025, art. 62, § 1º, inciso I";
+
+  /** O termo de frete na descrição (sem acento, palavra inteira, qualquer caixa). */
+  private static final Pattern FRETE =
+      Pattern.compile("\\bfretes?\\b", Pattern.CASE_INSENSITIVE);
 
   private FrasesSinaisNota() {}
 
@@ -54,8 +60,7 @@ public final class FrasesSinaisNota {
   static String frase(String nota, Sinal s) {
     return switch (s.codigo()) {
       case "PRODUTO_PARECE_SERVICO" -> nota + ", o item '" + curta(s.descricaoItem()) + "' "
-          + motivoServico(s) + " Serviço normalmente não sai em nota de produto (NF-e), e sim em"
-          + " NFS-e de padrão nacional (" + ARTIGO_NFSE + "): confira com seu contador"
+          + motivoServico(s) + documentoDoServico(s.descricaoItem()) + ": confira com seu contador"
           + ("ANTES_DE_EMITIR".equals(s.momento()) ? " antes de emitir." : ".");
       case "VALOR_UNITARIO_FORA_PADRAO" -> nota + ", o preço do item '" + curta(s.descricaoItem())
           + "' (" + FormatoBr.precoUnitario(s.valor()) + " por " + unidade(s.unidade())
@@ -81,6 +86,22 @@ public final class FrasesSinaisNota {
           + " antes de emitir, senão a emissão é barrada.";
       default -> nota + ", há um ponto para conferir com seu contador.";
     };
+  }
+
+  /**
+   * Documento em que o serviço deveria sair. Frete só é serviço de NFS-e dentro do mesmo município;
+   * entre municípios, o documento é o CT-e (contador do escritório, #284, resposta 13). Os demais
+   * termos seguem só com a NFS-e.
+   */
+  private static String documentoDoServico(String descricao) {
+    if (descricao != null && FRETE.matcher(Normalizer.normalize(descricao, Normalizer.Form.NFD)
+        .replaceAll("\\p{M}+", "")).find()) {
+      return " Serviço de frete não sai em nota de produto (NF-e): dentro do mesmo município vai em"
+          + " NFS-e de padrão nacional (" + ARTIGO_NFSE + "); entre municípios, o documento é o"
+          + " CT-e (conhecimento de transporte eletrônico)";
+    }
+    return " Serviço normalmente não sai em nota de produto (NF-e), e sim em NFS-e de padrão"
+        + " nacional (" + ARTIGO_NFSE + ")";
   }
 
   private static String motivoServico(Sinal s) {
