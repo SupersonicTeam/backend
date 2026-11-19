@@ -445,6 +445,7 @@ public class FiscalRulesValidator {
           prefixo + ".cstIbsCbs", "CST " + cst + " não corresponde ao cClassTrib " + cClassTrib
               + " (os três primeiros dígitos são o CST)"));
     }
+    validarCooperativaOptante(nota, item, prefixo, cClassTrib, violations);
     if (classificacaoService == null || nota.getDataEmissao() == null) {
       return;
     }
@@ -469,6 +470,49 @@ public class FiscalRulesValidator {
   }
 
   /**
+   * Venda do associado à cooperativa optante ({@code 200020}, LC 214/2025, art. 271; #299): o
+   * código vale pela operação, então o NCM não o recusa ({@link
+   * ClassificacaoTributariaService#codigoNaoAdmitido}) e a operação tem de ser possível. A
+   * cooperativa é pessoa jurídica (destinatário com CNPJ) no país (CFOP de saída 5xxx ou 6xxx,
+   * destinatário fora do exterior). Se ela optou e se o produtor é associado, o sistema não confere:
+   * é dado que a cooperativa passa ao produtor (aviso {@code COOPERATIVA_OPTANTE_A_CONFIRMAR} ao
+   * salvar). A nota importada não passa aqui (#375).
+   */
+  private void validarCooperativaOptante(NotaFiscal nota, NotaFiscalItem item, String prefixo,
+      String cClassTrib, List<NotaFiscalInvalidaParaEmissaoException.FieldViolation> violations) {
+    if (!ClassificacaoTributariaService.COOPERATIVA_OPTANTE.equals(cClassTrib)
+        || nota.getOrigem() == OrigemNotaFiscal.IMPORTADA) {
+      return;
+    }
+    // A mesma regra do XML (NotaFiscalNfeMapper.buildDest): 14 digitos = <CNPJ>, senao <CPF>.
+    String documento = nota.getDestinatarioCpfCnpj() == null ? ""
+        : nota.getDestinatarioCpfCnpj().replaceAll("\\D", "");
+    if (documento.length() != 14) {
+      violations.add(cooperativa(prefixo, "o destinatário tem de ter CNPJ: cooperativa é pessoa"
+          + " jurídica"));
+    }
+    String cfop = item.getCfop() == null ? "" : item.getCfop().strip();
+    if (!cfop.isEmpty() && !cfop.startsWith("5") && !cfop.startsWith("6")) {
+      violations.add(cooperativa(prefixo, "o CFOP " + cfop + " não é de saída no país (5xxx ou"
+          + " 6xxx)"));
+    }
+    if (nota.getDestinatarioEndereco() != null
+        && UfIbge.isExterior(nota.getDestinatarioEndereco().getUf())) {
+      violations.add(cooperativa(prefixo, "o destinatário está no exterior"));
+    }
+  }
+
+  private static NotaFiscalInvalidaParaEmissaoException.FieldViolation cooperativa(String prefixo,
+      String motivo) {
+    return new NotaFiscalInvalidaParaEmissaoException.FieldViolation(prefixo + ".cClassTrib",
+        "cClassTrib 200020 (venda do associado à cooperativa optante, LC 214/2025, art. 271)"
+            + " não vale nesta operação: " + motivo,
+        null, "Use o 200020 só na venda a cooperativa brasileira de que você é associado; senão,"
+            + " retire o cClassTrib do item e vale a regra do NCM",
+        ClassificacaoTributariaService.COOPERATIVA_OPTANTE, null);
+  }
+
+  /**
    * cClassTrib <strong>informado</strong> tem de valer para o NCM do item (issue #375):
    * {@link ClassificacaoTributariaService#codigoNaoAdmitido}. Sem isso, qualquer produto teria
    * alíquota zero informando o 200003, o 200014 ou outro código de redução. O tratamento da regra
@@ -488,7 +532,7 @@ public class FiscalRulesValidator {
               prefixo + ".cClassTrib", "cClassTrib " + item.getCClassTrib() + " não vale para o"
                   + " NCM " + item.getNcm() + ": a hipótese de redução dele não inclui esse NCM"
                   + " na tabela oficial (LC 214/2025). Para este NCM valem: " + admitidos
-                  + " (além de 000001 e 200036)",
+                  + " (além de 000001, 200036 e, na venda à cooperativa optante, 200020)",
               null, "Informe o cClassTrib " + nao.regra().cClassTrib() + " ("
                   + nao.regra().percentualReducao().stripTrailingZeros().toPlainString()
                   + "% de redução, a regra do NCM), outro da lista ou retire o cClassTrib do"

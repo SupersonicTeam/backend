@@ -298,31 +298,36 @@ public class SinaisNotaConferirService {
   }
 
   /**
-   * Avisos de uma nota própria recém-gravada, sem o resto da validação fiscal (issue #389): só o
-   * cClassTrib informado que o NCM do item não admite, a mesma regra que barra o {@code gerar-xml}
-   * (422). Sem as demais regras (duplicidade, valor fora do padrão, ICMS), só o cClassTrib
-   * informado, e uma conferência por par (cClassTrib, NCM) da nota; roda no create/update do
-   * rascunho. Não bloqueia; a nota importada nunca recebe aviso.
+   * Avisos de uma nota própria recém-gravada, sem o resto da validação fiscal (issues #389 e #299):
+   * o cClassTrib informado que o NCM do item não admite, a mesma regra que barra o
+   * {@code gerar-xml} (422), e o 200020 informado (venda à cooperativa optante), que vale só se a
+   * cooperativa optou e o produtor é associado, o que o sistema não confere. Sem as demais regras
+   * (duplicidade, valor fora do padrão, ICMS), uma conferência por par (cClassTrib, NCM) da nota;
+   * roda no create/update do rascunho. Não bloqueia; a nota importada nunca recebe aviso.
    *
    * @param nota nota já com os itens, ainda gerenciada ou completa
-   * @return um sinal por item com código não admitido, na ordem dos itens
+   * @return os avisos na ordem dos itens
    */
   @Transactional(readOnly = true)
-  public List<SinalNota> avisosDoRascunho(NotaFiscal nota) {
+  public List<AvisoRascunho> avisosDoRascunho(NotaFiscal nota) {
     if (nota.getOrigem() == OrigemNotaFiscal.IMPORTADA) {
       return List.of();
     }
-    List<SinalNota> sinais = new ArrayList<>();
+    List<AvisoRascunho> avisos = new ArrayList<>();
     Map<String, Boolean> jaConferido = new HashMap<>();
     for (NotaFiscalItem item : nota.getItens()) {
       if (cClassTribNaoAdmitido(item.getCClassTrib(), item.getNcm(), nota.getDataEmissao(),
           jaConferido, this::naoAdmitidoPelaTabela)) {
-        sinais.add(new SinalNota(CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO,
-            Motivo.CODIGO_NAO_VALE_PARA_O_NCM, Momento.ANTES_DE_EMITIR, item.getNumeroItem(),
-            item.getDescricao(), item.getCfop(), null));
+        avisos.add(new AvisoRascunho(AvisoRascunho.Codigo.CCLASSTRIB_NAO_ADMITIDO,
+            item.getNumeroItem()));
+      }
+      if (item.getCClassTrib() != null && ClassificacaoTributariaService.COOPERATIVA_OPTANTE
+          .equals(item.getCClassTrib().strip())) {
+        avisos.add(new AvisoRascunho(AvisoRascunho.Codigo.COOPERATIVA_OPTANTE_A_CONFIRMAR,
+            item.getNumeroItem()));
       }
     }
-    return List.copyOf(sinais);
+    return List.copyOf(avisos);
   }
 
   /** cClassTrib informado que o NCM não alcança: a regra do {@code FiscalRulesValidator}. */

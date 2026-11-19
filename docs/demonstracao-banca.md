@@ -71,6 +71,22 @@ edita e apaga modelo; o Rafael e a Juliana usam.
    nota autorizada; a nota emitida há 27 dias gera o alerta de **fim do prazo de cancelamento**
    (RN006/RN010); a **cancelada** mostra o motivo e o protocolo; o pedido do escritório (extrato
    bancário) está no calendário.
+
+   **Cooperativa optante (#299; #284, pergunta 6).** Ainda como o Carlos, abrir lado a lado duas
+   vendas de soja com a **mesma quantidade e o mesmo preço** (36.850 kg a R$ 2,12, R$ 78.122,00):
+   a nota emitida há 27 dias à **Graneleira Vale do Teles Pires** (cClassTrib 200036, in natura,
+   60% de redução: CBS e IBS destacados) e a de 20 dias atrás à **Cooperativa Agroindustrial
+   Celeste** (cClassTrib **200020**, redução de 100%: IBS/CBS zero). Baixar a DANFE das
+   duas (`IBS/CBS 200` e `[cClassTrib 200020]` no item da cooperativa; quadro do IBS/CBS zerado) e
+   que o Funrural retido e o ICMS (CST 51) são iguais nas duas. A mensagem: **o sistema não sabe
+   se a cooperativa optou**. A cooperativa informa ao produtor, e o produtor informa o 200020 no
+   item; a emissão exige destinatário com CNPJ e venda no país, e salvar a nota com o código traz o
+   aviso `COOPERATIVA_OPTANTE_A_CONFIRMAR` ("o sistema não confere isso"). A tela de item ainda não
+   tem o campo do cClassTrib: uma venda nova à cooperativa só sai pela API (o seed já traz a nota
+   autorizada). Não edite pela tela uma nota com o 200020: o `PUT` da tela substitui os itens e
+   apaga o código. As datas contam do dia da semeadura (o reset): com o reset uma semana antes da
+   banca, a nota da cooperativa terá cerca de 27 dias no dia da apresentação e também mostra o
+   alerta de fim do prazo de cancelamento, e a da Graneleira já terá passado do prazo.
 4. **ICMS a definir (Carlos e Três Pontes).** Os rascunhos de venda de milho do Carlos ao
    pecuarista Antônio Carlos Pereira (pessoa física **sem IE**) e o do touro reprodutor da Três
    Pontes para MG não têm CST de ICMS. O sistema só preenche sozinho o **51 (diferimento)** na venda
@@ -135,6 +151,7 @@ Reduções aplicadas pela tabela oficial, conferidas no banco da VPS em 2026-11-
 | **100%** (IBS/CBS zero) | ovos, leite UHT de 1 litro, arroz, tomate e café cru (Anexos I e XV da LC 214) |
 | **60%** | soja, milho, trigo e algodão em grão (in natura, art. 137), touro reprodutor, e os insumos: fertilizantes, defensivos, sementes e ração (Anexo IX) |
 | **0%** (alíquota cheia) | diesel e peças da colhedora |
+| **100% pela operação** (IBS/CBS zero) | a soja do Carlos vendida à Cooperativa Agroindustrial Celeste, optante pelo regime específico (cClassTrib 200020 informado no item, LC 214/2025, art. 271; #299) |
 
 - O IBS/CBS zero é o comportamento esperado, não falta de cálculo.
 - **Leite (#284, decisão de 2026-11-06):** nos NCMs "outros" e de maior teor de gordura (0401.10.90,

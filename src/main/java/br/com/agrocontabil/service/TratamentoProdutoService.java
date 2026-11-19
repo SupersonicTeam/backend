@@ -75,9 +75,10 @@ import org.springframework.transaction.annotation.Transactional;
  * in natura (60%, art. 137), como no cálculo da nota, e o produto leva a {@link Alternativa} da
  * alíquota zero (Anexo I, art. 125, cClassTrib 200003) para o leite de consumo direto: a resposta
  * diz as duas situações e que o enquadramento é com o contador. O UHT (#380) tem zero pela regra e
- * a condição lembra que o leite cru é outro NCM, com 60%. A cooperativa (pergunta 6) segue o dado atual
- * da tabela, sem regra própria; o arroz em casca não parboilizado (pergunta 3) é in natura pela
- * marca da referência (changeSet 0051).
+ * a condição lembra que o leite cru é outro NCM, com 60%. A venda à cooperativa optante (pergunta
+ * 6, cClassTrib 200020, #299) depende da operação e não do produto: o tratamento por produto não a
+ * menciona. O arroz em casca não parboilizado (pergunta 3) é in natura pela marca da referência
+ * (changeSet 0051).
  */
 @Service
 public class TratamentoProdutoService {

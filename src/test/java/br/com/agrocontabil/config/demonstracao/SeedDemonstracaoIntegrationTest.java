@@ -246,6 +246,46 @@ class SeedDemonstracaoIntegrationTest {
 
   @Test
   @Transactional(readOnly = true)
+  @DisplayName("#299: venda de soja a cooperativa optante sai com 200020 e IBS/CBS zero, ao lado"
+      + " da mesma venda a Graneleira com 60%")
+  void vendaACooperativaOptante() {
+    Produtor carlos = produtor(CenarioDemonstracao.CHAVE_PRINCIPAL);
+    List<NotaFiscal> doCarlos = notaRepository.findAll().stream()
+        .filter(n -> n.getProdutor().getId().equals(carlos.getId()))
+        .filter(n -> n.getStatus() == StatusNotaFiscal.AUTORIZADA)
+        .filter(n -> n.getValorTotalNota().compareTo(new BigDecimal("78122.00")) == 0)
+        .toList();
+
+    List<NotaFiscal> aCooperativa = doCarlos.stream()
+        .filter(n -> n.getDestinatarioNome().equals("Cooperativa Agroindustrial Celeste"))
+        .toList();
+    assertThat(aCooperativa).hasSize(1);
+    NotaFiscal cooperativa = aCooperativa.get(0);
+    assertThat(cooperativa.getItens()).singleElement().satisfies(item -> {
+      assertThat(item.getCClassTrib()).isEqualTo("200020");
+      assertThat(item.getCClassTribAplicado()).isEqualTo("200020");
+      assertThat(item.getPercentualReducaoAplicado()).isEqualByComparingTo("100");
+      assertThat(item.getNcm()).isEqualTo("12019000");
+    });
+    assertThat(cooperativa.getValorTotalCbs()).isEqualByComparingTo("0");
+    assertThat(cooperativa.getValorTotalIbs()).isEqualByComparingTo("0");
+    assertThat(cooperativa.getXmlGerado()).contains("<cClassTrib>200020</cClassTrib>")
+        .contains("<pRedAliq>100.0000</pRedAliq>").contains("<vCBS>0.00</vCBS>");
+    assertThat(validaAssinatura(cooperativa.getXmlGerado())).isTrue();
+    assertThat(cooperativa.getDestinatarioCpfCnpj()).hasSize(14);
+
+    // O cenario comum, lado a lado: mesma quantidade e preco, a Graneleira paga 60% de reducao.
+    assertThat(doCarlos).filteredOn(n -> n.getDestinatarioNome()
+            .equals("Graneleira Vale do Teles Pires Ltda"))
+        .singleElement().satisfies(n -> {
+          assertThat(n.getItens().get(0).getCClassTribAplicado()).isEqualTo("200036");
+          assertThat(n.getValorTotalCbs()).isPositive();
+          assertThat(n.getValorTotalIbs()).isPositive();
+        });
+  }
+
+  @Test
+  @Transactional(readOnly = true)
   @DisplayName("compras entram pelo mapper da importacao, com XML do fornecedor e credito")
   void comprasSaoImportadasComCredito() {
     List<NotaFiscal> importadas = notaRepository.findAll().stream()

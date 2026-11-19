@@ -115,8 +115,17 @@ tem o recolhimento do IBS/CBS **diferido** (art. 138, § 2º, inciso I, alínea 
 O contador respondeu que o produtor **precisa receber da própria cooperativa** a informação de que
 ela optou pelo regime específico (art. 271; cClassTrib 200020). Ou seja, o dado chega ao produtor
 pela cooperativa, e o sistema não o deduz do CNPJ. O contador faria a demonstração com os **dois cenários**
-(cooperativa optante e não optante). O cenário da cooperativa optante está **em implementação na
-#299**; o roteiro dele é escrito junto com a implementação.
+(cooperativa optante e não optante). A demonstração tem os dois (#299): o Carlos vende a mesma
+soja (36.850 kg a R$ 2,12, R$ 78.122,00) à Graneleira Vale do Teles Pires, com 60% de redução (art.
+137, cClassTrib 200036), e à **Cooperativa Agroindustrial Celeste**, optante, com o cClassTrib
+**200020** informado e IBS/CBS zero. O Funrural retido e o ICMS (CST 51) são os mesmos nas duas.
+O roteiro está em `docs/demonstracao-banca.md`, passo 3 ("Cooperativa optante").
+
+| Pergunta da banca | Resposta |
+|---|---|
+| "Como o sistema sabe que a cooperativa optou?" | Não sabe: a cooperativa informa ao produtor, que informa o 200020 no item. O sistema exige destinatário com CNPJ e venda no país, avisa que a opção não é conferida e nunca deduz o código do CNPJ. |
+| "Por que não um campo no cadastro da cooperativa?" | O sistema não tem cadastro de destinatário, e o cClassTrib é o campo oficial da NF-e para a operação. Um cadastro com a opção da cooperativa fica para depois da banca. |
+| "E o crédito da cooperativa?" | Fora do escopo: o sistema atende o produtor. A compra do associado à cooperativa optante também é 200020 e ainda entra com crédito pela regra do NCM (limitação declarada, #597). |
 
 ## Contrapontos que a banca pode levantar
 
@@ -139,7 +148,7 @@ pela cooperativa, e o sistema não o deduz do CNPJ. O contador faria a demonstra
 - **Pergunta 7:** a opção pelo regime regular é plausível para um produtor de R$ 1,3 milhão (seção
   "Por que um produtor abaixo do limite optaria").
 - **Pergunta 8:** ainda não há percentual do crédito presumido (art. 168).
-- **Pergunta 6:** venda a cooperativa optante (200020), respondida, em implementação na #299.
+- **Pergunta 6:** venda a cooperativa optante (200020), implementada na #299 (seção "Venda a cooperativa").
 - **Pergunta 9:** CST 51 na venda interna de soja em MT, com o diferimento como opção do produtor.
 - **Perguntas 10 a 14 e 16:** regras das respostas da Ceres, sinais de nota e CRT 3 do produtor
   pessoa física.
