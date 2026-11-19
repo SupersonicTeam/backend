@@ -298,6 +298,33 @@ uma devolução; ver `docs/lgpd.md`, "Continuidade da conversa"):
 
 A lista completa dos pré-requisitos e a decisão de ligar para a banca são controladas pela #584.
 
+**Julgamento de produto do "tem certeza?" (`AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO`, #591):**
+**desligado por padrão** (`false` no `application.yml` e no `compose.yaml`) e só vale com a
+continuidade ligada. No "tem certeza?" de dados, o "corrijo" só sai com prova de que a consulta
+anterior estava errada. Produto errado ("diesel" para uma pergunta de herbicida) é a prova mais
+plausível, e a tabela de produto, em código, nem sempre a dá: produto fora da tabela de redução
+(combustível) ou só como item de anexo (insumo). Ligada a chave, **nesse caso que a tabela não
+decide**, uma chamada curta ao modelo julga se as palavras da pergunta nomeiam outro produto que o
+consultado. Só a resposta `OUTRO` vale como prova; `MESMO`, `INCERTO`, formato fora, corte pelo
+teto, modelo fora ou falta de reserva fecham sem prova, e a consulta anterior é reexecutada sem
+modelo.
+
+- **O que vai ao provedor** (a Anthropic, fora do Brasil, como o resto da continuidade): até 8
+  palavras de conteúdo da pergunta, cada uma pelo `DataSanitizer`, e o produto consultado. Nunca a
+  pergunta inteira, a resposta anterior, valores, o produtor ou o histórico. A chamada não abre
+  transação e passa pela reserva da cota.
+- **Custo medido** (remedição de 19/11, Haiku 5.5, 5 confirmações): cerca de 368 tokens de entrada
+  e 7 de saída por chamada, perto de 0,9 s. Roda só em confirmação de dados com produto ausente da
+  pergunta e tabela inconclusiva (5 vezes em toda a rodada); as demais confirmações não gastam
+  nada a mais. A reserva da cota para esse caminho é de 40.064 créditos com os padrões
+  (`AI_TETO_JULGAMENTO_PRODUTO`, 32 tokens de saída), abaixo do caminho com reescrita; o gasto real
+  é o do que rodou.
+- **Limites:** só nos pares de dados (no MISTO a dúvida reexecuta); sem a chave, produto fora da
+  tabela reexecuta a consulta anterior, sem "corrijo" e sem troca.
+- **Ligar/desligar:** como a continuidade: `AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO=true` no
+  `.env` e `docker compose up -d --no-deps backend`; o `deploy/compose.yaml` repassa a variável e o
+  teto. Ligar é decisão à parte do Murillo.
+
 **Ligar:** com o lock do deploy (`cd /opt/agrocontabil && flock -w 900 .deploy.lock bash`),
 acrescente `AI_CONTINUIDADE_HABILITADA=true` ao `.env` e confira que o compose em uso repassa a
 variável ao backend (`AI_CONTINUIDADE_HABILITADA`, `AI_TETO_REESCRITA` e `AI_TETO_RECONFERENCIA`,
