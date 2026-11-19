@@ -99,8 +99,11 @@ Regras que todo código novo deve seguir. Se um trecho novo diverge daqui, está
 - **Mudou o mapper ou o validador de modo que altera o XML (ou o que ele precisa ter), suba a
   constante.** Mudança só de mensagem, sugestão ou log não sobe. Teste que monta nota `XML_GERADO`
   para o envio põe `.versaoRegraFiscal(VersaoRegraFiscal.ATUAL)`.
-- Rascunho: `NotaFiscalResponse.avisos` (create/update) traz o cClassTrib não admitido pelo NCM
-  (`SinaisNotaConferirService.avisosDoRascunho`), sem 422 e sem o resto da validação fiscal.
+- Rascunho: `NotaFiscalResponse.avisos` (create/update) traz o cClassTrib não admitido pelo NCM e
+  o 200020 informado (cooperativa optante, não conferida, #299)
+  (`SinaisNotaConferirService.avisosDoRascunho` → `AvisoRascunho`, uma mensagem por código), sem
+  422 e sem o resto da validação fiscal. Aviso novo = código no `AvisoRascunho.Codigo` com a
+  constante `MENSAGEM_*` (acento, `MensagensErroAcentuadasTest`); não é sinal da Ceres.
 
 ## Testes
 

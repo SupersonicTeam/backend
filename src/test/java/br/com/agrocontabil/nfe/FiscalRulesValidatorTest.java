@@ -170,6 +170,118 @@ class FiscalRulesValidatorTest {
   }
 
   @Test
+  @DisplayName("#299: 200020 na venda a cooperativa (CNPJ, CFOP de saida no pais) passa")
+  void cooperativaOptanteComCnpjPassa() {
+    NotaFiscal nota = notaDaCooperativa();
+
+    assertThatCode(() -> new FiscalRulesValidator(null, classificacaoCom200020()).validar(nota))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("#299: CNPJ com mascara conta como CNPJ, como no XML")
+  void cooperativaOptanteComCnpjMascaradoPassa() {
+    NotaFiscal nota = notaDaCooperativa();
+    nota.setDestinatarioCpfCnpj("11.222.333/0001-81");
+
+    assertThatCode(() -> new FiscalRulesValidator(null, classificacaoCom200020()).validar(nota))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("#299: as falhas da guarda do 200020 saem juntas, numa tentativa so")
+  void cooperativaOptanteFalhasSomadas() {
+    NotaFiscal nota = notaDaCooperativa();
+    nota.setDestinatarioCpfCnpj("98765432100");
+    nota.getItens().get(0).setCfop("7101");
+    nota.getDestinatarioEndereco().setUf("EX");
+
+    assertThat(violacoesDaCooperativa(nota)).extracting(ErrorDetail::message)
+        .hasSize(3)
+        .anySatisfy(m -> assertThat(m).contains("CNPJ"))
+        .anySatisfy(m -> assertThat(m).contains("7101"))
+        .anySatisfy(m -> assertThat(m).contains("exterior"));
+  }
+
+  @Test
+  @DisplayName("#299: 200020 com destinatario pessoa fisica (CPF) e recusado")
+  void cooperativaOptanteComCpfRecusada() {
+    NotaFiscal nota = notaDaCooperativa();
+    nota.setDestinatarioCpfCnpj("98765432100");
+
+    assertThat(violacoesDaCooperativa(nota)).singleElement().satisfies(d -> {
+      assertThat(d.field()).isEqualTo("item[1].cClassTrib");
+      assertThat(d.message()).contains("200020", "CNPJ");
+      assertThat(d.rejectedValue()).isEqualTo("200020");
+    });
+  }
+
+  @Test
+  @DisplayName("#299: 200020 na exportacao (CFOP 7xxx) e recusado")
+  void cooperativaOptanteNaExportacaoRecusada() {
+    NotaFiscal nota = notaDaCooperativa();
+    nota.getItens().get(0).setCfop("7101");
+
+    assertThat(violacoesDaCooperativa(nota)).singleElement().satisfies(d -> {
+      assertThat(d.field()).isEqualTo("item[1].cClassTrib");
+      assertThat(d.message()).contains("200020", "7101", "saída no país");
+    });
+  }
+
+  @Test
+  @DisplayName("#299: 200020 com destinatario no exterior (UF EX) e recusado")
+  void cooperativaOptanteNoExteriorRecusada() {
+    NotaFiscal nota = notaDaCooperativa();
+    nota.getDestinatarioEndereco().setUf("EX");
+
+    assertThat(violacoesDaCooperativa(nota)).singleElement().satisfies(d ->
+        assertThat(d.message()).contains("200020", "exterior"));
+  }
+
+  @Test
+  @DisplayName("#299: nota importada com 200020 nao passa pelas guardas da cooperativa")
+  void cooperativaOptanteImportadaNaoConfere() {
+    NotaFiscal nota = notaDaCooperativa();
+    nota.setOrigem(br.com.agrocontabil.model.OrigemNotaFiscal.IMPORTADA);
+    nota.setDestinatarioCpfCnpj("98765432100");
+
+    assertThatCode(() -> new FiscalRulesValidator(null, classificacaoCom200020()).validar(nota))
+        .doesNotThrowAnyException();
+  }
+
+  /** Violações da regra da cooperativa (as que citam o 200020) do 422. */
+  private List<ErrorDetail> violacoesDaCooperativa(NotaFiscal nota) {
+    Throwable erro = catchThrowable(() -> new FiscalRulesValidator(null, classificacaoCom200020())
+        .validar(nota));
+    assertThat(erro).isInstanceOf(NotaFiscalInvalidaParaEmissaoException.class);
+    return ((NotaFiscalInvalidaParaEmissaoException) erro).getErrors().stream()
+        .filter(d -> d.message() != null && d.message().contains("200020")).toList();
+  }
+
+  private static ClassificacaoTributariaService classificacaoCom200020() {
+    ClassificacaoTributariaService classificacao = mock(ClassificacaoTributariaService.class);
+    when(classificacao.classificacao(org.mockito.ArgumentMatchers.eq("200020"),
+        org.mockito.ArgumentMatchers.any())).thenReturn(java.util.Optional.of(
+            br.com.agrocontabil.model.ClassificacaoTributaria.builder().codigo("200020")
+                .percentualReducaoIbs(new BigDecimal("100")).build()));
+    return classificacao;
+  }
+
+  /** Venda de soja a uma cooperativa (CNPJ), com o 200020 informado e IBS/CBS zero. */
+  private NotaFiscal notaDaCooperativa() {
+    NotaFiscal nota = notaValida();
+    nota.setDestinatarioNome("Cooperativa Agroindustrial Teste");
+    nota.setDestinatarioCpfCnpj("11222333000181");
+    NotaFiscalItem item = nota.getItens().get(0);
+    item.setValorIbs(BigDecimal.ZERO);
+    item.setValorCbs(BigDecimal.ZERO);
+    item.setCClassTrib("200020");
+    item.setCClassTribAplicado("200020");
+    item.setPercentualReducaoAplicado(new BigDecimal("100"));
+    return nota;
+  }
+
+  @Test
   @DisplayName("CST informado sem cClassTrib (resto do exemplo antigo do OpenAPI) e ignorado (#278)")
   void cstSemCClassTribIgnorado() {
     NotaFiscal nota = notaValida();

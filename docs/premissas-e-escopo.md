@@ -29,9 +29,11 @@ O que a #281 precisa modelar e o sistema hoje **não** trata (todos no texto da 
 - **Diferimento dos insumos** (art. 138, § 2º, inciso I, alínea a): na venda de insumo
   agropecuário do Anexo IX (fertilizantes, defensivos, sementes etc.) entre contribuintes do
   regime regular, o recolhimento do IBS/CBS fica diferido. O encerramento do diferimento, quem
-  recolhe (§§ 5º a 7º) e o efeito sobre o crédito estão com o contador (#284, pergunta C). O
-  `CreditoTributarioService` não modela o diferimento: numa compra de insumo do Anexo IX ele estima
-  crédito como numa compra comum, o que pode não corresponder ao caso (#356).
+  recolhe (§§ 5º a 7º) e o efeito sobre o crédito não estão modelados. **Limitação declarada**
+  (decisão de 2026-11-19: a pergunta C da #284 não vai ao contador): o
+  `CreditoTributarioService` não considera o diferimento e, numa compra de insumo do Anexo IX, estima
+  crédito como numa compra comum, o que pode não corresponder ao caso. Fica para depois da banca
+  (#356).
 
 Por que assim até a banca: modelar a situação exige histórico por ano-calendário, as regras de
 opção e renúncia, nota sem destaque para o não contribuinte (CST/cClassTrib, relacionada à #278) e
@@ -74,8 +76,9 @@ pode** estar no Simples Nacional nem no MEI, que são de microempresa e empresa 
   manual de [`demonstracao-banca.md`](demonstracao-banca.md).
 
 O campo `RegimeTributario` (MEI/SIMPLES/PRESUMIDO/REAL) é do imposto de renda e do Simples e não
-representa a situação dos arts. 164 e 165 (a #281). A #284, pergunta 16, segue para o contador
-confirmar o CRT 3.
+representa a situação dos arts. 164 e 165 (a #281). O contador confirmou o CRT 3 em 19/11/2026
+(#284, resposta 16 do arquivo), com a ressalva de que regime regular do IBS/CBS não é o regime
+normal do ICMS.
 
 ## 3. ICMS e Funrural seguem por guia
 
@@ -95,6 +98,11 @@ O AgroContábil trata da **reforma** (IBS/CBS). Os tributos atuais ficam com o c
     NCM e a fonte de cada linha; hoje só MT + 1201.90.00, #284 pergunta 9). Fora dela, o item emite
     com o 51, e o sinal **não bloqueante** `ICMS_PADRAO_A_CONFIRMAR` pede a conferência antes do
     XML. Resposta nova do contador = uma linha na lista;
+  - **o diferimento do ICMS em MT é opção do produtor** (contador, 19/11/2026, resposta 9): com a
+    opção, CST 51; sem ela, CST 00, e quem opta pelo diferimento renuncia aos créditos de ICMS. O
+    produtor que **não** opta fica **fora do escopo**: o sistema não calcula ICMS e não emite CST 00
+    (só 40, 41, 50, 51 e 90). Declarar esse escopo, com o sistema especializado em IBS/CBS e sem
+    substituir a escrituração do ICMS, é aceitável para o contador;
   - **qualquer outro caso** (interestadual, exportação, destinatário sem IE, outra natureza): o
     CST **tem de ser informado** no item (`cstIcms`, combinado com o contador). Sem ele, a
     emissão responde **422 `ICMS_A_DEFINIR`**, e o sinal de nota a conferir `ICMS_A_DEFINIR`
@@ -121,18 +129,41 @@ O AgroContábil trata da **reforma** (IBS/CBS). Os tributos atuais ficam com o c
   complementares** (`infCpl`) e nos Dados Adicionais do DANFE: base, 1,2% + 0,1% + 0,2% por
   parcela, total e a base legal, com o recolhimento pelo adquirente. Venda a pessoa física,
   exportação e produtor pessoa jurídica não levam o texto. O recolhimento segue por guia (tipo
-  `FUNRURAL` ou `GPS`). O contador falou em 1,63%; o sistema segue com 1,5% e a base legal até a
-  resposta da pergunta A da #284.
+  `FUNRURAL` ou `GPS`). O contador falou em 1,63%; o sistema destaca 1,5% e a base legal
+  (decisão de 2026-11-19: a pergunta A da #284 não vai ao contador). **Limitação declarada.**
 
 ## 4. O que pode mudar
 
 As validações de contador da issue #284 podem ajustar este texto:
 
-- **pergunta 7:** plausibilidade de um produtor desse porte optar pelo regime regular, e outros
-  motivos para optar ou não;
-- **pergunta 9 (respondida):** ICMS diferido, CST 51, na venda interna de soja em MT, hoje o
-  padrão da NF-e (seção 3). Outros casos dependem do CST que o contador informar;
-- **pergunta 1:** a redução de 60% da soja em grão (art. 137), aplicada desde a #272 pela marca
-  *in natura* do NCM e ainda em validação com o contador.
+**Confirmado pelo contador em 19/11/2026 (#284):**
+
+- **perguntas 1 a 5:** soja e milho em grão a 60% (art. 137, aplicado desde a #272 pela marca *in
+  natura* do NCM), leite cru a 60%, arroz em casca a 60%, ovos, tomate e abacaxi a alíquota zero, e
+  o tratamento mais benéfico prevalece;
+- **pergunta 7:** é plausível um produtor desse porte optar pelo regime regular (motivos para optar
+  e para não optar no roteiro da banca);
+- **pergunta 8:** ainda não há percentual do crédito presumido do art. 168 para parametrizar;
+- **pergunta 9:** ICMS diferido, CST 51, na venda interna de soja em MT, hoje o padrão da NF-e (seção
+  3); o diferimento é opção do produtor;
+- **perguntas 10 a 14 e 16:** regras das respostas da Ceres, sinais de nota e CRT 3.
+
+**Pergunta 6, implementada na #299:** venda do associado à cooperativa optante pelo regime
+específico (LC 214/2025, art. 271): alíquota zero pelo cClassTrib **200020 informado no item**. A
+cooperativa informa ao produtor que optou; o sistema **não confere** a opção nem a associação, e o
+avisa ao salvar a nota (`COOPERATIVA_OPTANTE_A_CONFIRMAR`). A emissão exige destinatário com CNPJ e
+venda no país. A compra do associado **à** cooperativa optante (também 200020) ainda entra pela
+regra do NCM na importação, com crédito a maior: limitação declarada, #597.
+
+**Limitações declaradas** (decisão de 2026-11-19: as perguntas complementares A, C, D e E da #284
+não vão ao contador, e o texto não promete resposta):
+
+- **A, Funrural/Senar:** a NF-e destaca 1,5% (1,2% + 0,1% + 0,2%) com a base legal; o contador
+  citou 1,63%.
+- **C, insumos do Anexo IX:** o crédito é estimado sem considerar o diferimento do art. 138, § 2º
+  (#356, depois da banca).
+- **D, arroz parboilizado em casca (1006.10.91):** fica fora da marca *in natura*.
+- **E, ICMS:** o CST 51 está confirmado só para MT + soja; fora desse par, o sinal
+  `ICMS_PADRAO_A_CONFIRMAR` avisa para conferir com o contador (#334, depois da banca).
 
 Roteiro de resposta para a banca: [`roteiro-banca-regime-regular.md`](roteiro-banca-regime-regular.md).

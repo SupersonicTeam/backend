@@ -9,7 +9,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(description = "Aviso nao bloqueante sobre a nota gravada (a nota foi salva)")
 public record AvisoNotaResponse(
 
-    @Schema(description = "Codigo estavel do aviso", example = "CCLASSTRIB_NAO_ADMITIDO")
+    @Schema(description = "Codigo estavel do aviso: CCLASSTRIB_NAO_ADMITIDO (o NCM nao admite o"
+        + " cClassTrib) ou COOPERATIVA_OPTANTE_A_CONFIRMAR (200020 informado, opcao da"
+        + " cooperativa nao conferida)", example = "CCLASSTRIB_NAO_ADMITIDO")
     String codigo,
 
     @Schema(description = "Numero do item a que o aviso se refere (nulo se for da nota inteira)",

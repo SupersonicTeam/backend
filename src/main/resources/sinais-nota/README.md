@@ -36,7 +36,11 @@ A frase do aviso (`FrasesSinaisNota`) manda conferir com o contador e cita a NFS
 nacional, que os Municípios devem autorizar o contribuinte a emitir a partir de 2026
 (LC 214/2025, art. 62, § 1º, inciso I, conferido na base de legislação).
 
-## Pendente de validação do contador
+## Validação do contador
 
-As listas de unidades (serviço × produto) e a regra "unidade de produto desfaz o termo ambíguo"
-seguem a leitura das respostas 13 e 14 do escritório (#284) e ainda não foram revisadas por ele.
+O contador do escritório confirmou em 19/11/2026 (#284, respostas 13 e 14) a NFS-e como documento
+dos serviços listados, com a ressalva do frete (NFS-e só dentro do mesmo município; entre
+municípios, o documento é o CT-e; **a frase do aviso ainda não cita o CT-e**), e que "semente de soja para plantio" não gera alerta. As listas
+de unidades (serviço × produto) e a regra "unidade de produto desfaz o termo ambíguo" seguem a
+leitura dessas respostas. Sugestões dele ainda sem implementar: CFOP incorreto, natureza da
+operação e tributação incompatível.

@@ -1,0 +1,2 @@
+decisão: INCONCLUSIVA
+  problema: 13 de 120 execuções fora (acima de 10%): ['confirmacao_fora_da_rota', 'preparo_invalido']

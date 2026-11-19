@@ -201,9 +201,9 @@ class LeiteInNaturaEmissaoIntegrationTest {
 
     // O 200003 (Anexo I) nao vale para a soja; no leite vale. Sem codigo informado, sem aviso.
     assertThat(sinais.avisosDoRascunho(nota("12019000", "200003")))
-        .extracting(SinalNota::numeroItem, SinalNota::codigo)
+        .extracting(AvisoRascunho::numeroItem, AvisoRascunho::codigo)
         .containsExactly(org.assertj.core.groups.Tuple.tuple(1,
-            SinalNota.CodigoSinalNota.CCLASSTRIB_NAO_ADMITIDO));
+            AvisoRascunho.Codigo.CCLASSTRIB_NAO_ADMITIDO));
     assertThat(sinais.avisosDoRascunho(nota("04012090", "200003"))).isEmpty();
     assertThat(sinais.avisosDoRascunho(nota("12019000", null))).isEmpty();
   }

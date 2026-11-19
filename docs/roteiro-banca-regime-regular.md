@@ -69,6 +69,23 @@ argumento não favorece a opção. Ele só vale para bens de capital fora do art
   o crédito do comprador, e o IBS/CBS destacado só encarece o preço. É argumento econômico, sem
   dispositivo próprio.
 
+**Confirmado pelo contador do escritório em 19/11/2026 (#284, resposta 7):** é plausível um produtor
+de R$ 1,3 milhão por ano optar pelo regime regular, e os motivos que ele dá coincidem com os acima, com uma diferença no crédito dos insumos (veja abaixo).
+
+- **Para optar:** comprador empresa que aproveita o crédito, crédito nas compras de insumos e
+  planejamento tributário. Sobre o crédito nos insumos, veja a ressalva do Anexo IX abaixo: o
+  diferimento (art. 138, § 2º) não está modelado (limitação declarada, #356) e o argumento fica fora.
+- **Para não optar:** venda direta ao consumidor, poucos créditos aproveitáveis e o custo de
+  administrar a apuração e o recolhimento.
+- A banca pode perguntar por que alguém escolheria um regime com apuração e recolhimento. A resposta
+  é a do contador: depende de quem compra e de quanto crédito há para aproveitar; a decisão é do
+  produtor com o contador.
+
+**Percentual do crédito presumido (art. 168), resposta 8 do contador, 19/11/2026:** ainda não há
+percentual oficial para 2027 que o sistema possa parametrizar, e pode não ser um percentual único (o
+§ 6º permite diferenciar por produto, receita e tipo de produtor). Por isso o crédito presumido do
+comprador fica fora do escopo (#281).
+
 **Conclusão para a banca:** se a opção vale preço melhor depende do produto (tributado ou não), do
 comprador e do percentual presumido do ano (art. 168, § 4º). É argumento de negociação, não ganho
 garantido, e a decisão é do produtor com o contador.
@@ -79,7 +96,7 @@ tem o recolhimento do IBS/CBS **diferido** (art. 138, § 2º, inciso I, alínea 
 
 - Quando o diferimento se encerra (§ 5º), recolhe quem promove a operação que o encerra (§ 6º). O
   recolhimento é dispensado quando a apropriação do crédito é permitida (§ 8º). O efeito sobre o
-  crédito do produtor está com o contador (#284, pergunta C).
+  crédito do produtor não está modelado (limitação declarada, #356, depois da banca).
 - Por isso o argumento fica fora. O crédito do art. 47 nas demais compras tributadas (serviços,
   bens fora dos Anexos e do art. 110) continua valendo.
 - O sistema ainda não modela o diferimento (premissas, seção 1).
@@ -93,6 +110,23 @@ tem o recolhimento do IBS/CBS **diferido** (art. 138, § 2º, inciso I, alínea 
 | "art. 15" para a CBS | O art. 15 trata só da alíquota do **IBS** (estado e município de destino) | a fixação das alíquotas da CBS e do IBS está no art. 14 |
 | "art. 168, § 3º" para a divulgação do percentual | O § 3º diz como o crédito presumido é calculado | a divulgação anual até setembro está no **§ 4º** |
 
+## Venda a cooperativa (resposta 6 do contador, 19/11/2026)
+
+O contador respondeu que o produtor **precisa receber da própria cooperativa** a informação de que
+ela optou pelo regime específico (art. 271; cClassTrib 200020). Ou seja, o dado chega ao produtor
+pela cooperativa, e o sistema não o deduz do CNPJ. O contador faria a demonstração com os **dois cenários**
+(cooperativa optante e não optante). A demonstração tem os dois (#299): o Carlos vende a mesma
+soja (36.850 kg a R$ 2,12, R$ 78.122,00) à Graneleira Vale do Teles Pires, com 60% de redução (art.
+137, cClassTrib 200036), e à **Cooperativa Agroindustrial Celeste**, optante, com o cClassTrib
+**200020** informado e IBS/CBS zero. O Funrural retido e o ICMS (CST 51) são os mesmos nas duas.
+O roteiro está em `docs/demonstracao-banca.md`, passo 3 ("Cooperativa optante").
+
+| Pergunta da banca | Resposta |
+|---|---|
+| "Como o sistema sabe que a cooperativa optou?" | Não sabe: a cooperativa informa ao produtor, que informa o 200020 no item. O sistema exige destinatário com CNPJ e venda no país, avisa que a opção não é conferida e nunca deduz o código do CNPJ. |
+| "Por que não um campo no cadastro da cooperativa?" | O sistema não tem cadastro de destinatário, e o cClassTrib é o campo oficial da NF-e para a operação. Um cadastro com a opção da cooperativa fica para depois da banca. |
+| "E o crédito da cooperativa?" | Fora do escopo: o sistema atende o produtor. A compra do associado à cooperativa optante também é 200020 e ainda entra com crédito pela regra do NCM (limitação declarada, #597). |
+
 ## Contrapontos que a banca pode levantar
 
 | Contraponto | Resposta |
@@ -101,19 +135,39 @@ tem o recolhimento do IBS/CBS **diferido** (art. 138, § 2º, inciso I, alínea 
 | "Quem vende para pessoa física ou consumidor final não ganha nada com o crédito do comprador." | Correto: para esse produtor a opção faz menos sentido. É o caso do não contribuinte, fora do escopo atual (#281). |
 | "A opção é para sempre? O limite muda?" | A opção vale a partir do mês seguinte e é irretratável durante o ano-calendário (art. 165, §§ 1º e 2º). A renúncia produz efeito em 1º de janeiro do ano seguinte (art. 166), **mas fica vedada** a quem recebeu ressarcimento de crédito no ano corrente ou no anterior (art. 41, §§ 5º e 6º). O limite é atualizado todo ano pelo IPCA (art. 167). O sistema ainda não modela esse histórico (#281). |
 | "E o produtor integrado?" | Pelo art. 164 o integrado não é contribuinte qualquer que seja a receita, salvo opção (art. 165). Mesmo tratamento do pequeno produtor: fora do escopo atual. |
-| "Os produtos *in natura* têm redução de 60% (art. 137)." | Sim. Desde a tabela oficial (#272) a soja, o milho, o trigo e o algodão em grão saem com 60% pela marca *in natura* do NCM, e a demonstração mostra isso; o arroz em casca não parboilizado (1006.10.92) entrou na lista pela resposta do escritório (#284, pergunta 3; o parboilizado segue fora). O enquadramento segue em validação com o contador (#284, pergunta 1): não afirmar que ele é definitivo. |
+| "Os produtos *in natura* têm redução de 60% (art. 137)." | Sim. Desde a tabela oficial (#272) a soja, o milho, o trigo e o algodão em grão saem com 60% pela marca *in natura* do NCM, e a demonstração mostra isso; o arroz em casca não parboilizado (1006.10.92) entrou na lista pela resposta do escritório (#284, pergunta 3; o parboilizado segue fora). O contador do escritório confirmou o enquadramento em 19/11/2026 (#284, respostas 1 a 5: soja e milho em grão a 60%, leite cru a 60% e não a alíquota zero, arroz em casca a 60%, ovos, tomate e abacaxi a alíquota zero, e o tratamento mais benéfico prevalece). O arroz parboilizado (1006.10.91) fica fora da marca *in natura* (limitação declarada). |
 | "A nota diz que o emitente é do Simples Nacional (CRT 1)." | Não diz mais (#298): produtor rural pessoa física não entra no Simples Nacional nem no MEI (LC 123/2006, art. 3º), então a NF-e e o DANFE dele saem com **CRT 3 (regime normal)** e o cadastro com `SIMPLES` é recusado. Nota autorizada antes da correção guarda o CRT da emissão: não usar uma delas na banca. |
-| "E o ICMS da nota?" | A NF-e leva o grupo de ICMS por item, mas o sistema **não calcula** o ICMS (premissas, seção 3). Sem o grupo, a SEFAZ rejeitaria a NF-e (rejeição 1002, NT 2025.002, regra B25-90). **Padrão:** na venda interna de produção própria (CFOP 5101) a destinatário **com IE**, o XML sai com o **ICMS51, diferido** (CST 51, ICMS próprio zero). O escritório confirmou isso para a soja em MT (#284, pergunta 9); nos demais produtos e UFs o padrão é aplicado, e o sistema avisa para conferir com o contador. **Sem padrão:** venda interestadual, exportação, destinatário sem IE ou outro CFOP exigem o CST informado pelo contador. Sem ele, a emissão é barrada (422 `ICMS_A_DEFINIR`), e o sistema nunca escolhe o CST. O emitente do Simples ou MEI é barrado, porque informa CSOSN, que o sistema não emite. O cálculo do ICMS devido e o do ST seguem com o contador, por guia. O Funrural/Senar retido pelo comprador sai destacado nas informações complementares (#332). **Na VPS:** as notas já emitidas antes do #377 guardam o XML sem o grupo até o reset dos dados da demonstração. Não use uma delas para mostrar o ICMS. |
+| "E o ICMS da nota?" | A NF-e leva o grupo de ICMS por item, mas o sistema **não calcula** o ICMS (premissas, seção 3). Sem o grupo, a SEFAZ rejeitaria a NF-e (rejeição 1002, NT 2025.002, regra B25-90). **Padrão:** na venda interna de produção própria (CFOP 5101) a destinatário **com IE**, o XML sai com o **ICMS51, diferido** (CST 51, ICMS próprio zero). O escritório confirmou isso para a soja em MT (#284, pergunta 9); o diferimento do ICMS em MT é **opção do produtor** (CST 51 com a opção, 00 sem ela), e o produtor que não opta fica fora do escopo, porque o sistema não calcula ICMS nem emite CST 00. Apresentar o sistema como especializado em IBS/CBS, sem substituir a escrituração do ICMS, é aceitável (resposta 9, b). Nos demais produtos e UFs o padrão é aplicado, e o sistema avisa para conferir com o contador. **Sem padrão:** venda interestadual, exportação, destinatário sem IE ou outro CFOP exigem o CST informado pelo contador. Sem ele, a emissão é barrada (422 `ICMS_A_DEFINIR`), e o sistema nunca escolhe o CST. O emitente do Simples ou MEI é barrado, porque informa CSOSN, que o sistema não emite. O cálculo do ICMS devido e o do ST seguem com o contador, por guia. O Funrural/Senar retido pelo comprador sai destacado nas informações complementares (#332). **Na VPS:** as notas já emitidas antes do #377 guardam o XML sem o grupo até o reset dos dados da demonstração. Não use uma delas para mostrar o ICMS. |
 
 ## Pendências que podem mudar este texto
 
-- **#284, pergunta 7:** um contador confirmar se o argumento do crédito do comprador se sustenta e
-  se há outro motivo comum para optar ou não.
-- **#284, pergunta 1:** redução da soja em grão.
-- **#284, pergunta 9 (respondida):** CST 51, diferido, na venda interna de soja **em MT**. Só esse
-  par (UF; NCM) está confirmado (`icms/diferimento-confirmado.csv`). Os outros pares do seed da
-  banca (café em MG, leite no PR, milho, algodão e os demais) seguem a confirmar com o contador.
+**Respondido pelo contador em 19/11/2026 (#284):**
+
+- **Perguntas 1 a 5:** soja e milho em grão a 60%, leite cru a 60%, arroz em casca a 60%, ovos,
+  tomate e abacaxi a alíquota zero, o mais benéfico vence.
+- **Pergunta 7:** a opção pelo regime regular é plausível para um produtor de R$ 1,3 milhão (seção
+  "Por que um produtor abaixo do limite optaria").
+- **Pergunta 8:** ainda não há percentual do crédito presumido (art. 168).
+- **Pergunta 6:** venda a cooperativa optante (200020), implementada na #299 (seção "Venda a cooperativa").
+- **Pergunta 9:** CST 51 na venda interna de soja em MT, com o diferimento como opção do produtor.
+- **Perguntas 10 a 14 e 16:** regras das respostas da Ceres, sinais de nota e CRT 3 do produtor
+  pessoa física.
+
+**Limitações declaradas** (decisão de 2026-11-19: as perguntas complementares A, C, D e E da #284
+não vão ao contador; sem promessa de resposta):
+
+- **A:** Funrural/Senar destacado em 1,5% (o contador citou 1,63%).
+- **C:** crédito dos insumos do Anexo IX sem considerar o diferimento do art. 138, § 2º (#356,
+  depois da banca).
+- **D:** arroz parboilizado em casca (1006.10.91) fora da marca *in natura*.
+- **E:** CST 51 confirmado só para MT + soja (`icms/diferimento-confirmado.csv`); fora disso, o
+  sinal `ICMS_PADRAO_A_CONFIRMAR` (#334, depois da banca): café em MG, leite no PR, milho, algodão
+  e os demais não estão confirmados.
+
+**Outras pendências:**
+
 - **Dados da demonstração:** o regime gravado do João e da Maria na VPS, corrigido pelo passo manual
-  de [`demonstracao-banca.md`](demonstracao-banca.md) (#298). A #284, pergunta 16, confirma o CRT 3.
+  de [`demonstracao-banca.md`](demonstracao-banca.md) (#298). O contador confirmou o CRT 3 em
+  19/11/2026 (#284, resposta 16 do arquivo).
 - **Ceres:** a pergunta "pequeno produtor paga IBS?" deve citar os arts. 164 e 165 (base já
   ingerida); pedida para o gabarito ampliado na #264.
