@@ -299,8 +299,10 @@ uma devolução; ver `docs/lgpd.md`, "Continuidade da conversa"):
 A lista completa dos pré-requisitos e a decisão de ligar para a banca são controladas pela #584.
 
 **Julgamento de produto do "tem certeza?" (`AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO`, #591):**
-**desligado por padrão** (`false` no `application.yml` e no `compose.yaml`) e só vale com a
-continuidade ligada. No "tem certeza?" de dados, o "corrijo" só sai com prova de que a consulta
+**ligado por padrão** (decisão do Murillo, 2026-11-19: `true` no `application.yml` e no
+`compose.yaml`), mas só tem efeito com a continuidade ligada, que segue **desligada**: com
+`AI_CONTINUIDADE_HABILITADA=false` nenhuma chamada de julgamento acontece e o comportamento é o da
+`main`. No "tem certeza?" de dados, o "corrijo" só sai com prova de que a consulta
 anterior estava errada. Produto errado ("diesel" para uma pergunta de herbicida) é a prova mais
 plausível, e a tabela de produto, em código, nem sempre a dá: produto fora da tabela de redução
 (combustível) ou só como item de anexo (insumo). Ligada a chave, **nesse caso que a tabela não
@@ -321,9 +323,10 @@ modelo.
   é o do que rodou.
 - **Limites:** só nos pares de dados (no MISTO a dúvida reexecuta); sem a chave, produto fora da
   tabela reexecuta a consulta anterior, sem "corrijo" e sem troca.
-- **Ligar/desligar:** como a continuidade: `AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO=true` no
-  `.env` e `docker compose up -d --no-deps backend`; o `deploy/compose.yaml` repassa a variável e o
-  teto. Ligar é decisão à parte do Murillo.
+- **Desligar:** `AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO=false` no `.env` e
+  `docker compose up -d --no-deps backend`; o `deploy/compose.yaml` repassa a variável e o teto
+  (`AI_TETO_JULGAMENTO_PRODUTO`). Sem a chave, produto fora da tabela reexecuta a consulta anterior,
+  sem "corrijo" e sem troca. Ligar a continuidade segue decisão à parte do Murillo.
 
 **Ligar:** com o lock do deploy (`cd /opt/agrocontabil && flock -w 900 .deploy.lock bash`),
 acrescente `AI_CONTINUIDADE_HABILITADA=true` ao `.env` e confira que o compose em uso repassa a

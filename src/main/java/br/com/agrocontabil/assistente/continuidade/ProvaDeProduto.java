@@ -9,7 +9,8 @@ import org.springframework.stereotype.Component;
 /**
  * Tudo o que a confirmação de dados usa para provar que a consulta anterior era de outro produto
  * (#591): a {@link ResolucaoProduto} (a tabela de produto, em código) e, só com a chave
- * {@code app.assistente.continuidade.julgamento-de-produto} ligada junto com a continuidade, o
+ * {@code app.assistente.continuidade.julgamento-de-produto} (ligada por padrão) junto com a
+ * continuidade (desligada por padrão), o
  * {@link JulgamentoDeProduto} (uma chamada curta ao modelo no caso que a tabela não decide). Um
  * objeto só para a decisão de custo e para o orquestrador ouvirem a mesma coisa.
  */
