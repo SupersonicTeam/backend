@@ -27,8 +27,8 @@ contagens: esta evidência é mais fraca que a da primeira rodada."
 | **Veredito formal** | **`INCONCLUSIVA`**, só pelo limite de execuções fora |
 | Rodadas anteriores | 2026-11-18 em `b8722d16` (`RISCO_RELEVANTE`) e 2026-11-19 em `bedb80db` (`INCONCLUSIVA`) |
 
-Os scripts de medição são os mesmos das rodadas anteriores (conferido por diff contra o commit `7dd1cd64`); a
-chave foi exportada no ambiente que chama o script.
+Os dois scripts `rodar_medicao_*.sh` são os mesmos das rodadas anteriores (conferido por diff contra o commit
+`7dd1cd64`); a chave foi exportada no ambiente que chama o script.
 
 ## Por que `INCONCLUSIVA`
 
@@ -74,8 +74,8 @@ nenhuma das 5.
 Os registros da auditoria (`assistente_interacao`, tokens por chamada) mostram uma chamada pequena ao modelo
 dentro da confirmação de dados que **não existia nas rodadas anteriores**: nas 5 confirmações de `c581-01`
 (uma por repetição), com **368 tokens de entrada e 7 de saída** e tempo até a resposta de **0,85 a 0,95 s**
-(a confirmação sem chamada ao modelo leva cerca de 0,06 s). É a única confirmação com tokens abaixo de 1.500
-em toda a rodada, então é a candidata a ser o julgamento de produto. Isso é leitura dos registros, **não
+(a confirmação sem chamada ao modelo leva cerca de 0,06 s). É a única confirmação da camada `CONFIRMACAO` com tokens abaixo de 1.500
+nesta rodada, então é a candidata a ser o julgamento de produto. Isso é leitura dos registros, **não
 confirmada no código**.
 
 - **Quantas confirmações:** 5 de 107 medidas na #581 (todas em `c581-01`), mais 0 em toda a #499 (ver a

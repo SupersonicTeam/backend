@@ -25,7 +25,8 @@ contagens: esta evidência é mais fraca que a da primeira rodada."
 | Decisão (regra v3) | **NAO_ENTRA**, só por `M_lei_correcao` (2 falhas de 6; mínimo 5 de 6) |
 | Rodadas anteriores | 2026-11-18 em `0dc6ac21` (ENTRA), 2026-11-19 em `bedb80db` (NAO_ENTRA) e a de variância da `main` em `0b0ca16b` (NAO_ENTRA) |
 
-Os scripts de medição são os mesmos das rodadas anteriores (conferido por diff contra o commit `7dd1cd64`).
+Os dois scripts `rodar_medicao_*.sh` são os mesmos das rodadas anteriores (conferido por diff contra o commit
+`7dd1cd64`).
 
 ## Métricas do braço ligado (teste), as quatro rodadas
 
@@ -73,7 +74,7 @@ Execuções fora (teste, ligado): **3 de 126** (`t-lei-06/r1` e `t-lei-06/r2` po
 
 Nos registros do braço ligado do teste **não há nenhuma confirmação com a chamada pequena ao modelo** (a de
 cerca de 368 tokens de entrada e 7 de saída que apareceu nas confirmações de `c581-01` na #581): 0 de 36
-confirmações de dados do teste (21 `REEXECUCAO_MESMO`, sem chamada ao modelo, e 15 `CORRIJO_DADOS`, com a
+confirmações de dados do teste (e nenhuma no dev) (21 `REEXECUCAO_MESMO`, sem chamada ao modelo, e 15 `CORRIJO_DADOS`, com a
 chamada grande de cerca de 6.500 de crédito e p95 de 6.374 tokens de entrada). O tempo mediano até a resposta
 é de 0,083 s na `REEXECUCAO_MESMO` e de 1,108 s na `CORRIJO_DADOS`. Isso é leitura dos registros, **não
 confirmada no código**: as conversas do teste não exercitam o caso em que o julgamento de produto roda, ou o
