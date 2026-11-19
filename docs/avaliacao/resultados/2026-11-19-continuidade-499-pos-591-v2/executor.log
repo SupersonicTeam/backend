@@ -1,0 +1,10 @@
+[desligado] preparo feito; notas do seed {'devolvida_seed': '3222', 'cancelada_seed': '3212', 'aguardando_seed': '3224'}
+[ligado] preparo feito; notas do seed {'devolvida_seed': '3222', 'cancelada_seed': '3212', 'aguardando_seed': '3224'}
+autoteste: assinatura conferida
+repetição 1, braço desligado: 19:23:44
+repetição 1, braço ligado: 19:28:23
+repetição 2, braço ligado: 19:34:09
+repetição 2, braço desligado: 19:39:46
+repetição 3, braço desligado: 19:44:22
+repetição 3, braço ligado: 19:49:05
+fim: 19:56:40
