@@ -1,0 +1,2 @@
+decisão: INCONCLUSIVA
+  problema: controle do VP: corrigiu para melhor em 10 de 15 (mínimo 12): a rodada não enxerga o corrijo quando ele é devido

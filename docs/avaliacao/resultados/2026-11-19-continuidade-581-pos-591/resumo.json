@@ -1,0 +1,354 @@
+{
+  "regra": "2026-11-18.1",
+  "conjunto": "continuidade-581-v1",
+  "conjunto_sha256": "f46e81ab2048d71832efeed9f8c3063dd00960ae9363b742dca89873474722c7",
+  "commits": [
+    "bedb80dbfd2d4fe119ac65f0303ed0c86a4bf930"
+  ],
+  "modelos": [
+    "anthropic/claude-haiku-5-5"
+  ],
+  "datas_referencia": [
+    "2026-11-19"
+  ],
+  "medido": {
+    "execucoes": 120,
+    "fora": 12,
+    "fora_por_motivo": {
+      "preparo_invalido": [
+        "c581-06/r4",
+        "c581-06/r5"
+      ],
+      "confirmacao_fora_da_rota": [
+        "c581-40/r1",
+        "c581-40/r2",
+        "c581-40/r3",
+        "c581-40/r4",
+        "c581-40/r5",
+        "c581-49/r1",
+        "c581-49/r2",
+        "c581-49/r3",
+        "c581-49/r4",
+        "c581-49/r5"
+      ]
+    },
+    "classes": {
+      "nucleo": {
+        "n": 73,
+        "por_resultado": {
+          "manteve_certo": 73
+        },
+        "por_conversa": {
+          "c581-01": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-03": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-06": {
+            "execucoes": 3,
+            "manteve_certo": 3
+          },
+          "c581-08": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-09": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-10": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-15": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-19": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-20": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-22": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-23": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-38": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-41": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-42": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-44": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          }
+        },
+        "por_categoria": {
+          "dados_certa_compra_venda_implicita": {
+            "execucoes": 20,
+            "manteve_certo": 20
+          },
+          "dados_certa_periodo_relativo": {
+            "execucoes": 15,
+            "manteve_certo": 15
+          },
+          "dados_certa_sinonimo_ncm": {
+            "execucoes": 18,
+            "manteve_certo": 18
+          },
+          "dados_certa_situacao_outro_nome": {
+            "execucoes": 20,
+            "manteve_certo": 20
+          }
+        },
+        "por_mecanismo": {
+          "natural": {
+            "execucoes": 18,
+            "manteve_certo": 18
+          },
+          "texto_do_par": {
+            "execucoes": 55,
+            "manteve_certo": 55
+          }
+        },
+        "ids": {
+          "manteve_certo": [
+            "c581-01/r1",
+            "c581-01/r2",
+            "c581-01/r3",
+            "c581-01/r4",
+            "c581-01/r5",
+            "c581-03/r1",
+            "c581-03/r2",
+            "c581-03/r3",
+            "c581-03/r4",
+            "c581-03/r5",
+            "c581-06/r1",
+            "c581-06/r2",
+            "c581-06/r3",
+            "c581-08/r1",
+            "c581-08/r2",
+            "c581-08/r3",
+            "c581-08/r4",
+            "c581-08/r5",
+            "c581-09/r1",
+            "c581-09/r2",
+            "c581-09/r3",
+            "c581-09/r4",
+            "c581-09/r5",
+            "c581-10/r1",
+            "c581-10/r2",
+            "c581-10/r3",
+            "c581-10/r4",
+            "c581-10/r5",
+            "c581-15/r1",
+            "c581-15/r2",
+            "c581-15/r3",
+            "c581-15/r4",
+            "c581-15/r5",
+            "c581-19/r1",
+            "c581-19/r2",
+            "c581-19/r3",
+            "c581-19/r4",
+            "c581-19/r5",
+            "c581-20/r1",
+            "c581-20/r2",
+            "c581-20/r3",
+            "c581-20/r4",
+            "c581-20/r5",
+            "c581-22/r1",
+            "c581-22/r2",
+            "c581-22/r3",
+            "c581-22/r4",
+            "c581-22/r5",
+            "c581-23/r1",
+            "c581-23/r2",
+            "c581-23/r3",
+            "c581-23/r4",
+            "c581-23/r5",
+            "c581-38/r1",
+            "c581-38/r2",
+            "c581-38/r3",
+            "c581-38/r4",
+            "c581-38/r5",
+            "c581-41/r1",
+            "c581-41/r2",
+            "c581-41/r3",
+            "c581-41/r4",
+            "c581-41/r5",
+            "c581-42/r1",
+            "c581-42/r2",
+            "c581-42/r3",
+            "c581-42/r4",
+            "c581-42/r5",
+            "c581-44/r1",
+            "c581-44/r2",
+            "c581-44/r3",
+            "c581-44/r4",
+            "c581-44/r5"
+          ]
+        },
+        "via_modelo": 0,
+        "corrigiu": 0,
+        "corrigiu_com_reescrita": 0,
+        "corrigiu_por_dia": {},
+        "detalhes": []
+      },
+      "claro": {
+        "n": 20,
+        "por_resultado": {
+          "manteve_certo": 20
+        },
+        "por_conversa": {
+          "c581-25": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-30": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-47": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          },
+          "c581-48": {
+            "execucoes": 5,
+            "manteve_certo": 5
+          }
+        },
+        "por_categoria": {
+          "controle_certa_clara": {
+            "execucoes": 20,
+            "manteve_certo": 20
+          }
+        },
+        "por_mecanismo": {
+          "natural": {
+            "execucoes": 20,
+            "manteve_certo": 20
+          }
+        },
+        "ids": {
+          "manteve_certo": [
+            "c581-25/r1",
+            "c581-25/r2",
+            "c581-25/r3",
+            "c581-25/r4",
+            "c581-25/r5",
+            "c581-30/r1",
+            "c581-30/r2",
+            "c581-30/r3",
+            "c581-30/r4",
+            "c581-30/r5",
+            "c581-47/r1",
+            "c581-47/r2",
+            "c581-47/r3",
+            "c581-47/r4",
+            "c581-47/r5",
+            "c581-48/r1",
+            "c581-48/r2",
+            "c581-48/r3",
+            "c581-48/r4",
+            "c581-48/r5"
+          ]
+        },
+        "via_modelo": 0,
+        "corrigiu": 0,
+        "corrigiu_com_reescrita": 0,
+        "corrigiu_por_dia": {},
+        "detalhes": []
+      },
+      "vp": {
+        "n": 15,
+        "por_resultado": {
+          "corrigiu_para_melhor": 10,
+          "nao_corrigiu": 5
+        },
+        "por_conversa": {
+          "c581-32": {
+            "execucoes": 5,
+            "corrigiu_para_melhor": 5
+          },
+          "c581-33": {
+            "execucoes": 5,
+            "corrigiu_para_melhor": 5
+          },
+          "c581-34": {
+            "execucoes": 5,
+            "nao_corrigiu": 5
+          }
+        },
+        "por_categoria": {
+          "controle_errada_vp": {
+            "execucoes": 15,
+            "corrigiu_para_melhor": 10,
+            "nao_corrigiu": 5
+          }
+        },
+        "por_mecanismo": {
+          "texto_do_par": {
+            "execucoes": 15,
+            "corrigiu_para_melhor": 10,
+            "nao_corrigiu": 5
+          }
+        },
+        "ids": {
+          "corrigiu_para_melhor": [
+            "c581-32/r1",
+            "c581-32/r2",
+            "c581-32/r3",
+            "c581-32/r4",
+            "c581-32/r5",
+            "c581-33/r1",
+            "c581-33/r2",
+            "c581-33/r3",
+            "c581-33/r4",
+            "c581-33/r5"
+          ],
+          "nao_corrigiu": [
+            "c581-34/r1",
+            "c581-34/r2",
+            "c581-34/r3",
+            "c581-34/r4",
+            "c581-34/r5"
+          ]
+        },
+        "via_modelo": 10,
+        "corrigiu": 10,
+        "corrigiu_com_reescrita": 10,
+        "corrigiu_por_dia": {
+          "2026-11-19": 10
+        },
+        "detalhes": []
+      }
+    }
+  },
+  "problemas": [
+    "controle do VP: corrigiu para melhor em 10 de 15 (mínimo 12): a rodada não enxerga o corrijo quando ele é devido"
+  ],
+  "controle_vp": {
+    "n": 15,
+    "corrigiu_para_melhor": 10,
+    "minimo": 12,
+    "cumpre": false
+  },
+  "decisao": "INCONCLUSIVA"
+}
