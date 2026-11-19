@@ -224,7 +224,6 @@ public final class ConferenciaConsulta {
 
   static Nivel produtos(String normal, List<String> palavras, List<ChamadaAssinada> consulta,
       ResolucaoProduto resolucao, LocalDate dia) {
-    String digitosPergunta = normal.replaceAll("\\D", "");
     Nivel nivel = Nivel.PASSA;
     for (ChamadaAssinada c : consulta) {
       for (String nome : ARGUMENTOS_DE_PRODUTO) {
@@ -233,23 +232,12 @@ public final class ConferenciaConsulta {
           continue;
         }
         String normalValor = TextoContinuidade.normalizar(valor);
-        boolean ausente = false;
-        if (normalValor.chars().anyMatch(Character::isLetter)) {
-          for (String palavra : TextoContinuidade.palavras(normalValor)) {
-            if (palavra.length() >= 3 && !TextoContinuidade.VAZIAS.contains(palavra)
-                && !TextoContinuidade.numero(palavra)
-                && !TextoContinuidade.contemPorPrefixo(palavras, palavra)) {
-              ausente = true;
-            }
-          }
-        } else {
-          String digitos = normalValor.replaceAll("\\D", "");
-          ausente = !digitos.isEmpty() && !digitosPergunta.contains(digitos);
-          if (ausente && NCM_NA_PERGUNTA.matcher(normal).find()) {
-            // Outro NCM dito na pergunta contradiz o da consulta.
-            nivel = nivel.pior(Nivel.CONTRADIZ);
-            continue;
-          }
+        boolean ausente = produtoAusente(normalValor, normal, palavras);
+        if (ausente && !normalValor.chars().anyMatch(Character::isLetter)
+            && NCM_NA_PERGUNTA.matcher(normal).find()) {
+          // Outro NCM dito na pergunta contradiz o da consulta.
+          nivel = nivel.pior(Nivel.CONTRADIZ);
+          continue;
         }
         if (ausente) {
           // A palavra ausente (sinônimo, NCM escolhido pelo modelo) não é erro. Só a tabela prova
@@ -261,6 +249,21 @@ public final class ConferenciaConsulta {
       }
     }
     return nivel;
+  }
+
+  /**
+   * O produto da consulta não está na pergunta: alguma palavra dele (com letras) falta, ou os
+   * dígitos dele (NCM) não estão nos da pergunta.
+   */
+  private static boolean produtoAusente(String normalValor, String normal,
+      List<String> palavras) {
+    if (normalValor.chars().anyMatch(Character::isLetter)) {
+      return TextoContinuidade.palavras(normalValor).stream().anyMatch(p -> p.length() >= 3
+          && !TextoContinuidade.VAZIAS.contains(p) && !TextoContinuidade.numero(p)
+          && !TextoContinuidade.contemPorPrefixo(palavras, p));
+    }
+    String digitos = normalValor.replaceAll("\\D", "");
+    return !digitos.isEmpty() && !normal.replaceAll("\\D", "").contains(digitos);
   }
 
   /**
@@ -347,13 +350,7 @@ public final class ConferenciaConsulta {
           continue;
         }
         String normalValor = TextoContinuidade.normalizar(valor);
-        boolean letras = normalValor.chars().anyMatch(Character::isLetter);
-        boolean ausente = letras
-            ? TextoContinuidade.palavras(normalValor).stream().anyMatch(p -> p.length() >= 3
-                && !TextoContinuidade.VAZIAS.contains(p) && !TextoContinuidade.numero(p)
-                && !TextoContinuidade.contemPorPrefixo(palavras, p))
-            : !normalValor.replaceAll("\\D", "").isEmpty()
-                && !normal.replaceAll("\\D", "").contains(normalValor.replaceAll("\\D", ""));
+        boolean ausente = produtoAusente(normalValor, normal, palavras);
         if (ausente && relacaoComAPergunta(valor, normalValor, normal, resolucao, diaDoPar)
             == Relacao.INCONCLUSIVA) {
           return Optional.of(

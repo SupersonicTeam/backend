@@ -354,7 +354,8 @@ class ProvaDeIncoerenciaTest {
   void duvidaDeProduto() {
     // "diesel" não está na tabela de produto; "herbicida" só em item de anexo (sem NCM único).
     List<ChamadaAssinada> diesel = List.of(chamada("totalComprasPorInsumo",
-        "{\"descricaoOuNcm\":\"diesel\"}"));
+        "{\"descricaoOuNcm\":\"diesel\",\"dataInicio\":\"2026-09-01\","
+            + "\"dataFim\":\"2026-09-30\"}"));
 
     assertThat(ConferenciaConsulta.contradiz("quanto comprei de herbicida em setembro?", diesel,
         DIA, ResolucaoProduto.NENHUMA)).isFalse();
@@ -393,7 +394,8 @@ class ProvaDeIncoerenciaTest {
   @DisplayName("Decisão: a dúvida só vai ao julgamento com ele ligado, e só nos pares de dados")
   void decisaoDaDuvida() {
     ParConferido par = par("quanto comprei de herbicida em setembro?", List.of(chamada(
-        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"diesel\"}")));
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"diesel\",\"dataInicio\":"
+            + "\"2026-09-01\",\"dataFim\":\"2026-09-30\"}")));
     ProvaDeProduto semJulgamento = ProvaDeProduto.de(ResolucaoProduto.NENHUMA);
     ProvaDeProduto comJulgamento = new ProvaDeProduto(ResolucaoProduto.NENHUMA,
         org.mockito.Mockito.mock(JulgamentoDeProduto.class));
