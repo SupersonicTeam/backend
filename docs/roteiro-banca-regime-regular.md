@@ -74,7 +74,7 @@ de R$ 1,3 milhão por ano optar pelo regime regular, e os motivos que ele dá co
 
 - **Para optar:** comprador empresa que aproveita o crédito, crédito nas compras de insumos e
   planejamento tributário. Sobre o crédito nos insumos, veja a ressalva do Anexo IX abaixo: o
-  diferimento (art. 138, § 2º) segue com o contador (#284, pergunta C) e o argumento fica fora.
+  diferimento (art. 138, § 2º) não está modelado (limitação declarada, #356) e o argumento fica fora.
 - **Para não optar:** venda direta ao consumidor, poucos créditos aproveitáveis e o custo de
   administrar a apuração e o recolhimento.
 - A banca pode perguntar por que alguém escolheria um regime com apuração e recolhimento. A resposta
@@ -96,7 +96,7 @@ tem o recolhimento do IBS/CBS **diferido** (art. 138, § 2º, inciso I, alínea 
 
 - Quando o diferimento se encerra (§ 5º), recolhe quem promove a operação que o encerra (§ 6º). O
   recolhimento é dispensado quando a apropriação do crédito é permitida (§ 8º). O efeito sobre o
-  crédito do produtor está com o contador (#284, pergunta C).
+  crédito do produtor não está modelado (limitação declarada, #356, depois da banca).
 - Por isso o argumento fica fora. O crédito do art. 47 nas demais compras tributadas (serviços,
   bens fora dos Anexos e do art. 110) continua valendo.
 - O sistema ainda não modela o diferimento (premissas, seção 1).
@@ -126,7 +126,7 @@ pela cooperativa, e o sistema não o deduz do CNPJ. O contador faria a demonstra
 | "Quem vende para pessoa física ou consumidor final não ganha nada com o crédito do comprador." | Correto: para esse produtor a opção faz menos sentido. É o caso do não contribuinte, fora do escopo atual (#281). |
 | "A opção é para sempre? O limite muda?" | A opção vale a partir do mês seguinte e é irretratável durante o ano-calendário (art. 165, §§ 1º e 2º). A renúncia produz efeito em 1º de janeiro do ano seguinte (art. 166), **mas fica vedada** a quem recebeu ressarcimento de crédito no ano corrente ou no anterior (art. 41, §§ 5º e 6º). O limite é atualizado todo ano pelo IPCA (art. 167). O sistema ainda não modela esse histórico (#281). |
 | "E o produtor integrado?" | Pelo art. 164 o integrado não é contribuinte qualquer que seja a receita, salvo opção (art. 165). Mesmo tratamento do pequeno produtor: fora do escopo atual. |
-| "Os produtos *in natura* têm redução de 60% (art. 137)." | Sim. Desde a tabela oficial (#272) a soja, o milho, o trigo e o algodão em grão saem com 60% pela marca *in natura* do NCM, e a demonstração mostra isso; o arroz em casca não parboilizado (1006.10.92) entrou na lista pela resposta do escritório (#284, pergunta 3; o parboilizado segue fora). O contador do escritório confirmou o enquadramento em 19/11/2026 (#284, respostas 1 a 5: soja e milho em grão a 60%, leite cru a 60% e não a alíquota zero, arroz em casca a 60%, ovos, tomate e abacaxi a alíquota zero, e o tratamento mais benéfico prevalece). O arroz parboilizado (1006.10.91) segue sem resposta (pergunta D). |
+| "Os produtos *in natura* têm redução de 60% (art. 137)." | Sim. Desde a tabela oficial (#272) a soja, o milho, o trigo e o algodão em grão saem com 60% pela marca *in natura* do NCM, e a demonstração mostra isso; o arroz em casca não parboilizado (1006.10.92) entrou na lista pela resposta do escritório (#284, pergunta 3; o parboilizado segue fora). O contador do escritório confirmou o enquadramento em 19/11/2026 (#284, respostas 1 a 5: soja e milho em grão a 60%, leite cru a 60% e não a alíquota zero, arroz em casca a 60%, ovos, tomate e abacaxi a alíquota zero, e o tratamento mais benéfico prevalece). O arroz parboilizado (1006.10.91) fica fora da marca *in natura* (limitação declarada). |
 | "A nota diz que o emitente é do Simples Nacional (CRT 1)." | Não diz mais (#298): produtor rural pessoa física não entra no Simples Nacional nem no MEI (LC 123/2006, art. 3º), então a NF-e e o DANFE dele saem com **CRT 3 (regime normal)** e o cadastro com `SIMPLES` é recusado. Nota autorizada antes da correção guarda o CRT da emissão: não usar uma delas na banca. |
 | "E o ICMS da nota?" | A NF-e leva o grupo de ICMS por item, mas o sistema **não calcula** o ICMS (premissas, seção 3). Sem o grupo, a SEFAZ rejeitaria a NF-e (rejeição 1002, NT 2025.002, regra B25-90). **Padrão:** na venda interna de produção própria (CFOP 5101) a destinatário **com IE**, o XML sai com o **ICMS51, diferido** (CST 51, ICMS próprio zero). O escritório confirmou isso para a soja em MT (#284, pergunta 9); o diferimento do ICMS em MT é **opção do produtor** (CST 51 com a opção, 00 sem ela), e o produtor que não opta fica fora do escopo, porque o sistema não calcula ICMS nem emite CST 00. Apresentar o sistema como especializado em IBS/CBS, sem substituir a escrituração do ICMS, é aceitável (resposta 9, b). Nos demais produtos e UFs o padrão é aplicado, e o sistema avisa para conferir com o contador. **Sem padrão:** venda interestadual, exportação, destinatário sem IE ou outro CFOP exigem o CST informado pelo contador. Sem ele, a emissão é barrada (422 `ICMS_A_DEFINIR`), e o sistema nunca escolhe o CST. O emitente do Simples ou MEI é barrado, porque informa CSOSN, que o sistema não emite. O cálculo do ICMS devido e o do ST seguem com o contador, por guia. O Funrural/Senar retido pelo comprador sai destacado nas informações complementares (#332). **Na VPS:** as notas já emitidas antes do #377 guardam o XML sem o grupo até o reset dos dados da demonstração. Não use uma delas para mostrar o ICMS. |
 
@@ -144,10 +144,16 @@ pela cooperativa, e o sistema não o deduz do CNPJ. O contador faria a demonstra
 - **Perguntas 10 a 14 e 16:** regras das respostas da Ceres, sinais de nota e CRT 3 do produtor
   pessoa física.
 
-**Segue pendente (sem resposta):** arroz parboilizado 1006.10.91 (D), diferimento dos insumos do
-Anexo IX (C, bloqueia a #356), Funrural 1,5% × 1,63% (A) e CST do ICMS dos demais pares de UF e
-produto (E; só soja em MT está em `icms/diferimento-confirmado.csv`: café em MG, leite no PR, milho,
-algodão e os demais seguem a confirmar).
+**Limitações declaradas** (decisão de 2026-11-19: as perguntas complementares A, C, D e E da #284
+não vão ao contador; sem promessa de resposta):
+
+- **A:** Funrural/Senar destacado em 1,5% (o contador citou 1,63%).
+- **C:** crédito dos insumos do Anexo IX sem considerar o diferimento do art. 138, § 2º (#356,
+  depois da banca).
+- **D:** arroz parboilizado em casca (1006.10.91) fora da marca *in natura*.
+- **E:** CST 51 confirmado só para MT + soja (`icms/diferimento-confirmado.csv`); fora disso, o
+  sinal `ICMS_PADRAO_A_CONFIRMAR` (#334, depois da banca): café em MG, leite no PR, milho, algodão
+  e os demais não estão confirmados.
 
 **Outras pendências:**
 
