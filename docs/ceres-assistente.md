@@ -1604,7 +1604,10 @@ sozinho não a distingue de sinônimo. Duas fontes de evidência, nesta ordem:
    a tabela não decide (o produto da consulta não está na tabela, ou nenhum termo da pergunta se
    resolve: "diesel" não tem NCM na tabela de redução, "herbicida" só item de anexo). Atrás de
    `app.assistente.continuidade.julgamento-de-produto` (`AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO`),
-   **desligada por padrão** e só com a continuidade ligada. Vão ao provedor até 8 palavras de
+   **ligada por padrão** (decisão do Murillo, 2026-11-19), mas só tem efeito com a continuidade
+   ligada, que segue desligada (com ela desligada, nenhuma chamada de julgamento acontece e o
+   comportamento é o da `main`); para desligar, `AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO=false`.
+   Vão ao provedor até 8 palavras de
    conteúdo da pergunta (cada uma pelo `DataSanitizer`) e o produto consultado, nunca a pergunta
    inteira, a resposta anterior, o produtor ou valores; o modelo responde `OUTRO`, `MESMO` ou
    `INCERTO` (teto `app.assistente.tetos.julgamento-produto`, 32 tokens). **Só `OUTRO` é prova**:

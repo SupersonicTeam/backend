@@ -289,13 +289,13 @@ public class AssistenteProperties implements InitializingBean {
     private boolean habilitada;
 
     /**
-     * Julgamento de produto (#591, {@code AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO}), desligado
-     * por padrão e só com a continuidade ligada: no "tem certeza?" de dados, quando o produto da
-     * consulta anterior não aparece na pergunta e a tabela de produto não decide se é o mesmo, uma
-     * chamada curta ao modelo julga se são produtos diferentes. Falha fecha: sem prova, a consulta
-     * é reexecutada.
+     * Julgamento de produto (#591, {@code AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO}), ligado
+     * por padrão (decisão do Murillo, 2026-11-19) mas só com efeito com a continuidade ligada, que
+     * segue desligada: no "tem certeza?" de dados, quando o produto da consulta anterior não
+     * aparece na pergunta e a tabela de produto não decide se é o mesmo, uma chamada curta ao
+     * modelo julga se são produtos diferentes. Falha fecha: sem prova, a consulta é reexecutada.
      */
-    private boolean julgamentoDeProduto;
+    private boolean julgamentoDeProduto = true;
 
     public boolean isHabilitada() {
       return habilitada;

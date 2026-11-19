@@ -567,10 +567,12 @@ app:
     # (docs/lgpd.md): so ligue com a politica de dados nova no ar e o aviso na tela.
     continuidade:
       habilitada: ${AI_CONTINUIDADE_HABILITADA:false}
-      # Julgamento de produto (#591): so com a continuidade ligada. No "tem certeza?" de dados, uma
+      # Julgamento de produto (#591): ligado por padrao (decisao do Murillo, 2026-11-19), mas so tem
+      # efeito com a continuidade ligada, que segue desligada. No "tem certeza?" de dados, uma
       # chamada curta ao modelo julga se o produto da pergunta e o da consulta anterior sao outros,
       # quando a tabela de produto nao decide. Falha fecha (sem prova, reexecuta a consulta).
-      julgamento-de-produto: ${AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO:false}
+      # Para desligar: AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO=false.
+      julgamento-de-produto: ${AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO:true}
     # Cota semanal de creditos (issue #166). creditos = ceil((entrada x peso-entrada + saida x
     # peso-saida) x fator do modelo / tokens-por-credito). Desde a #511, 1 credito por token
     # ponderado (tokens-por-credito = 1) e as cotas em milhares de vezes as de antes. Semana de
