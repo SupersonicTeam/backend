@@ -74,8 +74,9 @@ pode** estar no Simples Nacional nem no MEI, que são de microempresa e empresa 
   manual de [`demonstracao-banca.md`](demonstracao-banca.md).
 
 O campo `RegimeTributario` (MEI/SIMPLES/PRESUMIDO/REAL) é do imposto de renda e do Simples e não
-representa a situação dos arts. 164 e 165 (a #281). A #284, pergunta 16, segue para o contador
-confirmar o CRT 3.
+representa a situação dos arts. 164 e 165 (a #281). O contador confirmou o CRT 3 em 19/11/2026
+(#284, resposta 16 do arquivo), com a ressalva de que regime regular do IBS/CBS não é o regime
+normal do ICMS.
 
 ## 3. ICMS e Funrural seguem por guia
 
@@ -95,6 +96,11 @@ O AgroContábil trata da **reforma** (IBS/CBS). Os tributos atuais ficam com o c
     NCM e a fonte de cada linha; hoje só MT + 1201.90.00, #284 pergunta 9). Fora dela, o item emite
     com o 51, e o sinal **não bloqueante** `ICMS_PADRAO_A_CONFIRMAR` pede a conferência antes do
     XML. Resposta nova do contador = uma linha na lista;
+  - **o diferimento do ICMS em MT é opção do produtor** (contador, 19/11/2026, resposta 9): com a
+    opção, CST 51; sem ela, CST 00, e quem opta pelo diferimento renuncia aos créditos de ICMS. O
+    produtor que **não** opta fica **fora do escopo**: o sistema não calcula ICMS e não emite CST 00
+    (só 40, 41, 50, 51 e 90). Declarar esse escopo, com o sistema especializado em IBS/CBS e sem
+    substituir a escrituração do ICMS, é aceitável para o contador;
   - **qualquer outro caso** (interestadual, exportação, destinatário sem IE, outra natureza): o
     CST **tem de ser informado** no item (`cstIcms`, combinado com o contador). Sem ele, a
     emissão responde **422 `ICMS_A_DEFINIR`**, e o sinal de nota a conferir `ICMS_A_DEFINIR`
@@ -128,11 +134,23 @@ O AgroContábil trata da **reforma** (IBS/CBS). Os tributos atuais ficam com o c
 
 As validações de contador da issue #284 podem ajustar este texto:
 
-- **pergunta 7:** plausibilidade de um produtor desse porte optar pelo regime regular, e outros
-  motivos para optar ou não;
-- **pergunta 9 (respondida):** ICMS diferido, CST 51, na venda interna de soja em MT, hoje o
-  padrão da NF-e (seção 3). Outros casos dependem do CST que o contador informar;
-- **pergunta 1:** a redução de 60% da soja em grão (art. 137), aplicada desde a #272 pela marca
-  *in natura* do NCM e ainda em validação com o contador.
+**Confirmado pelo contador em 19/11/2026 (#284):**
+
+- **perguntas 1 a 5:** soja e milho em grão a 60% (art. 137, aplicado desde a #272 pela marca *in
+  natura* do NCM), leite cru a 60%, arroz em casca a 60%, ovos, tomate e abacaxi a alíquota zero, e
+  o tratamento mais benéfico prevalece;
+- **pergunta 7:** é plausível um produtor desse porte optar pelo regime regular (motivos para optar
+  e para não optar no roteiro da banca);
+- **pergunta 8:** ainda não há percentual do crédito presumido do art. 168 para parametrizar;
+- **pergunta 9:** ICMS diferido, CST 51, na venda interna de soja em MT, hoje o padrão da NF-e (seção
+  3); o diferimento é opção do produtor;
+- **perguntas 10 a 14 e 16:** regras das respostas da Ceres, sinais de nota e CRT 3.
+
+**Respondido, em implementação:** pergunta 6, venda a cooperativa optante (cClassTrib 200020): a
+cooperativa informa ao produtor que optou, e o cenário está em implementação na #299.
+
+**Segue pendente (sem resposta do contador):** diferimento dos insumos do Anexo IX (pergunta C,
+bloqueia a #356), arroz parboilizado 1006.10.91 (D), Funrural 1,5% × 1,63% (A) e CST do ICMS dos
+demais pares de UF e produto (E).
 
 Roteiro de resposta para a banca: [`roteiro-banca-regime-regular.md`](roteiro-banca-regime-regular.md).
