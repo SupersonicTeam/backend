@@ -55,9 +55,9 @@ execuções de `c581-49` e 1 das 5 de `c581-40` saíam pela rota de dados.
 - **c581-32 e c581-33 (controle do verdadeiro positivo):** continuam corrigindo para o valor certo, 5
   de 5 cada (período errado, c581-32, e situação errada, c581-33).
 - **Núcleo:** nenhuma ocorrência de "corrijo" nas 73 execuções válidas; o backend repetiu a consulta
-  gravada em todas (0% passou pelo modelo). Como a rodada anterior não encontrou valor que piorasse
-  (só c581-01, vazio dos dois lados), não há nenhum valor com conteúdo trocado por outro pior nesta
-  rodada nem na anterior.
+  gravada em todas (0% passou pelo modelo). Pelo valor, só c581-01 (nas duas rodadas) e c581-34 (nesta) foram
+  conferidas resposta a resposta. Nas outras execuções do núcleo vale a ausência de "corrijo" e de
+  `refeito_para_pior` (0 em ambas as rodadas); nenhuma trocou um valor com conteúdo por outro.
 
 ## Leitura
 

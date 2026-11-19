@@ -40,9 +40,12 @@ revisão de lei registrada, no head do PR #592 (a correção da #591).
 ## Falhas e ids (sem conteúdo de conversa)
 
 - **`M_dados_correcao` (3 falhas):** `t-dados-04/r1/t2`, `t-dados-04/r2/t2`, `t-dados-04/r3/t2` (as 3
-  repetições de uma conversa). Todas também contam em `M_rota_funcao`.
+  repetições de uma conversa). Todas também contam em `M_rota_funcao`. Nas 3 a camada é
+  `CONFIRMACAO` e a resposta abriu com a repetição da consulta ("o resultado é o mesmo") seguida da
+  dica de reformular, em vez de "corrijo".
 - **`M_lei_correcao` (3 falhas de 6):** `t-lei-04/r1/t2`, `t-lei-04/r2/t2`, `t-lei-05/r2/t2`. Também
-  contam em `M_rota_funcao`.
+  contam em `M_rota_funcao`. Nas 3 a camada é `RECONFERENCIA_LEI` e a resposta abriu com o texto de
+  apoio ("a resposta anterior se baseia em…"), em vez de "corrijo".
 - **`M_rota_funcao` (17 falhas):** as três de `M_dados_correcao`, as três de `M_lei_correcao`, mais
   `t-dados-11/r2,r3/t2`, `t-dados-12/r1,r2,r3/t2`, `t-dados-13/r1,r2,r3/t2` e `t-dados-17/r1,r2,r3/t2`.
   Na rodada anterior as 8 falhas eram `t-dados-12/r1,r2,r3`, `t-dados-13/r2,r3` e `t-dados-17/r1,r2,r3`:
@@ -73,6 +76,16 @@ revisão de lei registrada, no head do PR #592 (a correção da #591).
 Duas métricas de limiar não cumpridas (`M_dados_correcao` e `M_lei_correcao`), logo `NAO_ENTRA` pela
 regra v3. Esta rodada não é repetida por conta própria: a decisão sobre o PR #592 é da orquestradora.
 O resultado da medição da #581 no mesmo commit está em `2026-11-19-continuidade-581-pos-591`.
+
+**As 3 falhas de `M_lei_correcao` (leitura, não fato provado).** A orquestradora conferiu no diff do
+PR #592 que o commit medido não altera o caminho de lei da continuidade: a correção só mexe na
+confirmação de dados (quem mede não leu o diff). Se for assim, as 3 falhas em 6 execuções, contra 0
+em 6 na rodada de 2026-11-18, apontam para **variação entre rodadas do modelo** numa métrica com
+n = 6, e não para efeito da correção. Esta rodada não prova isso: a mesma conversa de lei falhou em
+2 das 3 repetições (`t-lei-04`) e outra em 1 (`t-lei-05`), e só rodadas repetidas no mesmo commit
+separariam a variação do modelo de um efeito real. As 3 falhas de `M_dados_correcao` estão no caminho
+de confirmação de dados, que, segundo a orquestradora, é o único que o PR #592 altera; esta rodada
+também não prova que a correção as causou.
 
 ## Arquivos
 
