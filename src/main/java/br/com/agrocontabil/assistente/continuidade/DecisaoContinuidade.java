@@ -80,6 +80,35 @@ public final class DecisaoContinuidade {
    */
   public static Decisao decidir(String mensagem, HistoricoConferido historico,
       boolean ultimaRespostaSemTurno) {
+    return decidir(mensagem, historico, ultimaRespostaSemTurno, ResolucaoProduto.NENHUMA);
+  }
+
+  /**
+   * Decide o caminho com a resolução de produto (#591): o produto da consulta anterior só é erro
+   * se a tabela mostrar que a pergunta fala de outro produto.
+   *
+   * @param mensagem              mensagem nova
+   * @param historico             histórico conferido
+   * @param ultimaRespostaSemTurno a última mensagem da Ceres na tela não trouxe {@code turno}
+   * @param resolucao             de que produto um termo fala
+   * @return a decisão
+   */
+  public static Decisao decidir(String mensagem, HistoricoConferido historico,
+      boolean ultimaRespostaSemTurno, ResolucaoProduto resolucao) {
+    return decidir(mensagem, historico, ultimaRespostaSemTurno, ProvaDeProduto.de(resolucao));
+  }
+
+  /**
+   * Decide o caminho com a prova de produto (#591): a tabela e, ligado, o julgamento.
+   *
+   * @param mensagem              mensagem nova
+   * @param historico             histórico conferido
+   * @param ultimaRespostaSemTurno a última mensagem da Ceres na tela não trouxe {@code turno}
+   * @param prova                 a prova de produto
+   * @return a decisão
+   */
+  public static Decisao decidir(String mensagem, HistoricoConferido historico,
+      boolean ultimaRespostaSemTurno, ProvaDeProduto prova) {
     if (AtalhosFixos.ehAtalho(mensagem)) {
       return new Decisao(Caminho.ATALHO, CaminhoCota.SEM_MODELO, historico, Optional.empty(),
           MensagemContinuidade.Tipo.NENHUMA, null);
@@ -106,7 +135,7 @@ public final class DecisaoContinuidade {
     ParConferido par = historico.ultimo().orElseThrow();
     MensagemContinuidade.Tipo tipo = MensagemContinuidade.ler(mensagem, par);
     if (tipo.caminhoDaConfirmacao()) {
-      return new Decisao(Caminho.CONFIRMACAO, custoDaConfirmacao(par), historico,
+      return new Decisao(Caminho.CONFIRMACAO, custoDaConfirmacao(par, prova), historico,
           Optional.of(par), tipo, null);
     }
     if (GatilhoReescrita.dispara(mensagem, tipo)) {
@@ -119,10 +148,23 @@ public final class DecisaoContinuidade {
 
   /** Custo do caminho da confirmação pela rota do par. */
   static CaminhoCota custoDaConfirmacao(ParConferido par) {
+    return custoDaConfirmacao(par, ResolucaoProduto.NENHUMA);
+  }
+
+  static CaminhoCota custoDaConfirmacao(ParConferido par, ResolucaoProduto resolucao) {
+    return custoDaConfirmacao(par, ProvaDeProduto.de(resolucao));
+  }
+
+  static CaminhoCota custoDaConfirmacao(ParConferido par, ProvaDeProduto prova) {
     CargaTurno carga = par.carga();
-    boolean bate = consultaBate(par);
+    Consulta consulta = avaliarConsulta(par, prova);
+    boolean bate = consulta != Consulta.MODELO;
     return switch (carga.rota()) {
-      case DADOS -> bate ? CaminhoCota.SEM_MODELO : CaminhoCota.NORMAL;
+      case DADOS -> switch (consulta) {
+        case REEXECUTAR -> CaminhoCota.SEM_MODELO;
+        case MODELO -> CaminhoCota.NORMAL;
+        case DUVIDA_DE_PRODUTO -> CaminhoCota.CONFIRMACAO_COM_JULGAMENTO;
+      };
       case LEGISLACAO -> leiPorTextoFixo(par) ? CaminhoCota.SEM_MODELO : CaminhoCota.RECONFERENCIA;
       case MISTO -> {
         boolean fixa = leiPorTextoFixo(par);
@@ -135,20 +177,70 @@ public final class DecisaoContinuidade {
     };
   }
 
-  /** A consulta assinada do par bate com a pergunta dele (no dia do par). */
-  public static boolean consultaBate(ParConferido par) {
+  /**
+   * A consulta assinada do par pode ser reexecutada: a pergunta dele não a contradiz (no dia do
+   * par). A palavra que não aparece (sinônimo, NCM, situação com outro nome) não é prova de erro
+   * (#591): sem contradição explícita não há motivo para o modelo escolher outra consulta nem para
+   * a Ceres afirmar que corrige a resposta.
+   */
+  public static boolean consultaSemContradicao(ParConferido par) {
+    return consultaSemContradicao(par, ResolucaoProduto.NENHUMA);
+  }
+
+  /**
+   * Como {@link #consultaSemContradicao(ParConferido)}, com a resolução de produto: o produto da
+   * consulta que a pergunta não traz só a contradiz se a tabela mostrar outro produto.
+   *
+   * @param par       par de dados
+   * @param resolucao de que produto um termo fala
+   * @return se a consulta pode ser reexecutada
+   */
+  public static boolean consultaSemContradicao(ParConferido par, ResolucaoProduto resolucao) {
+    return avaliarConsulta(par, ProvaDeProduto.de(resolucao)) != Consulta.MODELO;
+  }
+
+  /** O que a confirmação de dados faz com a consulta anterior do par (#591). */
+  public enum Consulta {
+    /** Nada a contradiz: reexecuta a mesma consulta, sem modelo. */
+    REEXECUTAR,
+    /** A pergunta a contradiz (ou não há consulta): o modelo escolhe de novo. */
+    MODELO,
+    /**
+     * O produto da consulta não aparece na pergunta e a tabela não decide se é o mesmo: com o
+     * julgamento ligado, uma chamada curta decide; sem ele, é {@link #REEXECUTAR}. Só nos pares
+     * de dados.
+     */
+    DUVIDA_DE_PRODUTO
+  }
+
+  /**
+   * Avalia a consulta anterior do par.
+   *
+   * @param par   par de dados (ou o de dados do MISTO)
+   * @param prova a prova de produto
+   * @return o que fazer com a consulta
+   */
+  public static Consulta avaliarConsulta(ParConferido par, ProvaDeProduto prova) {
     CargaTurno carga = par.carga();
     if (carga.consulta() == null) {
-      return false;
+      return Consulta.MODELO;
     }
     if (carga.rota() == Intencao.DADOS && AtalhosFixos.ehAtalho(par.pergunta())) {
       // Atalho de dados da tela: a funcao e fixa ({@code {}}, com o padrao dela) e coerente por
       // construcao. As regras de periodo mudariam os argumentos ("este mes" vira o mes) e
       // mandariam ao modelo uma pergunta que se refaz sem ele.
-      return true;
+      return Consulta.REEXECUTAR;
     }
-    return ConferenciaConsulta.bate(par.pergunta(), carga.consulta(),
-        ConferenciaConsulta.diaDoPar(carga.exp()));
+    java.time.LocalDate dia = ConferenciaConsulta.diaDoPar(carga.exp());
+    if (ConferenciaConsulta.contradiz(par.pergunta(), carga.consulta(), dia, prova.resolucao())) {
+      return Consulta.MODELO;
+    }
+    if (carga.rota() == Intencao.DADOS && prova.comJulgamento()
+        && ConferenciaConsulta.duvidaDeProduto(par.pergunta(), carga.consulta(), dia,
+            prova.resolucao()).isPresent()) {
+      return Consulta.DUVIDA_DE_PRODUTO;
+    }
+    return Consulta.REEXECUTAR;
   }
 
   /**

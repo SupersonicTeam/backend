@@ -34,7 +34,14 @@ public enum CaminhoCota {
   RECONFERENCIA_MISTO,
 
   /** Com reescrita: a reescrita e o caminho mais caro depois dela. */
-  REESCRITA;
+  REESCRITA,
+
+  /**
+   * Confirmação de dados em que o produto da consulta anterior não aparece na pergunta e a tabela
+   * de produto não decide (#591): o julgamento de produto e, se ele achar outro produto, o caminho
+   * normal de dados. Só com o julgamento ligado; sem ele, a confirmação é a reexecução sem modelo.
+   */
+  CONFIRMACAO_COM_JULGAMENTO;
 
   /**
    * Chamadas ao modelo, no máximo.
@@ -46,7 +53,7 @@ public enum CaminhoCota {
       case SEM_MODELO -> 0;
       case RECONFERENCIA -> 2;
       case NORMAL, RECONFERENCIA_MISTO -> 3;
-      case REESCRITA -> 4;
+      case REESCRITA, CONFIRMACAO_COM_JULGAMENTO -> 4;
     };
   }
 
@@ -66,6 +73,7 @@ public enum CaminhoCota {
       case RECONFERENCIA -> (long) tetos.getReconferencia() + tetos.getLegislacao();
       case RECONFERENCIA_MISTO -> reconferenciaMisto;
       case REESCRITA -> tetos.getReescrita() + Math.max(normal, reconferenciaMisto);
+      case CONFIRMACAO_COM_JULGAMENTO -> tetos.getJulgamentoProduto() + normal;
     };
   }
 }

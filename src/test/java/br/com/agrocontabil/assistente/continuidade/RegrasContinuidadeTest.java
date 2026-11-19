@@ -199,7 +199,7 @@ class RegrasContinuidadeTest {
             List.of(chamada("vencimentosDoMes", "{}")), HashDados.de("x"), null, false, null), 0,
         false);
 
-    assertThat(DecisaoContinuidade.consultaBate(par)).isTrue();
+    assertThat(DecisaoContinuidade.consultaSemContradicao(par)).isTrue();
     assertThat(DecisaoContinuidade.decidir("tem certeza?", historico(par), false).custo())
         .isEqualTo(CaminhoCota.SEM_MODELO);
   }

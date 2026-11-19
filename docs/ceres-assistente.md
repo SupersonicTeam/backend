@@ -1584,3 +1584,37 @@ python3 -I docs/avaliacao/harness-api/harness.py
 # memoria da VM durante a rodada
 docker stats --no-stream
 ```
+
+### Prova de que a consulta anterior estava errada (#591)
+
+No "tem certeza?" de dados, o modelo só escolhe outra consulta, e o backend só abre a resposta com
+"corrijo", quando a pergunta **contradiz** a consulta anterior. A palavra que não aparece
+(sinônimo, NCM, situação com outro nome) não é prova. `ConferenciaConsulta` dá a cada regra
+`PASSA`, `SEM_PROVA` ou `CONTRADIZ`; sem contradição, a consulta é **reexecutada sem modelo**.
+
+Produto errado ("diesel" para uma pergunta de herbicida) é a contradição mais plausível, e o texto
+sozinho não a distingue de sinônimo. Duas fontes de evidência, nesta ordem:
+
+1. **A tabela de produto, em código** (`ResolucaoProduto` sobre `TratamentoProdutoPorta`): o
+   produto da consulta e os termos da pergunta (as palavras juntas e cada uma, ou o NCM dito) caem
+   em posições de NCM de 4 dígitos. Disjuntas = prova (o "milho" no lugar de "soja"); a mesma
+   posição ou termo parte do produto = o mesmo, sem prova. Só NCM conta: o item de anexo agrupa
+   posições. A resposta de cada termo vale 1 minuto (decisão de custo e orquestrador ouvem a mesma).
+2. **O julgamento de produto, uma chamada curta ao modelo** (`JulgamentoDeProduto`), só no caso que
+   a tabela não decide (o produto da consulta não está na tabela, ou nenhum termo da pergunta se
+   resolve: "diesel" não tem NCM na tabela de redução, "herbicida" só item de anexo). Atrás de
+   `app.assistente.continuidade.julgamento-de-produto` (`AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO`),
+   **desligada por padrão** e só com a continuidade ligada. Vão ao provedor até 8 palavras de
+   conteúdo da pergunta (cada uma pelo `DataSanitizer`) e o produto consultado, nunca a pergunta
+   inteira, a resposta anterior, o produtor ou valores; o modelo responde `OUTRO`, `MESMO` ou
+   `INCERTO` (teto `app.assistente.tetos.julgamento-produto`, 32 tokens). **Só `OUTRO` é prova**:
+   qualquer outra resposta, texto fora do formato, corte pelo teto, modelo fora ou reserva ausente
+   fecham sem prova e a consulta é reexecutada. A chamada é feita por `ContextoAssistente.chamar`
+   (reserva de cota, nenhuma transação aberta). A reserva do caminho
+   (`CaminhoCota.CONFIRMACAO_COM_JULGAMENTO`, 40.064 créditos com os padrões) cobre o julgamento e
+   o caminho normal de dados; o gasto real é o do que rodou. Só nos pares de dados: a dúvida num par
+   do MISTO reexecuta, sem julgamento.
+
+O "corrijo" por produto exige a prova (`ConferenciaConsulta.correcaoProvada`, ou o julgamento) e a
+consulta nova coerente com a pergunta; sem ela, no máximo "refiz", e a abertura da reexecução diz
+sempre o que foi consultado (produto, compra ou venda, período).

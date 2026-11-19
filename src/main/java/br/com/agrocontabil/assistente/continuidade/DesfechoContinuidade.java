@@ -52,6 +52,10 @@ public enum DesfechoContinuidade {
   REFEITA,
   /** Reexecução que falhou: texto fixo, sem turno. */
   REEXECUCAO_FALHOU,
+  /** Julgamento de produto (#591): a pergunta fala de outro produto que a consulta anterior. */
+  JULGAMENTO_PRODUTO_OUTRO,
+  /** Julgamento de produto (#591): mesmo produto, incerto, falha ou corte; sem prova de erro. */
+  JULGAMENTO_PRODUTO_SEM_PROVA,
   /** Reconferência por texto fixo, sem o modelo. */
   RECONFERENCIA_TEXTO_FIXO,
   /** Reconferência confirmou a resposta anterior. */

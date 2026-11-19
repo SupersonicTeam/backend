@@ -22,6 +22,7 @@ import br.com.agrocontabil.assistente.continuidade.MensagemContinuidade;
 import br.com.agrocontabil.assistente.continuidade.ParConferido;
 import br.com.agrocontabil.assistente.continuidade.ReconferenciaLei;
 import br.com.agrocontabil.assistente.continuidade.ReescritaContinuidade;
+import br.com.agrocontabil.assistente.continuidade.ProvaDeProduto;
 import br.com.agrocontabil.assistente.continuidade.RegistroTurno;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.fallback.TelaAtalho;
@@ -102,6 +103,7 @@ public class OrquestradorService {
   private final double confiancaMinima;
   private final ReescritaContinuidade reescrita;
   private final ReconferenciaLei reconferencia;
+  private final ProvaDeProduto provaDeProduto;
 
   /** Constrói o orquestrador sem a continuidade (testes da pergunta de turno único). */
   public OrquestradorService(ClassificadorIntencao classificador, RotaDados rotaDados,
@@ -112,7 +114,7 @@ public class OrquestradorService {
       DisponibilidadeModelo disponibilidade, AssistenteProperties propriedades) {
     this(classificador, rotaDados, rotaLegislacao, trechosDasCompras, fundamentoRetencao,
         textosDoBackend, atalhoReforma, atalhoDefinicao, fallback, disponibilidade, propriedades,
-        null, null);
+        null, null, ProvaDeProduto.NENHUMA);
   }
 
   /** Constrói o orquestrador com a continuidade da conversa (#499). */
@@ -123,7 +125,8 @@ public class OrquestradorService {
       AtalhoReformaTributaria atalhoReforma, AtalhoDefinicao atalhoDefinicao,
       ModoFallback fallback, DisponibilidadeModelo disponibilidade,
       AssistenteProperties propriedades, ReescritaContinuidade reescrita,
-      ReconferenciaLei reconferencia) {
+      ReconferenciaLei reconferencia, ProvaDeProduto provaDeProduto) {
+    this.provaDeProduto = provaDeProduto;
     this.reescrita = reescrita;
     this.reconferencia = reconferencia;
     this.atalhoReforma = atalhoReforma;
@@ -314,7 +317,20 @@ public class OrquestradorService {
       ContextoAssistente contexto) {
     List<ChamadaAssinada> anterior = par.carga().consulta();
     String hashAnterior = par.carga().dados();
-    if (anterior != null && DecisaoContinuidade.consultaBate(par)) {
+    DecisaoContinuidade.Consulta avaliacao = anterior == null
+        ? DecisaoContinuidade.Consulta.MODELO
+        : DecisaoContinuidade.avaliarConsulta(par, provaDeProduto);
+    boolean provadoPeloJulgamento = false;
+    if (avaliacao == DecisaoContinuidade.Consulta.DUVIDA_DE_PRODUTO) {
+      // O produto da consulta nao aparece na pergunta e a tabela nao decide (#591): uma chamada
+      // curta julga se sao produtos diferentes. So "OUTRO" e prova; o resto reexecuta.
+      provadoPeloJulgamento = ConferenciaConsulta.duvidaDeProduto(par.pergunta(), anterior,
+          ConferenciaConsulta.diaDoPar(par.carga().exp()), provaDeProduto.resolucao())
+          .map(d -> provaDeProduto.julgaOutro(d, contexto)).orElse(false);
+      avaliacao = provadoPeloJulgamento ? DecisaoContinuidade.Consulta.MODELO
+          : DecisaoContinuidade.Consulta.REEXECUTAR;
+    }
+    if (anterior != null && avaliacao == DecisaoContinuidade.Consulta.REEXECUTAR) {
       // Reexecucao sem modelo: a mesma consulta, pagando so a leitura da mensagem (#511).
       ResultadoRota refeita = rotaDados.reexecutar(anterior, par.pergunta(), contexto);
       if (Autocorrecao.FALHA_REEXECUCAO.equals(refeita.texto())) {
@@ -325,8 +341,9 @@ public class OrquestradorService {
       String abertura = aberturaDaReexecucao(anterior, hashAnterior, tipo, refeita, contexto);
       return new DadosDaConfirmacao(refeita, abertura, false);
     }
-    // Consulta que nao bate (ou par sem consulta): o modelo escolhe de novo sobre a pergunta do
-    // par. Fonte de numero: a pergunta so sem reescrita; senao, os argumentos executados agora.
+    // Consulta que a pergunta contradiz (ou par sem consulta): o modelo escolhe de novo sobre a
+    // pergunta do par. Palavra que nao aparece nao entra aqui (#591): so a contradicao e prova.
+    // Fonte de numero: a pergunta so sem reescrita; senao, os argumentos executados agora.
     FontePergunta fonte = par.carga().reescrita()
         ? FontePergunta.dosArgumentos() : FontePergunta.texto(par.pergunta());
     log.info("Ceres: {}", DesfechoContinuidade.CONFIRMACAO_COM_MODELO);
@@ -346,8 +363,12 @@ public class OrquestradorService {
     String abertura;
     if (mesmaConsulta) {
       abertura = aberturaDaReexecucao(anterior, hashAnterior, tipo, nova, contexto);
-    } else if (!mesmoResultado && ConferenciaConsulta.bate(par.pergunta(), executada,
-        contexto.hoje())) {
+    } else if (!mesmoResultado
+        && (provadoPeloJulgamento || ConferenciaConsulta.correcaoProvada(par.pergunta(), anterior,
+            executada, ConferenciaConsulta.diaDoPar(par.carga().exp()),
+            provaDeProduto.resolucao()))
+        && ConferenciaConsulta.bate(par.pergunta(), executada, contexto.hoje())) {
+      // "Corrijo" so com a prova de que a consulta anterior estava errada (#591) e a nova coerente.
       log.info("Ceres: {}", DesfechoContinuidade.CORRIGIDA);
       abertura = Autocorrecao.CORRIJO.formatted(descricao);
     } else if (mesmoResultado) {

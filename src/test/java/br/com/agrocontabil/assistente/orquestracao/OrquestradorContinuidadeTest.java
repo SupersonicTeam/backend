@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -27,6 +28,9 @@ import br.com.agrocontabil.assistente.continuidade.MensagemContinuidade;
 import br.com.agrocontabil.assistente.continuidade.ParConferido;
 import br.com.agrocontabil.assistente.continuidade.ReconferenciaLei;
 import br.com.agrocontabil.assistente.continuidade.ReescritaContinuidade;
+import br.com.agrocontabil.assistente.continuidade.JulgamentoDeProduto;
+import br.com.agrocontabil.assistente.continuidade.ProvaDeProduto;
+import br.com.agrocontabil.assistente.continuidade.ResolucaoProduto;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.llm.DisponibilidadeModelo;
 import br.com.agrocontabil.assistente.rag.BuscaTextualLegislacaoService;
@@ -36,8 +40,11 @@ import br.com.agrocontabil.config.CaminhoCota;
 import br.com.agrocontabil.model.DesfechoInteracao;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -70,6 +77,10 @@ class OrquestradorContinuidadeTest {
 
   private OrquestradorService orquestrador;
   private ContextoAssistente contexto;
+  /** O que o backend sabe de produto neste teste: termo → posições de NCM. */
+  private final Map<String, Set<String>> produtos = new HashMap<>();
+  private final ResolucaoProduto resolucao = (termo, dia) -> produtos.getOrDefault(termo,
+      Set.of());
 
   @BeforeEach
   void setUp() {
@@ -78,7 +89,7 @@ class OrquestradorContinuidadeTest {
         trechosDasCompras, new FundamentoRetencao(buscaTextual), new TextosDoBackend(buscaTextual),
         atalhoReforma, new AtalhoDefinicao(buscaTextual), new ModoFallback(buscaTextual, propriedades),
         new DisponibilidadeModelo(Duration.ofSeconds(30), () -> 0L), propriedades, reescrita,
-        reconferencia);
+        reconferencia, ProvaDeProduto.de(resolucao));
     contexto = new ContextoAssistente(UUID.randomUUID(), LocalDate.of(2026, 11, 11));
   }
 
@@ -140,8 +151,90 @@ class OrquestradorContinuidadeTest {
   }
 
   @Test
-  @DisplayName("Consulta de milho para pergunta de soja: o modelo escolhe de novo e 'corrijo'")
-  void consultaQueNaoBateCorrige() {
+  @DisplayName("Consulta de outro mês que a pergunta contradiz: o modelo escolhe de novo e 'corrijo'")
+  void consultaContradizidaCorrige() {
+    ParConferido par = parDeDados("quanto vendi de soja no mês passado?",
+        List.of(chamada("totalVendasPorProduto", "{\"descricaoOuNcm\":\"soja\","
+            + "\"dataInicio\":\"2026-09-01\",\"dataFim\":\"2026-09-30\"}")),
+        "Vendeu R$ 5,00 de soja.");
+    when(rotaDados.responder(eq("quanto vendi de soja no mês passado?"), any(),
+        any(FontePergunta.class))).thenAnswer(inv -> {
+          ContextoAssistente c = inv.getArgument(1);
+          c.registroTurno().registrarConsulta(List.of(chamada("totalVendasPorProduto",
+              "{\"descricaoOuNcm\":\"soja\",\"dataInicio\":\"2026-10-01\","
+                  + "\"dataFim\":\"2026-10-31\"}")));
+          return ResultadoRota.aceita("Vendeu R$ 9,00 de soja.");
+        });
+
+    ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.NORMAL));
+
+    assertThat(r.texto()).startsWith(Autocorrecao.CORRIJO.formatted("vendas de soja de 01/10/2026"
+        + " a 31/10/2026"));
+    verifyNoInteractions(classificador);
+  }
+
+  @Test
+  @DisplayName("Nota de outro número na consulta: a pergunta contradiz, 'corrijo'")
+  void notaDeOutroNumeroCorrige() {
+    ParConferido par = parDeDados("e a nota 13?", List.of(chamada("consultarNota",
+        "{\"numero\":12}")), "A nota 12 está autorizada.");
+    when(rotaDados.responder(eq("e a nota 13?"), any(), any(FontePergunta.class)))
+        .thenAnswer(inv -> {
+          ContextoAssistente c = inv.getArgument(1);
+          c.registroTurno().registrarConsulta(List.of(chamada("consultarNota",
+              "{\"numero\":13}")));
+          return ResultadoRota.aceita("A nota 13 foi rejeitada.");
+        });
+
+    ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.NORMAL));
+
+    assertThat(r.texto()).startsWith(Autocorrecao.CORRIJO.formatted("a nota 13"));
+  }
+
+  @Test
+  @DisplayName("Consulta contradita, nova também não bate: 'refiz', nunca 'corrijo'")
+  void contradicaoSemConsultaNovaCoerenteRefaz() {
+    ParConferido par = parDeDados("e a nota 13?", List.of(chamada("consultarNota",
+        "{\"numero\":12}")), "A nota 12 está autorizada.");
+    when(rotaDados.responder(eq("e a nota 13?"), any(), any(FontePergunta.class)))
+        .thenAnswer(inv -> {
+          ContextoAssistente c = inv.getArgument(1);
+          c.registroTurno().registrarConsulta(List.of(chamada("consultarNota",
+              "{\"numero\":14}")));
+          return ResultadoRota.aceita("A nota 14 foi rejeitada.");
+        });
+
+    ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.NORMAL));
+
+    assertThat(r.texto()).startsWith("Refiz a consulta").doesNotContain("corrijo");
+  }
+
+  @Test
+  @DisplayName("Sinônimo ou NCM na consulta anterior: reexecuta a mesma, sem modelo e sem 'corrijo'")
+  void semProvaReexecutaSemCorrigir() {
+    // A consulta anterior estava certa: o modelo traduziu "adubo" para "fertilizante". A palavra
+    // não aparece na pergunta, mas nada a contradiz (#591).
+    ParConferido par = parDeDados("quanto comprei de adubo?", List.of(chamada(
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"fertilizante\"}")),
+        "Comprou R$ 5,00 de fertilizante.");
+    // Mesmo que a reexecução devolva valor diferente, nunca é "corrijo".
+    when(rotaDados.reexecutar(eq(par.carga().consulta()), eq(par.pergunta()), any()))
+        .thenReturn(ResultadoRota.aceita("Comprou R$ 9,00 de fertilizante."));
+
+    ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.SEM_MODELO));
+
+    assertThat(r.texto()).startsWith("Repeti a mesma consulta").doesNotContain("corrijo");
+    // A confirmação segue a rota gravada no par, sem reclassificar: par de dados não vira MISTO.
+    assertThat(r.rota()).isEqualTo(Intencao.DADOS);
+    verify(rotaDados, never()).responder(anyString(), any(), any(FontePergunta.class));
+    verifyNoInteractions(classificador);
+  }
+
+  @Test
+  @DisplayName("Outro produto reconhecido pela tabela: o modelo escolhe de novo e 'corrijo'")
+  void outroProdutoCorrige() {
+    produtos.put("milho", Set.of("ncm:1005"));
+    produtos.put("soja", Set.of("ncm:1201"));
     ParConferido par = parDeDados("quanto vendi de soja?",
         List.of(chamada("totalVendasPorProduto", "{\"descricaoOuNcm\":\"milho\"}")),
         "Vendeu R$ 5,00 de milho.");
@@ -157,6 +250,138 @@ class OrquestradorContinuidadeTest {
 
     assertThat(r.texto()).startsWith(Autocorrecao.CORRIJO.formatted("vendas de soja"));
     verifyNoInteractions(classificador);
+  }
+
+  @Test
+  @DisplayName("Mesmo produto com outro nome na tabela: reexecuta, sem modelo e sem 'corrijo'")
+  void mesmoProdutoComOutroNome() {
+    produtos.put("fertilizante", Set.of("ncm:3105"));
+    produtos.put("adubo", Set.of("ncm:3105"));
+    ParConferido par = parDeDados("quanto comprei de adubo?", List.of(chamada(
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"fertilizante\"}")),
+        "Comprou R$ 5,00 de fertilizante.");
+    when(rotaDados.reexecutar(eq(par.carga().consulta()), eq(par.pergunta()), any()))
+        .thenReturn(ResultadoRota.aceita("Comprou R$ 9,00 de fertilizante."));
+
+    ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.SEM_MODELO));
+
+    assertThat(r.texto()).startsWith("Repeti a mesma consulta").doesNotContain("corrijo");
+    verify(rotaDados, never()).responder(anyString(), any(), any(FontePergunta.class));
+  }
+
+  @Test
+  @DisplayName("Termo que a tabela não resolve: reexecuta e diz o que consultou (produto, tipo, período)")
+  void termoSemResolucaoDizOQueConsultou() {
+    ParConferido par = parDeDados("quanto comprei de adubo?", List.of(chamada(
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"fertilizante\",\"dataInicio\":"
+            + "\"2026-10-01\",\"dataFim\":\"2026-10-31\"}")),
+        "Comprou R$ 5,00 de fertilizante.");
+    when(rotaDados.reexecutar(any(), any(), any()))
+        .thenReturn(ResultadoRota.aceita("Comprou R$ 5,00 de fertilizante."));
+
+    ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.SEM_MODELO));
+
+    assertThat(r.texto()).startsWith("Repeti a mesma consulta (compras de fertilizante de "
+        + "01/10/2026 a 31/10/2026)").doesNotContain("corrijo");
+    verify(rotaDados, never()).responder(anyString(), any(), any(FontePergunta.class));
+  }
+
+  @Test
+  @DisplayName("Produto novo da mesma família do anterior: nunca 'corrijo', mesmo indo ao modelo")
+  void novaConsultaDaMesmaFamiliaNaoCorrige() {
+    // A pergunta fala de "orgânico" (outra posição), o que manda o par ao modelo; mas a consulta
+    // nova é da mesma família da anterior: a tabela não prova que a anterior era de outro produto.
+    produtos.put("fertilizante", Set.of("ncm:3105"));
+    produtos.put("fertilizante organico", Set.of("ncm:3105"));
+    produtos.put("organico", Set.of("ncm:0709"));
+    ParConferido par = parDeDados("quanto comprei de insumo organico?", List.of(chamada(
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"fertilizante\"}")),
+        "Comprou R$ 5,00 de fertilizante.");
+    when(rotaDados.responder(eq("quanto comprei de insumo organico?"), any(),
+        any(FontePergunta.class))).thenAnswer(inv -> {
+          ContextoAssistente c = inv.getArgument(1);
+          c.registroTurno().registrarConsulta(List.of(chamada("totalComprasPorInsumo",
+              "{\"descricaoOuNcm\":\"fertilizante organico\"}")));
+          return ResultadoRota.aceita("Comprou R$ 9,00 de fertilizante organico.");
+        });
+
+    ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.NORMAL));
+
+    assertThat(r.texto()).doesNotContain("corrijo");
+  }
+
+  /** O orquestrador com o julgamento de produto ligado (#591), sobre os mesmos colaboradores. */
+  private void comJulgamentoDeProduto(JulgamentoDeProduto julgamento) {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    orquestrador = new OrquestradorService(classificador, rotaDados, rotaLegislacao,
+        trechosDasCompras, new FundamentoRetencao(buscaTextual), new TextosDoBackend(buscaTextual),
+        atalhoReforma, new AtalhoDefinicao(buscaTextual),
+        new ModoFallback(buscaTextual, propriedades),
+        new DisponibilidadeModelo(Duration.ofSeconds(30), () -> 0L), propriedades, reescrita,
+        reconferencia, new ProvaDeProduto(resolucao, julgamento));
+  }
+
+  private ParConferido parDoDiesel() {
+    // O primeiro turno consultou diesel; a pergunta do par fala de herbicida. "diesel" não está na
+    // tabela de produto e "herbicida" só aparece como item de anexo: a tabela não decide.
+    return parDeDados("quanto comprei de herbicida em setembro?", List.of(chamada(
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"diesel\",\"dataInicio\":\"2026-09-01\","
+            + "\"dataFim\":\"2026-09-30\"}")), "Comprou R$ 5,00 de diesel.");
+  }
+
+  @Test
+  @DisplayName("Produto que a tabela não decide e o julgamento acha outro: modelo escolhe de novo, 'corrijo'")
+  void julgamentoAchaOutroProduto() {
+    JulgamentoDeProduto julgamento = org.mockito.Mockito.mock(JulgamentoDeProduto.class);
+    when(julgamento.ehOutroProduto(any(), any())).thenReturn(true);
+    comJulgamentoDeProduto(julgamento);
+    ParConferido par = parDoDiesel();
+    when(rotaDados.responder(eq(par.pergunta()), any(), any(FontePergunta.class)))
+        .thenAnswer(inv -> {
+          ContextoAssistente c = inv.getArgument(1);
+          c.registroTurno().registrarConsulta(List.of(chamada("totalComprasPorInsumo",
+              "{\"descricaoOuNcm\":\"herbicida\",\"dataInicio\":\"2026-09-01\","
+                  + "\"dataFim\":\"2026-09-30\"}")));
+          return ResultadoRota.aceita("Comprou R$ 9,00 de herbicida.");
+        });
+
+    ResultadoOrquestracao r = responder("tem certeza?",
+        confirmacao(par, CaminhoCota.CONFIRMACAO_COM_JULGAMENTO));
+
+    assertThat(r.texto()).startsWith(Autocorrecao.CORRIJO.formatted(
+        "compras de herbicida de 01/09/2026 a 30/09/2026"));
+    verify(rotaDados, never()).reexecutar(any(), any(), any());
+  }
+
+  @Test
+  @DisplayName("Julgamento que não acha outro produto (mesmo, incerto ou falha): reexecuta, sem 'corrijo'")
+  void julgamentoSemProvaReexecuta() {
+    JulgamentoDeProduto julgamento = org.mockito.Mockito.mock(JulgamentoDeProduto.class);
+    when(julgamento.ehOutroProduto(any(), any())).thenReturn(false);
+    comJulgamentoDeProduto(julgamento);
+    ParConferido par = parDoDiesel();
+    when(rotaDados.reexecutar(eq(par.carga().consulta()), eq(par.pergunta()), any()))
+        .thenReturn(ResultadoRota.aceita("Comprou R$ 5,00 de diesel."));
+
+    ResultadoOrquestracao r = responder("tem certeza?",
+        confirmacao(par, CaminhoCota.CONFIRMACAO_COM_JULGAMENTO));
+
+    assertThat(r.texto()).startsWith("Repeti a mesma consulta (compras de diesel de 01/09/2026 a "
+        + "30/09/2026)").doesNotContain("corrijo");
+    verify(rotaDados, never()).responder(anyString(), any(), any(FontePergunta.class));
+  }
+
+  @Test
+  @DisplayName("Sem o julgamento ligado, a mesma dúvida reexecuta e não chama o modelo")
+  void duvidaSemJulgamentoLigado() {
+    ParConferido par = parDoDiesel();
+    when(rotaDados.reexecutar(any(), any(), any()))
+        .thenReturn(ResultadoRota.aceita("Comprou R$ 5,00 de diesel."));
+
+    ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.SEM_MODELO));
+
+    assertThat(r.texto()).startsWith("Repeti a mesma consulta").doesNotContain("corrijo");
+    verify(rotaDados, never()).responder(anyString(), any(), any(FontePergunta.class));
   }
 
   @Test
