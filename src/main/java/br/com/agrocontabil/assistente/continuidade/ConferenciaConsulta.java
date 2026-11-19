@@ -254,8 +254,9 @@ public final class ConferenciaConsulta {
         if (ausente) {
           // A palavra ausente (sinônimo, NCM escolhido pelo modelo) não é erro. Só a tabela prova
           // que a pergunta fala de outro produto.
-          nivel = nivel.pior(outroProduto(valor, normalValor, normal, resolucao, dia)
-              ? Nivel.CONTRADIZ : Nivel.SEM_PROVA);
+          nivel = nivel.pior(
+              relacaoComAPergunta(valor, normalValor, normal, resolucao, dia) == Relacao.OUTRO
+                  ? Nivel.CONTRADIZ : Nivel.SEM_PROVA);
         }
       }
     }
@@ -268,11 +269,11 @@ public final class ConferenciaConsulta {
    * Termo da pergunta que é parte do produto da consulta ("farinha" em "farinha de trigo"), que
    * coincide com ele ou que não se resolve não prova nada; sem termo resolvido, também não.
    */
-  private static boolean outroProduto(String valor, String normalValor, String normal,
+  private static Relacao relacaoComAPergunta(String valor, String normalValor, String normal,
       ResolucaoProduto resolucao, LocalDate dia) {
     Set<String> doValor = resolucao.familias(valor, dia);
     if (doValor.isEmpty()) {
-      return false;
+      return Relacao.INCONCLUSIVA;
     }
     List<String> palavrasDoValor = TextoContinuidade.palavras(normalValor).stream()
         .filter(TextoContinuidade::conteudo).toList();
@@ -287,18 +288,86 @@ public final class ConferenciaConsulta {
     boolean resolveu = false;
     for (String termo : consultas) {
       if (palavrasDoValor.stream().anyMatch(p -> p.startsWith(termo) || termo.startsWith(p))) {
-        return false;
+        return Relacao.MESMO;
       }
       Set<String> familias = resolucao.familias(termo, dia);
       if (familias.isEmpty()) {
         continue;
       }
       if (!Collections.disjoint(doValor, familias)) {
-        return false;
+        return Relacao.MESMO;
       }
       resolveu = true;
     }
-    return resolveu;
+    return resolveu ? Relacao.OUTRO : Relacao.INCONCLUSIVA;
+  }
+
+  /** O que a tabela de produto diz da relação entre o produto da consulta e a pergunta. */
+  private enum Relacao {
+    /** Mesma posição de NCM, ou o termo da pergunta é parte do produto: nenhuma prova de erro. */
+    MESMO,
+    /** Posições de NCM diferentes: prova de que a pergunta fala de outro produto. */
+    OUTRO,
+    /** A tabela não resolve o produto da consulta ou nenhum termo da pergunta: não decide. */
+    INCONCLUSIVA
+  }
+
+  /**
+   * Um produto da consulta anterior que a pergunta não traz e que a tabela não decide se é o mesmo
+   * (#591): o caso do julgamento de produto.
+   *
+   * @param produto produto da consulta ({@code descricaoOuNcm} ou {@code produtoOuNcm})
+   * @param termos  palavras de conteúdo da pergunta (sem números), para o julgamento
+   */
+  public record DuvidaDeProduto(String produto, List<String> termos) {}
+
+  /**
+   * O produto da consulta que a pergunta não traz e que a tabela de produto não decide (#591):
+   * nem o mesmo, nem outro. Só vale sem nenhuma contradição explícita (que já é prova). Vazio se
+   * não há dúvida: todo produto aparece na pergunta, ou a tabela decide.
+   *
+   * @param pergunta  pergunta do par
+   * @param consulta  consulta assinada
+   * @param diaDoPar  dia do par
+   * @param resolucao de que produto um termo fala
+   * @return a primeira dúvida, ou vazio
+   */
+  public static Optional<DuvidaDeProduto> duvidaDeProduto(String pergunta,
+      List<ChamadaAssinada> consulta, LocalDate diaDoPar, ResolucaoProduto resolucao) {
+    if (consulta == null || consulta.isEmpty()
+        || contradiz(pergunta, consulta, diaDoPar, resolucao)) {
+      return Optional.empty();
+    }
+    String normal = TextoContinuidade.normalizar(pergunta);
+    List<String> palavras = TextoContinuidade.palavras(normal);
+    for (ChamadaAssinada c : consulta) {
+      for (String nome : ARGUMENTOS_DE_PRODUTO) {
+        String valor = c.argumento(nome);
+        if (valor == null || valor.isBlank()) {
+          continue;
+        }
+        String normalValor = TextoContinuidade.normalizar(valor);
+        boolean letras = normalValor.chars().anyMatch(Character::isLetter);
+        boolean ausente = letras
+            ? TextoContinuidade.palavras(normalValor).stream().anyMatch(p -> p.length() >= 3
+                && !TextoContinuidade.VAZIAS.contains(p) && !TextoContinuidade.numero(p)
+                && !TextoContinuidade.contemPorPrefixo(palavras, p))
+            : !normalValor.replaceAll("\\D", "").isEmpty()
+                && !normal.replaceAll("\\D", "").contains(normalValor.replaceAll("\\D", ""));
+        if (ausente && relacaoComAPergunta(valor, normalValor, normal, resolucao, diaDoPar)
+            == Relacao.INCONCLUSIVA) {
+          return Optional.of(
+              new DuvidaDeProduto(valor.strip(), palavrasDeProdutoDaPergunta(normal)));
+        }
+      }
+    }
+    return Optional.empty();
+  }
+
+  /** As palavras de conteúdo da pergunta, sem número, até {@link #TERMOS_MAXIMOS}. */
+  private static List<String> palavrasDeProdutoDaPergunta(String normal) {
+    return termosDeProdutoDaPergunta(normal).stream()
+        .filter(t -> !TextoContinuidade.numero(t)).toList();
   }
 
   /** O NCM dito na pergunta e as palavras de conteúdo dela, até {@link #TERMOS_MAXIMOS}. */

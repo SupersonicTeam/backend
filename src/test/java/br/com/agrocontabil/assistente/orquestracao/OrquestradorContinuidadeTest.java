@@ -28,6 +28,8 @@ import br.com.agrocontabil.assistente.continuidade.MensagemContinuidade;
 import br.com.agrocontabil.assistente.continuidade.ParConferido;
 import br.com.agrocontabil.assistente.continuidade.ReconferenciaLei;
 import br.com.agrocontabil.assistente.continuidade.ReescritaContinuidade;
+import br.com.agrocontabil.assistente.continuidade.JulgamentoDeProduto;
+import br.com.agrocontabil.assistente.continuidade.ProvaDeProduto;
 import br.com.agrocontabil.assistente.continuidade.ResolucaoProduto;
 import br.com.agrocontabil.assistente.fallback.ModoFallback;
 import br.com.agrocontabil.assistente.llm.DisponibilidadeModelo;
@@ -87,7 +89,7 @@ class OrquestradorContinuidadeTest {
         trechosDasCompras, new FundamentoRetencao(buscaTextual), new TextosDoBackend(buscaTextual),
         atalhoReforma, new AtalhoDefinicao(buscaTextual), new ModoFallback(buscaTextual, propriedades),
         new DisponibilidadeModelo(Duration.ofSeconds(30), () -> 0L), propriedades, reescrita,
-        reconferencia, resolucao);
+        reconferencia, ProvaDeProduto.de(resolucao));
     contexto = new ContextoAssistente(UUID.randomUUID(), LocalDate.of(2026, 11, 11));
   }
 
@@ -306,6 +308,80 @@ class OrquestradorContinuidadeTest {
     ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.NORMAL));
 
     assertThat(r.texto()).doesNotContain("corrijo");
+  }
+
+  /** O orquestrador com o julgamento de produto ligado (#591), sobre os mesmos colaboradores. */
+  private void comJulgamentoDeProduto(JulgamentoDeProduto julgamento) {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    orquestrador = new OrquestradorService(classificador, rotaDados, rotaLegislacao,
+        trechosDasCompras, new FundamentoRetencao(buscaTextual), new TextosDoBackend(buscaTextual),
+        atalhoReforma, new AtalhoDefinicao(buscaTextual),
+        new ModoFallback(buscaTextual, propriedades),
+        new DisponibilidadeModelo(Duration.ofSeconds(30), () -> 0L), propriedades, reescrita,
+        reconferencia, new ProvaDeProduto(resolucao, julgamento));
+  }
+
+  private ParConferido parDoDiesel() {
+    // O primeiro turno consultou diesel; a pergunta do par fala de herbicida. "diesel" não está na
+    // tabela de produto e "herbicida" só aparece como item de anexo: a tabela não decide.
+    return parDeDados("quanto comprei de herbicida em setembro?", List.of(chamada(
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"diesel\",\"dataInicio\":\"2026-09-01\","
+            + "\"dataFim\":\"2026-09-30\"}")), "Comprou R$ 5,00 de diesel.");
+  }
+
+  @Test
+  @DisplayName("Produto que a tabela não decide e o julgamento acha outro: modelo escolhe de novo, 'corrijo'")
+  void julgamentoAchaOutroProduto() {
+    JulgamentoDeProduto julgamento = org.mockito.Mockito.mock(JulgamentoDeProduto.class);
+    when(julgamento.ehOutroProduto(any(), any())).thenReturn(true);
+    comJulgamentoDeProduto(julgamento);
+    ParConferido par = parDoDiesel();
+    when(rotaDados.responder(eq(par.pergunta()), any(), any(FontePergunta.class)))
+        .thenAnswer(inv -> {
+          ContextoAssistente c = inv.getArgument(1);
+          c.registroTurno().registrarConsulta(List.of(chamada("totalComprasPorInsumo",
+              "{\"descricaoOuNcm\":\"herbicida\",\"dataInicio\":\"2026-09-01\","
+                  + "\"dataFim\":\"2026-09-30\"}")));
+          return ResultadoRota.aceita("Comprou R$ 9,00 de herbicida.");
+        });
+
+    ResultadoOrquestracao r = responder("tem certeza?",
+        confirmacao(par, CaminhoCota.CONFIRMACAO_COM_JULGAMENTO));
+
+    assertThat(r.texto()).startsWith(Autocorrecao.CORRIJO.formatted(
+        "compras de herbicida de 01/09/2026 a 30/09/2026"));
+    verify(rotaDados, never()).reexecutar(any(), any(), any());
+  }
+
+  @Test
+  @DisplayName("Julgamento que não acha outro produto (mesmo, incerto ou falha): reexecuta, sem 'corrijo'")
+  void julgamentoSemProvaReexecuta() {
+    JulgamentoDeProduto julgamento = org.mockito.Mockito.mock(JulgamentoDeProduto.class);
+    when(julgamento.ehOutroProduto(any(), any())).thenReturn(false);
+    comJulgamentoDeProduto(julgamento);
+    ParConferido par = parDoDiesel();
+    when(rotaDados.reexecutar(eq(par.carga().consulta()), eq(par.pergunta()), any()))
+        .thenReturn(ResultadoRota.aceita("Comprou R$ 5,00 de diesel."));
+
+    ResultadoOrquestracao r = responder("tem certeza?",
+        confirmacao(par, CaminhoCota.CONFIRMACAO_COM_JULGAMENTO));
+
+    assertThat(r.texto()).startsWith("Repeti a mesma consulta (compras de diesel de 01/09/2026 a "
+        + "30/09/2026)").doesNotContain("corrijo");
+    verify(rotaDados, never()).responder(anyString(), any(), any(FontePergunta.class));
+  }
+
+  @Test
+  @DisplayName("Sem o julgamento ligado, a mesma dúvida reexecuta e não chama o modelo")
+  void duvidaSemJulgamentoLigado() {
+    ParConferido par = parDoDiesel();
+    when(rotaDados.reexecutar(any(), any(), any()))
+        .thenReturn(ResultadoRota.aceita("Comprou R$ 5,00 de diesel."));
+
+    ResultadoOrquestracao r = responder("tem certeza?", confirmacao(par, CaminhoCota.SEM_MODELO));
+
+    assertThat(r.texto()).startsWith("Repeti a mesma consulta").doesNotContain("corrijo");
+    verify(rotaDados, never()).responder(anyString(), any(), any(FontePergunta.class));
   }
 
   @Test

@@ -567,6 +567,10 @@ app:
     # (docs/lgpd.md): so ligue com a politica de dados nova no ar e o aviso na tela.
     continuidade:
       habilitada: ${AI_CONTINUIDADE_HABILITADA:false}
+      # Julgamento de produto (#591): so com a continuidade ligada. No "tem certeza?" de dados, uma
+      # chamada curta ao modelo julga se o produto da pergunta e o da consulta anterior sao outros,
+      # quando a tabela de produto nao decide. Falha fecha (sem prova, reexecuta a consulta).
+      julgamento-de-produto: ${AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO:false}
     # Cota semanal de creditos (issue #166). creditos = ceil((entrada x peso-entrada + saida x
     # peso-saida) x fator do modelo / tokens-por-credito). Desde a #511, 1 credito por token
     # ponderado (tokens-por-credito = 1) e as cotas em milhares de vezes as de antes. Semana de
@@ -600,6 +604,7 @@ app:
       legislacao: ${AI_TETO_LEGISLACAO:1024}
       # Continuidade (#499): reescrita da mensagem (JSON curto) e reconferencia de lei.
       reescrita: ${AI_TETO_REESCRITA:192}
+      julgamento-produto: ${AI_TETO_JULGAMENTO_PRODUTO:32}
       reconferencia: ${AI_TETO_RECONFERENCIA:1024}
       # Juiz da fidelidade da lei (#269, camada 2): um veredito por frase; so com o juiz ativo.
       juiz: ${AI_TETO_JUIZ:128}

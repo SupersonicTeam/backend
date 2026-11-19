@@ -288,12 +288,29 @@ public class AssistenteProperties implements InitializingBean {
     /** Liga a continuidade para todos os produtores ({@code AI_CONTINUIDADE_HABILITADA}). */
     private boolean habilitada;
 
+    /**
+     * Julgamento de produto (#591, {@code AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO}), desligado
+     * por padrão e só com a continuidade ligada: no "tem certeza?" de dados, quando o produto da
+     * consulta anterior não aparece na pergunta e a tabela de produto não decide se é o mesmo, uma
+     * chamada curta ao modelo julga se são produtos diferentes. Falha fecha: sem prova, a consulta
+     * é reexecutada.
+     */
+    private boolean julgamentoDeProduto;
+
     public boolean isHabilitada() {
       return habilitada;
     }
 
     public void setHabilitada(boolean habilitada) {
       this.habilitada = habilitada;
+    }
+
+    public boolean isJulgamentoDeProduto() {
+      return julgamentoDeProduto;
+    }
+
+    public void setJulgamentoDeProduto(boolean julgamentoDeProduto) {
+      this.julgamentoDeProduto = julgamentoDeProduto;
     }
   }
 
@@ -792,6 +809,12 @@ public class AssistenteProperties implements InitializingBean {
     private int reescrita = 192;
 
     /**
+     * Julgamento de produto da continuidade (#591): uma palavra (OUTRO, MESMO ou INCERTO). Entra na
+     * reserva só do caminho {@link CaminhoCota#CONFIRMACAO_COM_JULGAMENTO}.
+     */
+    private int julgamentoProduto = 32;
+
+    /**
      * Reconferência de lei da continuidade (#499): JSON com o veredito e até 3 fundamentos ou 2
      * correções, cada um com uma citação de até 40 palavras.
      */
@@ -834,6 +857,7 @@ public class AssistenteProperties implements InitializingBean {
       exigirTeto("classificacao", classificacao);
       exigirTeto("legislacao", legislacao);
       exigirTeto("reescrita", reescrita);
+      exigirTeto("julgamento-produto", julgamentoProduto);
       exigirTeto("reconferencia", reconferencia);
       exigirTeto("juiz", juiz);
       exigirTeto("juiz-com-justificativa", juizComJustificativa);
@@ -901,6 +925,14 @@ public class AssistenteProperties implements InitializingBean {
 
     public void setLegislacao(int legislacao) {
       this.legislacao = legislacao;
+    }
+
+    public int getJulgamentoProduto() {
+      return julgamentoProduto;
+    }
+
+    public void setJulgamentoProduto(int julgamentoProduto) {
+      this.julgamentoProduto = julgamentoProduto;
     }
 
     public int getReescrita() {

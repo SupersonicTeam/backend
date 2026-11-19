@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.RotaDados;
 import br.com.agrocontabil.assistente.RotaLegislacao;
+import br.com.agrocontabil.assistente.continuidade.JulgamentoDeProduto;
 import br.com.agrocontabil.assistente.continuidade.ReconferenciaLei;
 import br.com.agrocontabil.assistente.continuidade.ReescritaContinuidade;
 import br.com.agrocontabil.assistente.explicacao.ExplicadorResposta;
@@ -83,12 +84,15 @@ class TetoDaCotaCobreChamadasTest {
         Map.entry(RotaDados.class.getName(), 1L),
         Map.entry(RotaLegislacao.class.getName(), 1L),
         Map.entry(ReescritaContinuidade.class.getName(), 1L),
+        Map.entry(JulgamentoDeProduto.class.getName(), 1L),
         Map.entry(ReconferenciaLei.class.getName(), 1L),
         Map.entry(ExplicadorResposta.class.getName(), 1L),
         Map.entry(JuizFidelidadeLei.class.getName(), 1L));
     assertThat(AssistenteProperties.Cota.CHAMADAS_POR_PERGUNTA)
         .isEqualTo(CaminhoCota.NORMAL.chamadas());
     assertThat(CaminhoCota.REESCRITA.chamadas()).isEqualTo(4);
+    // O julgamento de produto (#591) e uma chamada a mais que a de dados: o caminho dele soma 4.
+    assertThat(CaminhoCota.CONFIRMACAO_COM_JULGAMENTO.chamadas()).isEqualTo(4);
   }
 
   @Test
@@ -109,6 +113,10 @@ class TetoDaCotaCobreChamadasTest {
         .isEqualTo(34_816);
     // 4 x 8.192 + (192 + 2.560) x 4.
     assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.REESCRITA)).isEqualTo(43_776);
+    // 4 x 8.192 + (32 + 1.792) x 4, abaixo do caminho com reescrita, que a subida confere.
+    assertThat(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.CONFIRMACAO_COM_JULGAMENTO))
+        .isEqualTo(40_064)
+        .isLessThan(cota.tetoDaPergunta(tetos, 1.0, CaminhoCota.REESCRITA));
   }
 
   @Test

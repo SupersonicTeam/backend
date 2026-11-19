@@ -347,6 +347,74 @@ class ProvaDeIncoerenciaTest {
         .isEqualTo(CaminhoCota.SEM_MODELO);
   }
 
+  // --- a dúvida que a tabela não decide: o julgamento de produto (#591) ---
+
+  @Test
+  @DisplayName("Produto fora da tabela e palavra da pergunta de outro grupo: dúvida, não prova")
+  void duvidaDeProduto() {
+    // "diesel" não está na tabela de produto; "herbicida" só em item de anexo (sem NCM único).
+    List<ChamadaAssinada> diesel = List.of(chamada("totalComprasPorInsumo",
+        "{\"descricaoOuNcm\":\"diesel\"}"));
+
+    assertThat(ConferenciaConsulta.contradiz("quanto comprei de herbicida em setembro?", diesel,
+        DIA, ResolucaoProduto.NENHUMA)).isFalse();
+    assertThat(ConferenciaConsulta.duvidaDeProduto("quanto comprei de herbicida em setembro?",
+        diesel, DIA, ResolucaoProduto.NENHUMA)).hasValueSatisfying(d -> {
+          assertThat(d.produto()).isEqualTo("diesel");
+          assertThat(d.termos()).contains("herbicida");
+        });
+  }
+
+  @Test
+  @DisplayName("Sem dúvida: produto na pergunta, tabela decide (mesmo ou outro) ou sem consulta")
+  void semDuvida() {
+    ResolucaoProduto tabela = tabela("milho", "ncm:1005", "soja", "ncm:1201",
+        "fertilizante", "ncm:3105", "adubo", "ncm:3105");
+    List<ChamadaAssinada> milho = List.of(chamada("totalVendasPorProduto",
+        "{\"descricaoOuNcm\":\"milho\"}"));
+
+    // O produto aparece na pergunta.
+    assertThat(ConferenciaConsulta.duvidaDeProduto("quanto vendi de milho?", milho, DIA, tabela))
+        .isEmpty();
+    // A tabela diz outro produto: é prova, não dúvida.
+    assertThat(ConferenciaConsulta.duvidaDeProduto("quanto vendi de soja?", milho, DIA, tabela))
+        .isEmpty();
+    // A tabela diz o mesmo produto.
+    assertThat(ConferenciaConsulta.duvidaDeProduto("quanto comprei de adubo?", List.of(chamada(
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"fertilizante\"}")), DIA, tabela)).isEmpty();
+    // Outra contradição (mês) já é prova.
+    assertThat(ConferenciaConsulta.duvidaDeProduto("quanto vendi de soja em setembro?",
+        List.of(chamada("totalVendasPorProduto", "{\"descricaoOuNcm\":\"diesel\","
+            + "\"dataInicio\":\"2026-10-01\",\"dataFim\":\"2026-10-31\"}")), DIA, tabela)).isEmpty();
+    assertThat(ConferenciaConsulta.duvidaDeProduto("e agora?", List.of(), DIA, tabela)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("Decisão: a dúvida só vai ao julgamento com ele ligado, e só nos pares de dados")
+  void decisaoDaDuvida() {
+    ParConferido par = par("quanto comprei de herbicida em setembro?", List.of(chamada(
+        "totalComprasPorInsumo", "{\"descricaoOuNcm\":\"diesel\"}")));
+    ProvaDeProduto semJulgamento = ProvaDeProduto.de(ResolucaoProduto.NENHUMA);
+    ProvaDeProduto comJulgamento = new ProvaDeProduto(ResolucaoProduto.NENHUMA,
+        org.mockito.Mockito.mock(JulgamentoDeProduto.class));
+
+    assertThat(DecisaoContinuidade.avaliarConsulta(par, semJulgamento))
+        .isEqualTo(DecisaoContinuidade.Consulta.REEXECUTAR);
+    assertThat(DecisaoContinuidade.custoDaConfirmacao(par, semJulgamento))
+        .isEqualTo(CaminhoCota.SEM_MODELO);
+    assertThat(DecisaoContinuidade.avaliarConsulta(par, comJulgamento))
+        .isEqualTo(DecisaoContinuidade.Consulta.DUVIDA_DE_PRODUTO);
+    // O caminho reserva o julgamento e o caminho normal de dados.
+    assertThat(DecisaoContinuidade.custoDaConfirmacao(par, comJulgamento))
+        .isEqualTo(CaminhoCota.CONFIRMACAO_COM_JULGAMENTO);
+    // No MISTO a dúvida não vai ao julgamento: reexecuta como antes.
+    ParConferido misto = new ParConferido(par.pergunta(), "Resposta.", "v1.a.b",
+        new CargaTurno(EXP, Intencao.MISTO, false, par.carga().consulta(), HashDados.de("x"),
+            null, false, null), 0, false);
+    assertThat(DecisaoContinuidade.avaliarConsulta(misto, comJulgamento))
+        .isEqualTo(DecisaoContinuidade.Consulta.REEXECUTAR);
+  }
+
   private static ParConferido par(String pergunta, List<ChamadaAssinada> consulta) {
     return new ParConferido(pergunta, "Resposta.", "v1.a.b",
         new CargaTurno(EXP, Intencao.DADOS, false, consulta, HashDados.de("x"), null, false, null),

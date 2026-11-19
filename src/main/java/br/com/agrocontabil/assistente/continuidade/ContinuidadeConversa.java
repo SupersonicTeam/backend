@@ -27,21 +27,21 @@ public class ContinuidadeConversa {
   private final EmissaoTurno emissao;
   private final RotaDados rotaDados;
   private final boolean modeloPorApi;
-  private final ResolucaoProduto resolucaoProduto;
+  private final ProvaDeProduto provaDeProduto;
 
   /** A continuidade da aplicação. */
   @Autowired
   public ContinuidadeConversa(AssistenteProperties propriedades, ConferenciaHistorico conferencia,
       EmissaoTurno emissao, RotaDados rotaDados, ModeloLinguagem modelo,
-      ResolucaoProduto resolucaoProduto) {
+      ProvaDeProduto provaDeProduto) {
     this(propriedades.getContinuidade().isHabilitada(), conferencia, emissao, rotaDados,
-        modelo.porApi(), resolucaoProduto);
+        modelo.porApi(), provaDeProduto);
   }
 
   private ContinuidadeConversa(boolean habilitada, ConferenciaHistorico conferencia,
       EmissaoTurno emissao, RotaDados rotaDados, boolean modeloPorApi,
-      ResolucaoProduto resolucaoProduto) {
-    this.resolucaoProduto = resolucaoProduto;
+      ProvaDeProduto provaDeProduto) {
+    this.provaDeProduto = provaDeProduto;
     this.habilitada = habilitada;
     this.conferencia = conferencia;
     this.emissao = emissao;
@@ -51,7 +51,7 @@ public class ContinuidadeConversa {
 
   /** A continuidade desligada (testes do serviço sem ela). */
   public static ContinuidadeConversa desligada() {
-    return new ContinuidadeConversa(false, null, null, null, false, ResolucaoProduto.NENHUMA);
+    return new ContinuidadeConversa(false, null, null, null, false, ProvaDeProduto.NENHUMA);
   }
 
   /** A flag {@code app.assistente.continuidade.habilitada}. */
@@ -83,7 +83,7 @@ public class ContinuidadeConversa {
     HistoricoConferido historico = conferencia.conferir(produtorId, request.historicoOuVazio(),
         agora, funcoes);
     return DecisaoContinuidade.decidir(request.pergunta(), historico, request.semTurnoNaUltima(),
-        resolucaoProduto);
+        provaDeProduto);
   }
 
   /**
