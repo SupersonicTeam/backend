@@ -84,7 +84,9 @@ edita e apaga modelo; o Rafael e a Juliana usam.
    aviso `COOPERATIVA_OPTANTE_A_CONFIRMAR` ("o sistema não confere isso"). A tela de item ainda não
    tem o campo do cClassTrib: uma venda nova à cooperativa só sai pela API (o seed já traz a nota
    autorizada). Não edite pela tela uma nota com o 200020: o `PUT` da tela substitui os itens e
-   apaga o código.
+   apaga o código. As datas contam do dia da semeadura (o reset): com o reset uma semana antes da
+   banca, a nota da cooperativa terá cerca de 27 dias no dia da apresentação e também mostra o
+   alerta de fim do prazo de cancelamento, e a da Graneleira já terá passado do prazo.
 4. **ICMS a definir (Carlos e Três Pontes).** Os rascunhos de venda de milho do Carlos ao
    pecuarista Antônio Carlos Pereira (pessoa física **sem IE**) e o do touro reprodutor da Três
    Pontes para MG não têm CST de ICMS. O sistema só preenche sozinho o **51 (diferimento)** na venda

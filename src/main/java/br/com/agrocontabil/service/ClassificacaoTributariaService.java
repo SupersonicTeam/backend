@@ -88,6 +88,13 @@ public class ClassificacaoTributariaService {
   public static final String COOPERATIVA_OPTANTE = "200020";
 
   /**
+   * Códigos que o {@link #codigoNaoAdmitido} aceita com qualquer NCM, por serem declaração de quem
+   * emite: a tributação integral, o in natura (o art. 137 não tem lista) e a venda à cooperativa
+   * optante (vale pela operação).
+   */
+  static final Set<String> SEMPRE_ADMITIDOS = Set.of(INTEGRAL, IN_NATURA, COOPERATIVA_OPTANTE);
+
+  /**
    * NCMs do leite do Anexo I, item 2, da LC 214/2025 que servem tanto ao leite cru quanto ao de
    * consumo direto (0401.10.90, 0401.20.90, 0401.40.10 e 0401.50.10): saem in natura por padrão
    * e só têm alíquota zero com o cClassTrib 200003 informado (ver a classe).
@@ -288,8 +295,8 @@ public class ClassificacaoTributariaService {
   @Transactional(readOnly = true)
   public Optional<CodigoNaoAdmitido> codigoNaoAdmitido(String cClassTrib, String ncm,
       LocalDate data) {
-    if (cClassTrib == null || INTEGRAL.equals(cClassTrib) || IN_NATURA.equals(cClassTrib)
-        || COOPERATIVA_OPTANTE.equals(cClassTrib) || ncm == null || ncm.isBlank()) {
+    if (cClassTrib == null || SEMPRE_ADMITIDOS.contains(cClassTrib) || ncm == null
+        || ncm.isBlank()) {
       return Optional.empty();
     }
     List<EnquadramentoAnexo> enquadramentos = enquadramentos(ncm, data);

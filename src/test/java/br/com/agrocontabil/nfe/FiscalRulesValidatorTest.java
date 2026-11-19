@@ -179,6 +179,31 @@ class FiscalRulesValidatorTest {
   }
 
   @Test
+  @DisplayName("#299: CNPJ com mascara conta como CNPJ, como no XML")
+  void cooperativaOptanteComCnpjMascaradoPassa() {
+    NotaFiscal nota = notaDaCooperativa();
+    nota.setDestinatarioCpfCnpj("11.222.333/0001-81");
+
+    assertThatCode(() -> new FiscalRulesValidator(null, classificacaoCom200020()).validar(nota))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("#299: as falhas da guarda do 200020 saem juntas, numa tentativa so")
+  void cooperativaOptanteFalhasSomadas() {
+    NotaFiscal nota = notaDaCooperativa();
+    nota.setDestinatarioCpfCnpj("98765432100");
+    nota.getItens().get(0).setCfop("7101");
+    nota.getDestinatarioEndereco().setUf("EX");
+
+    assertThat(violacoesDaCooperativa(nota)).extracting(ErrorDetail::message)
+        .hasSize(3)
+        .anySatisfy(m -> assertThat(m).contains("CNPJ"))
+        .anySatisfy(m -> assertThat(m).contains("7101"))
+        .anySatisfy(m -> assertThat(m).contains("exterior"));
+  }
+
+  @Test
   @DisplayName("#299: 200020 com destinatario pessoa fisica (CPF) e recusado")
   void cooperativaOptanteComCpfRecusada() {
     NotaFiscal nota = notaDaCooperativa();
@@ -199,7 +224,7 @@ class FiscalRulesValidatorTest {
 
     assertThat(violacoesDaCooperativa(nota)).singleElement().satisfies(d -> {
       assertThat(d.field()).isEqualTo("item[1].cClassTrib");
-      assertThat(d.message()).contains("200020", "7101");
+      assertThat(d.message()).contains("200020", "7101", "saída no país");
     });
   }
 

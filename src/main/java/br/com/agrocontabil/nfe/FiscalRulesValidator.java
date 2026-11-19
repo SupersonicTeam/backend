@@ -484,16 +484,19 @@ public class FiscalRulesValidator {
         || nota.getOrigem() == OrigemNotaFiscal.IMPORTADA) {
       return;
     }
+    // A mesma regra do XML (NotaFiscalNfeMapper.buildDest): 14 digitos = <CNPJ>, senao <CPF>.
     String documento = nota.getDestinatarioCpfCnpj() == null ? ""
-        : nota.getDestinatarioCpfCnpj().replaceAll("[^0-9A-Za-z]", "");
+        : nota.getDestinatarioCpfCnpj().replaceAll("\\D", "");
     if (documento.length() != 14) {
       violations.add(cooperativa(prefixo, "o destinatário tem de ter CNPJ: cooperativa é pessoa"
           + " jurídica"));
-    } else if (item.getCfop() != null && !item.getCfop().isBlank()
-        && !item.getCfop().strip().startsWith("5") && !item.getCfop().strip().startsWith("6")) {
-      violations.add(cooperativa(prefixo, "o CFOP " + item.getCfop().strip() + " não é de venda"
-          + " no país (5xxx ou 6xxx)"));
-    } else if (nota.getDestinatarioEndereco() != null
+    }
+    String cfop = item.getCfop() == null ? "" : item.getCfop().strip();
+    if (!cfop.isEmpty() && !cfop.startsWith("5") && !cfop.startsWith("6")) {
+      violations.add(cooperativa(prefixo, "o CFOP " + cfop + " não é de saída no país (5xxx ou"
+          + " 6xxx)"));
+    }
+    if (nota.getDestinatarioEndereco() != null
         && UfIbge.isExterior(nota.getDestinatarioEndereco().getUf())) {
       violations.add(cooperativa(prefixo, "o destinatário está no exterior"));
     }
