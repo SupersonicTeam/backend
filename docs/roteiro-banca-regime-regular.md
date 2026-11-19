@@ -70,7 +70,7 @@ argumento não favorece a opção. Ele só vale para bens de capital fora do art
   dispositivo próprio.
 
 **Confirmado pelo contador do escritório em 19/11/2026 (#284, resposta 7):** é plausível um produtor
-de R$ 1,3 milhão por ano optar pelo regime regular, e os motivos que ele dá batem com os acima.
+de R$ 1,3 milhão por ano optar pelo regime regular, e os motivos que ele dá coincidem com os acima, com uma diferença no crédito dos insumos (veja abaixo).
 
 - **Para optar:** comprador empresa que aproveita o crédito, crédito nas compras de insumos e
   planejamento tributário. Sobre o crédito nos insumos, veja a ressalva do Anexo IX abaixo: o
@@ -114,7 +114,7 @@ tem o recolhimento do IBS/CBS **diferido** (art. 138, § 2º, inciso I, alínea 
 
 O contador respondeu que o produtor **precisa receber da própria cooperativa** a informação de que
 ela optou pelo regime específico (art. 271; cClassTrib 200020). Ou seja, o dado chega ao produtor
-pela cooperativa, e o sistema não o deduz do CNPJ. Ele faria a demonstração com os **dois cenários**
+pela cooperativa, e o sistema não o deduz do CNPJ. O contador faria a demonstração com os **dois cenários**
 (cooperativa optante e não optante). O cenário da cooperativa optante está **em implementação na
 #299**; o roteiro dele é escrito junto com a implementação.
 
@@ -148,7 +148,11 @@ pela cooperativa, e o sistema não o deduz do CNPJ. Ele faria a demonstração c
 Anexo IX (C, bloqueia a #356), Funrural 1,5% × 1,63% (A) e CST do ICMS dos demais pares de UF e
 produto (E; só soja em MT está em `icms/diferimento-confirmado.csv`: café em MG, leite no PR, milho,
 algodão e os demais seguem a confirmar).
+
+**Outras pendências:**
+
 - **Dados da demonstração:** o regime gravado do João e da Maria na VPS, corrigido pelo passo manual
-  de [`demonstracao-banca.md`](demonstracao-banca.md) (#298). O contador confirmou o CRT 3 em 19/11/2026 (#284, resposta 16 do arquivo).
+  de [`demonstracao-banca.md`](demonstracao-banca.md) (#298). O contador confirmou o CRT 3 em
+  19/11/2026 (#284, resposta 16 do arquivo).
 - **Ceres:** a pergunta "pequeno produtor paga IBS?" deve citar os arts. 164 e 165 (base já
   ingerida); pedida para o gabarito ampliado na #264.
