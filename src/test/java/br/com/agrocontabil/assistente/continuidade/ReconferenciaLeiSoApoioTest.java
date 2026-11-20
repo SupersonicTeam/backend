@@ -162,6 +162,20 @@ class ReconferenciaLeiSoApoioTest {
   }
 
   @Test
+  @DisplayName("Chamada ao modelo que falha: o modelo não respondeu, vale a abertura de sempre")
+  void chamadaQueFalhaMantemAAberturaDeSempre() {
+    when(modelo.chamar(any())).thenThrow(
+        new br.com.agrocontabil.exception.AssistenteIndisponivelException("fora",
+            new RuntimeException("x")));
+
+    ReconferenciaLei.Resultado r = reconferencia.reconferir(
+        parDeLei("A soja tem redução de 40% da alíquota"), contexto);
+
+    assertThat(r.modeloRespondeu()).isFalse();
+    assertThat(r.rota().texto()).isEqualTo(APOIO_SEM_MODELO);
+  }
+
+  @Test
   @DisplayName("Mais de um dispositivo: a abertura nova no plural, com o mesmo sentido")
   void aberturaNovaNoPlural() {
     org.mockito.Mockito.doReturn(List.of(TRECHO, OUTRO)).when(buscaTextual)
