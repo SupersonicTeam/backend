@@ -44,6 +44,13 @@ public enum MotivoReconferenciaLei {
   /** O modelo disse que os trechos não sustentam a resposta anterior: apoio. */
   NAO_SUSTENTA,
 
+  /**
+   * O modelo indicou uma correção e a resposta saiu como apoio, sem a correção por texto
+   * ({@code app.assistente.continuidade.lei-corrijo-por-texto} desligada, o padrão): distingue
+   * este caso do apoio por descarte de uma guarda.
+   */
+  CORRIJO_INDICADO_APOIO,
+
   // --- CONFIRMO descartado ---
   /** Lista de fundamentos ausente, vazia, com mais de 3 itens ou item fora do formato. */
   CONFIRMO_FORMATO,

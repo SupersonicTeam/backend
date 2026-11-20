@@ -573,6 +573,12 @@ app:
       # quando a tabela de produto nao decide. Falha fecha (sem prova, reexecuta a consulta).
       # Para desligar: AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO=false.
       julgamento-de-produto: ${AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO:true}
+      # Correcao de lei por texto (#584): desligada por padrao (decisao do Murillo, 2026-11-20).
+      # Na contestacao de lei ("tem certeza?") o veredito CORRIJO do modelo nao vira texto de
+      # correcao: a resposta e o apoio, com o trecho literal da lei, e a concordancia (a segunda
+      # chamada ao modelo) nao roda. Para voltar a correcao por texto, com as guardas de ancora a
+      # concordancia: AI_CONTINUIDADE_LEI_CORRIJO_HABILITADO=true.
+      lei-corrijo-por-texto: ${AI_CONTINUIDADE_LEI_CORRIJO_HABILITADO:false}
     # Cota semanal de creditos (issue #166). creditos = ceil((entrada x peso-entrada + saida x
     # peso-saida) x fator do modelo / tokens-por-credito). Desde a #511, 1 credito por token
     # ponderado (tokens-por-credito = 1) e as cotas em milhares de vezes as de antes. Semana de

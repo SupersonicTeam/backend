@@ -27,11 +27,27 @@ public enum CaminhoCota {
    */
   NORMAL,
 
-  /** Reconferência de lei: a reconferência e a rota de lei da concordância. */
+  /**
+   * Reconferência de lei: a reconferência e a rota de lei da concordância. Só com a correção por
+   * texto ligada ({@code app.assistente.continuidade.lei-corrijo-por-texto}); sem ela, a reserva é
+   * a de {@link #RECONFERENCIA_APOIO}.
+   */
   RECONFERENCIA,
 
-  /** Reconferência no MISTO cuja consulta não bate: funções, reconferência e lei. */
+  /**
+   * Reconferência no MISTO cuja consulta não bate: funções, reconferência e lei. Só com a correção
+   * por texto ligada; sem ela, a reserva é a de {@link #RECONFERENCIA_MISTO_APOIO}.
+   */
   RECONFERENCIA_MISTO,
+
+  /**
+   * Reconferência de lei sem a correção por texto (#584, o padrão): uma chamada, a reconferência.
+   * O {@code CORRIJO} do modelo vira o apoio e a concordância não roda.
+   */
+  RECONFERENCIA_APOIO,
+
+  /** Reconferência no MISTO sem a correção por texto (#584): funções e reconferência. */
+  RECONFERENCIA_MISTO_APOIO,
 
   /** Com reescrita: a reescrita e o caminho mais caro depois dela. */
   REESCRITA,
@@ -51,7 +67,8 @@ public enum CaminhoCota {
   public int chamadas() {
     return switch (this) {
       case SEM_MODELO -> 0;
-      case RECONFERENCIA -> 2;
+      case RECONFERENCIA_APOIO -> 1;
+      case RECONFERENCIA, RECONFERENCIA_MISTO_APOIO -> 2;
       case NORMAL, RECONFERENCIA_MISTO -> 3;
       case REESCRITA, CONFIRMACAO_COM_JULGAMENTO -> 4;
     };
@@ -72,6 +89,8 @@ public enum CaminhoCota {
       case NORMAL -> normal;
       case RECONFERENCIA -> (long) tetos.getReconferencia() + tetos.getLegislacao();
       case RECONFERENCIA_MISTO -> reconferenciaMisto;
+      case RECONFERENCIA_APOIO -> tetos.getReconferencia();
+      case RECONFERENCIA_MISTO_APOIO -> (long) tetos.getFuncoes() + tetos.getReconferencia();
       case REESCRITA -> tetos.getReescrita() + Math.max(normal, reconferenciaMisto);
       case CONFIRMACAO_COM_JULGAMENTO -> tetos.getJulgamentoProduto() + normal;
     };
