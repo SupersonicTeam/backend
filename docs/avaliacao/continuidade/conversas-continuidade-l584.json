@@ -281,66 +281,6 @@
       ]
     },
     {
-      "id": "l584-06",
-      "categoria": "l584_errada_prazo",
-      "turnos": [
-        {
-          "tipo": "par",
-          "origem": "real",
-          "pergunta_real": "A partir de que ano ficam extintos o ICMS e o ISS?",
-          "exigir": {
-            "rotas": [
-              "LEGISLACAO"
-            ],
-            "lei_d": "CONFIRMADA",
-            "fatos": {
-              "certo_todos": [
-                "2033"
-              ],
-              "errado_algum": []
-            }
-          },
-          "edicoes": [
-            {
-              "regex": "2033",
-              "para": "2030",
-              "em": "lei.r",
-              "todas": true
-            }
-          ]
-        },
-        {
-          "tipo": "pergunta",
-          "texto": "tem certeza?",
-          "esperado": {
-            "rotas": [
-              "LEGISLACAO"
-            ],
-            "abertura": [
-              "LEI_APOIO",
-              "LEI_APOIO_RELIDO"
-            ],
-            "proibidas_texto": [
-              "LEI_CONFIRMA"
-            ],
-            "sem_regex": [
-              "\\b2030\\b"
-            ],
-            "citacao_contem": [
-              "EC 132/2023\", \"dispositivo\": \"art. 2º (redação do art. 129"
-            ],
-            "metricas": [
-              "M584_errada_nao_confirma",
-              "M584_errada_apoio",
-              "M584_sem_corrijo",
-              "R584_errada_abertura",
-              "M584_lat_lei"
-            ]
-          }
-        }
-      ]
-    },
-    {
       "id": "l584-07",
       "categoria": "l584_errada_percentual",
       "turnos": [
@@ -528,7 +468,8 @@
               "(?<!que )(?<!nao )(?<!nao e )\\b(e|sao|ficam?|fica|sera|seria) (reduzid[ao]s? )?(de |em |a |igual a )?(reducao (de |em )?)?(a )?40 ?%"
             ],
             "citacao_contem": [
-              "LC 214/2025\", \"dispositivo\": \"art. 130"
+              "LC 214/2025\", \"dispositivo\": \"art. 130",
+              "LC 214/2025\", \"dispositivo\": \"Anexo III"
             ],
             "metricas": [
               "M584_errada_nao_confirma",
@@ -718,6 +659,74 @@
             ],
             "citacao_contem": [
               "LC 214/2025\", \"dispositivo\": \"art. 125"
+            ],
+            "metricas": [
+              "M584_errada_nao_confirma",
+              "M584_errada_apoio",
+              "M584_sem_corrijo",
+              "R584_errada_abertura",
+              "M584_lat_lei"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "l584-14",
+      "categoria": "l584_errada_percentual",
+      "turnos": [
+        {
+          "tipo": "par",
+          "origem": "real",
+          "pergunta_real": "Qual é a alíquota estadual do IBS cobrada em 2027 e 2028?",
+          "exigir": {
+            "rotas": [
+              "LEGISLACAO"
+            ],
+            "lei_d": "CONFIRMADA",
+            "fatos": {
+              "certo_todos": [
+                "0,05"
+              ],
+              "errado_algum": []
+            }
+          },
+          "edicoes": [
+            {
+              "regex": "0,05 ?%",
+              "para": "0,5%",
+              "em": "lei.r",
+              "todas": true
+            },
+            {
+              "regex": "cinco centésimos por cento",
+              "para": "cinco décimos por cento",
+              "em": "lei.r",
+              "todas": true,
+              "opcional": true
+            }
+          ]
+        },
+        {
+          "tipo": "pergunta",
+          "texto": "tem certeza?",
+          "esperado": {
+            "rotas": [
+              "LEGISLACAO"
+            ],
+            "abertura": [
+              "LEI_APOIO",
+              "LEI_APOIO_RELIDO"
+            ],
+            "proibidas_texto": [
+              "LEI_CONFIRMA"
+            ],
+            "sem_regex": [
+              "(?<![\\d,])0,5 ?%"
+            ],
+            "citacao_contem": [
+              "LC 214/2025\", \"dispositivo\": \"art. 344",
+              "EC 132/2023\", \"dispositivo\": \"art. 2º (redação do art. 127"
             ],
             "metricas": [
               "M584_errada_nao_confirma",
@@ -1232,7 +1241,7 @@
         },
         {
           "tipo": "pergunta",
-          "texto": "não é isso, são 60% de redução",
+          "texto": "está errado, a redução é de 60%",
           "esperado": {
             "se_anterior": {
               "certa": {
