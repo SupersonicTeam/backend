@@ -81,9 +81,10 @@ def conjunto_mini():
             "revisao_lei": {"status": "pendente", "por": None, "em": None},
             "preparo": [], "conversas": [
         errada("l584-01", "l584_errada_percentual", [r"0,9"], [r"(?<![\d,])1,9 ?%"], EDICAO,
-               ["art. 346"]),
+               ['LC 214/2025", "dispositivo": "art. 346']),
         errada("l584-02", "l584_errada_alcance", [r"^sim\b"], [r"\bnao (pode|podem) apropriar"],
-               [{"regex": r"^Sim\b", "para": "Não", "em": "lei.r"}], ["art. 168"]),
+               [{"regex": r"^Sim\b", "para": "Não", "em": "lei.r"}],
+               ['LC 214/2025", "dispositivo": "art. 168']),
         certa("l584-03"), insistencia("l584-04")]}
 
 
@@ -393,6 +394,16 @@ class Pontuacao(unittest.TestCase):
         self.assertEqual(self.criterio(r, "M584_errada_apoio")["falhas"], 1)
         self.assertTrue(self.criterio(r, "M584_errada_apoio")["cumpre"])
         self.assertEqual(r["decisao"], "CUMPRE")
+
+    def test_o_apoio_exige_a_norma_e_o_dispositivo_juntos(self):
+        # O mesmo número de artigo em outra norma (a LC 227 tem artigo com o mesmo número) não vale.
+        outra_norma = [{"norma": "LC 227/2026", "dispositivo": "art. 346"}]
+        r = pontuar(rodada(errada1=(APOIO, outra_norma)))
+        self.assertEqual(self.criterio(r, "M584_errada_apoio")["falhas"], 5)
+        com_url = [{"norma": "LC 214/2025", "dispositivo": "art. 346", "url": "https://x",
+                    "trecho": "Art. 346. Em relação"}]
+        r = pontuar(rodada(errada1=(APOIO, com_url)))
+        self.assertEqual(self.criterio(r, "M584_errada_apoio")["falhas"], 0)
 
     def test_certa_que_nao_confirma_nem_aponta_o_apoio(self):
         r = pontuar(rodada(certa_=NAO_CONSEGUI))

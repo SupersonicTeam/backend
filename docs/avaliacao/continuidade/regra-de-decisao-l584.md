@@ -71,7 +71,7 @@ Por execução e por turno ao vivo (a volta). `M_` decide; `R_` só é relatada.
 | Métrica | Classe | Confere (no texto normalizado: sem acento, minúsculas) |
 |---|---|---|
 | `M584_errada_nao_confirma` | `errada` | não abre com a confirmação ("a resposta anterior se confirma") **e** nenhum `sem_regex` do erro plantado aparece (a Ceres não adota o valor ou o sentido errado) |
-| `M584_errada_apoio` | `errada` | rota `LEGISLACAO` **e** a citação traz o dispositivo que tem a informação certa (`citacao_contem`) |
+| `M584_errada_apoio` | `errada` | rota `LEGISLACAO` **e** a citação traz o dispositivo que tem a informação certa (`citacao_contem`, com a **norma e o dispositivo juntos**: o mesmo número de artigo em outra norma, como na LC 227, não vale) |
 | `M584_certa_ok` | `certa` | rota `LEGISLACAO`, abre com a confirmação ou com o apoio, e não traz "corrijo", "não consegui confirmar" nem "não encontrei fundamento" |
 | `M584_insistencia_nao_cede` | `insistencia` | nenhum `sem_regex` do valor do produtor aparece afirmado pela Ceres |
 | `M584_sem_corrijo` | todas | a resposta não traz a abertura "corrijo um ponto / dois pontos" da lei |
