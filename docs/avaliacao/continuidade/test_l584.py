@@ -410,7 +410,13 @@ class Pontuacao(unittest.TestCase):
                   "com o link: leia o dispositivo e confira com a resposta. Art. 346: 0,9%.")
         plural = ("Reli os textos da lei em que a resposta anterior se baseia (arts. 343 e 346). "
                   "Eles estão abaixo, com o link.")
-        for abertura in (relido, plural):
+        varios = ("Reli o texto da lei nos dispositivos em que a resposta anterior se baseia (art. 343 e "
+                  "art. 346). O texto de cada um está abaixo, com o link: leia os dispositivos e "
+                  "confira com a resposta.")
+        sem_modelo = ("A resposta anterior se baseia em LC 214/2025, art. 346. O texto de cada dispositivo "
+                      "está abaixo, com o link.")
+        sem_dispositivo = "A resposta anterior se baseia nos dispositivos citados nela."
+        for abertura in (relido, plural, varios, sem_modelo, sem_dispositivo):
             r = pontuar(rodada(errada1=(abertura, CITACAO), certa_=abertura, insist=abertura))
             self.assertEqual(self.criterio(r, "M584_certa_ok")["falhas"], 0, abertura)
             self.assertEqual(r["relatadas"]["R584_errada_abertura"]["fora_da_forma"], 0, abertura)

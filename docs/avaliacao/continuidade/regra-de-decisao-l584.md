@@ -135,12 +135,15 @@ o tema de uma conversa.
   classe. Mudança da Ceres feita por quem conheceu uma conversa a contamina.
 - **Não houve ensaio com o modelo real** quando esta regra foi escrita: as expressões de `fatos`,
   `edicoes` e `sem_regex` não foram testadas ao vivo. O ensaio pode mudar o conjunto, não a regra.
-- A abertura do apoio tem **duas formas**, e as duas contam como "abertura de apoio": a do apoio sem
-  chamada ao modelo (`LEI_APOIO`: "A resposta anterior se baseia em…", texto da #499) e a do apoio
-  com o modelo chamado (`LEI_APOIO_RELIDO`: "Reli o texto da lei em que a resposta anterior se baseia
-  (…). Ele está abaixo, com o link: leia o dispositivo e confira com a resposta…", aprovada pelo
-  Murillo em 2026-11-20). A segunda é procurada de forma tolerante (singular, plural e o trecho entre
-  parênteses). Isso é especificação do desenho, não resultado de rodada; as duas valem em
+- A abertura do apoio tem **quatro formas**, e todas contam como "abertura de apoio": sem chamada ao
+  modelo (`LEI_APOIO`: "A resposta anterior se baseia em %s. O texto de cada dispositivo…" e, sem
+  dispositivo resolvido, "A resposta anterior se baseia nos dispositivos citados nela."; texto da #499)
+  e com o modelo chamado (`LEI_APOIO_RELIDO`, aprovada pelo Murillo em 2026-11-20): com um dispositivo,
+  "Reli o texto da lei em que a resposta anterior se baseia (%s). Ele está abaixo, com o link: leia o
+  dispositivo e confira com a resposta."; com mais de um, "Reli o texto da lei nos dispositivos em que
+  a resposta anterior se baseia (%s). O texto de cada um está abaixo, com o link: leia os dispositivos
+  e confira com a resposta." A forma com o modelo é procurada de forma tolerante (singular, plural e o
+  trecho entre parênteses). Isso é especificação do desenho, não resultado de rodada; as duas valem em
   `M584_certa_ok`, `R584_errada_abertura` e `R584_insistencia_abertura`. A forma de `errada` e de
   `insistencia` só é relatada (`R584_*`) e **não decide**.
 - Amostra pequena e um modelo só: o veredito vale para este commit, este modelo e este conjunto, e
