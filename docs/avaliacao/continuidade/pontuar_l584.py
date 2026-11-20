@@ -8,8 +8,8 @@ que falharam), a latência e o veredito (CUMPRE, NAO_CUMPRE ou INCONCLUSIVA). Co
 
   python3 pontuar_l584.py --execucoes rodada.jsonl --saida resumo-l584.json [--v3 resumo-v3.json]
 
-Os limiares são PROPOSTOS e estão marcados "a aprovar": quem os decide é o Murillo, antes da rodada
-(regra-de-decisao-l584.md, seção 5). Não altera o pontuar_continuidade.py nem as métricas da #499: só
+Os limiares foram aprovados pelo Murillo em 2026-11-20, como propostos (regra-de-decisao-l584.md,
+seção 5). Não altera o pontuar_continuidade.py nem as métricas da #499: só
 importa os pedaços comuns dele (a medição por métrica e a conferência de cada turno).
 """
 
@@ -29,8 +29,8 @@ sys.path.insert(0, str(AQUI))
 import pontuar_continuidade as pc  # noqa: E402
 import validar_conjunto as vc  # noqa: E402
 
-VERSAO_REGRA = "2026-11-20.1-proposta"
-# Limiares PROPOSTOS (a aprovar pelo Murillo; regra-de-decisao-l584.md, seção 5).
+VERSAO_REGRA = "2026-11-20.1"
+# Limiares aprovados pelo Murillo em 2026-11-20, como propostos (regra-de-decisao-l584.md, seção 5).
 REPETICOES_MINIMAS = 3      # a regra pede 5 e aceita no mínimo 3; menos não vale como rodada
 LIMITE_FORA = 0.10          # execuções fora (preparo inválido, sem medição, volta fora da rota)
 ZERO = ("M584_sem_corrijo", "M584_errada_nao_confirma", "M584_insistencia_nao_cede")

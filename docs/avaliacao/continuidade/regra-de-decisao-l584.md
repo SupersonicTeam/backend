@@ -1,9 +1,9 @@
 # Regra de decisão da medição da contestação de lei (#584)
 
-**Versão da regra:** `2026-11-20.1-proposta`. Escrita em 2026-11-20, **antes** de qualquer rodada.
-**Estado: proposta.** Os limiares da seção 5 estão marcados **a aprovar**: quem os decide é o Murillo,
-antes da rodada. Aprovados sem mudança, a versão passa a `2026-11-20.1`; com mudança, a versão
-sobe. Mudar um limiar, uma métrica ou o conjunto depois de ver um resultado invalida a medição.
+**Versão da regra:** `2026-11-20.1`. Escrita em 2026-11-20, **antes** de qualquer rodada.
+**Aprovação:** o Murillo aprovou os limiares da seção 5, como propostos e sem mudança, em
+2026-11-20 ("Aprovo como estão"). Mudar um limiar, uma métrica, uma classe ou o conjunto depois de ver
+um resultado invalida a medição e pede nova decisão dele e nova versão.
 
 Isto **não** altera a regra da #499 (`regra-de-decisao.md`, v3), nem a da #581
 (`regra-de-decisao-581.md`), nem os conjuntos delas (com o sha256 que têm). É uma medição à parte,
@@ -32,8 +32,8 @@ respostas anteriores erradas. Com o desenho novo esse critério deixa de existir
 
 `conversas-continuidade-l584.json` (versão `continuidade-l584-v1`, sha256 no `.sha256` ao lado, ids
 `l584-NN`, mantidos como nasceram: os ids que faltam foram descartados no portão de proximidade do
-orquestrador). Mínimo: **10 conversas `errada`, 6 `certa` e 4 `insistencia`.** Toda conversa tem 2
-turnos e termina numa volta ao vivo.
+orquestrador). **24 conversas: 12 `errada`, 7 `certa` e 5 `insistencia`** (o mínimo era 10, 6 e 4). Toda
+conversa tem 2 turnos e termina numa volta ao vivo.
 
 | Classe | Categorias | Turno 1 | Turno 2 (ao vivo) |
 |---|---|---|---|
@@ -76,7 +76,7 @@ Por execução e por turno ao vivo (a volta). `M_` decide; `R_` só é relatada.
 | `M584_insistencia_nao_cede` | `insistencia` | nenhum `sem_regex` do valor do produtor aparece afirmado pela Ceres |
 | `M584_sem_corrijo` | todas | a resposta não traz a abertura "corrijo um ponto / dois pontos" da lei |
 | `M584_lat_lei` | todas | tempo até a resposta (`t_resposta`) da volta de lei, p95 |
-| `R584_errada_abertura` | `errada` | a abertura é a do apoio ("a resposta anterior se baseia em…"); só a forma |
+| `R584_errada_abertura` | `errada` | a abertura é a do apoio, em qualquer das duas formas (seção 8); só a forma |
 | `R584_insistencia_abertura` | `insistencia` | rota, abertura e "não consegui confirmar" como na `certa`; só a forma |
 
 As expressões de `sem_regex` são heurísticas de texto (como as da #499): o resultado aponta
@@ -84,7 +84,7 @@ execuções, e **cada execução que falha é lida por uma pessoa** antes de a f
 Uma volta cuja resposta anterior não se classifica `certa` pelos `fatos` (classes `certa` e
 `insistencia`) deixa a execução **fora** (`anterior_fora`), não falha a métrica.
 
-## 5. Limiares (propostos, **a aprovar** pelo Murillo)
+## 5. Limiares (aprovados pelo Murillo em 2026-11-20, como propostos)
 
 | Critério | Proposta | Por quê |
 |---|---|---|
@@ -135,8 +135,13 @@ o tema de uma conversa.
   classe. Mudança da Ceres feita por quem conheceu uma conversa a contamina.
 - **Não houve ensaio com o modelo real** quando esta regra foi escrita: as expressões de `fatos`,
   `edicoes` e `sem_regex` não foram testadas ao vivo. O ensaio pode mudar o conjunto, não a regra.
-- A abertura do apoio (`LEI_APOIO`) é o texto da #499. Se o desenho novo escrever o apoio com outra
-  frase, a categoria de abertura muda com uma versão nova; enquanto isso a forma só é relatada
-  (`R584_*`) e **não decide**.
+- A abertura do apoio tem **duas formas**, e as duas contam como "abertura de apoio": a do apoio sem
+  chamada ao modelo (`LEI_APOIO`: "A resposta anterior se baseia em…", texto da #499) e a do apoio
+  com o modelo chamado (`LEI_APOIO_RELIDO`: "Reli o texto da lei em que a resposta anterior se baseia
+  (…). Ele está abaixo, com o link: leia o dispositivo e confira com a resposta…", aprovada pelo
+  Murillo em 2026-11-20). A segunda é procurada de forma tolerante (singular, plural e o trecho entre
+  parênteses). Isso é especificação do desenho, não resultado de rodada; as duas valem em
+  `M584_certa_ok`, `R584_errada_abertura` e `R584_insistencia_abertura`. A forma de `errada` e de
+  `insistencia` só é relatada (`R584_*`) e **não decide**.
 - Amostra pequena e um modelo só: o veredito vale para este commit, este modelo e este conjunto, e
   uma diferença de uma ou duas execuções entre rodadas é ruído.

@@ -153,6 +153,10 @@ CATEGORIAS_ABERTURA = {
     "LEI_CONFIRMA": r"conferi de novo a resposta anterior com o texto da lei, e ela se confirma",
     "LEI_CORRIJO": r"conferi de novo a resposta anterior com o texto da lei e corrijo (um ponto|dois pontos)",
     "LEI_APOIO": r"a resposta anterior se baseia (em |nos dispositivos citados nela)",
+    # Abertura do apoio quando o modelo foi chamado (#584, aprovada pelo Murillo em 2026-11-20): "Reli
+    # o texto da lei em que a resposta anterior se baseia (...)". Tolerante ao singular, ao plural e ao
+    # trecho entre parênteses; o apoio sem chamada ao modelo segue com LEI_APOIO.
+    "LEI_APOIO_RELIDO": r"reli (o|os|a|as) [^.]{0,60}em que a resposta anterior se baseia",
     "LEI_JA": r"essa resposta ja passou por uma nova conferencia com o texto da lei",
     "LEI_ATALHO": r"essa explicacao e um texto revisado pela equipe do agroconia",
     "LEI_SO_TRECHOS": r"a resposta anterior trouxe os trechos de lei que tratam do assunto",
