@@ -648,6 +648,44 @@ class AssistenteChatIntegrationTest {
   }
 
   @Test
+  @DisplayName("#584: o motivo e as contagens da reconferencia de lei chegam as colunas 0066")
+  void auditoriaGravaReconferenciaDeLei() {
+    auditoriaPorta.registrar(new AuditoriaPorta.RegistroInteracao(produtorA.getId(),
+        "LEGISLACAO", DesfechoInteracao.RECONFERENCIA_DESCARTADA, null, null, null,
+        "RECONFERENCIA_LEI", "[]", 0, null, "none/simulado", 10, 20, 5, false, 80,
+        OffsetDateTime.now(), null, null, null, null,
+        new AuditoriaPorta.RegistroReconferenciaLei(
+            br.com.agrocontabil.model.MotivoReconferenciaLei.CORRIJO_CONCORDANCIA_NAO_ACEITA, 2,
+            1, br.com.agrocontabil.model.BuscaReconferenciaLei.OK, 5, null, 6, 1, 9000, 1100,
+            DesfechoInteracao.CITACAO_INVALIDA)));
+    auditoriaPorta.registrar(new AuditoriaPorta.RegistroInteracao(produtorA.getId(), "DADOS",
+        DesfechoInteracao.RESPONDIDA, null, null, null, "EMBEDDING", "[]", 1, null,
+        "none/simulado", 10, 20, 5, false, 80, OffsetDateTime.now()));
+
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtorA.getId()))
+        .hasSize(2).anySatisfy(i -> {
+          assertThat(i.getReconferenciaLei()).isEqualTo(
+              br.com.agrocontabil.model.MotivoReconferenciaLei.CORRIJO_CONCORDANCIA_NAO_ACEITA);
+          assertThat(i.getReconferenciaDispositivos()).isEqualTo(2);
+          assertThat(i.getReconferenciaTrechosCitados()).isEqualTo(1);
+          assertThat(i.getReconferenciaBusca())
+              .isEqualTo(br.com.agrocontabil.model.BuscaReconferenciaLei.OK);
+          assertThat(i.getReconferenciaTrechosBusca()).isEqualTo(5);
+          assertThat(i.getReconferenciaTrechosCompras()).isNull();
+          assertThat(i.getReconferenciaTrechosPrompt()).isEqualTo(6);
+          assertThat(i.getReconferenciaTrechosPromptCitados()).isEqualTo(1);
+          assertThat(i.getReconferenciaCaracteresTrechos()).isEqualTo(9000);
+          assertThat(i.getReconferenciaTokensConcordancia()).isEqualTo(1100);
+          assertThat(i.getReconferenciaConcordancia())
+              .isEqualTo(DesfechoInteracao.CITACAO_INVALIDA);
+        }).anySatisfy(i -> {
+          assertThat(i.getRota()).isEqualTo("DADOS");
+          assertThat(i.getReconferenciaLei()).isNull();
+          assertThat(i.getReconferenciaTrechosPrompt()).isNull();
+        });
+  }
+
+  @Test
   @DisplayName("#144: toda pergunta gera auditoria com rota, funcoes e desfecho, sem o texto")
   void auditoriaSemConteudo() throws Exception {
     modelo.responderCom(modeloFiel(Map.of(

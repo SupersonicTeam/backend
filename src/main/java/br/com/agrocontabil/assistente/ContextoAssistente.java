@@ -2,6 +2,7 @@ package br.com.agrocontabil.assistente;
 
 import br.com.agrocontabil.assistente.continuidade.RegistroTurno;
 import br.com.agrocontabil.assistente.llm.ModeloLinguagem;
+import br.com.agrocontabil.assistente.porta.AuditoriaPorta;
 import br.com.agrocontabil.dto.AssistenteChatResponse.OrigemFonte;
 import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import br.com.agrocontabil.model.DesfechoInteracao;
@@ -17,6 +18,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.UnaryOperator;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
@@ -77,6 +79,8 @@ public final class ContextoAssistente {
   private final AtomicReference<String> camadaClassificacao = new AtomicReference<>();
   private final AtomicReference<DesfechoFidelidadeLei> fidelidadeLei = new AtomicReference<>();
   private final AtomicReference<JuizLei> juizLei = new AtomicReference<>();
+  private final AtomicReference<AuditoriaPorta.RegistroReconferenciaLei> reconferenciaLei =
+      new AtomicReference<>();
   private final AtomicBoolean trechosRelacionados = new AtomicBoolean();
   private final AtomicBoolean classificacaoCortada = new AtomicBoolean();
   private final List<TextoDoBackend> textosDoBackend =
@@ -207,6 +211,25 @@ public final class ContextoAssistente {
   /** Tempo e tokens do juiz; nulo se ele não rodou. */
   public JuizLei juizLei() {
     return juizLei.get();
+  }
+
+  /**
+   * Atualiza o registro da reconferência de lei da continuidade (#584): o motivo do desfecho e o
+   * que foi ao prompt dela, só códigos e contagens (#144). Parte do registro vazio no primeiro
+   * passo; vai à auditoria. Não muda nada do que a pergunta responde ou cobra.
+   *
+   * @param passo o que acrescentar ao registro atual
+   */
+  public void atualizarReconferenciaLei(
+      UnaryOperator<AuditoriaPorta.RegistroReconferenciaLei> passo) {
+    reconferenciaLei.updateAndGet(
+        atual -> passo.apply(atual == null ? AuditoriaPorta.RegistroReconferenciaLei.vazio()
+            : atual));
+  }
+
+  /** O registro da reconferência de lei; nulo se a pergunta não passou por ela. */
+  public AuditoriaPorta.RegistroReconferenciaLei reconferenciaLei() {
+    return reconferenciaLei.get();
   }
 
   /**

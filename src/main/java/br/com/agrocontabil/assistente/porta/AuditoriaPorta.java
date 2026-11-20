@@ -1,8 +1,10 @@
 package br.com.agrocontabil.assistente.porta;
 
+import br.com.agrocontabil.model.BuscaReconferenciaLei;
 import br.com.agrocontabil.model.DesfechoExplicacao;
 import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import br.com.agrocontabil.model.DesfechoInteracao;
+import br.com.agrocontabil.model.MotivoReconferenciaLei;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -62,6 +64,8 @@ public interface AuditoriaPorta {
    * @param tokensEntradaJuiz tokens de entrada do juiz; nulo se ele não rodou. {@code tokensEntrada}
    *                         é o da pergunta sem ele
    * @param tokensSaidaJuiz  tokens de saída do juiz; nulo se ele não rodou
+   * @param reconferenciaLei por que a reconferência de lei da continuidade terminou como terminou e
+   *                         o que foi ao prompt dela (#584), só códigos e contagens; nulo fora dela
    */
   record RegistroInteracao(
       UUID produtorId, String rota, DesfechoInteracao desfecho,
@@ -70,7 +74,23 @@ public interface AuditoriaPorta {
       int chamadasFuncao, String trechosCitadosJson, String modelo, long latenciaMs,
       Integer tokensEntrada, Integer tokensSaida, boolean tokensEstimados, int tamanhoPergunta,
       OffsetDateTime criadoEm, DesfechoFidelidadeLei fidelidadeLei, Long latenciaJuizMs,
-      Integer tokensEntradaJuiz, Integer tokensSaidaJuiz) {
+      Integer tokensEntradaJuiz, Integer tokensSaidaJuiz,
+      RegistroReconferenciaLei reconferenciaLei) {
+
+    /** Registro sem a reconferência de lei (#584): a forma de antes da instrumentação. */
+    public RegistroInteracao(
+        UUID produtorId, String rota, DesfechoInteracao desfecho,
+        DesfechoInteracao desfechoDados, DesfechoInteracao desfechoLegislacao,
+        Boolean perguntaLeiReescrita, String camadaClassificacao, String funcoesJson,
+        int chamadasFuncao, String trechosCitadosJson, String modelo, long latenciaMs,
+        Integer tokensEntrada, Integer tokensSaida, boolean tokensEstimados, int tamanhoPergunta,
+        OffsetDateTime criadoEm, DesfechoFidelidadeLei fidelidadeLei, Long latenciaJuizMs,
+        Integer tokensEntradaJuiz, Integer tokensSaidaJuiz) {
+      this(produtorId, rota, desfecho, desfechoDados, desfechoLegislacao, perguntaLeiReescrita,
+          camadaClassificacao, funcoesJson, chamadasFuncao, trechosCitadosJson, modelo, latenciaMs,
+          tokensEntrada, tokensSaida, tokensEstimados, tamanhoPergunta, criadoEm, fidelidadeLei,
+          latenciaJuizMs, tokensEntradaJuiz, tokensSaidaJuiz, null);
+    }
 
     /** Registro sem a conferência de fidelidade (#269): a forma de antes da flag. */
     public RegistroInteracao(
@@ -83,7 +103,7 @@ public interface AuditoriaPorta {
       this(produtorId, rota, desfecho, desfechoDados, desfechoLegislacao, perguntaLeiReescrita,
           camadaClassificacao, funcoesJson, chamadasFuncao, trechosCitadosJson, modelo, latenciaMs,
           tokensEntrada, tokensSaida, tokensEstimados, tamanhoPergunta, criadoEm, null, null, null,
-          null);
+          null, null);
     }
   }
 
@@ -98,4 +118,72 @@ public interface AuditoriaPorta {
    */
   record RegistroExplicacao(UUID interacaoId, DesfechoExplicacao desfecho, long latenciaMs,
       Integer tokensEntrada, Integer tokensSaida) {}
+
+  /**
+   * O que a reconferência de lei da continuidade (#499) registra para o diagnóstico (#584): o
+   * motivo do desfecho e o que foi ao prompt. Só códigos, contagens e marcas: nenhum texto de
+   * pergunta, de resposta, de lei ou do modelo (#144). Cada campo nulo é "não chegou a esse passo".
+   *
+   * @param motivo                 por que terminou como terminou
+   * @param dispositivos           dispositivos que a resposta anterior citava (lei.r ou lei.c)
+   * @param trechosCitadosAchados  desses, quantos trechos vigentes a base textual achou
+   * @param busca                  resultado da busca vetorial; nulo se não chegou a ela
+   * @param trechosBusca           trechos que a busca vetorial devolveu (acima do limiar)
+   * @param trechosCompras         trechos dos itens de anexo das compras (só no MISTO)
+   * @param trechosPrompt          trechos que foram ao prompt, depois do teto de 8 e de 24.000
+   *                               caracteres
+   * @param trechosPromptCitados   desses, os que a resposta anterior citava
+   * @param caracteresTrechos      caracteres de texto de lei no prompt
+   * @param tokensEntradaConcordancia tokens de entrada da chamada da concordância (a rota de lei
+   *                               normal, a guarda final do CORRIJO); nulo se ela não rodou
+   * @param desfechoConcordancia   desfecho da rota de lei normal da concordância; nulo se não rodou
+   */
+  record RegistroReconferenciaLei(
+      MotivoReconferenciaLei motivo, Integer dispositivos, Integer trechosCitadosAchados,
+      BuscaReconferenciaLei busca, Integer trechosBusca, Integer trechosCompras,
+      Integer trechosPrompt, Integer trechosPromptCitados, Integer caracteresTrechos,
+      Integer tokensEntradaConcordancia, DesfechoInteracao desfechoConcordancia) {
+
+    /** Registro vazio: ainda sem nenhum passo. */
+    public static RegistroReconferenciaLei vazio() {
+      return new RegistroReconferenciaLei(null, null, null, null, null, null, null, null, null,
+          null, null);
+    }
+
+    /** O motivo do desfecho. */
+    public RegistroReconferenciaLei comMotivo(MotivoReconferenciaLei novo) {
+      return new RegistroReconferenciaLei(novo, dispositivos, trechosCitadosAchados, busca,
+          trechosBusca, trechosCompras, trechosPrompt, trechosPromptCitados, caracteresTrechos,
+          tokensEntradaConcordancia, desfechoConcordancia);
+    }
+
+    /** Os dispositivos citados e os trechos que a busca textual achou para eles. */
+    public RegistroReconferenciaLei comCitados(int novosDispositivos, int achados) {
+      return new RegistroReconferenciaLei(motivo, novosDispositivos, achados, busca, trechosBusca,
+          trechosCompras, trechosPrompt, trechosPromptCitados, caracteresTrechos,
+          tokensEntradaConcordancia, desfechoConcordancia);
+    }
+
+    /** O resultado da busca vetorial e, se ela respondeu, quantos trechos e os das compras. */
+    public RegistroReconferenciaLei comBusca(BuscaReconferenciaLei novaBusca, Integer daBusca,
+        Integer dasCompras) {
+      return new RegistroReconferenciaLei(motivo, dispositivos, trechosCitadosAchados, novaBusca,
+          daBusca, dasCompras, trechosPrompt, trechosPromptCitados, caracteresTrechos,
+          tokensEntradaConcordancia, desfechoConcordancia);
+    }
+
+    /** O que foi ao prompt. */
+    public RegistroReconferenciaLei comPrompt(int trechos, int citados, int caracteres) {
+      return new RegistroReconferenciaLei(motivo, dispositivos, trechosCitadosAchados, busca,
+          trechosBusca, trechosCompras, trechos, citados, caracteres, tokensEntradaConcordancia,
+          desfechoConcordancia);
+    }
+
+    /** A concordância (a segunda chamada ao modelo do CORRIJO): tokens e desfecho da rota. */
+    public RegistroReconferenciaLei comConcordancia(Integer tokens, DesfechoInteracao desfecho) {
+      return new RegistroReconferenciaLei(motivo, dispositivos, trechosCitadosAchados, busca,
+          trechosBusca, trechosCompras, trechosPrompt, trechosPromptCitados, caracteresTrechos,
+          tokens, desfecho);
+    }
+  }
 }

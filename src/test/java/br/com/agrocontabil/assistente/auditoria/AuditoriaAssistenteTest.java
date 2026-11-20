@@ -115,6 +115,43 @@ class AuditoriaAssistenteTest {
     assertThat(r.latenciaMs()).isEqualTo(1000L);
   }
 
+  @Test
+  @DisplayName("#584: sem reconferencia de lei, o registro dela vai nulo a porta")
+  void reconferenciaDeLei() {
+    auditoria.registrar(contexto, "LEGISLACAO", DesfechoInteracao.RECONFERENCIA_DESCARTADA,
+        "anthropic/simulado", 1000, 80);
+    assertThat(capturar().reconferenciaLei()).isNull();
+  }
+
+  @Test
+  @DisplayName("#584: a reconferencia de lei grava motivo e contagens, sem texto")
+  void reconferenciaDeLeiGravada() {
+    contexto.atualizarReconferenciaLei(r -> r.comCitados(2, 1));
+    contexto.atualizarReconferenciaLei(
+        r -> r.comBusca(br.com.agrocontabil.model.BuscaReconferenciaLei.OK, 5, null));
+    contexto.atualizarReconferenciaLei(r -> r.comPrompt(6, 1, 9000));
+    contexto.atualizarReconferenciaLei(r -> r.comConcordancia(1100,
+        DesfechoInteracao.RESPONDIDA));
+    contexto.atualizarReconferenciaLei(
+        r -> r.comMotivo(br.com.agrocontabil.model.MotivoReconferenciaLei.CORRIGIU));
+
+    auditoria.registrar(contexto, "LEGISLACAO", DesfechoInteracao.RESPONDIDA,
+        "anthropic/simulado", 1000, 80);
+
+    AuditoriaPorta.RegistroReconferenciaLei r = capturar().reconferenciaLei();
+    assertThat(r.motivo()).isEqualTo(br.com.agrocontabil.model.MotivoReconferenciaLei.CORRIGIU);
+    assertThat(r.dispositivos()).isEqualTo(2);
+    assertThat(r.trechosCitadosAchados()).isEqualTo(1);
+    assertThat(r.busca()).isEqualTo(br.com.agrocontabil.model.BuscaReconferenciaLei.OK);
+    assertThat(r.trechosBusca()).isEqualTo(5);
+    assertThat(r.trechosCompras()).isNull();
+    assertThat(r.trechosPrompt()).isEqualTo(6);
+    assertThat(r.trechosPromptCitados()).isEqualTo(1);
+    assertThat(r.caracteresTrechos()).isEqualTo(9000);
+    assertThat(r.tokensEntradaConcordancia()).isEqualTo(1100);
+    assertThat(r.desfechoConcordancia()).isEqualTo(DesfechoInteracao.RESPONDIDA);
+  }
+
   private RegistroInteracao capturar() {
     ArgumentCaptor<RegistroInteracao> captor = ArgumentCaptor.forClass(RegistroInteracao.class);
     verify(porta).registrar(captor.capture());

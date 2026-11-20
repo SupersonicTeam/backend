@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0066-assistente-interacao-reconferencia-lei.xml
+         Ceres, issue #584 (instrumentacao da reconferencia de lei da
+         continuidade, #499): a auditoria passa a gravar POR QUE cada
+         reconferencia terminou como terminou, sem mudar o comportamento.
+
+         - reconferencia_lei: MotivoReconferenciaLei (CONFIRMOU, CORRIGIU,
+           uma guarda que descartou, saida do modelo invalida, caminho sem
+           modelo...). Nula fora da reconferencia de lei e nas perguntas
+           gravadas antes desta mudanca.
+         - reconferencia_dispositivos / _trechos_citados: dispositivos que a
+           resposta anterior citava e quantos trechos a base achou para eles.
+         - reconferencia_busca (OK/FALHOU), _trechos_busca e _trechos_compras:
+           a busca vetorial (embedding da pergunta + base) e os trechos das
+           compras do MISTO.
+         - reconferencia_trechos_prompt, _trechos_prompt_citados e
+           _caracteres_trechos: o que foi ao prompt da reconferencia.
+         - reconferencia_tokens_concordancia e reconferencia_concordancia:
+           a segunda chamada ao modelo do CORRIJO (a concordancia). Os tokens
+           ja estao nos totais da pergunta (tokens_entrada); aqui so a parcela.
+         So codigos e contagens: nenhum texto de pergunta, de resposta, de lei
+         ou do modelo e gravado (#144).
+         ================================================================ -->
+
+    <changeSet id="0066-add-reconferencia-lei-assistente-interacao" author="supersonic-team">
+        <comment>Motivo do desfecho e o que foi ao prompt da reconferencia de lei (#584).</comment>
+        <addColumn tableName="assistente_interacao">
+            <column name="reconferencia_lei" type="VARCHAR(40)"/>
+            <column name="reconferencia_dispositivos" type="INTEGER"/>
+            <column name="reconferencia_trechos_citados" type="INTEGER"/>
+            <column name="reconferencia_busca" type="VARCHAR(10)"/>
+            <column name="reconferencia_trechos_busca" type="INTEGER"/>
+            <column name="reconferencia_trechos_compras" type="INTEGER"/>
+            <column name="reconferencia_trechos_prompt" type="INTEGER"/>
+            <column name="reconferencia_trechos_prompt_citados" type="INTEGER"/>
+            <column name="reconferencia_caracteres_trechos" type="INTEGER"/>
+            <column name="reconferencia_tokens_concordancia" type="INTEGER"/>
+            <column name="reconferencia_concordancia" type="VARCHAR(40)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

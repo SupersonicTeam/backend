@@ -27,7 +27,9 @@ import br.com.agrocontabil.assistente.rag.ValidadorCitacao;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.dto.TurnoConversa;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
+import br.com.agrocontabil.model.BuscaReconferenciaLei;
 import br.com.agrocontabil.model.DesfechoInteracao;
+import br.com.agrocontabil.model.MotivoReconferenciaLei;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -204,9 +206,12 @@ public class ReconferenciaLei {
       return textoFixo(par, contexto);
     }
     List<String> dispositivos = dispositivosDaFatia(par);
-    if (!disponibilidade.disponivel() || dispositivos.isEmpty()) {
-      return apoio(par, contexto, dispositivos, DesfechoContinuidade.RECONFERENCIA_SEM_MODELO,
-          false);
+    if (!disponibilidade.disponivel()) {
+      return semModelo(par, contexto, dispositivos, MotivoReconferenciaLei.SEM_MODELO_DISJUNTOR);
+    }
+    if (dispositivos.isEmpty()) {
+      return semModelo(par, contexto, dispositivos,
+          MotivoReconferenciaLei.SEM_MODELO_SEM_DISPOSITIVO);
     }
     boolean misto = par.carga().rota() == Intencao.MISTO;
     String perguntaLei = misto && par.carga().lei().perguntaLei() != null
@@ -216,20 +221,33 @@ public class ReconferenciaLei {
     List<TrechoRecuperado> trechos;
     try {
       citados = buscaTextual.buscarDispositivos(dispositivos, contexto.hoje());
+      int achados = citados.size();
+      contexto.atualizarReconferenciaLei(r -> r.comCitados(dispositivos.size(), achados));
       List<TrechoRecuperado> complementares = new ArrayList<>(
           busca.buscar(perguntaLei, contexto.hoje()));
+      int daBusca = complementares.size();
+      Integer dasCompras = null;
       if (misto) {
-        complementares.addAll(trechosDasCompras.buscar(contexto));
+        List<TrechoRecuperado> compras = trechosDasCompras.buscar(contexto);
+        dasCompras = compras.size();
+        complementares.addAll(compras);
       }
+      Integer comprasRegistradas = dasCompras;
+      contexto.atualizarReconferenciaLei(
+          r -> r.comBusca(BuscaReconferenciaLei.OK, daBusca, comprasRegistradas));
       trechos = limitar(RotaLegislacao.juntar(citados, complementares));
     } catch (AssistenteIndisponivelException e) {
       contexto.verificarAtiva();
-      return apoio(par, contexto, dispositivos, DesfechoContinuidade.RECONFERENCIA_SEM_MODELO,
-          false);
+      // So a busca vetorial vem depois da dos citados: com os citados registrados e a busca
+      // ainda sem resultado, foi ela que falhou.
+      contexto.atualizarReconferenciaLei(r -> r.dispositivos() != null && r.busca() == null
+          ? r.comBusca(BuscaReconferenciaLei.FALHOU, null, null) : r);
+      return semModelo(par, contexto, dispositivos,
+          MotivoReconferenciaLei.SEM_MODELO_BUSCA_FALHOU);
     }
     if (citados.isEmpty()) {
-      return apoio(par, contexto, dispositivos, DesfechoContinuidade.RECONFERENCIA_SEM_MODELO,
-          false);
+      return semModelo(par, contexto, dispositivos,
+          MotivoReconferenciaLei.SEM_MODELO_SEM_TRECHO_CITADO);
     }
     Set<String> marcasCitadas = new HashSet<>();
     Map<String, TrechoRecuperado> porMarca = new LinkedHashMap<>();
@@ -241,6 +259,11 @@ public class ReconferenciaLei {
         marcasCitadas.add(t.marca());
       }
     }
+    int caracteres = trechos.stream().mapToInt(t -> t.texto().length()).sum();
+    int citadosNoPrompt = marcasCitadas.size();
+    int trechosNoPrompt = trechos.size();
+    contexto.atualizarReconferenciaLei(
+        r -> r.comPrompt(trechosNoPrompt, citadosNoPrompt, caracteres));
     String fatia = par.carga().lei().textoModelo().de(par.resposta());
     String marcada = comMarcas(fatia, trechos);
     String json;
@@ -248,8 +271,7 @@ public class ReconferenciaLei {
       json = JSON.writeValueAsString(new MensagemReconferencia(
           DataSanitizer.mascarar(perguntaLei), DataSanitizer.mascarar(marcada)));
     } catch (JsonProcessingException e) {
-      return apoio(par, contexto, dispositivos, DesfechoContinuidade.RECONFERENCIA_SEM_MODELO,
-          false);
+      return semModelo(par, contexto, dispositivos, MotivoReconferenciaLei.SEM_MODELO_FALHA_JSON);
     }
     Prompt prompt = new Prompt(List.<Message>of(
         new SystemMessage(PromptsCeres.sistemaReconferenciaLei(contexto.hoje(),
@@ -260,17 +282,19 @@ public class ReconferenciaLei {
       resposta = contexto.chamar(modelo, prompt);
     } catch (AssistenteIndisponivelException e) {
       contexto.verificarAtiva();
-      return apoio(par, contexto, dispositivos, DesfechoContinuidade.RECONFERENCIA_SEM_MODELO,
-          false);
+      return semModelo(par, contexto, dispositivos,
+          MotivoReconferenciaLei.SEM_MODELO_CHAMADA_FALHOU);
     }
     if (ModeloLinguagem.cortadaPeloTeto(resposta, teto)) {
       return apoio(par, contexto, dispositivos,
-          DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO, true);
+          DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO, true,
+          MotivoReconferenciaLei.CORTADA_PELO_TETO);
     }
     Optional<JsonNode> veredito = ler(resposta.getResult().getOutput().getText());
     if (veredito.isEmpty()) {
       return apoio(par, contexto, dispositivos,
-          DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO, true);
+          DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO, true,
+          MotivoReconferenciaLei.SAIDA_NAO_E_JSON);
     }
     String tipo = veredito.get().path("veredito").asText("");
     Conferencia conferencia = new Conferencia(par, perguntaLei, fatia, marcada, trechos,
@@ -279,9 +303,11 @@ public class ReconferenciaLei {
       case "CONFIRMO" -> conferencia.confirmo(veredito.get(), dispositivos);
       case "CORRIJO" -> conferencia.corrijo(veredito.get(), dispositivos);
       case "NAO_SUSTENTA" -> apoio(par, contexto, dispositivos,
-          DesfechoContinuidade.RECONFERENCIA_NAO_SUSTENTA, true);
+          DesfechoContinuidade.RECONFERENCIA_NAO_SUSTENTA, true,
+          MotivoReconferenciaLei.NAO_SUSTENTA);
       default -> apoio(par, contexto, dispositivos,
-          DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO, true);
+          DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO, true,
+          MotivoReconferenciaLei.VEREDITO_DESCONHECIDO);
     };
   }
 
@@ -315,7 +341,8 @@ public class ReconferenciaLei {
     Resultado confirmo(JsonNode no, List<String> dispositivos) {
       JsonNode lista = no.path("fundamentos");
       if (!lista.isArray() || lista.isEmpty() || lista.size() > 3) {
-        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO);
+        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO,
+            MotivoReconferenciaLei.CONFIRMO_FORMATO);
       }
       List<String> linhas = new ArrayList<>();
       List<CitacaoLegal> citacoes = new ArrayList<>();
@@ -323,32 +350,42 @@ public class ReconferenciaLei {
       for (JsonNode item : lista) {
         Optional<Fundamento> fundamento = fundamento(item);
         if (fundamento.isEmpty()) {
-          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO);
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO,
+              MotivoReconferenciaLei.CONFIRMO_FORMATO);
         }
         Fundamento f = fundamento.get();
         if (!marcasCitadas.contains(f.marca())) {
-          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO);
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
+              MotivoReconferenciaLei.CONFIRMO_MARCA_NAO_CITADA);
         }
         TrechoRecuperado trecho = porMarca.get(f.marca());
         Optional<String> pedaco = pedacoLiteral(f.citacao(), trecho.texto());
         if (pedaco.isEmpty()) {
-          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO);
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
+              MotivoReconferenciaLei.CONFIRMO_CITACAO_NAO_LITERAL);
         }
         pedacos.add(pedaco.get());
         linhas.add(O_QUE_DIZ.formatted(trecho.comoCitacao().referencia(), pedaco.get()));
         citacoes.add(trecho.comoCitacao());
       }
-      if (!numerosDaFatiaNosTrechos() || !numerosDaFatiaNasCitacoes(pedacos)) {
-        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO);
+      if (!numerosDaFatiaNosTrechos()) {
+        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO,
+            MotivoReconferenciaLei.CONFIRMO_NUMERO_FATIA);
+      }
+      if (!numerosDaFatiaNasCitacoes(pedacos)) {
+        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO,
+            MotivoReconferenciaLei.CONFIRMO_NUMERO_CITACAO);
       }
       String texto = CONFIRMA + "\n\n" + String.join("\n", linhas) + "\n\n" + ENQUADRAMENTO;
-      return saida(texto, citacoes, DesfechoContinuidade.RECONFERENCIA_CONFIRMOU);
+      return saida(texto, citacoes, DesfechoContinuidade.RECONFERENCIA_CONFIRMOU,
+          MotivoReconferenciaLei.CONFIRMOU);
     }
 
     Resultado corrijo(JsonNode no, List<String> dispositivos) {
       JsonNode lista = no.path("correcoes");
       if (!lista.isArray() || lista.isEmpty() || lista.size() > 2) {
-        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO);
+        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO,
+            MotivoReconferenciaLei.CORRIJO_FORMATO_LISTA);
       }
       List<String> itens = new ArrayList<>();
       List<CitacaoLegal> citacoes = new ArrayList<>();
@@ -359,43 +396,51 @@ public class ReconferenciaLei {
         if (anterior == null || corrigida == null || fundamento.isEmpty()
             || anterior.length() > MAXIMO_FRASE || corrigida.length() > MAXIMO_FRASE
             || FiltroInjecao.pareceInjecao(anterior) || FiltroInjecao.pareceInjecao(corrigida)) {
-          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO);
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO,
+              MotivoReconferenciaLei.CORRIJO_FORMATO_ITEM);
         }
         Fundamento f = fundamento.get();
         TrechoRecuperado trecho = porMarca.get(f.marca());
         if (trecho == null) {
-          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO);
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
+              MotivoReconferenciaLei.CORRIJO_MARCA_INEXISTENTE);
         }
         // a. ancora
         Optional<String> original = ancora(anterior, fatia);
         if (original.isEmpty()) {
-          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_ANCORA);
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_ANCORA,
+              MotivoReconferenciaLei.CORRIJO_SEM_ANCORA);
         }
         // citacao literal do fundamento
         Optional<String> pedaco = pedacoLiteral(f.citacao(), trecho.texto());
         if (pedaco.isEmpty()) {
-          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO);
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
+              MotivoReconferenciaLei.CORRIJO_CITACAO_NAO_LITERAL);
         }
         // b. citacao valida na frase, com a marca do fundamento
         ValidadorCitacao.Resultado validacao = validadorCitacao.validar(corrigida, trechos);
         if (!validacao.valida() || !marcas(corrigida).contains(f.marca())) {
-          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO);
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
+              MotivoReconferenciaLei.CORRIJO_CITACAO_INVALIDA);
         }
         // c. numero da frase corrigida so dos trechos marcados nela
         List<String> fontes = marcas(corrigida).stream().map(porMarca::get)
             .filter(java.util.Objects::nonNull).map(t -> semAnotacoes(t.texto())).toList();
         String corrigidaSemMarcas = RotaLegislacao.semMarcas(corrigida).strip();
         if (!validadorNumeros.verificar(corrigidaSemMarcas, fontes).rastreavel()) {
-          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO);
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO,
+              MotivoReconferenciaLei.CORRIJO_NUMERO);
         }
         // d. dados do produtor
         if (verificadorDados.afirmaSobreDados(
             RotaLegislacao.semSimOuNaoInicial(corrigidaSemMarcas))) {
-          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_DADOS);
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_DADOS,
+              MotivoReconferenciaLei.CORRIJO_DADOS);
         }
         // e. regime especifico
         if (GuardaRegimeEspecifico.barra(perguntaLei, validacao.citacoes())) {
-          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_REGIME);
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_REGIME,
+              MotivoReconferenciaLei.CORRIJO_REGIME);
         }
         // f. diferenca conferivel
         Set<BigDecimal> antes = ValidadorNumeros.valoresMencionados(
@@ -413,17 +458,21 @@ public class ReconferenciaLei {
         boolean mudaPolaridade = !misto && polaridadeAntes != null && polaridadeDepois != null
             && !polaridadeAntes.equals(polaridadeDepois);
         if (!mudaNumero && !mudaPolaridade) {
-          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_DIFERENCA);
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_DIFERENCA,
+              MotivoReconferenciaLei.CORRIJO_SEM_DIFERENCA);
         }
         // g. numero antigo com apoio literal no trecho que a frase anterior citava
         if (mudaNumero && antigoComApoio(anterior, antigos)) {
           return descartar(dispositivos,
-              DesfechoContinuidade.RECONFERENCIA_DESCARTADA_APOIO_LITERAL);
+              DesfechoContinuidade.RECONFERENCIA_DESCARTADA_APOIO_LITERAL,
+              MotivoReconferenciaLei.CORRIJO_APOIO_LITERAL);
         }
         // h. concordancia
-        if (!concorda(trecho.id(), novos, antigos, mudaPolaridade ? polaridadeDepois : null)) {
+        MotivoReconferenciaLei concordancia = concorda(trecho.id(), novos, antigos,
+            mudaPolaridade ? polaridadeDepois : null);
+        if (concordancia != MotivoReconferenciaLei.CORRIGIU) {
           return descartar(dispositivos,
-              DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CONCORDANCIA);
+              DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CONCORDANCIA, concordancia);
         }
         String comReferencias = validacao.texto().strip().replaceAll("[.\\s]+$", "");
         itens.add(CORRECAO.formatted(original.get(), comReferencias,
@@ -432,11 +481,12 @@ public class ReconferenciaLei {
       }
       String abertura = itens.size() == 1 ? CORRIJO_UM : CORRIJO_DOIS;
       String texto = abertura + "\n" + String.join("\n", itens) + "\n\n" + ENQUADRAMENTO;
-      return saida(texto, citacoes, DesfechoContinuidade.RECONFERENCIA_CORRIGIU);
+      return saida(texto, citacoes, DesfechoContinuidade.RECONFERENCIA_CORRIGIU,
+          MotivoReconferenciaLei.CORRIGIU);
     }
 
     private Resultado saida(String texto, List<CitacaoLegal> daSaida,
-        DesfechoContinuidade desfecho) {
+        DesfechoContinuidade desfecho, MotivoReconferenciaLei motivo) {
       List<CitacaoLegal> anteriores = new ArrayList<>();
       for (TrechoRecuperado t : trechos) {
         if (marcasCitadas.contains(t.marca())) {
@@ -445,13 +495,15 @@ public class ReconferenciaLei {
       }
       List<CitacaoLegal> citacoes = CitacoesFixas.juntar(daSaida, anteriores);
       registrarParNovo(par, contexto, citacoes);
+      contexto.atualizarReconferenciaLei(r -> r.comMotivo(motivo));
       log.info("Ceres: {}", desfecho);
       return new Resultado(new ResultadoRota(LinhaGlossario.acrescentadaA(texto),
           DesfechoInteracao.RESPONDIDA, citacoes), desfecho, true);
     }
 
-    private Resultado descartar(List<String> dispositivos, DesfechoContinuidade motivo) {
-      return apoio(par, contexto, dispositivos, motivo, true);
+    private Resultado descartar(List<String> dispositivos, DesfechoContinuidade desfecho,
+        MotivoReconferenciaLei motivo) {
+      return apoio(par, contexto, dispositivos, desfecho, true, motivo);
     }
 
     /** (b) do CONFIRMO: cada número de cada frase está no trecho que ela cita. */
@@ -527,11 +579,12 @@ public class ReconferenciaLei {
      * (h) a rota de lei normal, sobre a mesma pergunta e sem a resposta anterior nem a dúvida, é
      * aceita e a frase dela que cita o mesmo trecho tem o ponto novo e não o antigo.
      */
-    private boolean concorda(String idTrecho, Set<BigDecimal> novos, Set<BigDecimal> antigos,
-        String polaridadeNova) {
+    private MotivoReconferenciaLei concorda(String idTrecho, Set<BigDecimal> novos,
+        Set<BigDecimal> antigos, String polaridadeNova) {
       FontePergunta fonte = par.carga().reescrita()
           ? FontePergunta.dosArgumentos() : FontePergunta.texto(perguntaLei);
       ResultadoRota rota;
+      int entradaAntes = contexto.gasto().entrada();
       try {
         rota = misto
             ? rotaLegislacao.responderRegraGeral(perguntaLei, contexto,
@@ -539,14 +592,19 @@ public class ReconferenciaLei {
             : rotaLegislacao.responder(perguntaLei, contexto, fonte);
       } catch (AssistenteIndisponivelException e) {
         contexto.verificarAtiva();
-        return false;
+        int daChamada = contexto.gasto().entrada() - entradaAntes;
+        contexto.atualizarReconferenciaLei(r -> r.comConcordancia(daChamada, null));
+        return MotivoReconferenciaLei.CORRIJO_CONCORDANCIA_INDISPONIVEL;
       }
+      int daChamada = contexto.gasto().entrada() - entradaAntes;
+      DesfechoInteracao desfechoDaRota = rota.desfecho();
+      contexto.atualizarReconferenciaLei(r -> r.comConcordancia(daChamada, desfechoDaRota));
       DetalheLei detalhe = rota.detalheLei();
       if (!rota.aceita() || detalhe == null) {
-        return false;
+        return MotivoReconferenciaLei.CORRIJO_CONCORDANCIA_NAO_ACEITA;
       }
       if (polaridadeNova != null && !polaridadeNova.equals(polaridade(detalhe.textoComMarcas()))) {
-        return false;
+        return MotivoReconferenciaLei.CORRIJO_CONCORDANCIA_POLARIDADE;
       }
       Set<String> marcasDoTrecho = new HashSet<>();
       for (TrechoRecuperado t : detalhe.trechos()) {
@@ -555,10 +613,11 @@ public class ReconferenciaLei {
         }
       }
       if (marcasDoTrecho.isEmpty()) {
-        return false;
+        return MotivoReconferenciaLei.CORRIJO_CONCORDANCIA_SEM_TRECHO;
       }
       if (novos.isEmpty()) {
-        return polaridadeNova != null;
+        return polaridadeNova != null ? MotivoReconferenciaLei.CORRIGIU
+            : MotivoReconferenciaLei.CORRIJO_CONCORDANCIA_SEM_FRASE;
       }
       for (String frase : frases(detalhe.textoComMarcas())) {
         if (marcas(frase).stream().anyMatch(marcasDoTrecho::contains)) {
@@ -567,11 +626,11 @@ public class ReconferenciaLei {
           boolean temNovo = numeros.stream().anyMatch(novos::contains);
           boolean temAntigo = numeros.stream().anyMatch(antigos::contains);
           if (temNovo && !temAntigo) {
-            return true;
+            return MotivoReconferenciaLei.CORRIGIU;
           }
         }
       }
-      return false;
+      return MotivoReconferenciaLei.CORRIJO_CONCORDANCIA_SEM_FRASE;
     }
   }
 
@@ -585,7 +644,7 @@ public class ReconferenciaLei {
     List<String> paraCitar = dispositivos;
     if (lei == null) {
       return apoio(par, contexto, List.of(), DesfechoContinuidade.RECONFERENCIA_TEXTO_FIXO,
-          false);
+          false, MotivoReconferenciaLei.TEXTO_FIXO);
     } else if (lei.atalho() != null) {
       texto = ATALHO;
       paraCitar = AtalhoReformaTributaria.dispositivosFixos();
@@ -603,7 +662,7 @@ public class ReconferenciaLei {
       return fixo(par, contexto, texto, citacoes);
     } else {
       return apoio(par, contexto, dispositivos, DesfechoContinuidade.RECONFERENCIA_TEXTO_FIXO,
-          false);
+          false, MotivoReconferenciaLei.TEXTO_FIXO);
     }
     return fixo(par, contexto, texto, citacoes(paraCitar, contexto));
   }
@@ -611,6 +670,7 @@ public class ReconferenciaLei {
   private Resultado fixo(ParConferido par, ContextoAssistente contexto, String texto,
       List<CitacaoLegal> citacoes) {
     devolverOrigem(par, contexto);
+    contexto.atualizarReconferenciaLei(r -> r.comMotivo(MotivoReconferenciaLei.TEXTO_FIXO));
     log.info("Ceres: {}", DesfechoContinuidade.RECONFERENCIA_TEXTO_FIXO);
     return new Resultado(new ResultadoRota(texto + " " + ENQUADRAMENTO,
         DesfechoInteracao.RESPONDIDA, citacoes), DesfechoContinuidade.RECONFERENCIA_TEXTO_FIXO,
@@ -623,6 +683,26 @@ public class ReconferenciaLei {
    */
   Resultado apoio(ParConferido par, ContextoAssistente contexto, List<String> dispositivos,
       DesfechoContinuidade motivo, boolean modeloRespondeu) {
+    return apoio(par, contexto, dispositivos, motivo, modeloRespondeu, null);
+  }
+
+  /** O apoio sem chamar o modelo ({@code RECONFERENCIA_SEM_MODELO}), com o motivo da auditoria. */
+  private Resultado semModelo(ParConferido par, ContextoAssistente contexto,
+      List<String> dispositivos, MotivoReconferenciaLei motivo) {
+    return apoio(par, contexto, dispositivos, DesfechoContinuidade.RECONFERENCIA_SEM_MODELO, false,
+        motivo);
+  }
+
+  /**
+   * O apoio, com o motivo que vai à auditoria (#584): só o código, nunca texto. {@code null} = não
+   * registra (a chamada dos testes, que não passa por uma pergunta auditada).
+   */
+  Resultado apoio(ParConferido par, ContextoAssistente contexto, List<String> dispositivos,
+      DesfechoContinuidade motivo, boolean modeloRespondeu,
+      MotivoReconferenciaLei motivoAuditado) {
+    if (motivoAuditado != null) {
+      contexto.atualizarReconferenciaLei(r -> r.comMotivo(motivoAuditado));
+    }
     List<CitacaoLegal> citacoes = citacoes(dispositivos, contexto);
     String texto = (citacoes.isEmpty() ? APOIO_SEM_DISPOSITIVO
         : APOIO.formatted(referencias(citacoes))) + " " + ENQUADRAMENTO;

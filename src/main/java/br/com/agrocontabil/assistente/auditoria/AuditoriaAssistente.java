@@ -91,7 +91,8 @@ public class AuditoriaAssistente {
         contexto.fidelidadeLei(),
         juiz == null ? null : juiz.latenciaMs(),
         juiz == null ? null : juiz.tokensEntrada(),
-        juiz == null ? null : juiz.tokensSaida()));
+        juiz == null ? null : juiz.tokensSaida(),
+        contexto.reconferenciaLei()));
   }
 
   /**
