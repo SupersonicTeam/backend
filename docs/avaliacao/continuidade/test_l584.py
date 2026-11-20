@@ -442,7 +442,7 @@ class Pontuacao(unittest.TestCase):
         linhas = []
         for r in (1, 2, 3, 4, 5):
             linhas += exec_errada("l584-01", r, APOIO, CITACAO, preparo=r > 2)
-            linhas += exec_errada("l584-02", r, APOIO, [{"norma": "x", "dispositivo": "art. 168"}])
+            linhas += exec_errada("l584-02", r, APOIO, [{"norma": "LC 214/2025", "dispositivo": "art. 168"}])
             linhas += exec_lei("l584-03", r, CONFIRMA) + exec_lei("l584-04", r, CONFIRMA)
         r = pontuar(linhas)
         self.assertEqual(r["fora_por_motivo"], {"preparo_invalido": 2})
