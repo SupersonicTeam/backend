@@ -134,8 +134,11 @@ public interface AuditoriaPorta {
    *                               caracteres
    * @param trechosPromptCitados   desses, os que a resposta anterior citava
    * @param caracteresTrechos      caracteres de texto de lei no prompt
-   * @param tokensEntradaConcordancia tokens de entrada da chamada da concordância (a rota de lei
-   *                               normal, a guarda final do CORRIJO); nulo se ela não rodou
+   * @param tokensEntradaConcordancia tokens de entrada que a concordância (a rota de lei normal, a
+   *                               guarda final do CORRIJO) gastou, já somados aos da pergunta; com
+   *                               o juiz da fidelidade ligado, os do juiz também estão aqui, e
+   *                               nulo se ela não rodou ou falhou (a estimativa de uma chamada que
+   *                               falhou não é gasto)
    * @param desfechoConcordancia   desfecho da rota de lei normal da concordância; nulo se não rodou
    */
   record RegistroReconferenciaLei(

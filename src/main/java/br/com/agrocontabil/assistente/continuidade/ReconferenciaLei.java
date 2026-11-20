@@ -226,15 +226,15 @@ public class ReconferenciaLei {
       List<TrechoRecuperado> complementares = new ArrayList<>(
           busca.buscar(perguntaLei, contexto.hoje()));
       int daBusca = complementares.size();
-      Integer dasCompras = null;
+      contexto.atualizarReconferenciaLei(
+          r -> r.comBusca(BuscaReconferenciaLei.OK, daBusca, null));
       if (misto) {
         List<TrechoRecuperado> compras = trechosDasCompras.buscar(contexto);
-        dasCompras = compras.size();
+        int dasCompras = compras.size();
+        contexto.atualizarReconferenciaLei(
+            r -> r.comBusca(BuscaReconferenciaLei.OK, daBusca, dasCompras));
         complementares.addAll(compras);
       }
-      Integer comprasRegistradas = dasCompras;
-      contexto.atualizarReconferenciaLei(
-          r -> r.comBusca(BuscaReconferenciaLei.OK, daBusca, comprasRegistradas));
       trechos = limitar(RotaLegislacao.juntar(citados, complementares));
     } catch (AssistenteIndisponivelException e) {
       contexto.verificarAtiva();
@@ -592,8 +592,8 @@ public class ReconferenciaLei {
             : rotaLegislacao.responder(perguntaLei, contexto, fonte);
       } catch (AssistenteIndisponivelException e) {
         contexto.verificarAtiva();
-        int daChamada = contexto.gasto().entrada() - entradaAntes;
-        contexto.atualizarReconferenciaLei(r -> r.comConcordancia(daChamada, null));
+        // A chamada que falhou deixa so a estimativa da entrada em curso: nao e gasto, nao vai.
+        contexto.atualizarReconferenciaLei(r -> r.comConcordancia(null, null));
         return MotivoReconferenciaLei.CORRIJO_CONCORDANCIA_INDISPONIVEL;
       }
       int daChamada = contexto.gasto().entrada() - entradaAntes;
@@ -677,15 +677,6 @@ public class ReconferenciaLei {
         false);
   }
 
-  /**
-   * O apoio: aponta os dispositivos da resposta anterior, sem recuar. Com o modelo tendo
-   * respondido, o par novo leva {@code lei.k}; sem ele, o turno é o par de origem.
-   */
-  Resultado apoio(ParConferido par, ContextoAssistente contexto, List<String> dispositivos,
-      DesfechoContinuidade motivo, boolean modeloRespondeu) {
-    return apoio(par, contexto, dispositivos, motivo, modeloRespondeu, null);
-  }
-
   /** O apoio sem chamar o modelo ({@code RECONFERENCIA_SEM_MODELO}), com o motivo da auditoria. */
   private Resultado semModelo(ParConferido par, ContextoAssistente contexto,
       List<String> dispositivos, MotivoReconferenciaLei motivo) {
@@ -694,15 +685,14 @@ public class ReconferenciaLei {
   }
 
   /**
-   * O apoio, com o motivo que vai à auditoria (#584): só o código, nunca texto. {@code null} = não
-   * registra (a chamada dos testes, que não passa por uma pergunta auditada).
+   * O apoio: aponta os dispositivos da resposta anterior, sem recuar. Com o modelo tendo
+   * respondido, o par novo leva {@code lei.k}; sem ele, o turno é o par de origem. O motivo vai à
+   * auditoria (#584): só o código, nunca texto.
    */
-  Resultado apoio(ParConferido par, ContextoAssistente contexto, List<String> dispositivos,
-      DesfechoContinuidade motivo, boolean modeloRespondeu,
+  private Resultado apoio(ParConferido par, ContextoAssistente contexto,
+      List<String> dispositivos, DesfechoContinuidade motivo, boolean modeloRespondeu,
       MotivoReconferenciaLei motivoAuditado) {
-    if (motivoAuditado != null) {
-      contexto.atualizarReconferenciaLei(r -> r.comMotivo(motivoAuditado));
-    }
+    contexto.atualizarReconferenciaLei(r -> r.comMotivo(motivoAuditado));
     List<CitacaoLegal> citacoes = citacoes(dispositivos, contexto);
     String texto = (citacoes.isEmpty() ? APOIO_SEM_DISPOSITIVO
         : APOIO.formatted(referencias(citacoes))) + " " + ENQUADRAMENTO;

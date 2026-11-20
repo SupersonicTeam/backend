@@ -312,29 +312,104 @@ class ReconferenciaLeiAuditoriaTest {
   }
 
   @Test
-  @DisplayName("A instrumentação não muda a resposta nem o desfecho: o texto é o do apoio de antes")
+  @DisplayName("A instrumentação não muda a resposta nem o desfecho: texto e desfechos de sempre")
   void naoMudaARespostaNemODesfecho() {
     when(modelo.chamar(any())).thenReturn(resposta("{\"veredito\": \"CONFIRMO\", "
         + "\"fundamentos\": [{\"marca\": \"T1\", \"citacao\": \"" + CITACAO + "\"}]}"));
-    ParConferido par = parDeLei("Sim, a soja tem redução de 40% da alíquota");
 
-    ReconferenciaLei.Resultado instrumentado = reconferencia.reconferir(par, contexto);
-
-    // O apoio sem motivo auditado é o caminho de antes da #584 (a assinatura de cinco argumentos).
-    ContextoAssistente semAuditoria = new ContextoAssistente(UUID.randomUUID(), HOJE);
-    ReconferenciaLei.Resultado antes = reconferencia.apoio(par, semAuditoria,
-        List.of("LC 214/2025|art. 137, § 1º"), DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO,
-        true);
+    ReconferenciaLei.Resultado r = reconferencia.reconferir(
+        parDeLei("Sim, a soja tem redução de 40% da alíquota"), contexto);
 
     assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CONFIRMO_NUMERO_FATIA);
-    assertThat(semAuditoria.reconferenciaLei()).isNull();
-    assertThat(instrumentado.desfecho()).isEqualTo(antes.desfecho());
-    assertThat(instrumentado.modeloRespondeu()).isEqualTo(antes.modeloRespondeu());
-    assertThat(instrumentado.rota().texto()).isEqualTo(antes.rota().texto())
-        .startsWith("A resposta anterior se baseia em " + REFERENCIA);
-    assertThat(instrumentado.rota().desfecho()).isEqualTo(antes.rota().desfecho())
-        .isEqualTo(DesfechoInteracao.RECONFERENCIA_DESCARTADA);
-    assertThat(instrumentado.rota().citacoes()).isEqualTo(antes.rota().citacoes());
+    assertThat(r.desfecho()).isEqualTo(DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO);
+    assertThat(r.modeloRespondeu()).isTrue();
+    assertThat(r.rota().desfecho()).isEqualTo(DesfechoInteracao.RECONFERENCIA_DESCARTADA);
+    assertThat(r.rota().texto()).isEqualTo("A resposta anterior se baseia em " + REFERENCIA
+        + ". O texto de cada dispositivo está abaixo, com o link. "
+        + ReconferenciaLei.ENQUADRAMENTO);
+    assertThat(r.rota().citacoes()).hasSize(1);
+    assertThat(contexto.registroTurno().reconferida()).isTrue();
+  }
+
+  @Test
+  @DisplayName("Guardas restantes do CONFIRMO e do CORRIJO: cada uma grava o seu código")
+  void guardasRestantes() {
+    String semNumero = "alíquotas do IBS e da CBS incidentes sobre o fornecimento dos produtos "
+        + "agropecuários";
+    String de40 = "A soja tem redução de 40% da alíquota [T1]";
+    String de60 = "A soja tem redução de 60% da alíquota [T1]";
+    when(modelo.chamar(any())).thenReturn(
+        // CONFIRMO cuja citação literal não traz o número da fatia
+        resposta("{\"veredito\": \"CONFIRMO\", \"fundamentos\": [{\"marca\": \"T1\", "
+            + "\"citacao\": \"" + semNumero + "\"}]}"),
+        // CORRIJO com citação do fundamento tirada da anotação
+        resposta(correcao(de40, de60, "Redação dada pela Lei Complementar nº 227")),
+        // CORRIJO cuja frase corrigida não leva a marca
+        resposta(correcao(de40, "A soja tem redução de 60% da alíquota", CITACAO)),
+        // CORRIJO com número que o trecho não tem
+        resposta(correcao(de40, "A soja tem redução de 70% da alíquota [T1]", CITACAO)),
+        // CORRIJO que fala dos dados do produtor
+        resposta(correcao(de40, "Você paga e a soja tem redução de 60% da alíquota [T1]",
+            CITACAO)),
+        // CORRIJO sem diferença: o mesmo número de volta
+        resposta(correcao(de60, de60, CITACAO)),
+        // CORRIJO que inverte sim e não, com a rota normal dizendo sim
+        resposta(correcao("Sim, a soja tem redução de 60% da alíquota [T1]",
+            "Não, a soja tem redução de 60% da alíquota [T1]", CITACAO)));
+    concordanciaCom("Sim, a soja tem redução de 60% da alíquota [T1].", 0);
+
+    String[] frases = {"Sim, a soja tem redução de 60% da alíquota",
+        "A soja tem redução de 40% da alíquota", "A soja tem redução de 40% da alíquota",
+        "A soja tem redução de 40% da alíquota", "A soja tem redução de 40% da alíquota",
+        "A soja tem redução de 60% da alíquota", "Sim, a soja tem redução de 60% da alíquota"};
+    List<MotivoReconferenciaLei> motivos = new java.util.ArrayList<>();
+    for (String frase : frases) {
+      contexto = new ContextoAssistente(UUID.randomUUID(), HOJE);
+      reconferencia.reconferir(parDeLei(frase), contexto);
+      motivos.add(motivo());
+    }
+
+    assertThat(motivos).containsExactly(MotivoReconferenciaLei.CONFIRMO_NUMERO_CITACAO,
+        MotivoReconferenciaLei.CORRIJO_CITACAO_NAO_LITERAL,
+        MotivoReconferenciaLei.CORRIJO_CITACAO_INVALIDA, MotivoReconferenciaLei.CORRIJO_NUMERO,
+        MotivoReconferenciaLei.CORRIJO_DADOS, MotivoReconferenciaLei.CORRIJO_SEM_DIFERENCA,
+        MotivoReconferenciaLei.CORRIJO_CONCORDANCIA_POLARIDADE);
+  }
+
+  @Test
+  @DisplayName("MISTO: os trechos das compras entram na contagem, à parte dos da busca vetorial")
+  void mistoContaOsTrechosDasCompras() {
+    String fatia = "A soja tem redução (" + REFERENCIA + ").";
+    ParConferido misto = new ParConferido("p", "Dados.\n\n" + fatia, "v1.a.b",
+        new CargaTurno(1L, Intencao.MISTO, false, null, null, null, false,
+            new LeiAssinada(LeiAssinada.Classe.CONFIRMADA, new Faixa(8, 8 + fatia.length()), null,
+                "a soja tem redução?", false, false, null)), 0, false);
+    when(trechosDasCompras.buscar(any())).thenReturn(List.of(new TrechoRecuperado(null, "t9",
+        "LC 214/2025", "Anexo IX, item 4", "u", "Item de anexo das compras do produtor.", 0.4)));
+    when(modelo.chamar(any())).thenReturn(resposta("{\"veredito\": \"NAO_SUSTENTA\"}"));
+
+    reconferencia.reconferir(misto, contexto);
+
+    RegistroReconferenciaLei registro = contexto.reconferenciaLei();
+    assertThat(registro.motivo()).isEqualTo(MotivoReconferenciaLei.NAO_SUSTENTA);
+    assertThat(registro.trechosBusca()).isEqualTo(2);
+    assertThat(registro.trechosCompras()).isEqualTo(1);
+    assertThat(registro.trechosPrompt()).isEqualTo(3);
+  }
+
+  @Test
+  @DisplayName("Concordância que falha: nenhum token vai à auditoria (a estimativa não é gasto)")
+  void concordanciaQueFalhaNaoGravaTokens() {
+    when(modelo.chamar(any())).thenReturn(resposta(correcao()));
+    doThrow(new AssistenteIndisponivelException("fora", new RuntimeException("x")))
+        .when(rotaLegislacao).responder(eq("a soja tem redução?"), any(),
+            any(FontePergunta.class));
+
+    reconferencia.reconferir(parDeLei("A soja tem redução de 40% da alíquota"), contexto);
+
+    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_CONCORDANCIA_INDISPONIVEL);
+    assertThat(contexto.reconferenciaLei().tokensEntradaConcordancia()).isNull();
+    assertThat(contexto.reconferenciaLei().desfechoConcordancia()).isNull();
   }
 
   @Test
@@ -377,6 +452,12 @@ class ReconferenciaLeiAuditoriaTest {
       return rota;
     }).when(rotaLegislacao).responder(eq("a soja tem redução?"), any(),
         any(FontePergunta.class));
+  }
+
+  private static String correcao(String anterior, String corrigida, String citacao) {
+    return "{\"veredito\": \"CORRIJO\", \"correcoes\": [{\"fraseAnterior\": \"" + anterior
+        + "\", \"fraseCorrigida\": \"" + corrigida + "\", \"fundamento\": {\"marca\": \"T1\", "
+        + "\"citacao\": \"" + citacao + "\"}}]}";
   }
 
   private static String correcao() {
