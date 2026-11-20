@@ -95,6 +95,19 @@ public class ReconferenciaLei {
   public static final String APOIO = "A resposta anterior se baseia em %s. O texto de cada "
       + "dispositivo está abaixo, com o link.";
 
+  /**
+   * Apoio depois de o modelo ser chamado e responder (CORRIJO, NAO_SUSTENTA e descartes), com um
+   * dispositivo. Frase aprovada pelo Murillo em 2026-11-20 (#584): não afirma erro nem confirma, e
+   * convida a ler o trecho. Sem chamar o modelo vale {@link #APOIO}.
+   */
+  public static final String APOIO_RELIDO = "Reli o texto da lei em que a resposta anterior se "
+      + "baseia (%s). Ele está abaixo, com o link: leia o dispositivo e confira com a resposta.";
+
+  /** {@link #APOIO_RELIDO} com mais de um dispositivo, com o mesmo sentido. */
+  public static final String APOIO_RELIDO_PLURAL = "Reli o texto da lei nos dispositivos em que a "
+      + "resposta anterior se baseia (%s). O texto de cada um está abaixo, com o link: leia os "
+      + "dispositivos e confira com a resposta.";
+
   /** Apoio sem dispositivo resolvido. */
   public static final String APOIO_SEM_DISPOSITIVO = "A resposta anterior se baseia nos "
       + "dispositivos citados nela.";
@@ -702,8 +715,7 @@ public class ReconferenciaLei {
       MotivoReconferenciaLei motivoAuditado) {
     contexto.atualizarReconferenciaLei(r -> r.comMotivo(motivoAuditado));
     List<CitacaoLegal> citacoes = citacoes(dispositivos, contexto);
-    String texto = (citacoes.isEmpty() ? APOIO_SEM_DISPOSITIVO
-        : APOIO.formatted(referencias(citacoes))) + " " + ENQUADRAMENTO;
+    String texto = abertura(citacoes, modeloRespondeu) + " " + ENQUADRAMENTO;
     if (modeloRespondeu) {
       registrarParNovo(par, contexto, citacoes);
     } else {
@@ -712,6 +724,22 @@ public class ReconferenciaLei {
     log.info("Ceres: {}", motivo);
     return new Resultado(new ResultadoRota(texto, DesfechoInteracao.RECONFERENCIA_DESCARTADA,
         citacoes), motivo, modeloRespondeu);
+  }
+
+  /**
+   * A abertura do apoio: depois de o modelo responder, a frase de quem releu o trecho (singular ou
+   * plural pelo número de referências); sem ele, a de sempre. Sem dispositivo resolvido, não há o
+   * que ler abaixo e vale a frase sem link.
+   */
+  private static String abertura(List<CitacaoLegal> citacoes, boolean modeloRespondeu) {
+    if (citacoes.isEmpty()) {
+      return APOIO_SEM_DISPOSITIVO;
+    }
+    if (!modeloRespondeu) {
+      return APOIO.formatted(referencias(citacoes));
+    }
+    boolean varios = citacoes.stream().map(CitacaoLegal::referencia).distinct().count() > 1;
+    return (varios ? APOIO_RELIDO_PLURAL : APOIO_RELIDO).formatted(referencias(citacoes));
   }
 
   private static void devolverOrigem(ParConferido par, ContextoAssistente contexto) {

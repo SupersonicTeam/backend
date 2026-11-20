@@ -121,7 +121,8 @@ class ReconferenciaLeiTest {
 
     assertThat(r.desfecho()).isEqualTo(DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO);
     assertThat(r.rota().texto()).doesNotContain(ReconferenciaLei.CONFIRMA)
-        .startsWith("A resposta anterior se baseia em " + REFERENCIA);
+        .startsWith("Reli o texto da lei em que a resposta anterior se baseia (" + REFERENCIA
+            + ")");
     assertThat(r.rota().desfecho()).isEqualTo(DesfechoInteracao.RECONFERENCIA_DESCARTADA);
   }
 
@@ -177,7 +178,7 @@ class ReconferenciaLeiTest {
           parDeLei("Sim, a soja tem redução de 60% da alíquota"), contexto);
       assertThat(r.rota().texto()).doesNotContain(RotaLegislacao.TRECHOS_SEM_CONFIRMACAO)
           .doesNotContain("Não encontrei fundamento legal")
-          .startsWith("A resposta anterior se baseia em");
+          .startsWith("Reli o texto da lei em que a resposta anterior se baseia");
       assertThat(r.modeloRespondeu()).isTrue();
     }
   }

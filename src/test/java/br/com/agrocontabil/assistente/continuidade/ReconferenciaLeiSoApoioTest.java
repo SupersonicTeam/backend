@@ -61,9 +61,13 @@ class ReconferenciaLeiSoApoioTest {
       "LC 214/2025", "art. 137, § 1º", "https://planalto", TEXTO_TRECHO, 0.9);
   private static final TrechoRecuperado OUTRO = new TrechoRecuperado(null, "t138",
       "LC 214/2025", "art. 138", "u", "Outro trecho de lei sobre insumos e prazos.", 0.5);
-  private static final String APOIO_ESPERADO = "A resposta anterior se baseia em " + REFERENCIA
-      + ". O texto de cada dispositivo está abaixo, com o link. "
-      + ReconferenciaLei.ENQUADRAMENTO;
+  /** Apoio depois de o modelo ser chamado (frase aprovada pelo Murillo em 2026-11-20). */
+  private static final String APOIO_ESPERADO = "Reli o texto da lei em que a resposta anterior "
+      + "se baseia (" + REFERENCIA + "). Ele está abaixo, com o link: leia o dispositivo e "
+      + "confira com a resposta. " + ReconferenciaLei.ENQUADRAMENTO;
+  /** Apoio sem chamar o modelo: a abertura de sempre. */
+  private static final String APOIO_SEM_MODELO = "A resposta anterior se baseia em " + REFERENCIA
+      + ". O texto de cada dispositivo está abaixo, com o link. " + ReconferenciaLei.ENQUADRAMENTO;
 
   @Mock private ModeloLinguagem modelo;
   @Mock private BuscaLegislacaoService busca;
@@ -129,6 +133,67 @@ class ReconferenciaLeiSoApoioTest {
     assertThat(contexto.registroTurno().reconferida()).isTrue();
     verify(modelo, times(1)).chamar(any());
     verify(rotaLegislacao, never()).responder(any(), any(), any(FontePergunta.class));
+  }
+
+  @Test
+  @DisplayName("Duas aberturas de apoio: a nova, só quando o modelo foi chamado e respondeu, e a "
+      + "de sempre nos caminhos sem modelo")
+  void duasAberturas() {
+    // Modelo respondeu (NAO_SUSTENTA, descartes e CORRIJO): a abertura nova, no singular.
+    when(modelo.chamar(any())).thenReturn(resposta("{\"veredito\": \"NAO_SUSTENTA\"}"),
+        resposta("texto solto"));
+    assertThat(reconferencia.reconferir(parDeLei("A soja tem redução de 40% da alíquota"),
+        contexto).rota().texto()).isEqualTo(APOIO_ESPERADO);
+    assertThat(reconferencia.reconferir(parDeLei("A soja tem redução de 40% da alíquota"),
+        new ContextoAssistente(UUID.randomUUID(), HOJE)).rota().texto())
+        .isEqualTo(APOIO_ESPERADO);
+
+    // Sem chamar o modelo (disjuntor, busca que falha): a abertura de sempre.
+    when(disponibilidade.disponivel()).thenReturn(false);
+    assertThat(reconferencia.reconferir(parDeLei("A soja tem redução de 40% da alíquota"),
+        new ContextoAssistente(UUID.randomUUID(), HOJE)).rota().texto())
+        .isEqualTo(APOIO_SEM_MODELO);
+    when(disponibilidade.disponivel()).thenReturn(true);
+    org.mockito.Mockito.doThrow(new br.com.agrocontabil.exception.AssistenteIndisponivelException(
+        "fora", new RuntimeException("x"))).when(busca).buscar(any(), eq(HOJE));
+    assertThat(reconferencia.reconferir(parDeLei("A soja tem redução de 40% da alíquota"),
+        new ContextoAssistente(UUID.randomUUID(), HOJE)).rota().texto())
+        .isEqualTo(APOIO_SEM_MODELO);
+  }
+
+  @Test
+  @DisplayName("Mais de um dispositivo: a abertura nova no plural, com o mesmo sentido")
+  void aberturaNovaNoPlural() {
+    org.mockito.Mockito.doReturn(List.of(TRECHO, OUTRO)).when(buscaTextual)
+        .buscarDispositivos(anyList(), eq(HOJE));
+    String fatia = "A soja tem redução de 40% da alíquota (" + REFERENCIA
+        + "; LC 214/2025, art. 138).";
+    ParConferido par = new ParConferido("a soja tem redução?", fatia, "v1.a.b",
+        new CargaTurno(1L, Intencao.LEGISLACAO, false, null, null, null, false,
+            new LeiAssinada(LeiAssinada.Classe.CONFIRMADA, new Faixa(0, fatia.length()), null,
+                null, false, false, null)), 0, false);
+    when(modelo.chamar(any())).thenReturn(resposta("{\"veredito\": \"NAO_SUSTENTA\"}"));
+
+    String texto = reconferencia.reconferir(par, contexto).rota().texto();
+
+    assertThat(texto).isEqualTo("Reli o texto da lei nos dispositivos em que a resposta anterior "
+        + "se baseia (" + REFERENCIA + " e LC 214/2025, art. 138). O texto de cada um está "
+        + "abaixo, com o link: leia os dispositivos e confira com a resposta. "
+        + ReconferenciaLei.ENQUADRAMENTO);
+  }
+
+  @Test
+  @DisplayName("Apoio com o modelo e sem dispositivo na base: a frase de sempre, sem o link")
+  void semDispositivoNaBase() {
+    org.mockito.Mockito.doReturn(List.of()).when(buscaTextual)
+        .buscarDispositivos(anyList(), eq(HOJE));
+
+    // Sem trecho citado achado na base, a reconferencia nem chama o modelo: apoio sem dispositivo.
+    String texto = reconferencia.reconferir(parDeLei("A soja tem redução de 40% da alíquota"),
+        contexto).rota().texto();
+
+    assertThat(texto).isEqualTo(ReconferenciaLei.APOIO_SEM_DISPOSITIVO + " "
+        + ReconferenciaLei.ENQUADRAMENTO);
   }
 
   @Test

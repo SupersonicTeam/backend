@@ -331,9 +331,9 @@ class ReconferenciaLeiAuditoriaTest {
     assertThat(r.desfecho()).isEqualTo(DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO);
     assertThat(r.modeloRespondeu()).isTrue();
     assertThat(r.rota().desfecho()).isEqualTo(DesfechoInteracao.RECONFERENCIA_DESCARTADA);
-    assertThat(r.rota().texto()).isEqualTo("A resposta anterior se baseia em " + REFERENCIA
-        + ". O texto de cada dispositivo está abaixo, com o link. "
-        + ReconferenciaLei.ENQUADRAMENTO);
+    assertThat(r.rota().texto()).isEqualTo("Reli o texto da lei em que a resposta anterior se "
+        + "baseia (" + REFERENCIA + "). Ele está abaixo, com o link: leia o dispositivo e confira "
+        + "com a resposta. " + ReconferenciaLei.ENQUADRAMENTO);
     assertThat(r.rota().citacoes()).hasSize(1);
     assertThat(contexto.registroTurno().reconferida()).isTrue();
   }
