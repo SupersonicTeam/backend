@@ -103,6 +103,59 @@ public class AssistenteInteracao {
   @Column(name = "tokens_saida_juiz", updatable = false)
   private Integer tokensSaidaJuiz;
 
+  /**
+   * Por que a reconferência de lei da continuidade terminou como terminou (#584, changeSet 0066):
+   * código de lista fechada, nunca texto (#144). Nulo fora da reconferência de lei.
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "reconferencia_lei", length = 40, updatable = false,
+      columnDefinition = "VARCHAR(40)")
+  private MotivoReconferenciaLei reconferenciaLei;
+
+  /** Dispositivos que a resposta anterior citava (#584); nulo fora da reconferência de lei. */
+  @Column(name = "reconferencia_dispositivos", updatable = false)
+  private Integer reconferenciaDispositivos;
+
+  /** Desses, quantos trechos vigentes a base textual achou (#584). */
+  @Column(name = "reconferencia_trechos_citados", updatable = false)
+  private Integer reconferenciaTrechosCitados;
+
+  /** Resultado da busca vetorial da reconferência (#584); nulo se não chegou a ela. */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "reconferencia_busca", length = 10, updatable = false,
+      columnDefinition = "VARCHAR(10)")
+  private BuscaReconferenciaLei reconferenciaBusca;
+
+  /** Trechos que a busca vetorial devolveu (#584); nulo se ela não respondeu. */
+  @Column(name = "reconferencia_trechos_busca", updatable = false)
+  private Integer reconferenciaTrechosBusca;
+
+  /** Trechos dos itens de anexo das compras, só no MISTO (#584). */
+  @Column(name = "reconferencia_trechos_compras", updatable = false)
+  private Integer reconferenciaTrechosCompras;
+
+  /** Trechos que foram ao prompt da reconferência, depois dos tetos (#584). */
+  @Column(name = "reconferencia_trechos_prompt", updatable = false)
+  private Integer reconferenciaTrechosPrompt;
+
+  /** Desses, os que a resposta anterior citava (#584). */
+  @Column(name = "reconferencia_trechos_prompt_citados", updatable = false)
+  private Integer reconferenciaTrechosPromptCitados;
+
+  /** Caracteres de texto de lei no prompt da reconferência (#584). */
+  @Column(name = "reconferencia_caracteres_trechos", updatable = false)
+  private Integer reconferenciaCaracteresTrechos;
+
+  /** Tokens de entrada da chamada da concordância do CORRIJO, já somados aos da pergunta (#584). */
+  @Column(name = "reconferencia_tokens_concordancia", updatable = false)
+  private Integer reconferenciaTokensConcordancia;
+
+  /** Desfecho da rota de lei normal da concordância (#584); nulo se ela não rodou. */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "reconferencia_concordancia", length = 40, updatable = false,
+      columnDefinition = "VARCHAR(40)")
+  private DesfechoInteracao reconferenciaConcordancia;
+
   /** Funções usadas e parâmetros (JSON), já sanitizados. */
   @Column(name = "funcoes", columnDefinition = "TEXT", updatable = false)
   private String funcoes;

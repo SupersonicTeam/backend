@@ -58,6 +58,17 @@ AQUECIMENTO = ("Quanto eu vendi de feijão em março de 2026?", "O que é o Impo
 AUTOTESTE = "Quanto vendi de soja em outubro?"
 CAMPOS_AUDITORIA = ("rota", "desfecho", "camada_classificacao", "latencia_ms",
                     "tokens_entrada", "tokens_saida", "modelo")
+# #584: o motivo do desfecho da reconferência de lei e o que foi ao prompt dela (changeSet 0066).
+# Só existem no banco de um jar com a instrumentação: o executor exporta o que o banco tiver e
+# deixa de fora o que não tiver, para as rodadas antigas continuarem legíveis e o jar antigo
+# continuar rodando. Só códigos e contagens; os contadores saem como número.
+CAMPOS_RECONFERENCIA = ("reconferencia_lei", "reconferencia_dispositivos",
+                        "reconferencia_trechos_citados", "reconferencia_busca",
+                        "reconferencia_trechos_busca", "reconferencia_trechos_compras",
+                        "reconferencia_trechos_prompt", "reconferencia_trechos_prompt_citados",
+                        "reconferencia_caracteres_trechos", "reconferencia_tokens_concordancia",
+                        "reconferencia_concordancia")
+RECONFERENCIA_TEXTOS = ("reconferencia_lei", "reconferencia_busca", "reconferencia_concordancia")
 ROTAS_TECNICAS = {0, 429, 500, 502, 503, 504}
 REPETICOES_581 = 5
 
@@ -170,6 +181,28 @@ def falha_tecnica(chamada: dict) -> bool:
     return chamada["http_status"] != 200 or bool(corpo.get("modoFallback")) or not corpo
 
 
+def montar_auditoria(linhas: list[dict], novas: int, extras: tuple[str, ...] = ()) -> dict:
+    """A auditoria de uma chamada: a linha mais recente e a soma dos tokens de todas.
+
+    `linhas` vem da mais recente para a mais antiga, com os valores em texto (vazio = nulo). Os
+    campos de `extras` (#584, reconferência de lei) saem da linha mais recente, os contadores como
+    número e os códigos como texto; sem `extras` (banco de um jar antigo) o formato é o de antes.
+    """
+    if not linhas:
+        return {}
+
+    def soma(campo: str) -> int | None:
+        numeros = [int(l[campo]) for l in linhas if l[campo].isdigit()]
+        return sum(numeros) if numeros else None
+    ultima = {c: (linhas[0][c] or None) for c in CAMPOS_AUDITORIA}
+    ultima.update(tokens_entrada=soma("tokens_entrada"), tokens_saida=soma("tokens_saida"),
+                  linhas=novas, camadas=[l["camada_classificacao"] or None for l in linhas])
+    for campo in extras:
+        valor = linhas[0].get(campo) or None
+        ultima[campo] = valor if valor is None or campo in RECONFERENCIA_TEXTOS else int(valor)
+    return ultima
+
+
 # ---------------------------------------------------------------------------------------------
 # Banco (só leitura, pelo psql do container)
 # ---------------------------------------------------------------------------------------------
@@ -209,6 +242,17 @@ class Banco:
     def contagem_auditoria(self) -> int:
         return int(self.consulta("select count(*) from assistente_interacao")[0][0])
 
+    def campos_reconferencia(self) -> tuple[str, ...]:
+        """As colunas da reconferência (#584) que este banco tem, na ordem de CAMPOS_RECONFERENCIA."""
+        if not hasattr(self, "_campos_reconferencia"):
+            lista = ", ".join(f"'{c}'" for c in CAMPOS_RECONFERENCIA)
+            presentes = {l[0] for l in self.consulta(
+                "select column_name from information_schema.columns "
+                f"where table_name = 'assistente_interacao' and column_name in ({lista})")}
+            self._campos_reconferencia = tuple(
+                c for c in CAMPOS_RECONFERENCIA if c in presentes)
+        return self._campos_reconferencia
+
     def auditoria_nova(self, contagem_antes: int) -> dict:
         """As linhas que a chamada gravou: a mais recente e a soma dos tokens de todas.
 
@@ -218,20 +262,13 @@ class Banco:
         novas = self.contagem_auditoria() - contagem_antes
         if novas < 1:
             return {}
-        colunas = ", ".join(f"coalesce({c}::text, '')" for c in CAMPOS_AUDITORIA)
-        linhas = [dict(zip(CAMPOS_AUDITORIA, valores)) for valores in self.consulta(
+        extras = self.campos_reconferencia()
+        campos = CAMPOS_AUDITORIA + extras
+        colunas = ", ".join(f"coalesce({c}::text, '')" for c in campos)
+        linhas = [dict(zip(campos, valores)) for valores in self.consulta(
             f"select {colunas} from assistente_interacao order by criado_em desc limit {novas}")
-            if len(valores) == len(CAMPOS_AUDITORIA)]
-        if not linhas:
-            return {}
-
-        def soma(campo: str) -> int | None:
-            numeros = [int(l[campo]) for l in linhas if l[campo].isdigit()]
-            return sum(numeros) if numeros else None
-        ultima = {c: (v or None) for c, v in linhas[0].items()}
-        ultima.update(tokens_entrada=soma("tokens_entrada"), tokens_saida=soma("tokens_saida"),
-                      linhas=novas, camadas=[l["camada_classificacao"] or None for l in linhas])
-        return ultima
+            if len(valores) == len(campos)]
+        return montar_auditoria(linhas, novas, extras)
 
 
 # ---------------------------------------------------------------------------------------------

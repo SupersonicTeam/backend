@@ -3,7 +3,9 @@ package br.com.agrocontabil.assistente.continuidade;
 /**
  * O que a continuidade fez numa pergunta (#499), um valor por caminho, guarda e conferência. Vai ao
  * log em {@code INFO} só como enum: nenhum texto do histórico, da reescrita nem da reconferência.
- * Colunas na auditoria ficam para depois da banca.
+ * O motivo da reconferência de lei, mais fino que este enum, vai à auditoria como
+ * {@code MotivoReconferenciaLei} (changeSet 0066, #584); as outras colunas ficam para depois da
+ * banca.
  */
 public enum DesfechoContinuidade {
   /** MAC, formato, codificação, rota, faixa ou função fora da lista: o histórico inteiro saiu. */

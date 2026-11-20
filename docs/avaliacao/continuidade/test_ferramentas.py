@@ -307,5 +307,78 @@ class Pontuacao(unittest.TestCase):
         self.assertIsNone(pc.p95([]))
 
 
+class AuditoriaDaReconferencia(unittest.TestCase):
+    """#584: os campos novos da auditoria saem no JSONL quando o banco os tem e só então."""
+
+    ANTIGA = {"rota": "LEGISLACAO", "desfecho": "RECONFERENCIA_DESCARTADA",
+              "camada_classificacao": "RECONFERENCIA_LEI", "latencia_ms": "3200",
+              "tokens_entrada": "3258", "tokens_saida": "437", "modelo": "anthropic/m"}
+    NOVA = dict(ANTIGA, reconferencia_lei="CORRIJO_CONCORDANCIA_SEM_FRASE",
+                reconferencia_dispositivos="1", reconferencia_trechos_citados="1",
+                reconferencia_busca="OK", reconferencia_trechos_busca="5",
+                reconferencia_trechos_compras="", reconferencia_trechos_prompt="6",
+                reconferencia_trechos_prompt_citados="1",
+                reconferencia_caracteres_trechos="9000",
+                reconferencia_tokens_concordancia="1100",
+                reconferencia_concordancia="RESPONDIDA")
+
+    def test_banco_antigo_mantem_o_formato_de_antes(self):
+        saida = ex.montar_auditoria([self.ANTIGA], 1)
+        self.assertEqual(
+            sorted(saida), sorted(ex.CAMPOS_AUDITORIA + ("linhas", "camadas")))
+        self.assertEqual(saida["tokens_entrada"], 3258)
+        self.assertEqual(saida["desfecho"], "RECONFERENCIA_DESCARTADA")
+        self.assertEqual(saida["camadas"], ["RECONFERENCIA_LEI"])
+        self.assertFalse(any(c.startswith("reconferencia_") for c in saida))
+
+    def test_banco_novo_exporta_codigos_como_texto_e_contagens_como_numero(self):
+        extras = ex.CAMPOS_RECONFERENCIA
+        saida = ex.montar_auditoria([self.NOVA], 1, extras)
+        self.assertEqual(saida["reconferencia_lei"], "CORRIJO_CONCORDANCIA_SEM_FRASE")
+        self.assertEqual(saida["reconferencia_busca"], "OK")
+        self.assertEqual(saida["reconferencia_concordancia"], "RESPONDIDA")
+        self.assertEqual(saida["reconferencia_trechos_prompt"], 6)
+        self.assertEqual(saida["reconferencia_tokens_concordancia"], 1100)
+        self.assertIsNone(saida["reconferencia_trechos_compras"])
+        # o que já era pontuado não muda
+        antiga = ex.montar_auditoria([self.ANTIGA], 1)
+        for campo in ex.CAMPOS_AUDITORIA + ("linhas", "camadas"):
+            self.assertEqual(saida[campo], antiga[campo])
+
+    def test_fora_da_reconferencia_os_campos_saem_nulos(self):
+        linha = dict(self.NOVA, **{c: "" for c in ex.CAMPOS_RECONFERENCIA})
+        saida = ex.montar_auditoria([linha], 1, ex.CAMPOS_RECONFERENCIA)
+        self.assertTrue(all(saida[c] is None for c in ex.CAMPOS_RECONFERENCIA))
+
+    def test_tokens_somam_todas_as_linhas_e_os_campos_novos_vem_da_mais_recente(self):
+        mais_recente = dict(self.NOVA, tokens_entrada="100")
+        mais_antiga = dict(self.ANTIGA, tokens_entrada="200",
+                           **{c: "9" for c in ex.CAMPOS_RECONFERENCIA
+                              if c not in ex.RECONFERENCIA_TEXTOS})
+        saida = ex.montar_auditoria([mais_recente, mais_antiga], 2, ex.CAMPOS_RECONFERENCIA)
+        self.assertEqual(saida["tokens_entrada"], 300)
+        self.assertEqual(saida["linhas"], 2)
+        self.assertEqual(saida["reconferencia_trechos_prompt"], 6)
+
+    def test_sem_linha_nao_ha_auditoria(self):
+        self.assertEqual(ex.montar_auditoria([], 0, ex.CAMPOS_RECONFERENCIA), {})
+
+    def test_o_banco_so_oferece_as_colunas_que_tem(self):
+        banco = object.__new__(ex.Banco)
+        consultas = []
+
+        def consulta(sql):
+            consultas.append(sql)
+            return [["reconferencia_busca"], ["reconferencia_lei"]]
+        banco.consulta = consulta
+        self.assertEqual(banco.campos_reconferencia(),
+                         ("reconferencia_lei", "reconferencia_busca"))
+        banco.campos_reconferencia()
+        self.assertEqual(len(consultas), 1)  # a pergunta ao catálogo é uma só por banco
+        sem_colunas = object.__new__(ex.Banco)
+        sem_colunas.consulta = lambda sql: []
+        self.assertEqual(sem_colunas.campos_reconferencia(), ())
+
+
 if __name__ == "__main__":
     unittest.main()

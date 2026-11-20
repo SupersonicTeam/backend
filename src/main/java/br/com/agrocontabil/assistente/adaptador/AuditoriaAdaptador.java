@@ -21,6 +21,7 @@ public class AuditoriaAdaptador implements AuditoriaPorta {
 
   @Override
   public UUID registrar(RegistroInteracao r) {
+    RegistroReconferenciaLei rec = r.reconferenciaLei();
     return interacaoService.registrar(AssistenteInteracao.builder()
         .produtorId(r.produtorId())
         .rota(r.rota())
@@ -33,6 +34,17 @@ public class AuditoriaAdaptador implements AuditoriaPorta {
         .latenciaJuizMs(r.latenciaJuizMs())
         .tokensEntradaJuiz(r.tokensEntradaJuiz())
         .tokensSaidaJuiz(r.tokensSaidaJuiz())
+        .reconferenciaLei(rec == null ? null : rec.motivo())
+        .reconferenciaDispositivos(rec == null ? null : rec.dispositivos())
+        .reconferenciaTrechosCitados(rec == null ? null : rec.trechosCitadosAchados())
+        .reconferenciaBusca(rec == null ? null : rec.busca())
+        .reconferenciaTrechosBusca(rec == null ? null : rec.trechosBusca())
+        .reconferenciaTrechosCompras(rec == null ? null : rec.trechosCompras())
+        .reconferenciaTrechosPrompt(rec == null ? null : rec.trechosPrompt())
+        .reconferenciaTrechosPromptCitados(rec == null ? null : rec.trechosPromptCitados())
+        .reconferenciaCaracteresTrechos(rec == null ? null : rec.caracteresTrechos())
+        .reconferenciaTokensConcordancia(rec == null ? null : rec.tokensEntradaConcordancia())
+        .reconferenciaConcordancia(rec == null ? null : rec.desfechoConcordancia())
         .funcoes(r.funcoesJson())
         .chamadasFuncao(r.chamadasFuncao())
         .trechosCitados(r.trechosCitadosJson())

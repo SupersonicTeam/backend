@@ -668,6 +668,75 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0066: motivo e contagens da reconferencia de lei, nulos fora dela (#584)")
+  void changeSet0066ReconferenciaLei() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'assistente_interacao'"
+            + " AND column_name LIKE 'reconferencia_%' ORDER BY column_name");
+    assertThat(colunas).extracting(c -> c.get("column_name"))
+        .containsExactly("reconferencia_busca", "reconferencia_caracteres_trechos",
+            "reconferencia_concordancia", "reconferencia_dispositivos", "reconferencia_lei",
+            "reconferencia_tokens_concordancia", "reconferencia_trechos_busca",
+            "reconferencia_trechos_citados", "reconferencia_trechos_compras",
+            "reconferencia_trechos_prompt", "reconferencia_trechos_prompt_citados");
+    assertThat(colunas).allSatisfy(c -> assertThat(c.get("is_nullable")).isEqualTo("YES"));
+    assertThat(colunas).filteredOn(c -> "reconferencia_lei".equals(c.get("column_name")))
+        .singleElement().satisfies(c -> assertThat(
+            ((Number) c.get("character_maximum_length")).intValue()).isEqualTo(40));
+    // O maior motivo cabe na coluna de 40.
+    assertThat(java.util.Arrays.stream(
+        br.com.agrocontabil.model.MotivoReconferenciaLei.values())
+        .mapToInt(m -> m.name().length()).max().orElseThrow()).isLessThanOrEqualTo(40);
+
+    String produtor = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor 0066')",
+        produtor);
+    UUID semReconferencia = interacaoService.registrar(AssistenteInteracao.builder()
+        .produtorId(UUID.fromString(produtor)).rota("DADOS")
+        .desfecho(DesfechoInteracao.RESPONDIDA).chamadasFuncao(1).latenciaMs(10)
+        .tamanhoPergunta(20).criadoEm(java.time.OffsetDateTime.now()).build());
+    UUID descartada = interacaoService.registrar(AssistenteInteracao.builder()
+        .produtorId(UUID.fromString(produtor)).rota("LEGISLACAO")
+        .desfecho(DesfechoInteracao.RECONFERENCIA_DESCARTADA)
+        .reconferenciaLei(br.com.agrocontabil.model.MotivoReconferenciaLei
+            .CORRIJO_CONCORDANCIA_INDISPONIVEL)
+        .reconferenciaDispositivos(2).reconferenciaTrechosCitados(1)
+        .reconferenciaBusca(br.com.agrocontabil.model.BuscaReconferenciaLei.OK)
+        .reconferenciaTrechosBusca(5).reconferenciaTrechosPrompt(6)
+        .reconferenciaTrechosPromptCitados(1).reconferenciaCaracteresTrechos(9000)
+        .reconferenciaTokensConcordancia(1100)
+        .reconferenciaConcordancia(DesfechoInteracao.CITACAO_INVALIDA).latenciaMs(10)
+        .tamanhoPergunta(20).criadoEm(java.time.OffsetDateTime.now()).build());
+
+    assertThat(jdbc.queryForMap("SELECT reconferencia_lei, reconferencia_trechos_prompt,"
+        + " reconferencia_busca, reconferencia_concordancia FROM assistente_interacao"
+        + " WHERE id = ?", semReconferencia))
+        .containsEntry("reconferencia_lei", null)
+        .containsEntry("reconferencia_trechos_prompt", null)
+        .containsEntry("reconferencia_busca", null)
+        .containsEntry("reconferencia_concordancia", null);
+    assertThat(jdbc.queryForMap("SELECT reconferencia_lei, reconferencia_dispositivos,"
+        + " reconferencia_trechos_citados, reconferencia_busca, reconferencia_trechos_busca,"
+        + " reconferencia_trechos_compras, reconferencia_trechos_prompt,"
+        + " reconferencia_trechos_prompt_citados, reconferencia_caracteres_trechos,"
+        + " reconferencia_tokens_concordancia, reconferencia_concordancia"
+        + " FROM assistente_interacao WHERE id = ?", descartada))
+        .containsEntry("reconferencia_lei", "CORRIJO_CONCORDANCIA_INDISPONIVEL")
+        .containsEntry("reconferencia_dispositivos", 2)
+        .containsEntry("reconferencia_trechos_citados", 1)
+        .containsEntry("reconferencia_busca", "OK")
+        .containsEntry("reconferencia_trechos_busca", 5)
+        .containsEntry("reconferencia_trechos_compras", null)
+        .containsEntry("reconferencia_trechos_prompt", 6)
+        .containsEntry("reconferencia_trechos_prompt_citados", 1)
+        .containsEntry("reconferencia_caracteres_trechos", 9000)
+        .containsEntry("reconferencia_tokens_concordancia", 1100)
+        .containsEntry("reconferencia_concordancia", "CITACAO_INVALIDA");
+  }
+
+  @Test
   @DisplayName("changeSet 0030: desfecho por parte do MISTO, nulo fora dele, sem texto")
   void changeSet0030PartesDoMisto() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
@@ -1488,13 +1557,18 @@ class LiquibaseChangelogIntegrationTest {
             + " WHERE table_name = 'assistente_interacao' ORDER BY column_name",
         String.class);
 
-    // As colunas da explicacao (#268, changeSet 0064) e da fidelidade da lei (#269, changeSet
-    // 0065) tambem sao so desfecho e metricas.
+    // As colunas da explicacao (#268, changeSet 0064), da fidelidade da lei (#269, changeSet
+    // 0065) e da reconferencia de lei (#584, changeSet 0066) tambem sao so codigo e metricas.
     assertThat(colunas).containsExactly(
         "camada_classificacao", "chamadas_funcao", "criado_em", "desfecho", "desfecho_dados",
         "desfecho_explicacao", "desfecho_legislacao", "fidelidade_lei",
         "funcoes", "id", "latencia_explicacao_ms", "latencia_juiz_ms", "latencia_ms", "modelo",
-        "pergunta_lei_reescrita", "produtor_id", "rota",
+        "pergunta_lei_reescrita", "produtor_id", "reconferencia_busca",
+        "reconferencia_caracteres_trechos", "reconferencia_concordancia",
+        "reconferencia_dispositivos", "reconferencia_lei", "reconferencia_tokens_concordancia",
+        "reconferencia_trechos_busca", "reconferencia_trechos_citados",
+        "reconferencia_trechos_compras", "reconferencia_trechos_prompt",
+        "reconferencia_trechos_prompt_citados", "rota",
         "tamanho_pergunta", "tokens_entrada", "tokens_entrada_explicacao", "tokens_entrada_juiz",
         "tokens_estimados", "tokens_saida", "tokens_saida_explicacao", "tokens_saida_juiz",
         "trechos_citados");

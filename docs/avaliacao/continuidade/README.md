@@ -60,6 +60,15 @@ sozinha); sem a opção, nada muda. O `validar_conjunto.py` aceita a parte `c581
   (dev). Uma pergunta, um fato ou uma troca mudados depois da revisão fazem o validador recusar
   o conjunto, e o executor não roda.
 
+### Campos da auditoria da reconferência de lei (#584)
+
+Com um jar que tenha o changeSet 0066, o `auditoria` de cada linha do `rodada.jsonl` ganha os
+campos `reconferencia_*` (motivo do desfecho como código de lista fechada, dispositivos e trechos
+achados, busca vetorial `OK`/`FALHOU`, trechos que foram ao prompt e à concordância, tokens e
+desfecho da concordância), tirados da linha de auditoria mais recente da chamada; fora da
+reconferência de lei ficam `null`. O executor pergunta ao catálogo do banco quais colunas existem:
+com um jar antigo os campos não saem e o formato é o de antes. Nada disso entra na pontuação.
+
 ### Regra v3 (2026-11-11), com o conjunto na v2
 
 A regra mudou antes de qualquer rodada oficial, por mudança de contrato e não por resultado. A
