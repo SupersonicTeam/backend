@@ -64,6 +64,11 @@ public enum DesfechoContinuidade {
   RECONFERENCIA_CONFIRMOU,
   /** Reconferência corrigiu um ou dois pontos. */
   RECONFERENCIA_CORRIGIU,
+  /**
+   * O modelo indicou uma correção e a resposta saiu como apoio, sem a correção por texto (#584,
+   * o padrão): nenhuma frase do modelo vai ao produtor.
+   */
+  RECONFERENCIA_APOIO_SEM_CORRECAO,
   /** O modelo disse que os trechos não sustentam: apoio. */
   RECONFERENCIA_NAO_SUSTENTA,
   /** Saída fora do formato ou cortada: apoio. */

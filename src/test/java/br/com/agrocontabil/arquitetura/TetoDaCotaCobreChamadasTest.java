@@ -124,6 +124,8 @@ class TetoDaCotaCobreChamadasTest {
       + "parcela dele (8.192 + 128 x 4 = 8.704); o sem modelo, nao; desligado, nada muda")
   void reservasPorCaminhoComOJuizDaLei() {
     AssistenteProperties propriedades = new AssistenteProperties();
+    // Com a correcao por texto ligada (#584): os caminhos da reconferencia com a concordancia.
+    propriedades.getContinuidade().setLeiCorrijoPorTexto(true);
     for (CaminhoCota caminho : CaminhoCota.values()) {
       assertThat(propriedades.tetoDaPergunta(1.0, caminho)).as(caminho.name())
           .isEqualTo(propriedades.getCota().tetoDaPergunta(propriedades.getTetos(), 1.0,
@@ -142,6 +144,41 @@ class TetoDaCotaCobreChamadasTest {
         .isEqualTo(34_816 + 8_704);
     assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.REESCRITA))
         .isEqualTo(43_776 + 8_704);
+  }
+
+  @Test
+  @DisplayName("#584: sem a correcao por texto (padrao), a reconferencia de lei nao faz a "
+      + "concordancia: 1 chamada (8.192 + 1.024 x 4 = 12.288) e, no MISTO, 2 (22.528), sem "
+      + "a parcela do juiz; ligada, voltam 24.576 e 34.816")
+  void reservaDaReconferenciaSoComApoio() {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    assertThat(propriedades.getContinuidade().isLeiCorrijoPorTexto()).isFalse();
+    assertThat(CaminhoCota.RECONFERENCIA_APOIO.chamadas()).isEqualTo(1);
+    assertThat(CaminhoCota.RECONFERENCIA_MISTO_APOIO.chamadas()).isEqualTo(2);
+
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.RECONFERENCIA)).isEqualTo(12_288)
+        .isEqualTo(propriedades.getCota().tetoDaPergunta(propriedades.getTetos(), 1.0,
+            CaminhoCota.RECONFERENCIA_APOIO));
+    // 2 x 8.192 + (512 + 1.024) x 4.
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.RECONFERENCIA_MISTO))
+        .isEqualTo(22_528);
+    // Os outros caminhos nao mudam.
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.NORMAL)).isEqualTo(31_744);
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.REESCRITA)).isEqualTo(43_776);
+
+    // O juiz da lei so roda na rota de lei da concordancia, que nao existe nesse caminho.
+    propriedades.getFidelidadeLei().setEnabled(true);
+    propriedades.getFidelidadeLei().getJuiz().setEnabled(true);
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.RECONFERENCIA)).isEqualTo(12_288);
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.RECONFERENCIA_MISTO))
+        .isEqualTo(22_528);
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.NORMAL)).isEqualTo(31_744 + 8_704);
+
+    propriedades.getContinuidade().setLeiCorrijoPorTexto(true);
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.RECONFERENCIA))
+        .isEqualTo(24_576 + 8_704);
+    assertThat(propriedades.tetoDaPergunta(1.0, CaminhoCota.RECONFERENCIA_MISTO))
+        .isEqualTo(34_816 + 8_704);
   }
 
   @Test

@@ -154,6 +154,7 @@ public class ReconferenciaLei {
   private final RotaLegislacao rotaLegislacao;
   private final TrechosDasCompras trechosDasCompras;
   private final DisponibilidadeModelo disponibilidade;
+  private final AssistenteProperties propriedades;
   private final int teto;
 
   /** Constrói a reconferência; o teto é {@code app.assistente.tetos.reconferencia}. */
@@ -171,6 +172,7 @@ public class ReconferenciaLei {
     this.rotaLegislacao = rotaLegislacao;
     this.trechosDasCompras = trechosDasCompras;
     this.disponibilidade = disponibilidade;
+    this.propriedades = propriedades;
     this.teto = propriedades.getTetos().getReconferencia();
   }
 
@@ -301,7 +303,13 @@ public class ReconferenciaLei {
         porMarca, marcasCitadas, misto, contexto);
     return switch (tipo) {
       case "CONFIRMO" -> conferencia.confirmo(veredito.get(), dispositivos);
-      case "CORRIJO" -> conferencia.corrijo(veredito.get(), dispositivos);
+      case "CORRIJO" -> propriedades.getContinuidade().isLeiCorrijoPorTexto()
+          ? conferencia.corrijo(veredito.get(), dispositivos)
+          // Decisão do Murillo (2026-11-20, #584): na contestação de lei a Ceres mostra só o trecho
+          // da lei. O CORRIJO do modelo não vira frase de correção nem chama a concordância.
+          : apoio(par, contexto, dispositivos,
+              DesfechoContinuidade.RECONFERENCIA_APOIO_SEM_CORRECAO, true,
+              MotivoReconferenciaLei.CORRIJO_INDICADO_APOIO);
       case "NAO_SUSTENTA" -> apoio(par, contexto, dispositivos,
           DesfechoContinuidade.RECONFERENCIA_NAO_SUSTENTA, true,
           MotivoReconferenciaLei.NAO_SUSTENTA);

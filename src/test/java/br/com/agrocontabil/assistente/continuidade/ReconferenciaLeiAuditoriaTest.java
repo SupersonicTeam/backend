@@ -83,7 +83,7 @@ class ReconferenciaLeiAuditoriaTest {
     contexto = new ContextoAssistente(UUID.randomUUID(), HOJE);
     reconferencia = new ReconferenciaLei(modelo, busca, buscaTextual, new ValidadorCitacao(),
         new ValidadorNumeros(), new VerificadorAfirmacaoDados(), rotaLegislacao,
-        trechosDasCompras, disponibilidade, new AssistenteProperties());
+        trechosDasCompras, disponibilidade, comCorrecaoPorTexto());
     lenient().when(disponibilidade.disponivel()).thenReturn(true);
     lenient().when(buscaTextual.buscarDispositivos(anyList(), eq(HOJE)))
         .thenReturn(List.of(TRECHO));
@@ -92,6 +92,13 @@ class ReconferenciaLeiAuditoriaTest {
 
   private MotivoReconferenciaLei motivo() {
     return contexto.reconferenciaLei().motivo();
+  }
+
+  /** Os testes desta classe cobrem a correção por texto e suas guardas (#584: chave ligada). */
+  private static AssistenteProperties comCorrecaoPorTexto() {
+    AssistenteProperties propriedades = new AssistenteProperties();
+    propriedades.getContinuidade().setLeiCorrijoPorTexto(true);
+    return propriedades;
   }
 
   @Test
