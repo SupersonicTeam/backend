@@ -27,6 +27,14 @@ o braço desligado. O comportamento para o conjunto da #499 (o padrão) não mud
   CERES_SENHA=... python3 executar_continuidade.py --conjunto 581 --pasta <worktree> \\
       --braco ligado http://localhost:8502 agroconia_581_ligado \\
       --modelo anthropic/claude-haiku-5-5 --saida-dir <pasta>
+
+Conjunto da contestação de lei (`--conjunto l584`, regra-de-decisao-l584.md, #584): como o da #581,
+só o braço `ligado`, 5 repetições por padrão e sem a lei sozinha. A rodada oficial exige a
+`revisao_lei` do conjunto registrada (`status` revisado); sem ela só roda o ensaio (`--ids`).
+
+  CERES_SENHA=... python3 executar_continuidade.py --conjunto l584 --pasta <worktree> \\
+      --braco ligado http://localhost:8502 agroconia_l584_ligado \\
+      --modelo anthropic/claude-haiku-5-5 --saida-dir <pasta>
 """
 
 from __future__ import annotations
@@ -71,6 +79,8 @@ CAMPOS_RECONFERENCIA = ("reconferencia_lei", "reconferencia_dispositivos",
 RECONFERENCIA_TEXTOS = ("reconferencia_lei", "reconferencia_busca", "reconferencia_concordancia")
 ROTAS_TECNICAS = {0, 429, 500, 502, 503, 504}
 REPETICOES_581 = 5
+REPETICOES_L584 = 5
+SO_LIGADO = ("581", "l584")  # conjuntos medidos só no braço ligado, sem a lei sozinha
 
 
 def agora() -> dt.datetime:
@@ -603,6 +613,14 @@ def carregar(caminho: Path) -> tuple[dict, str]:
     return conjunto, hashlib.sha256(caminho.read_bytes()).hexdigest()
 
 
+def exigir_revisao_para_a_rodada(conjunto: dict, ids: list | None) -> None:
+    """Rodada oficial do conjunto da #584 só com a `revisao_lei` registrada; o ensaio (`--ids`) roda."""
+    if ids or conjunto["revisao_lei"].get("status") == "revisado":
+        return
+    raise SystemExit("revisao_lei do conjunto da #584 não está registrada (status revisado): só o "
+                     "ensaio com --ids roda; a rodada oficial exige a revisão da equipe")
+
+
 def main(argv=None) -> int:
     analisador = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     analisador.add_argument("--pasta", required=True, help="worktree limpo do commit medido")
@@ -610,11 +628,12 @@ def main(argv=None) -> int:
                             metavar=("NOME", "URL", "BANCO"))
     analisador.add_argument("--modelo", required=True)
     analisador.add_argument("--saida-dir", required=True)
-    analisador.add_argument("--conjunto", choices=("499", "581"), default="499",
+    analisador.add_argument("--conjunto", choices=("499", "581", "l584"), default="499",
                             help="499: dev e teste, dois braços (padrão); 581: o conjunto do "
-                                 "falso positivo do corrijo, só o braço ligado")
+                                 "falso positivo do corrijo, só o braço ligado; l584: o da "
+                                 "contestação de lei, só o braço ligado")
     analisador.add_argument("--repeticoes", type=int, default=None,
-                            help="padrão: 3 no conjunto da 499 e 5 no da 581")
+                            help="padrão: 3 no conjunto da 499 e 5 no da 581 e no da l584")
     analisador.add_argument("--tentativas", type=int, default=3)
     analisador.add_argument("--lei-sozinha", type=int, default=5)
     analisador.add_argument("--intervalo", type=float, default=3.2)
@@ -624,16 +643,19 @@ def main(argv=None) -> int:
     if not senha:
         raise SystemExit("CERES_SENHA ausente")
     nomes = {b[0] for b in args.braco}
-    esperados = {"ligado"} if args.conjunto == "581" else {"desligado", "ligado"}
+    esperados = {"ligado"} if args.conjunto in SO_LIGADO else {"desligado", "ligado"}
     if nomes != esperados:
         raise SystemExit(f"os braços precisam ser {sorted(esperados)} no conjunto {args.conjunto}")
     if args.repeticoes is None:
-        args.repeticoes = REPETICOES_581 if args.conjunto == "581" else 3
-    if args.conjunto == "581":
+        args.repeticoes = {"581": REPETICOES_581, "l584": REPETICOES_L584}.get(args.conjunto, 3)
+    if args.conjunto in SO_LIGADO:
         args.lei_sozinha = 0
     commit = commit_limpo(args.pasta)
-    conjuntos = [carregar(vc.ARQUIVO_581)] if args.conjunto == "581" \
-        else [carregar(vc.ARQUIVOS[1]), carregar(vc.ARQUIVOS[0])]
+    conjuntos = {"581": lambda: [carregar(vc.ARQUIVO_581)],
+                 "l584": lambda: [carregar(vc.ARQUIVO_L584)]}.get(
+        args.conjunto, lambda: [carregar(vc.ARQUIVOS[1]), carregar(vc.ARQUIVOS[0])])()
+    if args.conjunto == "l584":
+        exigir_revisao_para_a_rodada(conjuntos[0][0], args.ids)
     bracos = {nome: Braco(nome, url.rstrip("/"), banco, senha, args.intervalo)
               for nome, url, banco in args.braco}
     saida_dir = Path(args.saida_dir)

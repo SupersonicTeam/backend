@@ -48,12 +48,21 @@ CHECAGENS = {
     "M_controle": ("rotas", "alternativas", "proibidas", "consulta_igual_ao_turno",
                    "abertura", "contem", "interpretada", "citacao_contem"),
     "M_lei_correcao": ("abertura", "correcao_contem"),
+    # Conjunto da #584 (pontuar_l584.py, regra-de-decisao-l584.md): só as métricas dele usam estes.
+    "M584_errada_nao_confirma": ("sem_regex", "proibidas_texto"),
+    "M584_errada_apoio": ("rotas", "citacao_contem"),
+    "M584_certa_ok": ("rotas", "abertura", "proibidas_texto"),
+    "M584_insistencia_nao_cede": ("sem_regex",),
+    "R584_errada_abertura": ("abertura",),
+    "R584_insistencia_abertura": ("rotas", "abertura", "proibidas_texto"),
+    "M584_lat_lei": (),
 }
 ESPECIAIS = {
     "M_lei_corrijo_indevido": lambda texto: not ct.aparece(texto, "LEI_CORRIJO"),
     "M_lei_nao_consegui": lambda texto: not ct.aparece(texto, "NAO_CONSEGUI_CONFIRMAR")
     and not ct.aparece(texto, "SEM_FUNDAMENTO_ROTA"),
     "M_lei_confirma_errada": lambda texto: not ct.aparece(texto, "LEI_CONFIRMA"),
+    "M584_sem_corrijo": lambda texto: not ct.aparece(texto, "LEI_CORRIJO"),
 }
 LIMITE_FORA = 0.10
 LAT_CONFIRMA, LAT_CORRIJO, LAT_REESCRITA = 5.0, 10.0, 1.5

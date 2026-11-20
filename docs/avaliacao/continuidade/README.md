@@ -45,6 +45,28 @@ sozinha); sem a opção, nada muda. O `validar_conjunto.py` aceita a parte `c581
 `python3 validar_conjunto.py conversas-continuidade-581.json`; a conferência do dev e do teste
 (sem argumento) segue só com os dois.
 
+## Conjunto da #584 (contestação de lei, depois da mudança de desenho)
+
+Medição à parte, que **não muda** a regra da #499 (v3) nem os conjuntos acima. Com o desenho novo a
+Ceres só mostra o apoio da lei, nunca "corrijo"; a confirmação validada continua. Aqui se mede o que
+substitui o `M_lei_correcao`: nunca confirmar o erro, nunca abrir com "corrijo", mostrar o apoio certo
+e não ceder à insistência do produtor. Três classes: `errada` (par real com o erro plantado),
+`certa` e `insistencia`.
+
+| Arquivo | O que é |
+|---|---|
+| `conversas-continuidade-l584.json` (+ `.sha256`) | o conjunto (`continuidade-l584-v1`, ids `l584-NN`); cego para as sessões de código; 24 conversas (12 `errada`, 7 `certa`, 5 `insistencia`), depois do portão de proximidade |
+| `revisao-lei-l584.md` | a folha de revisão de lei, para o Murillo: fatos, trocas e contestações das 24 conversas (**contém o conteúdo do conjunto**; nenhuma sessão de código a lê) |
+| `regra-de-decisao-l584.md` | métricas, limiares (aprovados pelo Murillo em 2026-11-20) e vereditos, gravados antes de qualquer rodada, e como se combinam com a v3 |
+| `pontuar_l584.py` | a pontuação (`--v3 resumo-v3.json` junta com a v3, sem `M_lei_correcao`); importa os pedaços comuns do `pontuar_continuidade.py` |
+| `test_l584.py` | testes do validador, do executor e da pontuação, rodados na CI |
+
+O executor é o mesmo da #499, com `--conjunto l584` (só o braço `ligado`, 5 repetições, sem a lei
+sozinha). **A rodada oficial exige a `revisao_lei` registrada**; sem ela só roda o ensaio com
+`--ids`. O `validar_conjunto.py` aceita a parte `l584` pelo caminho
+`python3 validar_conjunto.py conversas-continuidade-l584.json`; a conferência do dev e do teste
+(sem argumento) segue só com os dois.
+
 ## Versões
 
 ### Revisão de lei registrada (2026-11-13), com a regra v3 e o conjunto na v2

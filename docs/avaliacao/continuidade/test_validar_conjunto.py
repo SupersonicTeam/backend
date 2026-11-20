@@ -221,6 +221,9 @@ class CategoriasDeTexto(unittest.TestCase):
                        "ponto:",
         "LEI_APOIO": "A resposta anterior se baseia em LC 214/2025, art. 137. O texto de cada "
                      "dispositivo está abaixo, com o link.",
+        "LEI_APOIO_RELIDO": "Reli o texto da lei em que a resposta anterior se baseia (LC 214/2025, "
+                            "art. 137). Ele está abaixo, com o link: leia o dispositivo e confira "
+                            "com a resposta.",
         "LEI_JA": "Essa resposta já passou por uma nova conferência com o texto da lei.",
         "LEI_ATALHO": "Essa explicação é um texto revisado pela equipe do AgroConIA e se baseia "
                       "nos dispositivos citados abaixo, com o link.",
@@ -241,6 +244,12 @@ class CategoriasDeTexto(unittest.TestCase):
         self.assertEqual(set(self.TEXTOS), set(vc.CATEGORIAS_ABERTURA))
         for categoria, texto in self.TEXTOS.items():
             self.assertTrue(casa(vc.CATEGORIAS_ABERTURA[categoria], texto), categoria)
+
+    def test_abertura_do_apoio_relido_aceita_o_plural(self):
+        plural = "Reli os textos da lei em que a resposta anterior se baseia (arts. 137 e 138)."
+        self.assertTrue(casa(vc.CATEGORIAS_ABERTURA["LEI_APOIO_RELIDO"], plural))
+        self.assertFalse(casa(vc.CATEGORIAS_ABERTURA["LEI_APOIO_RELIDO"], self.TEXTOS["LEI_APOIO"]))
+        self.assertFalse(casa(vc.CATEGORIAS_ABERTURA["LEI_APOIO"], self.TEXTOS["LEI_APOIO_RELIDO"]))
 
     def test_categorias_vizinhas_nao_se_confundem(self):
         pares = [("REEXECUCAO_MESMO", "REEXECUCAO_MUDOU"), ("LEI_CONFIRMA", "LEI_CORRIJO"),
