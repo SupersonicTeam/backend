@@ -1,0 +1,57 @@
+[ligado] preparo feito; notas do seed {'devolvida_seed': '3223', 'cancelada_seed': '3212', 'aguardando_seed': '3225'}
+autoteste: assinatura conferida
+[1/36] pausa de 360 s antes de t-lei-04
+[1/36] t-lei-04 r1 (apos_pausa) 01:51:13
+[2/36] t-lei-05 r1 (logo_depois) 01:51:21
+[3/36] pausa de 360 s antes de t-lei-05
+[3/36] t-lei-05 r2 (apos_pausa) 01:57:35
+[4/36] d-lei-02 r1 (logo_depois) 01:57:47
+[5/36] pausa de 360 s antes de d-lei-02
+[5/36] d-lei-02 r2 (apos_pausa) 02:03:55
+[6/36] t-lei-04 r2 (logo_depois) 02:04:03
+[7/36] pausa de 360 s antes de t-lei-04
+[7/36] t-lei-04 r3 (apos_pausa) 02:10:12
+[8/36] t-lei-05 r3 (logo_depois) 02:10:20
+[9/36] pausa de 360 s antes de t-lei-05
+[9/36] t-lei-05 r4 (apos_pausa) 02:16:27
+[10/36] d-lei-02 r3 (logo_depois) 02:16:36
+[11/36] pausa de 360 s antes de d-lei-02
+[11/36] d-lei-02 r4 (apos_pausa) 02:22:45
+[12/36] t-lei-04 r4 (logo_depois) 02:22:53
+[13/36] pausa de 360 s antes de t-lei-04
+[13/36] t-lei-04 r5 (apos_pausa) 02:29:02
+[14/36] t-lei-05 r5 (logo_depois) 02:29:11
+[15/36] pausa de 360 s antes de t-lei-05
+[15/36] t-lei-05 r6 (apos_pausa) 02:35:25
+[16/36] d-lei-02 r5 (logo_depois) 02:35:45
+[17/36] pausa de 360 s antes de d-lei-02
+[17/36] d-lei-02 r6 (apos_pausa) 02:41:53
+[18/36] t-lei-04 r6 (logo_depois) 02:42:01
+[19/36] pausa de 360 s antes de t-lei-04
+[19/36] t-lei-04 r7 (apos_pausa) 02:48:10
+[20/36] t-lei-05 r7 (logo_depois) 02:48:18
+[21/36] pausa de 360 s antes de t-lei-05
+[21/36] t-lei-05 r8 (apos_pausa) 02:54:25
+[22/36] d-lei-02 r7 (logo_depois) 02:54:33
+[23/36] pausa de 360 s antes de d-lei-02
+[23/36] d-lei-02 r8 (apos_pausa) 03:00:42
+[24/36] t-lei-04 r8 (logo_depois) 03:00:50
+[25/36] pausa de 360 s antes de t-lei-04
+[25/36] t-lei-04 r9 (apos_pausa) 03:06:58
+[26/36] t-lei-05 r9 (logo_depois) 03:07:07
+[27/36] pausa de 360 s antes de t-lei-05
+[27/36] t-lei-05 r10 (apos_pausa) 03:13:20
+[28/36] d-lei-02 r9 (logo_depois) 03:13:28
+[29/36] pausa de 360 s antes de d-lei-02
+[29/36] d-lei-02 r10 (apos_pausa) 03:19:36
+[30/36] t-lei-04 r10 (logo_depois) 03:19:45
+[31/36] pausa de 360 s antes de t-lei-04
+[31/36] t-lei-04 r11 (apos_pausa) 03:25:54
+[32/36] t-lei-05 r11 (logo_depois) 03:26:02
+[33/36] pausa de 360 s antes de t-lei-05
+[33/36] t-lei-05 r12 (apos_pausa) 03:32:11
+[34/36] d-lei-02 r11 (logo_depois) 03:32:18
+[35/36] pausa de 360 s antes de d-lei-02
+[35/36] d-lei-02 r12 (apos_pausa) 03:38:27
+[36/36] t-lei-04 r12 (logo_depois) 03:38:36
+fim: 03:38:43
