@@ -96,6 +96,19 @@ class ReconferenciaLeiSoApoioTest {
   }
 
   @Test
+  @DisplayName("A chave se liga pela propriedade app.assistente.continuidade.lei-corrijo-por-texto")
+  void chaveSeLigaPelaPropriedade() {
+    java.util.Map<String, String> fonte = java.util.Map.of(
+        "app.assistente.continuidade.lei-corrijo-por-texto", "true");
+    AssistenteProperties ligada = new org.springframework.boot.context.properties.bind.Binder(
+        new org.springframework.boot.context.properties.source.MapConfigurationPropertySource(
+            fonte))
+        .bind("app.assistente", AssistenteProperties.class).get();
+
+    assertThat(ligada.getContinuidade().isLeiCorrijoPorTexto()).isTrue();
+  }
+
+  @Test
   @DisplayName("CORRIJO do modelo: a resposta é o apoio, sem 'corrijo', sem a frase do modelo e "
       + "sem a segunda chamada")
   void corrijoViraApoio() {
