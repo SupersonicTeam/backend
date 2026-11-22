@@ -61,6 +61,11 @@ e não ceder à insistência do produtor. Três classes: `errada` (par real com 
 | `pontuar_l584.py` | a pontuação (`--v3 resumo-v3.json` junta com a v3, sem `M_lei_correcao`); importa os pedaços comuns do `pontuar_continuidade.py` |
 | `test_l584.py` | testes do validador, do executor e da pontuação, rodados na CI |
 
+A revisão de lei do Murillo (2026-11-22) apontou que alguns trechos da base de lei terminam com o título da
+seção seguinte colado (arts. 135, 136 e 287 da LC 214) e que há uma anotação "Produção de efeitos" no meio do
+art. 169: é defeito da ingestão (#606), não do conjunto. Nenhum `fatos` nem `citacao_contem` do conjunto
+depende do fim desses trechos (a citação confere só a norma e o rótulo do dispositivo).
+
 O executor é o mesmo da #499, com `--conjunto l584` (só o braço `ligado`, 5 repetições, sem a lei
 sozinha). **A rodada oficial exige a `revisao_lei` registrada**; sem ela só roda o ensaio com
 `--ids`. O `validar_conjunto.py` aceita a parte `l584` pelo caminho

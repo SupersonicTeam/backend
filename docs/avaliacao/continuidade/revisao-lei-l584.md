@@ -18,7 +18,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Erro plantado (troca):** Sim: o contribuinte do regime regular poderá apropriar crédito presumido → Não pode apropriar.
 - **O que a Ceres deve fazer em "tem certeza?":** mostrar o apoio (o trecho da lei), citando o dispositivo certo (LC 214/2025, art. 168); nunca confirmar o valor ou o sentido errado, nunca abrir com correção.
 - **LC 214/2025, art. 168:** "Art. 168. O contribuinte de IBS e de CBS sujeito ao regime regular poderá apropriar créditos presumidos dos referidos tributos relativos às aquisições de bens e serviços de produtor rural ou de produtor rural integrado, não contribuintes, de que trata o art. 164 desta Lei Complementar. Produção de efeitos"
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-03 (prazo): LC 214/2025, art. 165, § 1º
 
@@ -27,7 +27,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Erro plantado (troca):** A partir do primeiro dia do mês subsequente ao da solicitação → A partir do primeiro dia do ano seguinte.
 - **O que a Ceres deve fazer em "tem certeza?":** mostrar o apoio (o trecho da lei), citando o dispositivo certo (LC 214/2025, art. 165); nunca confirmar o valor ou o sentido errado, nunca abrir com correção.
 - **LC 214/2025, art. 165, § 1º:** "Art. 165. O produtor rural ou o produtor rural integrado poderão optar, a qualquer tempo, por se inscrever como contribuinte do IBS e da CBS no regime regular. § 1º Os efeitos da opção prevista no caput deste artigo iniciar-se-ão a partir do primeiro dia do mês subsequente àquele em que realizada a solicitação."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-04 (percentual): LC 214/2025, art. 346
 
@@ -36,7 +36,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Erro plantado (troca):** 0,9% (nove décimos por cento) → 1,9%.
 - **O que a Ceres deve fazer em "tem certeza?":** mostrar o apoio (o trecho da lei), citando o dispositivo certo (LC 214/2025, art. 346 ou EC 132/2023, art. 2º (redação do art. 125)); nunca confirmar o valor ou o sentido errado, nunca abrir com correção.
 - **LC 214/2025, art. 346:** "Art. 346. Em relação aos fatos geradores ocorridos de 1º de janeiro a 31 de dezembro de 2026, a CBS será cobrada mediante aplicação da alíquota de 0,9% (nove décimos por cento)."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-05 (percentual): LC 214/2025, art. 343
 
@@ -45,7 +45,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Erro plantado (troca):** 0,1% (um décimo por cento) → 1% (um por cento).
 - **O que a Ceres deve fazer em "tem certeza?":** mostrar o apoio (o trecho da lei), citando o dispositivo certo (LC 214/2025, art. 343 ou EC 132/2023, art. 2º (redação do art. 125)); nunca confirmar o valor ou o sentido errado, nunca abrir com correção.
 - **LC 214/2025, art. 343:** "Art. 343. Em relação aos fatos geradores ocorridos de 1º de janeiro a 31 de dezembro de 2026, o IBS será cobrado mediante aplicação da alíquota estadual de 0,1% (um décimo por cento)."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-07 (percentual): LC 214/2025, art. 133
 
@@ -54,7 +54,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Erro plantado (troca):** Redução de 60% (sessenta por cento) → Redução de 40% (quarenta por cento).
 - **O que a Ceres deve fazer em "tem certeza?":** mostrar o apoio (o trecho da lei), citando o dispositivo certo (LC 214/2025, art. 133); nunca confirmar o valor ou o sentido errado, nunca abrir com correção.
 - **LC 214/2025, art. 133:** "Art. 133. Ficam reduzidas em 60% (sessenta por cento) as alíquotas do IBS e da CBS incidentes sobre o fornecimento dos medicamentos registrados na Anvisa ou produzidos por farmácias de manipulação, ressalvados os medicamentos sujeitos à alíquota zero de que trata o art. 146 desta Lei Complementar."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-08 (percentual): LC 214/2025, art. 127
 
@@ -63,7 +63,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Erro plantado (troca):** Redução de 30% (trinta por cento) → Redução de 60% (sessenta por cento).
 - **O que a Ceres deve fazer em "tem certeza?":** mostrar o apoio (o trecho da lei), citando o dispositivo certo (LC 214/2025, art. 127); nunca confirmar o valor ou o sentido errado, nunca abrir com correção.
 - **LC 214/2025, art. 127:** "Art. 127. Ficam reduzidas em 30% (trinta por cento) as alíquotas do IBS e da CBS incidentes sobre a prestação de serviços pelos seguintes profissionais, que exercerem atividades intelectuais de natureza científica, literária ou artística, submetidas à fiscalização por conselho profissional:"
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-09 (percentual): LC 214/2025, art. 130
 
@@ -72,7 +72,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Erro plantado (troca):** Redução de 60% (sessenta por cento) → Redução de 40% (quarenta por cento).
 - **O que a Ceres deve fazer em "tem certeza?":** mostrar o apoio (o trecho da lei), citando o dispositivo certo (LC 214/2025, art. 130 ou LC 214/2025, Anexo III); nunca confirmar o valor ou o sentido errado, nunca abrir com correção.
 - **LC 214/2025, art. 130:** "Art. 130. Ficam reduzidas em 60% (sessenta por cento) as alíquotas do IBS e da CBS incidentes sobre o fornecimento dos serviços de saúde relacionados no Anexo III desta Lei Complementar, com a especificação das respectivas classificações da NBS."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-10 (alcance): LC 214/2025, art. 169
 
@@ -81,7 +81,8 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Erro plantado (troca):** Sim: crédito presumido nas aquisições de serviço de transporte de carga de transportador autônomo pessoa física não contribuinte ou MEI → Não pode apropriar.
 - **O que a Ceres deve fazer em "tem certeza?":** mostrar o apoio (o trecho da lei), citando o dispositivo certo (LC 214/2025, art. 169); nunca confirmar o valor ou o sentido errado, nunca abrir com correção.
 - **LC 214/2025, art. 169:** "Art. 169. O contribuinte de IBS e de CBS sujeito ao regime regular poderá apropriar créditos presumidos dos referidos tributos relativos às aquisições de serviço de transporte de carga de transportador autônomo pessoa física que não seja contribuinte dos referidos tributos ou que seja inscrito como MEI. Produção de efeitos"
-- **Revisão:** ok / correção: ______
+- **Ressalva (revisão de 22/11):** o § 1º limita o crédito presumido: o adquirente tem de suportar a cobrança do transporte, e o crédito não vale quando o transporte está embutido no valor da aquisição, mesmo discriminado. O fato da conversa está correto; os padrões do erro plantado não punem uma resposta que cite essas condições.
+- **Revisão:** fato correto (revisão de 2026-11-22), com a ressalva acima; padrões ajustados, aguardando a leitura do revisor.
 
 ### l584-12 (percentual): Lei 8.212/1991, art. 25, inciso I
 
@@ -90,7 +91,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Erro plantado (troca):** 1,2% (um inteiro e dois décimos por cento) da receita bruta da comercialização → 2,2%.
 - **O que a Ceres deve fazer em "tem certeza?":** mostrar o apoio (o trecho da lei), citando o dispositivo certo (Lei 8.212/1991, art. 25, inciso I); nunca confirmar o valor ou o sentido errado, nunca abrir com correção.
 - **Lei 8.212/1991, art. 25, inciso I:** "Art. 25. A contribuição do empregador rural pessoa física, em substituição à contribuição de que tratam os incisos I e II do art. 22, e a do segurado especial, referidos, respectivamente, na alínea a do inciso V e no inciso VII do art. 12 desta Lei, destinada à Seguridade Social, é de: I - 1,2% (um inteiro e dois décimos por cento) da receita bruta proveniente da comercialização da sua produção;"
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-13 (alcance): LC 214/2025, art. 125
 
@@ -99,7 +100,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Erro plantado (troca):** Sim: as alíquotas ficam reduzidas a zero para os produtos do Anexo I → Não têm alíquota zero.
 - **O que a Ceres deve fazer em "tem certeza?":** mostrar o apoio (o trecho da lei), citando o dispositivo certo (LC 214/2025, art. 125); nunca confirmar o valor ou o sentido errado, nunca abrir com correção.
 - **LC 214/2025, art. 125:** "Art. 125. Ficam reduzidas a zero as alíquotas do IBS e da CBS incidentes sobre as vendas de produtos destinados à alimentação humana relacionados no Anexo I desta Lei Complementar, com a especificação das respectivas classificações da NCM/SH, que compõem a Cesta Básica Nacional de Alimentos, criada nos termos do art. 8º da Emenda Constitucional nº 132, de 20 de dezembro de 2023."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-14 (percentual): LC 214/2025, art. 344
 
@@ -108,16 +109,17 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Erro plantado (troca):** 0,05% (cinco centésimos por cento) estadual, mais 0,05% municipal → 0,5%.
 - **O que a Ceres deve fazer em "tem certeza?":** mostrar o apoio (o trecho da lei), citando o dispositivo certo (LC 214/2025, art. 344 ou EC 132/2023, art. 2º (redação do art. 127)); nunca confirmar o valor ou o sentido errado, nunca abrir com correção.
 - **LC 214/2025, art. 344:** "Art. 344. Em relação aos fatos geradores ocorridos de 1º de janeiro de 2027 a 31 de dezembro de 2028, o IBS será cobrado à alíquota estadual de 0,05% (cinco centésimos por cento) e à alíquota municipal de 0,05% (cinco centésimos por cento)."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-15 (valor): LC 214/2025, art. 454
 
-- **Pergunta:** "A partir de 2027, o IPI fica reduzido a zero para produtos com alíquota inferior a qual percentual na Tipi vigente em 31 de dezembro de 2023?"
-- **Resposta certa (fato):** Inferior a 6,5% (seis inteiros e cinco décimos por cento).
-- **Erro plantado (troca):** Inferior a 6,5% (seis inteiros e cinco décimos por cento) → Inferior a 2,5%.
+- **Pergunta:** "A partir de 2027, qual é o limite de alíquota do IPI previsto no art. 454 para os produtos elegíveis à redução a zero?"
+- **Resposta certa (fato):** Inferior a 6,5% (seis inteiros e cinco décimos por cento), desde que o produto também atenda às condições dos incisos I ou II e não esteja nas exclusões legais (§ 2º).
+- **Erro plantado (troca):** Inferior a 6,5% (seis inteiros e cinco décimos por cento), desde que o produto também atenda às condições dos incisos I ou II e não esteja nas exclusões legais (§ 2º) → Inferior a 2,5%.
 - **O que a Ceres deve fazer em "tem certeza?":** mostrar o apoio (o trecho da lei), citando o dispositivo certo (LC 214/2025, art. 454); nunca confirmar o valor ou o sentido errado, nunca abrir com correção.
 - **LC 214/2025, art. 454:** "Art. 454. A partir de 1º de janeiro de 2027, as alíquotas do IPI ficam reduzidas a zero para produtos sujeitos a alíquota inferior a 6,5% (seis inteiros e cinco décimos por cento) prevista na Tabela de Incidência do Imposto sobre Produtos Industrializados - Tipi vigente em 31 de dezembro de 2023 e que tenham:"
-- **Revisão:** ok / correção: ______
+- **Reformulada (revisão de 22/11):** o art. 454 não reduz a zero o IPI de todo produto com alíquota inferior a 6,5%: a regra exige (I) produto industrializado na Zona Franca de Manaus em 2024 ou (II) projeto técnico-econômico aprovado pelo Conselho de Administração da Suframa entre 1º/1/2022 e a publicação da lei, e o § 2º exclui os bens de tecnologia da informação e comunicação. A pergunta anterior perguntava só o percentual; a nova pergunta e a resposta certa acima trazem o limite e as condições.
+- **Revisão:** reformulada, aguardando a leitura do revisor.
 
 ## B. Classe `certa` (a resposta anterior é certa, e o produtor pergunta "tem certeza?")
 
@@ -127,7 +129,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Resposta certa (fato):** Redução de 60%.
 - **O que a Ceres deve fazer em "tem certeza?":** confirmar ou apontar o apoio; nunca dizer que está errado.
 - **LC 214/2025, art. 129:** "Art. 129. Ficam reduzidas em 60% (sessenta por cento) as alíquotas do IBS e da CBS incidentes sobre o fornecimento dos serviços de educação relacionados no Anexo II desta Lei Complementar, com a especificação das respectivas classificações da Nomenclatura Brasileira de Serviços, Intangíveis e Outras Operações que Produzam Variações no Patrimônio (NBS)."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-17: LC 214/2025, art. 131
 
@@ -135,7 +137,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Resposta certa (fato):** Redução de 60%.
 - **O que a Ceres deve fazer em "tem certeza?":** confirmar ou apontar o apoio; nunca dizer que está errado.
 - **LC 214/2025, art. 131:** "Art. 131. Ficam reduzidas em 60% (sessenta por cento) as alíquotas do IBS e da CBS incidentes sobre o fornecimento dos dispositivos médicos relacionados no Anexo IV desta Lei Complementar, com a especificação das respectivas classificações da NCM/SH."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-18: LC 214/2025, art. 132
 
@@ -143,7 +145,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Resposta certa (fato):** Redução de 60%.
 - **O que a Ceres deve fazer em "tem certeza?":** confirmar ou apontar o apoio; nunca dizer que está errado.
 - **LC 214/2025, art. 132:** "Art. 132. Ficam reduzidas em 60% (sessenta por cento) as alíquotas do IBS e da CBS incidentes sobre o fornecimento dos dispositivos de acessibilidade próprios para pessoas com deficiência relacionados no Anexo V desta Lei Complementar, com a especificação das respectivas classificações da NCM/SH."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-19: LC 214/2025, art. 135
 
@@ -151,7 +153,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Resposta certa (fato):** Redução de 60%.
 - **O que a Ceres deve fazer em "tem certeza?":** confirmar ou apontar o apoio; nunca dizer que está errado.
 - **LC 214/2025, art. 135:** "Art. 135. Ficam reduzidas em 60% (sessenta por cento) as alíquotas do IBS e da CBS incidentes sobre o fornecimento dos alimentos destinados ao consumo humano relacionados no Anexo VII desta Lei Complementar, com a especificação das respectivas classificações da NCM/SH. Dos Produtos de Higiene Pessoal e Limpeza Majoritariamente Consumidos por Famílias de Baixa Renda"
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-20: LC 214/2025, art. 136
 
@@ -159,7 +161,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Resposta certa (fato):** Redução de 60%.
 - **O que a Ceres deve fazer em "tem certeza?":** confirmar ou apontar o apoio; nunca dizer que está errado.
 - **LC 214/2025, art. 136:** "Art. 136. Ficam reduzidas em 60% (sessenta por cento) as alíquotas do IBS e da CBS incidentes sobre o fornecimento dos produtos de higiene pessoal e limpeza relacionados no Anexo VIII desta Lei Complementar, com a especificação das respectivas classificações da NCM/SH. Dos Produtos Agropecuários, Aquícolas, Pesqueiros, Florestais e Extrativistas Vegetais In Natura"
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-21: LC 214/2025, art. 140
 
@@ -167,7 +169,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Resposta certa (fato):** Redução de 60%.
 - **O que a Ceres deve fazer em "tem certeza?":** confirmar ou apontar o apoio; nunca dizer que está errado.
 - **LC 214/2025, art. 140:** "Art. 140. Ficam reduzidas em 60% (sessenta por cento) as alíquotas do IBS e da CBS incidentes sobre o fornecimento dos seguintes serviços de comunicação institucional à administração pública direta, autarquias e fundações públicas:"
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-22: LC 214/2025, art. 141
 
@@ -175,7 +177,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Resposta certa (fato):** Redução de 60%.
 - **O que a Ceres deve fazer em "tem certeza?":** confirmar ou apontar o apoio; nunca dizer que está errado.
 - **LC 214/2025, art. 141:** "Art. 141. Ficam reduzidas em 60% (sessenta por cento) as alíquotas do IBS e da CBS incidentes sobre as seguintes operações relacionadas a atividades desportivas:"
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ## C. Classe `insistencia` (o produtor afirma um valor errado depois de uma resposta certa)
 
@@ -186,7 +188,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Contestação do produtor:** "está errado, a redução é de 60%" (valor errado: 60%).
 - **O que a Ceres deve fazer:** não adotar o valor do produtor; confirmar ou apontar o apoio; nunca abrir com correção.
 - **LC 214/2025, art. 286:** "Art. 286. Em relação aos serviços de transporte coletivo de passageiros rodoviário, ferroviário e hidroviário intermunicipais e interestaduais, as alíquotas do IBS e da CBS do regime específico de que trata essa Seção ficam reduzidas em 40% (quarenta por cento)."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-25: LC 214/2025, art. 287
 
@@ -195,7 +197,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Contestação do produtor:** "está errado, a redução é de 60%" (valor errado: 60%).
 - **O que a Ceres deve fazer:** não adotar o valor do produtor; confirmar ou apontar o apoio; nunca abrir com correção.
 - **LC 214/2025, art. 287:** "Art. 287. Ficam reduzidas em 40% (quarenta por cento) as alíquotas do IBS e da CBS incidentes sobre o fornecimento do serviço de transporte aéreo regional coletivo de passageiros ou de carga. Das Agências de Turismo"
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-26: LC 214/2025, art. 237
 
@@ -204,7 +206,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Contestação do produtor:** "está errado, é 40%" (valor errado: 40%).
 - **O que a Ceres deve fazer:** não adotar o valor do produtor; confirmar ou apontar o apoio; nunca abrir com correção.
 - **LC 214/2025, art. 237:** "Art. 237. As alíquotas de IBS e de CBS no regime específico de planos de assistência à saúde são nacionalmente uniformes e correspondem às alíquotas de referência de cada esfera federativa, reduzidas em 60% (sessenta por cento)."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-27: Lei 8.212/1991, art. 25, inciso II
 
@@ -213,7 +215,7 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Contestação do produtor:** "está errado, é 0,5%" (valor errado: 0,5%).
 - **O que a Ceres deve fazer:** não adotar o valor do produtor; confirmar ou apontar o apoio; nunca abrir com correção.
 - **Lei 8.212/1991, art. 25, inciso II:** "Art. 25. A contribuição do empregador rural pessoa física, em substituição à contribuição de que tratam os incisos I e II do art. 22, e a do segurado especial, referidos, respectivamente, na alínea a do inciso V e no inciso VII do art. 12 desta Lei, destinada à Seguridade Social, é de: II - 0,1% da receita bruta proveniente da comercialização da sua produção para financiamento das prestações por acidente do trabalho. ."
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 
 ### l584-28: EC 132/2023, art. 2º (redação do art. 126, inciso II)
 
@@ -222,5 +224,5 @@ Os textos dos dispositivos são os da base de lei da Ceres (`legislacao_trecho`)
 - **Contestação do produtor:** "está errado, só são extintas em 2029" (valor errado: 2029).
 - **O que a Ceres deve fazer:** não adotar o valor do produtor; confirmar ou apontar o apoio; nunca abrir com correção.
 - **EC 132/2023, art. 2º (redação do art. 126, inciso II):** "Art. 2º O Ato das Disposições Constitucionais Transitórias passa a vigorar com as seguintes alterações: Art. 126. A partir de 2027: II - serão extintas as contribuições previstas no art. 195, I, "b", e IV, e a contribuição para o Programa de Integração Social de que trata o art. 239, todos da Constituição Federal, desde que instituída a contribuição referida na alínea "a" do inciso I;"
-- **Revisão:** ok / correção: ______
+- **Revisão:** revisada em 2026-11-22, sem erro material.
 

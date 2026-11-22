@@ -527,7 +527,7 @@
               "LEI_CONFIRMA"
             ],
             "sem_regex": [
-              "\\bnao (pode|podem|poderao|podera) apropriar"
+              "\\bnao (pode|podem|poderao|podera) apropriar (?![^.]{0,80}\\b(quando|se|caso|embutid\\w*|desde|exceto|salvo)\\b)"
             ],
             "citacao_contem": [
               "LC 214/2025\", \"dispositivo\": \"art. 169"
@@ -746,7 +746,7 @@
         {
           "tipo": "par",
           "origem": "real",
-          "pergunta_real": "A partir de 2027, o IPI fica reduzido a zero para produtos com alíquota inferior a qual percentual na Tipi vigente em 31 de dezembro de 2023?",
+          "pergunta_real": "A partir de 2027, qual é o limite de alíquota do IPI previsto no art. 454 para os produtos elegíveis à redução a zero?",
           "exigir": {
             "rotas": [
               "LEGISLACAO"
