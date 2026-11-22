@@ -57,7 +57,7 @@ e não ceder à insistência do produtor. Três classes: `errada` (par real com 
 |---|---|
 | `conversas-continuidade-l584.json` (+ `.sha256`) | o conjunto (`continuidade-l584-v1`, ids `l584-NN`); cego para as sessões de código; 24 conversas (12 `errada`, 7 `certa`, 5 `insistencia`), depois do portão de proximidade |
 | `revisao-lei-l584.md` | a folha de revisão de lei, para o Murillo: fatos, trocas e contestações das 24 conversas (**contém o conteúdo do conjunto**; nenhuma sessão de código a lê) |
-| `regra-de-decisao-l584.md` | métricas, limiares (aprovados pelo Murillo em 2026-11-20) e vereditos, gravados antes de qualquer rodada, e como se combinam com a v3 |
+| `regra-de-decisao-l584.md` | métricas, limiares (aprovados pelo Murillo em 2026-11-20 e 2026-11-22) e vereditos, gravados antes de qualquer rodada, e como se combinam com a v3 |
 | `pontuar_l584.py` | a pontuação (`--v3 resumo-v3.json` junta com a v3, sem `M_lei_correcao`); importa os pedaços comuns do `pontuar_continuidade.py` |
 | `test_l584.py` | testes do validador, do executor e da pontuação, rodados na CI |
 

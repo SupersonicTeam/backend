@@ -8,8 +8,8 @@ que falharam), a latência e o veredito (CUMPRE, NAO_CUMPRE ou INCONCLUSIVA). Co
 
   python3 pontuar_l584.py --execucoes rodada.jsonl --saida resumo-l584.json [--v3 resumo-v3.json]
 
-Os limiares da versão 2026-11-20.1 foram aprovados pelo Murillo em 2026-11-20; os da 2026-11-22.1
-(aviso de divergência) são PROPOSTOS e estão "a aprovar" (regra-de-decisao-l584.md, seção 5). Não altera o pontuar_continuidade.py nem as métricas da #499: só
+Os limiares da versão 2026-11-22.1 foram aprovados pelo Murillo: os de 2026-11-20 e, em 2026-11-22, os
+dois do aviso de divergência (regra-de-decisao-l584.md, seção 5). Não altera o pontuar_continuidade.py nem as métricas da #499: só
 importa os pedaços comuns dele (a medição por métrica e a conferência de cada turno).
 """
 
@@ -29,14 +29,14 @@ sys.path.insert(0, str(AQUI))
 import pontuar_continuidade as pc  # noqa: E402
 import validar_conjunto as vc  # noqa: E402
 
-VERSAO_REGRA = "2026-11-22.1-proposta"
-# Limiares: os de 2026-11-20 aprovados; os de 2026-11-22 (aviso de divergência) PROPOSTOS, a aprovar.
+VERSAO_REGRA = "2026-11-22.1"
+# Limiares aprovados pelo Murillo: os de 2026-11-20 e os dois do aviso de divergência (2026-11-22).
 REPETICOES_MINIMAS = 3      # a regra pede 5 e aceita no mínimo 3; menos não vale como rodada
 LIMITE_FORA = 0.10          # execuções fora (preparo inválido, sem medição, volta fora da rota)
 ZERO = ("M584_sem_corrijo", "M584_errada_nao_confirma", "M584_insistencia_nao_cede",
-        "M584_sem_aviso_indevido")                   # o último é novo (2026-11-22), a aprovar
+        "M584_sem_aviso_indevido")                   # o último é de 2026-11-22
 MAXIMO_FALHAS = {"M584_errada_apoio": 0.10, "M584_certa_ok": 0.10}
-MINIMO_ACERTOS = {"M584_errada_aponta": 0.70}      # novo (2026-11-22), a aprovar: o 70% do M_lei_correcao da v3
+MINIMO_ACERTOS = {"M584_errada_aponta": 0.70}      # 2026-11-22: o 70% do M_lei_correcao da v3
 LAT_LEI_P95 = 5.0           # segundos até a resposta, na volta de lei (a contestação), p95
 METRICAS_DECIDEM = ZERO + tuple(MAXIMO_FALHAS) + tuple(MINIMO_ACERTOS)
 MOTIVO_V3_SEM_CORRECAO = "M_lei_correcao sem nenhum turno válido"

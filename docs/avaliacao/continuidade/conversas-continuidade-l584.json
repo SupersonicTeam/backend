@@ -6,10 +6,11 @@
   "produtor": "carlos.rossi@example.com",
   "regra": "docs/avaliacao/continuidade/regra-de-decisao-l584.md",
   "revisao_lei": {
-    "status": "pendente",
-    "por": null,
-    "em": null,
-    "nota": "Os fatos de lei (campo fatos), as trocas (campo edicoes) e as contestações passam pela revisão da equipe e do orientador, sem contador, antes da rodada oficial."
+    "status": "revisado",
+    "por": "Murillo Weiss",
+    "em": "2026-11-22",
+    "nota": "Os fatos de lei (campo fatos), as trocas (campo edicoes) e as contestações passam pela revisão da equipe e do orientador, sem contador, antes da rodada oficial.",
+    "conteudo_revisado_sha256": "b013cbb82ec5fe00fb35af9b64f1955c308e90e08a608383563acb44f86d0ea8"
   },
   "preparo": [],
   "conversas": [

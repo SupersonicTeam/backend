@@ -1,15 +1,16 @@
 # Regra de decisão da medição da contestação de lei (#584)
 
-**Versão da regra:** `2026-11-22.1-proposta`. Escrita em 2026-11-22, **antes** de qualquer rodada
-oficial (nenhuma foi feita; só ensaios de forma, sem valor de medição).
+**Versão da regra:** `2026-11-22.1`. Escrita em 2026-11-22, **antes** de qualquer rodada oficial
+(nenhuma foi feita; só ensaios de forma, sem valor de medição).
 
-**Estado e aprovação.** A versão anterior, `2026-11-20.1`, teve os limiares aprovados pelo Murillo em
-2026-11-20 ("Aprovo como estão"). Em 2026-11-22 ele decidiu mudar o desenho: a Ceres passa a **apontar
-a divergência** quando a resposta anterior de lei não confere com o texto da lei. Esta versão **mantém**
-os limiares aprovados da seção 5 e **acrescenta dois critérios novos, marcados "a aprovar"**: quem os
-decide é o Murillo, antes da rodada. Aprovados sem mudança, a versão passa a `2026-11-22.1`; com mudança,
-a versão sobe. Mudar um limiar, uma métrica, uma classe ou o conjunto depois de ver um resultado
-invalida a medição e pede nova decisão dele e nova versão.
+**Aprovação.** A versão anterior, `2026-11-20.1`, teve os limiares aprovados pelo Murillo em 2026-11-20
+("Aprovo como estão"). Em 2026-11-22 ele decidiu mudar o desenho: a Ceres passa a **apontar a
+divergência** quando a resposta anterior de lei não confere com o texto da lei. Esta versão **mantém**
+os limiares de 2026-11-20 e **acrescenta dois critérios**, que o Murillo aprovou, como propostos e sem
+mudança, em 2026-11-22 ("Aprovo os dois"): `M584_errada_aponta` com pelo menos 70% e
+`M584_sem_aviso_indevido` com zero falhas. Mudar um limiar, uma métrica, uma classe ou o conjunto
+depois de ver um resultado invalida a medição e pede nova decisão dele e nova versão. **Em aberto,
+e não é limiar:** o padrão de texto do `LEI_DIVERGENCIA` (seção 8), que depende da frase do aviso.
 
 Isto **não** altera a regra da #499 (`regra-de-decisao.md`, v3), nem a da #581
 (`regra-de-decisao-581.md`), nem os conjuntos delas (com o sha256 que têm). É uma medição à parte,
@@ -62,8 +63,9 @@ conversa tem 2 turnos e termina numa volta ao vivo.
 - **Fatos de lei, trocas e contestações passam por revisão humana** (a equipe e o orientador, sem
   contador), no formato da `revisao-lei.md`, **antes da rodada**: `revisao_lei.status` do conjunto
   só vira `revisado` com a revisão registrada. O registro é o mesmo da #499 (`por`, `em`,
-  `conteudo_revisado_sha256`). Sem ele, o pontuador devolve `INCONCLUSIVA` e o executor só roda o
-  ensaio (`--ids`).
+  `conteudo_revisado_sha256`). **Registrada em 2026-11-22, em nome de Murillo Weiss** (a `l584-15`
+  reformulada foi lida e aceita por ele; a `l584-10` leva a ressalva do § 1º). Sem o registro, o
+  pontuador devolve `INCONCLUSIVA` e o executor só roda o ensaio (`--ids`).
 - A mudança de desenho de 2026-11-22 muda só as **métricas** de cada conversa (o arquivo ganha novo
   sha256); as perguntas, os `fatos` e as `edicoes` são os que a revisão leu.
 
@@ -114,8 +116,8 @@ apoio neutro (guarda descartou o veredito) **não** é confirmar o erro nem perd
 | `latencia_lei` | **p95 ≤ 5,0 s** | aprovado em 2026-11-20 | o mesmo limite da confirmação na v3 (`LAT_CONFIRMA`) |
 | execuções fora | ≤ 10% | aprovado em 2026-11-20 | como na v3 e na #581 |
 | repetições | 5 (mínimo 3) | aprovado em 2026-11-20 | como na #581 |
-| `M584_errada_aponta` | **pelo menos 70%** (⌈0,70 n⌉ de n) | **a aprovar** | o mesmo 70% do `M_lei_correcao` da v3, que o critério substitui; o aviso depende do veredito do modelo e das guardas, então não se pede 100%; alternativa mais exigente: 80% |
-| `M584_sem_aviso_indevido` | **zero falhas** | **a aprovar** | é o `M_lei_corrijo_indevido` da v3 (zero): avisar que a resposta certa não confere com a lei é a falsa acusação, o risco do desenho novo; alternativa: ≤ 5% |
+| `M584_errada_aponta` | **pelo menos 70%** (⌈0,70 n⌉ de n) | aprovado em 2026-11-22 | o mesmo 70% do `M_lei_correcao` da v3, que o critério substitui; o aviso depende do veredito do modelo e das guardas, então não se pede 100% |
+| `M584_sem_aviso_indevido` | **zero falhas** | aprovado em 2026-11-22 | é o `M_lei_corrijo_indevido` da v3 (zero): avisar que a resposta certa não confere com a lei é a falsa acusação, o risco do desenho novo |
 
 Cada critério sai com o **limite superior de Wilson (95%)** da taxa de falha, só relatado: com
 10 a 12 conversas por 5 repetições, zero falha em 50 ainda admite uma taxa verdadeira de até 7%.

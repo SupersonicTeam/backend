@@ -620,7 +620,9 @@ class RegraEscrita(unittest.TestCase):
     def test_versao_e_estado(self):
         self.assertIn(p584.VERSAO_REGRA, self.TEXTO)
         self.assertIn("Aprovo como estão", self.TEXTO)       # os limiares de 2026-11-20
-        self.assertIn("**a aprovar**", self.TEXTO)           # os dois critérios de 2026-11-22
+        self.assertIn("Aprovo os dois", self.TEXTO)          # os dois critérios de 2026-11-22
+        self.assertNotIn("**a aprovar**", self.TEXTO)
+        self.assertNotIn("-proposta", self.TEXTO)
 
     def test_limiares_da_prosa_sao_os_do_codigo(self):
         self.assertEqual(p584.ZERO, ("M584_sem_corrijo", "M584_errada_nao_confirma",
@@ -636,7 +638,6 @@ class RegraEscrita(unittest.TestCase):
     def test_as_metricas_da_regra_sao_as_do_validador(self):
         for nome in vc.METRICAS_L584:
             self.assertIn(f"`{nome}`", self.TEXTO)
-        self.assertIn("a aprovar", self.TEXTO)
 
 
 if __name__ == "__main__":
