@@ -741,10 +741,14 @@ de hoje). Os trechos inalterados são pulados pelo hash e **ficam com o embeddin
 mudam (na comparação feita no PR, 1.247 de 8.304: 1.068 da LC 214, 97 da LC 227, 29 da Lei 8.212 e 53
 da EC 132; a Lei 9.528 não muda) ganham texto e **embedding novos**, gerados pelo `bge-m3` no Ollama.
 O índice HNSW e a coluna `conteudo_tsv_sem_acento` (gerada) se atualizam sozinhos; não há `REINDEX`
-nem reinício do backend. **Duração: não medida.** É proporcional aos ~1.250 embeddings (15% da carga
-inicial, que já era lenta em CPU); o log mostra um resumo por norma ao fim. Enquanto uma norma
-é refeita, os trechos apagados dela ficam fora da base: faça fora de horário e **sem medição da
-Ceres em curso**.
+nem reinício do backend. **Duração, medida na reingestão local de 22/11/2026** (notebook do Murillo,
+Ollama local com o `bge-m3` em CPU, 100% CPU pelo `ollama ps`, sem GPU no contêiner; banco local; o `DELETE` e as quatro ingestões, cada uma subindo a aplicação, com ~15 s de
+subida): **847 s no total, 14 min**: LC 214 629 s (1.068 embeddings, ~0,6 s cada), LC 227 102 s (97),
+Lei 8.212 53 s (29) e EC 132 62 s (53). **Na VPS não foi medida**: ela também embeda em CPU (8 OCPU),
+então espere a mesma ordem de grandeza, sem garantia; o tempo é proporcional aos ~1.250
+embeddings, e o log mostra um resumo por norma ao fim.
+Enquanto uma norma é refeita, os trechos apagados dela ficam fora da base: faça fora de horário e
+**sem medição da Ceres em curso**.
 
 1. **Salve o texto compilado** das cinco normas como o Planalto serve (sem converter), numa pasta
    (`lcp214.htm`, `lcp227.htm`, `l8212cons.htm`, `emc132.htm`, `l9528.htm`; as URLs estão em
@@ -776,6 +780,12 @@ Ceres em curso**.
    docker exec -i agrocontabil-postgres psql -U agrocontabil -d agrocontabil -v ON_ERROR_STOP=1 < apagar.sql
    ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,ingestao -Dspring-boot.run.arguments="--ingestao.arquivo=<pasta>/lcp214.htm --ingestao.norma='LC 214/2025' --ingestao.url=https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm --ingestao.data-captura=<hoje> --ingestao.vigencia-inicio=2025-01-16"
    ```
+
+   Se o banco local não tem todos os changeSets da `main` (a subida da aplicação os aplicaria),
+   acrescente `--spring.liquibase.enabled=false --spring.jpa.hibernate.ddl-auto=none` aos argumentos
+   (a ingestão só usa `legislacao_trecho`); `DEMONSTRACAO_HABILITADA` já vale `false` por padrão fora
+   da VPS. Na reingestão de 22/11 a única outra tabela que mudou foi a `shedlock` (a hora de um job
+   agendado), conferida por checksum de todas as tabelas antes e depois.
 
    Repita para `LC 227/2026` (`lcp227.htm`, `--ingestao.vigencia-inicio=2026-01-14`), `Lei 8.212/1991`
    (`l8212cons.htm`, `1991-07-25`) e `EC 132/2023` (`emc132.htm`, `2023-12-21`). A Lei 9.528/1997 não
