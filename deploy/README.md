@@ -725,6 +725,96 @@ gunzip -c legislacao.tsv.gz | docker compose exec -T postgres \
   psql -U agrocontabil -d agrocontabil -c "\copy legislacao_trecho(id, content, metadata, embedding) from stdin"
 ```
 
+#### Reingestão por nome de seção e anotação coladas (#606)
+
+O fatiador antigo deixava o **nome da seção seguinte** no fim do último dispositivo de cada seção e
+a anotação "Produção de efeitos" (e "Vigência", "Sem eficácia") no texto. Corrigido o fatiador, a base
+que já está carregada continua com o texto antigo até ser reingerida. **É passo manual, do Murillo,
+e a ordem entre local, VPS e medições é combinada antes** (a base medida tem de ser a da banca; ver
+a #583 e a #584). O código não muda base nenhuma sozinho.
+
+O que acontece: a ingestão é idempotente pelo **hash de norma + dispositivo + texto**. Texto
+corrigido = hash novo, e a ingestão **recusa** texto novo com a mesma `vigencia-inicio` de uma linha
+aberta (`Nada foi ingerido`). Então o passo é apagar **só as linhas que mudam** e reingerir com os
+**mesmos argumentos da carga** (mesma `vigencia-inicio`, é a mesma redação; só a `data-captura` é a
+de hoje). Os trechos inalterados são pulados pelo hash e **ficam com o embedding que já têm**; os que
+mudam (na comparação feita no PR, 1.247 de 8.304: 1.068 da LC 214, 97 da LC 227, 29 da Lei 8.212 e 53
+da EC 132; a Lei 9.528 não muda) ganham texto e **embedding novos**, gerados pelo `bge-m3` no Ollama.
+O índice HNSW e a coluna `conteudo_tsv_sem_acento` (gerada) se atualizam sozinhos; não há `REINDEX`
+nem reinício do backend. **Duração: não medida.** É proporcional aos ~1.250 embeddings (15% da carga
+inicial, que já era lenta em CPU); o log mostra um resumo por norma ao fim. Enquanto uma norma
+é refeita, os trechos apagados dela ficam fora da base: faça fora de horário e **sem medição da
+Ceres em curso**.
+
+1. **Salve o texto compilado** das cinco normas como o Planalto serve (sem converter), numa pasta
+   (`lcp214.htm`, `lcp227.htm`, `l8212cons.htm`, `emc132.htm`, `l9528.htm`; as URLs estão em
+   `docs/ceres-assistente.md`). O `curl` puro foi recusado pelo Planalto (conexão reiniciada) em 22/11/2026; o
+   `Invoke-WebRequest` com `User-Agent` de navegador funcionou.
+2. **Tire o CSV da base que vai ser reingerida** (somente leitura; é o que a ferramenta compara):
+
+   ```bash
+   docker compose exec -T postgres psql -U agrocontabil -d agrocontabil -c   "COPY (SELECT norma, dispositivo, vigencia_inicio, vigencia_fim, content, hash FROM legislacao_trecho ORDER BY norma, dispositivo, vigencia_inicio) TO STDOUT WITH (FORMAT csv, HEADER)" > base.csv
+   ```
+
+   Na VPS, copie o `base.csv` para a máquina de desenvolvimento.
+3. **Comparação a seco**, na máquina de desenvolvimento (não ingere, não gera embedding, não usa o
+   Ollama nem o banco):
+
+   ```bash
+   ./mvnw test -Dtest=ComparacaoFatiamentoBaseManual -Dcomparacao.pasta=<pasta dos HTMLs> -Dcomparacao.base=base.csv -Dcomparacao.saida=relatorio.md -Dcomparacao.sql-saida=apagar.sql
+   ```
+
+   Leia o `relatorio.md`. **Só siga se** a contagem por norma da base e do fatiador for igual
+   (5.004, 2.211, 547, 538 e 4), **Somem** e **Aparecem** forem 0 e **OUTRA** for 0; a lista "O que
+   sai" tem de ter só nome de seção e as anotações "Produção de efeitos", "Vigência" e "Sem
+   eficácia". Qualquer outra coisa (o Planalto pode ter mudado o texto desde a captura da base) é
+   para parar e investigar: a ferramenta nem grava o `apagar.sql` nesse caso.
+4. **Local:** apague e reingira (Postgres e Ollama no ar; um comando por norma, com os argumentos de
+   `docs/ceres-assistente.md` e a `data-captura` de hoje):
+
+   ```bash
+   docker exec -i agrocontabil-postgres psql -U agrocontabil -d agrocontabil -v ON_ERROR_STOP=1 < apagar.sql
+   ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,ingestao -Dspring-boot.run.arguments="--ingestao.arquivo=<pasta>/lcp214.htm --ingestao.norma='LC 214/2025' --ingestao.url=https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm --ingestao.data-captura=<hoje> --ingestao.vigencia-inicio=2025-01-16"
+   ```
+
+   Repita para `LC 227/2026` (`lcp227.htm`, `--ingestao.vigencia-inicio=2026-01-14`), `Lei 8.212/1991`
+   (`l8212cons.htm`, `1991-07-25`) e `EC 132/2023` (`emc132.htm`, `2023-12-21`). A Lei 9.528/1997 não
+   precisa. Rode antes cada uma com `--ingestao.simular=true`.
+5. **VPS:** com as HTMLs em `/opt/agrocontabil/legislacao/` e o `apagar.sql` (gerado do `base.csv` da
+   própria VPS) em `/opt/agrocontabil/`, e **fora de um deploy**:
+
+   ```bash
+   cd /opt/agrocontabil
+   docker compose exec -T postgres psql -U agrocontabil -d agrocontabil -v ON_ERROR_STOP=1 < apagar.sql
+   docker compose run --rm -v /opt/agrocontabil/legislacao:/legislacao:ro -e SPRING_PROFILES_ACTIVE=homolog,ingestao -e DEMONSTRACAO_HABILITADA=false backend   --ingestao.arquivo=/legislacao/lcp214.htm --ingestao.norma='LC 214/2025'   --ingestao.url=https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm   --ingestao.data-captura=<hoje> --ingestao.vigencia-inicio=2025-01-16
+   echo $?   # 0 = ingerida; 1 = falhou, motivo no log
+   ```
+
+   O `-e DEMONSTRACAO_HABILITADA=false` importa: o compose da VPS liga o seed da banca e o profile
+   `ingestao` não o desliga, então sem isso o container da ingestão rodaria o seed junto do backend
+   no ar. Os outros três comandos seguem o padrão do passo 4. Se uma ingestão cair no meio, rode o **mesmo
+   comando** de novo: é idempotente (pula o que já entrou) e a base não fica com vigência duplicada.
+6. **Conferir** (as quatro consultas têm de dar o resultado indicado):
+
+   ```sql
+   -- contagem por norma igual à de antes: 5004, 2211, 547, 538 e 4
+   SELECT norma, count(*) FROM legislacao_trecho GROUP BY norma ORDER BY norma;
+   -- a consulta da issue: artigo que termina em "Do/Da/Dos/Das Título" sem pontuação final => 0 linhas
+   SELECT norma, count(*) FROM legislacao_trecho
+    WHERE dispositivo LIKE 'art.%' AND content ~ '\s(Do|Da|Dos|Das|DO|DA|DOS|DAS)\s[^.;:!?]{3,200}[^.;:!?\s]$'
+    GROUP BY norma;
+   -- anotações do Planalto no texto => 0
+   SELECT count(*) FROM legislacao_trecho
+    WHERE content ~ 'Produção de efeito|Sem eficácia|\mVigência\M';
+   -- nenhum dispositivo com duas redações abertas (a mesma vigência) => 0 linhas
+   SELECT norma, dispositivo FROM legislacao_trecho WHERE vigencia_fim = '9999-12-31'
+    GROUP BY norma, dispositivo HAVING count(*) > 1;
+   ```
+
+   A segunda consulta não conta os itens de anexo (`Anexo XI, item 1`...), cujo texto legítimo é em
+   maiúsculas. Depois disso, uma pergunta de lei pela tela confirma que a busca segue
+   respondendo.
+
 ## CI/CD
 
 ```

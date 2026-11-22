@@ -292,6 +292,50 @@ trechos). Comandos da #145:
 - "Vigência encerrada" solto, de MP que caducou, que grudava no dispositivo vigente anterior (o
   art. 30, IV, citado pela Ceres, terminava assim). Só a linha que é apenas a anotação sai.
 
+**Nome de seção e anotação sem parênteses (#606).** Em 22/11/2026 uma revisão de lei achou que o
+último dispositivo de cada seção terminava com o **nome da seção seguinte** ("art. 135 ... NCM/SH. Dos
+Produtos de Higiene Pessoal e Limpeza Majoritariamente Consumidos por Famílias de Baixa Renda"), e a
+Ceres mostra o trecho literal. Causa, conferida no HTML do Planalto: o rótulo ("Seção VIII") e o nome
+da seção ficam em **dois parágrafos**; o fatiador descartava só o rótulo, e o nome entrava no
+dispositivo anterior. Na Lei 8.212/1991 o rótulo do capítulo nem é parágrafo (fica num `<center>`) e
+só o nome vem em `<p>`; na EC 132 o rótulo e o nome estão dentro de uma citação. O mesmo consolidado
+acrescenta **links sem parênteses** ("Produção de efeitos", "Vigência", "Sem eficácia", "Vide ..."):
+no caput eles iam no meio de **todos** os dispositivos de baixo (o "Produção de efeitos" do art. 169
+estava no texto do art. 169 e de cada parágrafo e inciso dele). Regras do `FatiadorDispositivos`:
+
+- depois de um rótulo ("Seção VII"), a linha seguinte é o nome e sai, **se** não for dispositivo
+  (`Art.`, `§`, parágrafo único, inciso, alínea), não passar de 400 caracteres e não terminar em
+  `.`, `;` ou `:` (é texto de lei, e fica);
+- sem rótulo em `<p>`, o parágrafo só sai se for **cabeçalho** (centralizado ou todo em negrito,
+  **fora de tabela**: as células da tabela do art. 20 da Lei 8.212 são centralizadas e são lei) **e**
+  abrir com "Do/Da/Dos/Das" ou estiver todo em maiúsculas; "(Valores e alíquotas...)" fica, e o
+  rótulo de anexo citado ("ANEXO VII", dentro do art. 174 da LC 227) também;
+- o link cujo texto **inteiro** é a anotação sai do DOM, antes de o texto ser lido; o link de uma
+  referência de verdade ("art. 5º", "Lei Complementar nº 214") nunca casa.
+
+O texto legal de nenhum dispositivo muda. A comparação a seco do PR (a ferramenta
+`ComparacaoFatiamentoBaseManual`, abaixo) mostrou 1.247 dos 8.304 trechos mudando, **todos só com
+remoção** de nome de seção ou de anotação, sem dispositivo perdido nem criado e com a mesma contagem
+por norma. A maior parte é a anotação repetida nos filhos do caput, não o título.
+
+**Reingestão do #606 (manual, nunca endpoint).** Mudou o texto, então mudou o hash: a ingestão trata
+o trecho corrigido como "texto alterado com a mesma vigência" e **recusa** (`exigirVigenciaPosterior`:
+"Nada foi ingerido") enquanto a linha antiga estiver aberta. Por isso o passo é apagar só as linhas
+que mudam e reingerir com os **mesmos argumentos da carga** (mesma `vigencia-inicio`: é a mesma
+redação). Os trechos inalterados são pulados pelo hash (nada de embedding); só os que mudam geram
+embedding de novo. Passo a passo local e na VPS em `deploy/README.md`, seção "Base de legislação da
+Ceres".
+
+**Comparação a seco do fatiador contra a base (`ComparacaoFatiamentoBaseManual`).** Ferramenta
+manual em `src/test` (não roda no `./mvnw test`, não ingere, não gera embedding, não usa o Ollama nem
+o banco): roda o fatiador sobre os cinco HTMLs do Planalto, como a ingestão faz, e compara por
+(norma, dispositivo, vigência) com um CSV da base, tirado por fora do banco. Diz, por norma, quantos
+trechos são iguais, mudam, somem e aparecem; classifica cada mudança (`SUFIXO`: sobrou texto no fim
+que saiu; `MEIO`: saiu um pedaço do meio; `OUTRA`: palavra acrescentada ou trocada, que o fatiador
+nunca deve fazer) e lista **cada pedaço que sai, com a contagem**, que é o jeito de conferir tudo e
+não só uma amostra. `-Dcomparacao.sql-saida` grava o `DELETE` por hash das linhas que mudam, **só**
+se nada some, nada aparece e não há `OUTRA`. Uso em `deploy/README.md`.
+
 **A LC 214 na base precisa ser reingerida (achado da #145).** O compilado da LC 214 também tacha
 por estilo as redações substituídas pela LC 227/2026. Na ingestão de 2026-09-30 elas entraram como
 vigentes: **151 dispositivos têm duas redações abertas**, e a revogada ficou com o rótulo limpo

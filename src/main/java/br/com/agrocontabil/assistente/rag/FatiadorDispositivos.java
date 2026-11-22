@@ -34,8 +34,15 @@ import org.springframework.stereotype.Component;
  *   <li>em emenda constitucional, o texto entre aspas é a nova redação de outro dispositivo; a
  *       referência fica "art. 1º (redação do art. 156-A, § 1º)" — o artigo da emenda que a deu e o
  *       dispositivo que ela alterou;</li>
- *   <li>títulos, capítulos e seções não viram trecho; texto antes do primeiro artigo (ementa,
- *       preâmbulo) é ignorado;</li>
+ *   <li>títulos, capítulos e seções não viram trecho, <strong>nem o nome deles</strong> ("Seção VII"
+ *       e, em outro parágrafo, "Dos Alimentos Destinados ao Consumo Humano"): o nome vem logo depois
+ *       do rótulo ou, quando o rótulo nem é parágrafo (a Lei 8.212/1991 o põe num {@code center}),
+ *       é um parágrafo centralizado ou todo em negrito que abre com "Do/Da/Dos/Das" ou está todo em
+ *       maiúsculas. Sem isso o nome ficava no fim do último dispositivo da seção anterior (#606);</li>
+ *   <li>texto antes do primeiro artigo (ementa, preâmbulo) é ignorado;</li>
+ *   <li>os links de anotação do Planalto sem parênteses ("Produção de efeitos", "Vigência", "Sem
+ *       eficácia", "Vide ...") saem do texto: a anotação não é lei, e no caput ela ia no meio de
+ *       todos os dispositivos de baixo (#606);</li>
  *   <li>o texto articulado termina na assinatura ("Brasília, 16 de janeiro de 2025; ...", ou
  *       "Brasília, em 24 de julho de 1991" nos textos antigos; depois dela vêm notas de rodapé com
  *       redações de MP antigas, que não são lei vigente):
@@ -86,6 +93,30 @@ public class FatiadorDispositivos {
   private static final Pattern MARCA_ALTERACAO =
       Pattern.compile("([\"”’'])(?:\\s*\\([^()]*\\))+\\s*[.;]?\\s*$");
   private static final Pattern SO_PONTOS = Pattern.compile("^[.…\\s\"“”]*$");
+  /**
+   * Link de anotação do Planalto sem parênteses (às vezes com eles, às vezes com ponto final): o
+   * texto <em>inteiro</em> do link. O consolidado acrescenta "Produção de efeitos" no fim do caput
+   * (cerca de 130 vezes na LC 214), "Vigência" e "Sem eficácia" depois de dispositivos de MP e "Vide ..." às
+   * decisões do STF; nada disso é lei, e o link de uma referência de verdade tem mais texto
+   * ("art. 5º", "Lei Complementar nº 214").
+   */
+  private static final Pattern LINK_DE_ANOTACAO = Pattern.compile(
+      "^\\(?\\s*(?:Produ[çc][ãa]o de efeitos?|Vig[êe]ncia(?: encerrada)?|Sem efic[áa]cia"
+          + "|Vide\\b[^()]*)\\s*\\)?\\s*\\.?$",
+      Pattern.CASE_INSENSITIVE);
+  /** Parênteses que sobraram vazios depois de tirar o link de dentro deles: "(Sem eficácia)". */
+  private static final Pattern PARENTESES_VAZIOS = Pattern.compile("\\(\\s*\\)");
+  /** Tamanho máximo do nome de um título: o maior da base (LC 214, antes do art. 471) tem uns 300. */
+  private static final int NOME_DE_TITULO_MAXIMO = 400;
+  /**
+   * Nome de título que o rótulo nem anuncia (a Lei 8.212/1991 põe "CAPÍTULO I" num {@code center}
+   * fora de parágrafo e só o nome vem em {@code <p>}): "Do/Da/Dos/Das ..." com maiúscula ou o
+   * parágrafo todo em maiúsculas. Quem abre com outra coisa ("(Valores e alíquotas...)") é texto, e
+   * o rótulo de anexo citado ("ANEXO VII", na LC 227/2026) fica de fora: não é nome de seção, e
+   * tirar só o rótulo deixaria o resto do anexo citado, que já vem colado ao artigo, pela metade.
+   */
+  private static final Pattern NOME_SEM_ROTULO = Pattern.compile(
+      "^(?!ANEXO\\b)(?:D[oa]s?\\b.*|(?=.*\\p{Lu}{3})[\\p{Lu}\\d\\s,.;:()/\\-–—ªº°]+)$");
   /** Cabeçalho de anexo: o parágrafo inteiro é "ANEXO" + numeral romano. */
   private static final Pattern ANEXO = Pattern.compile("^ANEXO\\s+([IVXLC]+)$");
   /** Local e data da assinatura: fim do texto articulado. */
@@ -125,12 +156,17 @@ public class FatiadorDispositivos {
     // span com "text-decoration: line-through", sem <strike>. O seletor de atributo do jsoup nao
     // diferencia maiusculas.
     documento.select("[style*=line-through]").remove();
-    List<String> linhas = new ArrayList<>();
+    for (Element link : documento.select("a")) {
+      if (LINK_DE_ANOTACAO.matcher(limpar(link.text())).matches()) {
+        link.remove();
+      }
+    }
+    List<Linha> linhas = new ArrayList<>();
     List<Element> paragrafos = documento.select("p");
     int inicioAnexos = paragrafos.size();
     if (paragrafos.isEmpty()) {
       for (String linha : documento.body().wholeText().split("\\R")) {
-        linhas.add(linha);
+        linhas.add(new Linha(linha, false));
       }
     } else {
       // Anexos so depois da assinatura: um "ANEXO I" antes dela e texto citado (ex.: emenda que
@@ -147,12 +183,12 @@ public class FatiadorDispositivos {
           inicioAnexos = i;
           break;
         }
-        linhas.add(paragrafos.get(i).text());
+        linhas.add(new Linha(paragrafos.get(i).text(), pareceCabecalho(paragrafos.get(i))));
       }
     }
     Estado estado = new Estado();
-    for (String bruta : linhas) {
-      estado.processar(limpar(bruta));
+    for (Linha linha : linhas) {
+      estado.processar(limpar(linha.texto()), linha.cabecalho());
     }
     fatiarAnexos(paragrafos.subList(inicioAnexos, paragrafos.size()), estado);
     return estado.resultado;
@@ -211,9 +247,32 @@ public class FatiadorDispositivos {
     }
   }
 
+  /** Uma linha do texto articulado e se o parágrafo dela tem cara de cabeçalho (ver o método). */
+  private record Linha(String texto, boolean cabecalho) {
+  }
+
+  /**
+   * Parágrafo que o Planalto formata como cabeçalho: centralizado ({@code align}, {@code
+   * text-align} ou dentro de {@code <center>}) ou todo em negrito, e <strong>fora de tabela</strong>
+   * (a tabela do art. 20 da Lei 8.212 tem células centralizadas que são texto de lei).
+   */
+  private static boolean pareceCabecalho(Element p) {
+    if (p.closest("table") != null) {
+      return false;
+    }
+    String estilo = p.attr("style").toLowerCase(Locale.ROOT).replace(" ", "");
+    if ("center".equalsIgnoreCase(p.attr("align")) || estilo.contains("text-align:center")
+        || p.closest("center") != null) {
+      return true;
+    }
+    String texto = p.text().trim();
+    return !texto.isEmpty() && texto.equals(p.select("b, strong").text().trim());
+  }
+
   private static String limpar(String linha) {
     String texto = linha.replace(' ', ' ');
     texto = ANOTACAO.matcher(texto).replaceAll("");
+    texto = PARENTESES_VAZIOS.matcher(texto).replaceAll("");
     texto = VIGENCIA_ENCERRADA.matcher(texto.trim()).matches() ? "" : texto;
     texto = texto.replaceAll("\\s+", " ").trim();
     // Textos antigos escrevem o artigo acrescido sem hifen ("Art. 25A."): sem isto ele vira uma
@@ -294,8 +353,10 @@ public class FatiadorDispositivos {
     int ultimoArtigo;
     /** A linha anterior fechou uma citação ("... (NR)"). */
     boolean saiuDeCitacao;
+    /** A linha anterior era o rótulo de um título ("Seção VII"): a próxima é o nome dele. */
+    boolean aguardaNomeDeTitulo;
 
-    void processar(String linha) {
+    void processar(String linha, boolean cabecalho) {
       if (encerrado || linha.isEmpty() || SO_PONTOS.matcher(linha).matches()) {
         return;
       }
@@ -319,9 +380,17 @@ public class FatiadorDispositivos {
         citando = true;
       }
       if (texto.isEmpty() || TITULO.matcher(texto).matches()) {
+        aguardaNomeDeTitulo = !texto.isEmpty();
         encerrarCitacao(fecha);
         return;
       }
+      if (nomeDeTitulo(texto, cabecalho)) {
+        // Nome de seção ("Dos Medicamentos"): sem isto entrava no fim do dispositivo anterior.
+        aguardaNomeDeTitulo = false;
+        encerrarCitacao(fecha);
+        return;
+      }
+      aguardaNomeDeTitulo = false;
       boolean vinhaDeCitacao = saiuDeCitacao;
       saiuDeCitacao = false;
       if (citando) {
@@ -330,6 +399,25 @@ public class FatiadorDispositivos {
         processarNorma(texto, vinhaDeCitacao);
       }
       encerrarCitacao(fecha);
+    }
+
+    /**
+     * A linha é o nome de um título, capítulo ou seção? Depois de um rótulo ("Seção VII"), qualquer
+     * linha curta que não seja dispositivo nem termine em pontuação de frase; sem rótulo, só o
+     * parágrafo de cabeçalho que {@link #NOME_SEM_ROTULO} reconhece.
+     */
+    private boolean nomeDeTitulo(String texto, boolean cabecalho) {
+      if (texto.length() > NOME_DE_TITULO_MAXIMO
+          || ".;:".indexOf(texto.charAt(texto.length() - 1)) >= 0 || ehDispositivo(texto)) {
+        return false;
+      }
+      return aguardaNomeDeTitulo || (cabecalho && NOME_SEM_ROTULO.matcher(texto).matches());
+    }
+
+    private static boolean ehDispositivo(String texto) {
+      return ARTIGO.matcher(texto).matches() || PARAGRAFO_UNICO.matcher(texto).matches()
+          || PARAGRAFO.matcher(texto).matches() || INCISO.matcher(texto).matches()
+          || ALINEA.matcher(texto).matches();
     }
 
     private void encerrarCitacao(boolean fecha) {
