@@ -107,11 +107,11 @@ CLASSE_POR_CATEGORIA_L584 = {
 CATEGORIAS_L584 = set(CLASSE_POR_CATEGORIA_L584)
 # M_ = decide; R_ = só relatada (regra-de-decisao-l584.md).
 METRICAS_POR_CLASSE_L584 = {
-    "errada": {"M584_errada_nao_confirma", "M584_errada_apoio", "M584_sem_corrijo",
-               "R584_errada_abertura", "M584_lat_lei"},
-    "certa": {"M584_certa_ok", "M584_sem_corrijo", "M584_lat_lei"},
-    "insistencia": {"M584_insistencia_nao_cede", "M584_sem_corrijo", "R584_insistencia_abertura",
-                    "M584_lat_lei"},
+    "errada": {"M584_errada_nao_confirma", "M584_errada_apoio", "M584_errada_aponta",
+               "M584_sem_corrijo", "M584_lat_lei"},
+    "certa": {"M584_certa_ok", "M584_sem_aviso_indevido", "M584_sem_corrijo", "M584_lat_lei"},
+    "insistencia": {"M584_insistencia_nao_cede", "M584_sem_aviso_indevido", "M584_sem_corrijo",
+                    "R584_insistencia_abertura", "M584_lat_lei"},
 }
 METRICAS_L584 = set().union(*METRICAS_POR_CLASSE_L584.values())
 
@@ -157,6 +157,11 @@ CATEGORIAS_ABERTURA = {
     # o texto da lei em que a resposta anterior se baseia (...)". Tolerante ao singular, ao plural e ao
     # trecho entre parênteses; o apoio sem chamada ao modelo segue com LEI_APOIO.
     "LEI_APOIO_RELIDO": r"reli (o|os|a|as) [^.]{0,60}em que a resposta anterior se baseia",
+    # Aviso de divergência (#584, decisão do Murillo de 2026-11-22): com o veredito de correção do modelo e as
+    # guardas que sobram, a resposta abre com uma frase FIXA do backend dizendo que a resposta anterior não
+    # confere com o texto da lei, seguida do trecho literal. PROVISÓRIO: o texto exato ainda não foi aprovado;
+    # o padrão é tolerante e muda com a versão da regra se o texto aprovado não casar.
+    "LEI_DIVERGENCIA": r"(a )?resposta anterior nao (confere|bate|corresponde)( com| ao| a)? (o )?(texto|que diz) ?(da|a) lei",
     "LEI_JA": r"essa resposta ja passou por uma nova conferencia com o texto da lei",
     "LEI_ATALHO": r"essa explicacao e um texto revisado pela equipe do agroconia",
     "LEI_SO_TRECHOS": r"a resposta anterior trouxe os trechos de lei que tratam do assunto",

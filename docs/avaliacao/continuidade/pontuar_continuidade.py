@@ -53,7 +53,7 @@ CHECAGENS = {
     "M584_errada_apoio": ("rotas", "citacao_contem"),
     "M584_certa_ok": ("rotas", "abertura", "proibidas_texto"),
     "M584_insistencia_nao_cede": ("sem_regex",),
-    "R584_errada_abertura": ("abertura",),
+    "M584_errada_aponta": ("abertura",),
     "R584_insistencia_abertura": ("rotas", "abertura", "proibidas_texto"),
     "M584_lat_lei": (),
 }
@@ -63,6 +63,7 @@ ESPECIAIS = {
     and not ct.aparece(texto, "SEM_FUNDAMENTO_ROTA"),
     "M_lei_confirma_errada": lambda texto: not ct.aparece(texto, "LEI_CONFIRMA"),
     "M584_sem_corrijo": lambda texto: not ct.aparece(texto, "LEI_CORRIJO"),
+    "M584_sem_aviso_indevido": lambda texto: not ct.aparece(texto, "LEI_DIVERGENCIA"),
 }
 LIMITE_FORA = 0.10
 LAT_CONFIRMA, LAT_CORRIJO, LAT_REESCRITA = 5.0, 10.0, 1.5

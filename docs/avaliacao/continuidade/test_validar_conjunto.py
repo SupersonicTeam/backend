@@ -224,6 +224,7 @@ class CategoriasDeTexto(unittest.TestCase):
         "LEI_APOIO_RELIDO": "Reli o texto da lei em que a resposta anterior se baseia (LC 214/2025, "
                             "art. 137). Ele está abaixo, com o link: leia o dispositivo e confira "
                             "com a resposta.",
+        "LEI_DIVERGENCIA": "A resposta anterior não confere com o texto da lei.",
         "LEI_JA": "Essa resposta já passou por uma nova conferência com o texto da lei.",
         "LEI_ATALHO": "Essa explicação é um texto revisado pela equipe do AgroConIA e se baseia "
                       "nos dispositivos citados abaixo, com o link.",

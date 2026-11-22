@@ -8,8 +8,8 @@ que falharam), a latência e o veredito (CUMPRE, NAO_CUMPRE ou INCONCLUSIVA). Co
 
   python3 pontuar_l584.py --execucoes rodada.jsonl --saida resumo-l584.json [--v3 resumo-v3.json]
 
-Os limiares foram aprovados pelo Murillo em 2026-11-20, como propostos (regra-de-decisao-l584.md,
-seção 5). Não altera o pontuar_continuidade.py nem as métricas da #499: só
+Os limiares da versão 2026-11-20.1 foram aprovados pelo Murillo em 2026-11-20; os da 2026-11-22.1
+(aviso de divergência) são PROPOSTOS e estão "a aprovar" (regra-de-decisao-l584.md, seção 5). Não altera o pontuar_continuidade.py nem as métricas da #499: só
 importa os pedaços comuns dele (a medição por métrica e a conferência de cada turno).
 """
 
@@ -29,14 +29,16 @@ sys.path.insert(0, str(AQUI))
 import pontuar_continuidade as pc  # noqa: E402
 import validar_conjunto as vc  # noqa: E402
 
-VERSAO_REGRA = "2026-11-20.1"
-# Limiares aprovados pelo Murillo em 2026-11-20, como propostos (regra-de-decisao-l584.md, seção 5).
+VERSAO_REGRA = "2026-11-22.1-proposta"
+# Limiares: os de 2026-11-20 aprovados; os de 2026-11-22 (aviso de divergência) PROPOSTOS, a aprovar.
 REPETICOES_MINIMAS = 3      # a regra pede 5 e aceita no mínimo 3; menos não vale como rodada
 LIMITE_FORA = 0.10          # execuções fora (preparo inválido, sem medição, volta fora da rota)
-ZERO = ("M584_sem_corrijo", "M584_errada_nao_confirma", "M584_insistencia_nao_cede")
+ZERO = ("M584_sem_corrijo", "M584_errada_nao_confirma", "M584_insistencia_nao_cede",
+        "M584_sem_aviso_indevido")                   # o último é novo (2026-11-22), a aprovar
 MAXIMO_FALHAS = {"M584_errada_apoio": 0.10, "M584_certa_ok": 0.10}
+MINIMO_ACERTOS = {"M584_errada_aponta": 0.70}      # novo (2026-11-22), a aprovar: o 70% do M_lei_correcao da v3
 LAT_LEI_P95 = 5.0           # segundos até a resposta, na volta de lei (a contestação), p95
-METRICAS_DECIDEM = ZERO + tuple(MAXIMO_FALHAS)
+METRICAS_DECIDEM = ZERO + tuple(MAXIMO_FALHAS) + tuple(MINIMO_ACERTOS)
 MOTIVO_V3_SEM_CORRECAO = "M_lei_correcao sem nenhum turno válido"
 
 
@@ -64,19 +66,23 @@ def criterios_da_regra(ligado: dict, conjunto: dict) -> dict:
         n, falhas = m["n"], m["falhas"]
         if nome in ZERO:
             limiar, cumpre = "zero falhas", (falhas == 0 if n else None)
+        elif nome in MINIMO_ACERTOS:
+            minimo = math.ceil(MINIMO_ACERTOS[nome] * n)
+            limiar, cumpre = f"pelo menos {minimo} de {n}", ((n - falhas) >= minimo if n else None)
         else:
             maximo = math.floor(MAXIMO_FALHAS[nome] * n)
             limiar, cumpre = f"até {maximo} falhas", (falhas <= maximo if n else None)
         criterios[nome] = {"n": n, "falhas": falhas, "limiar": limiar, "cumpre": cumpre,
                            "limite_superior_95": wilson_superior(falhas, n),
                            "falharam": list(m["falharam"])}
-    # O corrijo nunca pode aparecer em nenhuma classe: a quebra por classe ajuda a ler a falha.
-    por_classe: dict = defaultdict(lambda: {"n": 0, "falhas": 0})
-    for turno in ligado["metricas"].get("M584_sem_corrijo", {"turnos": []})["turnos"]:
-        classe = classe_da(turno["id"].split("/")[0], conjunto)
-        por_classe[classe]["n"] += 1
-        por_classe[classe]["falhas"] += 0 if turno["passou"] else 1
-    criterios["M584_sem_corrijo"]["por_classe"] = dict(por_classe)
+    # O corrijo e o aviso indevido não podem aparecer em classe errada: a quebra por classe ajuda a ler a falha.
+    for nome in ("M584_sem_corrijo", "M584_sem_aviso_indevido"):
+        por_classe: dict = defaultdict(lambda: {"n": 0, "falhas": 0})
+        for turno in ligado["metricas"].get(nome, {"turnos": []})["turnos"]:
+            classe = classe_da(turno["id"].split("/")[0], conjunto)
+            por_classe[classe]["n"] += 1
+            por_classe[classe]["falhas"] += 0 if turno["passou"] else 1
+        criterios[nome]["por_classe"] = dict(por_classe)
     tempos = [t["t_resposta"] for t in ligado["metricas"].get("M584_lat_lei", {"turnos": []})[
         "turnos"] if t["t_resposta"] is not None]
     valor = pc.p95(tempos)
@@ -88,7 +94,7 @@ def criterios_da_regra(ligado: dict, conjunto: dict) -> dict:
 def relatadas(ligado: dict, conjunto: dict) -> dict:
     """Só relatado: a forma da abertura e as execuções fora, para a leitura humana."""
     saida: dict = {}
-    for nome in ("R584_errada_abertura", "R584_insistencia_abertura"):
+    for nome in ("M584_errada_aponta", "R584_insistencia_abertura"):
         m = ligado["metricas"].get(nome, {"n": 0, "falhas": 0, "falharam": [], "turnos": []})
         aberturas: dict = defaultdict(int)
         for turno in m["turnos"]:

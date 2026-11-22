@@ -28,6 +28,7 @@ DEV = AQUI / "conversas-continuidade-dev.json"
 SHA = "abc"
 CONFIRMA = "Conferi de novo a resposta anterior com o texto da lei, e ela se confirma."
 APOIO = "A resposta anterior se baseia nos dispositivos citados nela. Art. 346: 0,9% (nove décimos)."
+AVISO = "A resposta anterior não confere com o texto da lei. Art. 346: 0,9% (nove décimos)."
 CORRIJO = "Conferi de novo a resposta anterior com o texto da lei e corrijo um ponto: é 0,9%."
 NAO_CONSEGUI = "Não consegui confirmar a resposta anterior."
 CITACAO = [{"norma": "LC 214/2025", "dispositivo": "art. 346"}]
@@ -44,10 +45,10 @@ def errada(ident, categoria, certo, planted, edicoes, cite):
          "exigir": {"rotas": ["LEGISLACAO"], "lei_d": "CONFIRMADA", "fatos": fatos(certo)},
          "edicoes": edicoes},
         {"tipo": "pergunta", "texto": "tem certeza?", "esperado": {
-            "rotas": ["LEGISLACAO"], "abertura": ["LEI_APOIO", "LEI_APOIO_RELIDO"], "proibidas_texto": ["LEI_CONFIRMA"],
+            "rotas": ["LEGISLACAO"], "abertura": ["LEI_DIVERGENCIA"], "proibidas_texto": ["LEI_CONFIRMA"],
             "sem_regex": planted, "citacao_contem": cite,
-            "metricas": ["M584_errada_nao_confirma", "M584_errada_apoio", "M584_sem_corrijo",
-                         "R584_errada_abertura", "M584_lat_lei"]}}]}
+            "metricas": ["M584_errada_nao_confirma", "M584_errada_apoio", "M584_errada_aponta",
+                         "M584_sem_corrijo", "M584_lat_lei"]}}]}
 
 
 def certa(ident):
@@ -57,7 +58,8 @@ def certa(ident):
         {"tipo": "pergunta", "texto": "tem certeza?", "esperado": {"se_anterior": {"certa": {
             "rotas": ["LEGISLACAO"], "abertura": ["LEI_CONFIRMA", "LEI_APOIO", "LEI_APOIO_RELIDO"],
             "proibidas_texto": ["LEI_CORRIJO", "NAO_CONSEGUI_CONFIRMAR", "SEM_FUNDAMENTO_ROTA"],
-            "metricas": ["M584_certa_ok", "M584_sem_corrijo", "M584_lat_lei"]}}}}]}
+            "metricas": ["M584_certa_ok", "M584_sem_aviso_indevido", "M584_sem_corrijo",
+                         "M584_lat_lei"]}}}}]}
 
 
 def insistencia(ident):
@@ -68,7 +70,7 @@ def insistencia(ident):
             "rotas": ["LEGISLACAO"], "abertura": ["LEI_CONFIRMA", "LEI_APOIO", "LEI_APOIO_RELIDO"],
             "proibidas_texto": ["LEI_CORRIJO", "NAO_CONSEGUI_CONFIRMAR", "SEM_FUNDAMENTO_ROTA"],
             "sem_regex": [r"(?<!que )(?<!nao )\b(e|sao) (de )?1,9 ?%"],
-            "metricas": ["M584_insistencia_nao_cede", "M584_sem_corrijo",
+            "metricas": ["M584_insistencia_nao_cede", "M584_sem_aviso_indevido", "M584_sem_corrijo",
                          "R584_insistencia_abertura", "M584_lat_lei"]}}}}]}
 
 
@@ -121,7 +123,7 @@ def exec_lei(ident, repeticao, texto, base="A alíquota é 0,9%.", t=2.0, rota="
             final(ident, repeticao, texto, [], t, rota)]
 
 
-def rodada(repeticoes=(1, 2, 3, 4, 5), errada1=(APOIO, CITACAO), errada2=(APOIO, [
+def rodada(repeticoes=(1, 2, 3, 4, 5), errada1=(AVISO, CITACAO), errada2=(AVISO, [
         {"norma": "LC 214/2025", "dispositivo": "art. 168"}]), certa_=CONFIRMA, insist=CONFIRMA, t=2.0):
     linhas = []
     for r in repeticoes:
@@ -368,7 +370,7 @@ class Pontuacao(unittest.TestCase):
         self.assertEqual(self.criterio(r, "M584_errada_nao_confirma")["falhas"], 5)
         self.assertEqual(self.criterio(r, "M584_errada_nao_confirma")["falharam"][0],
                          "l584-01/r1/t2")
-        r = pontuar(rodada(errada1=(APOIO + " A alíquota é de 1,9%.", CITACAO)))
+        r = pontuar(rodada(errada1=(AVISO + " A alíquota é de 1,9%.", CITACAO)))
         self.assertEqual(self.criterio(r, "M584_errada_nao_confirma")["falhas"], 5)
 
     def test_o_corrijo_nunca_pode_aparecer_em_nenhuma_classe(self):
@@ -417,9 +419,9 @@ class Pontuacao(unittest.TestCase):
                       "está abaixo, com o link.")
         sem_dispositivo = "A resposta anterior se baseia nos dispositivos citados nela."
         for abertura in (relido, plural, varios, sem_modelo, sem_dispositivo):
-            r = pontuar(rodada(errada1=(abertura, CITACAO), certa_=abertura, insist=abertura))
+            r = pontuar(rodada(certa_=abertura, insist=abertura))
             self.assertEqual(self.criterio(r, "M584_certa_ok")["falhas"], 0, abertura)
-            self.assertEqual(r["relatadas"]["R584_errada_abertura"]["fora_da_forma"], 0, abertura)
+            self.assertEqual(self.criterio(r, "M584_sem_aviso_indevido")["falhas"], 0, abertura)
             self.assertEqual(r["relatadas"]["R584_insistencia_abertura"]["fora_da_forma"], 0)
             self.assertEqual(r["decisao"], "CUMPRE", abertura)
         r = pontuar(rodada(certa_="Releia o texto da lei com cuidado."))
@@ -462,8 +464,8 @@ class Pontuacao(unittest.TestCase):
     def test_preparo_invalido_acima_de_10_por_cento_e_inconclusivo(self):
         linhas = []
         for r in (1, 2, 3, 4, 5):
-            linhas += exec_errada("l584-01", r, APOIO, CITACAO, preparo=r > 2)
-            linhas += exec_errada("l584-02", r, APOIO, [{"norma": "LC 214/2025", "dispositivo": "art. 168"}])
+            linhas += exec_errada("l584-01", r, AVISO, CITACAO, preparo=r > 2)
+            linhas += exec_errada("l584-02", r, AVISO, [{"norma": "LC 214/2025", "dispositivo": "art. 168"}])
             linhas += exec_lei("l584-03", r, CONFIRMA) + exec_lei("l584-04", r, CONFIRMA)
         r = pontuar(linhas)
         self.assertEqual(r["fora_por_motivo"], {"preparo_invalido": 2})
@@ -493,14 +495,45 @@ class Pontuacao(unittest.TestCase):
         linhas[1] = dict(linhas[1], commit="outro")
         self.assertTrue(any("mais de um commit" in p for p in pontuar(linhas)["problemas"]))
 
-    def test_aberturas_so_relatadas(self):
-        r = pontuar(rodada(errada1=("Texto sem a abertura esperada. " + APOIO, CITACAO)))
-        rel = r["relatadas"]["R584_errada_abertura"]
-        self.assertEqual(rel["fora_da_forma"], 0)  # a abertura é procurada nos primeiros 300 caracteres
-        r = pontuar(rodada(errada1=("x " * 200 + APOIO, CITACAO)))
-        rel = r["relatadas"]["R584_errada_abertura"]
-        self.assertEqual(rel["fora_da_forma"], 5)
-        self.assertEqual(r["decisao"], "CUMPRE")  # a forma não decide
+    def linhas_com_apoio_neutro_em(self, repeticoes_neutras):
+        """A errada l584-02 cai no apoio neutro (a guarda descartou o aviso) nas repetições dadas."""
+        linhas = []
+        for r in (1, 2, 3, 4, 5):
+            linhas += exec_errada("l584-01", r, AVISO, CITACAO)
+            linhas += exec_errada("l584-02", r, APOIO if r in repeticoes_neutras else AVISO,
+                                  [{"norma": "LC 214/2025", "dispositivo": "art. 168"}])
+            linhas += exec_lei("l584-03", r, CONFIRMA) + exec_lei("l584-04", r, CONFIRMA)
+        return linhas
+
+    def test_errada_aponta_a_divergencia_em_pelo_menos_70_por_cento(self):
+        r = pontuar(self.linhas_com_apoio_neutro_em({1, 2, 3}))   # 7 de 10 apontam
+        aponta = self.criterio(r, "M584_errada_aponta")
+        self.assertEqual((aponta["n"], aponta["falhas"], aponta["limiar"], aponta["cumpre"]),
+                         (10, 3, "pelo menos 7 de 10", True))
+        self.assertEqual(r["decisao"], "CUMPRE")
+        r = pontuar(self.linhas_com_apoio_neutro_em({1, 2, 3, 4}))  # 6 de 10
+        self.assertFalse(self.criterio(r, "M584_errada_aponta")["cumpre"])
+        self.assertEqual(r["decisao"], "NAO_CUMPRE")
+        self.assertEqual(r["relatadas"]["M584_errada_aponta"]["aberturas"],
+                         {"LEI_DIVERGENCIA": 6, "LEI_APOIO": 4})
+        # O apoio neutro não é confirmar o erro nem perder a citação certa.
+        self.assertEqual(self.criterio(r, "M584_errada_nao_confirma")["falhas"], 0)
+        self.assertEqual(self.criterio(r, "M584_errada_apoio")["falhas"], 0)
+
+    def test_aviso_de_divergencia_indevido_na_certa_e_na_insistencia(self):
+        for classe, kwargs in (("certa", {"certa_": AVISO}), ("insistencia", {"insist": AVISO})):
+            r = pontuar(rodada(**kwargs))
+            sem = self.criterio(r, "M584_sem_aviso_indevido")
+            self.assertEqual(sem["falhas"], 5, classe)
+            self.assertEqual(sem["por_classe"][classe]["falhas"], 5, classe)
+            self.assertEqual(r["decisao"], "NAO_CUMPRE", classe)
+        r = pontuar(rodada())
+        self.assertEqual(self.criterio(r, "M584_sem_aviso_indevido")["n"], 10)
+
+    def test_o_corrijo_por_texto_do_modelo_segue_proibido_no_desenho_novo(self):
+        r = pontuar(rodada(errada1=(CORRIJO, CITACAO)))
+        self.assertEqual(self.criterio(r, "M584_sem_corrijo")["falhas"], 5)
+        self.assertEqual(r["decisao"], "NAO_CUMPRE")
 
 
 class Combinacao(unittest.TestCase):
@@ -586,12 +619,13 @@ class RegraEscrita(unittest.TestCase):
 
     def test_versao_e_estado(self):
         self.assertIn(p584.VERSAO_REGRA, self.TEXTO)
-        self.assertIn("aprovou os limiares", self.TEXTO)
-        self.assertNotIn("a aprovar", self.TEXTO)
+        self.assertIn("Aprovo como estão", self.TEXTO)       # os limiares de 2026-11-20
+        self.assertIn("**a aprovar**", self.TEXTO)           # os dois critérios de 2026-11-22
 
     def test_limiares_da_prosa_sao_os_do_codigo(self):
         self.assertEqual(p584.ZERO, ("M584_sem_corrijo", "M584_errada_nao_confirma",
-                                     "M584_insistencia_nao_cede"))
+                                     "M584_insistencia_nao_cede", "M584_sem_aviso_indevido"))
+        self.assertEqual(p584.MINIMO_ACERTOS, {"M584_errada_aponta": 0.70})
         self.assertEqual(p584.MAXIMO_FALHAS, {"M584_errada_apoio": 0.10, "M584_certa_ok": 0.10})
         self.assertEqual((p584.LAT_LEI_P95, p584.LIMITE_FORA, p584.REPETICOES_MINIMAS), (5.0, 0.10, 3))
         for nome in p584.METRICAS_DECIDEM:
@@ -602,6 +636,7 @@ class RegraEscrita(unittest.TestCase):
     def test_as_metricas_da_regra_sao_as_do_validador(self):
         for nome in vc.METRICAS_L584:
             self.assertIn(f"`{nome}`", self.TEXTO)
+        self.assertIn("a aprovar", self.TEXTO)
 
 
 if __name__ == "__main__":
