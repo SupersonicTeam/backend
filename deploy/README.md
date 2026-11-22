@@ -742,10 +742,11 @@ mudam (na comparação feita no PR, 1.247 de 8.304: 1.068 da LC 214, 97 da LC 22
 da EC 132; a Lei 9.528 não muda) ganham texto e **embedding novos**, gerados pelo `bge-m3` no Ollama.
 O índice HNSW e a coluna `conteudo_tsv_sem_acento` (gerada) se atualizam sozinhos; não há `REINDEX`
 nem reinício do backend. **Duração, medida na reingestão local de 22/11/2026** (notebook do Murillo,
-Ollama local, banco local; o `DELETE` e as quatro ingestões, cada uma subindo a aplicação, com ~15 s de
+Ollama local com o `bge-m3` em CPU, 100% CPU pelo `ollama ps`, sem GPU no contêiner; banco local; o `DELETE` e as quatro ingestões, cada uma subindo a aplicação, com ~15 s de
 subida): **847 s no total, 14 min**: LC 214 629 s (1.068 embeddings, ~0,6 s cada), LC 227 102 s (97),
-Lei 8.212 53 s (29) e EC 132 62 s (53). **Na VPS não foi medida**: ela embeda em CPU, então espere
-mais; o tempo é proporcional aos ~1.250 embeddings, e o log mostra um resumo por norma ao fim.
+Lei 8.212 53 s (29) e EC 132 62 s (53). **Na VPS não foi medida**: ela também embeda em CPU (8 OCPU),
+então espere a mesma ordem de grandeza, sem garantia; o tempo é proporcional aos ~1.250
+embeddings, e o log mostra um resumo por norma ao fim.
 Enquanto uma norma é refeita, os trechos apagados dela ficam fora da base: faça fora de horário e
 **sem medição da Ceres em curso**.
 
@@ -782,9 +783,11 @@ Enquanto uma norma é refeita, os trechos apagados dela ficam fora da base: faç
 
    Se o banco local não tem todos os changeSets da `main` (a subida da aplicação os aplicaria),
    acrescente `--spring.liquibase.enabled=false --spring.jpa.hibernate.ddl-auto=none` aos argumentos
-   (a ingestão só usa `legislacao_trecho`) e exporte `DEMONSTRACAO_HABILITADA=false`. Na reingestão de
-   22/11 a única outra tabela que mudou foi a `shedlock` (a hora de um job agendado), conferida por
-   checksum de todas as tabelas antes e depois. Repita para `LC 227/2026` (`lcp227.htm`, `--ingestao.vigencia-inicio=2026-01-14`), `Lei 8.212/1991`
+   (a ingestão só usa `legislacao_trecho`); `DEMONSTRACAO_HABILITADA` já vale `false` por padrão fora
+   da VPS. Na reingestão de 22/11 a única outra tabela que mudou foi a `shedlock` (a hora de um job
+   agendado), conferida por checksum de todas as tabelas antes e depois.
+
+   Repita para `LC 227/2026` (`lcp227.htm`, `--ingestao.vigencia-inicio=2026-01-14`), `Lei 8.212/1991`
    (`l8212cons.htm`, `1991-07-25`) e `EC 132/2023` (`emc132.htm`, `2023-12-21`). A Lei 9.528/1997 não
    precisa. Rode antes cada uma com `--ingestao.simular=true`.
 5. **VPS:** com as HTMLs em `/opt/agrocontabil/legislacao/` e o `apagar.sql` (gerado do `base.csv` da
