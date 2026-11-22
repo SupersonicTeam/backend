@@ -169,6 +169,10 @@ public class ReconferenciaLei {
       "^[\\s\\p{Punct}\\u2013\\u2014]*(sim(?=[\\s\\p{Punct}\\u2013\\u2014]|$)"
           + "|n[a\\u00e3]o[*_]*\\s*[,.;:!\\u2013\\u2014-])",
       Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+  /** Negação e restrição no texto normalizado (sem acento nem caixa), para o sentido do trecho. */
+  private static final Pattern NEGACAO = Pattern.compile(
+      "\\b(nao|nem|nenhum[a]?|vedad[oa]s?|vedacao|veda|proibid[oa]s?|proibicao|exceto|excetuad[oa]s?"
+          + "|exclui|excluid[oa]s?|ressalvad[oa]s?|salvo)\\b");
   private static final Pattern FIM_DE_FRASE = Pattern.compile("(?<=[.!?])\\s+");
   private static final Pattern TOKEN = Pattern.compile("[\\p{L}\\p{N}]+(?:\\.\\p{N}+)*");
 
@@ -616,13 +620,24 @@ public class ReconferenciaLei {
       if (!misto) {
         String antes = polaridade(fatia);
         String depois = polaridade(texto(item.get("fraseCorrigida")));
-        if (antes != null && depois != null && !antes.equals(depois)) {
+        if (antes != null && depois != null && !antes.equals(depois)
+            && citacaoCorroboraPolaridade(antes, pedaco)) {
           return MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA;
         }
       }
       return !daResposta.isEmpty() && semApoio.isEmpty()
           ? MotivoReconferenciaLei.CORRIJO_APOIO_LITERAL
           : MotivoReconferenciaLei.CORRIJO_SEM_DIFERENCA;
+    }
+
+    /**
+     * A palavra do modelo sozinha não prova o sentido: a citação literal tem de dar o sinal. Uma
+     * resposta anterior "Sim" só diverge se o trecho citado traz negação ou restrição ("não",
+     * "vedado", "exceto"...); uma "Não" só diverge se o trecho citado é afirmativo, sem elas.
+     */
+    private static boolean citacaoCorroboraPolaridade(String antes, String pedaco) {
+      boolean nega = NEGACAO.matcher(RegrasClassificacao.normalizar(pedaco)).find();
+      return "SIM".equals(antes) ? nega : !nega;
     }
 
     private Resultado saida(String texto, List<CitacaoLegal> daSaida,

@@ -60,6 +60,13 @@ class ReconferenciaLeiAvisoTest {
       + "fornecimento dos produtos agropecuários";
   private static final TrechoRecuperado TRECHO = new TrechoRecuperado(null, "t137",
       "LC 214/2025", "art. 137, § 1º", "https://planalto", TEXTO_TRECHO, 0.9);
+  /** O mesmo dispositivo, mas com um trecho que nega (sentido: não se aplica). */
+  private static final TrechoRecuperado VEDADO = new TrechoRecuperado(null, "t137",
+      "LC 214/2025", "art. 137, § 1º", "https://planalto",
+      "Não se aplica a redução de 60% (sessenta por cento) às operações com produtos "
+          + "industrializados.", 0.9);
+  private static final String CITACAO_VEDADO = "Não se aplica a redução de 60% (sessenta por "
+      + "cento) às operações";
   private static final TrechoRecuperado PRAZO = new TrechoRecuperado(null, "t138",
       "LC 214/2025", "art. 138", "https://planalto",
       "Fica diferido o pagamento em 30 dias contados da entrada do insumo.", 0.8);
@@ -137,18 +144,100 @@ class ReconferenciaLeiAvisoTest {
   }
 
   @Test
-  @DisplayName("Polaridade trocada (Sim no lugar de Não): aviso fixo, só o Sim/Não da frase do "
-      + "modelo é lido e nada dela é mostrado")
+  @DisplayName("Sim no lugar de Não: o aviso só sai com a citação literal dando o sinal (aqui, "
+      + "um trecho que nega); a frase do modelo só tem o Sim/Não lido e nada dela é mostrado")
   void avisoPorPolaridade() {
+    org.mockito.Mockito.doReturn(List.of(VEDADO)).when(buscaTextual)
+        .buscarDispositivos(anyList(), eq(HOJE));
     when(modelo.chamar(any())).thenReturn(resposta(correcao(
-        "Sim, a soja tem redução de 60% da alíquota [T1]",
-        "Não, a soja tem redução de 60% da alíquota [T1]", "T1", CITACAO)));
+        "Sim, a redução de 60% alcança os produtos industrializados [T1]",
+        "Não, a redução de 60% não alcança os produtos industrializados [T1]", "T1",
+        CITACAO_VEDADO)));
 
     ReconferenciaLei.Resultado r = reconferencia.reconferir(
-        parDeLei("Sim, a soja tem redução de 60% da alíquota"), contexto);
+        parDeLei("Sim, a redução de 60% alcança os produtos industrializados"), contexto);
 
     assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA);
     assertThat(r.rota().texto()).isEqualTo(AVISO_ESPERADO);
+  }
+
+  @Test
+  @DisplayName("Resposta 'Sim' certa e modelo dizendo 'Não': a citação é afirmativa, sem aviso "
+      + "falso (apoio neutro)")
+  void polaridadeSemCorroboracaoNaoAvisa() {
+    when(modelo.chamar(any())).thenReturn(resposta(correcao(
+        "Sim, a soja tem redução da alíquota [T1]", "Não, a soja tem redução da alíquota [T1]",
+        "T1", CITACAO)));
+
+    ReconferenciaLei.Resultado r = reconferencia.reconferir(
+        parDeLei("Sim, a soja tem redução da alíquota"), contexto);
+
+    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_SEM_DIFERENCA);
+    assertThat(r.rota().texto()).isEqualTo(APOIO_NEUTRO).doesNotContain("não confere");
+  }
+
+  @Test
+  @DisplayName("Resposta 'Não' errada: a citação é afirmativa e o aviso sai; com citação que "
+      + "nega, não")
+  void polaridadeDeNaoParaSim() {
+    when(modelo.chamar(any())).thenReturn(resposta(correcao(
+        "Não, a soja não tem redução da alíquota [T1]", "Sim, a soja tem redução da alíquota [T1]",
+        "T1", CITACAO)));
+    reconferencia.reconferir(parDeLei("Não, a soja não tem redução da alíquota"), contexto);
+    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA);
+
+    contexto = new ContextoAssistente(UUID.randomUUID(), HOJE);
+    org.mockito.Mockito.doReturn(List.of(VEDADO)).when(buscaTextual)
+        .buscarDispositivos(anyList(), eq(HOJE));
+    when(modelo.chamar(any())).thenReturn(resposta(correcao(
+        "Não, a soja não tem redução da alíquota [T1]", "Sim, a soja tem redução da alíquota [T1]",
+        "T1", CITACAO_VEDADO)));
+    reconferencia.reconferir(parDeLei("Não, a soja não tem redução da alíquota"), contexto);
+    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_SEM_DIFERENCA);
+  }
+
+  @Test
+  @DisplayName("A mensagem do produtor nunca vai ao modelo: o prompt leva só a pergunta e a "
+      + "resposta do par, e o veredito de um 'valor errado do produtor' não tem de onde sair")
+  void promptSemAMensagemDoProdutor() throws Exception {
+    when(modelo.chamar(any())).thenReturn(resposta(correcao(
+        "A soja tem redução de 40% da alíquota [T1]", "A soja tem redução de 60% da alíquota [T1]",
+        "T1", CITACAO)));
+
+    reconferencia.reconferir(parDeLei("A soja tem redução de 60% da alíquota"), contexto);
+
+    org.mockito.ArgumentCaptor<org.springframework.ai.chat.prompt.Prompt> prompt =
+        org.mockito.ArgumentCaptor.forClass(org.springframework.ai.chat.prompt.Prompt.class);
+    verify(modelo).chamar(prompt.capture());
+    assertThat(prompt.getValue().getInstructions()).hasSize(2);
+    com.fasterxml.jackson.databind.JsonNode usuario = new com.fasterxml.jackson.databind
+        .ObjectMapper().readTree(prompt.getValue().getInstructions().get(1).getText());
+    assertThat(usuario.fieldNames()).toIterable()
+        .containsExactlyInAnyOrder("pergunta", "respostaAnterior");
+    assertThat(usuario.get("pergunta").asText()).isEqualTo("a soja tem redução?");
+  }
+
+  @Test
+  @DisplayName("Cada motivo pertence a um grupo de veredito: aviso e barrado por guarda são "
+      + "correção; confirmação, confirmação descartada; o resto, sem veredito")
+  void grupoDoVeredito() {
+    assertThat(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA.veredito())
+        .isEqualTo(MotivoReconferenciaLei.Veredito.CORRECAO);
+    assertThat(MotivoReconferenciaLei.CORRIJO_APOIO_LITERAL.veredito())
+        .isEqualTo(MotivoReconferenciaLei.Veredito.CORRECAO);
+    assertThat(MotivoReconferenciaLei.CORRIGIU.veredito())
+        .isEqualTo(MotivoReconferenciaLei.Veredito.CORRECAO);
+    assertThat(MotivoReconferenciaLei.CONFIRMOU.veredito())
+        .isEqualTo(MotivoReconferenciaLei.Veredito.CONFIRMACAO);
+    assertThat(MotivoReconferenciaLei.CONFIRMO_NUMERO_FATIA.veredito())
+        .isEqualTo(MotivoReconferenciaLei.Veredito.CONFIRMACAO);
+    assertThat(MotivoReconferenciaLei.NAO_SUSTENTA.veredito())
+        .isEqualTo(MotivoReconferenciaLei.Veredito.NAO_SUSTENTA);
+    for (MotivoReconferenciaLei m : List.of(MotivoReconferenciaLei.TEXTO_FIXO,
+        MotivoReconferenciaLei.SEM_MODELO_DISJUNTOR, MotivoReconferenciaLei.CORTADA_PELO_TETO,
+        MotivoReconferenciaLei.SAIDA_NAO_E_JSON, MotivoReconferenciaLei.VEREDITO_DESCONHECIDO)) {
+      assertThat(m.veredito()).as(m.name()).isEqualTo(MotivoReconferenciaLei.Veredito.NENHUM);
+    }
   }
 
   @Test

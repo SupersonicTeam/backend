@@ -405,6 +405,27 @@ class OrquestradorContinuidadeTest {
   }
 
   @Test
+  @DisplayName("Lei certa contestada com um valor errado do produtor: a reconferência recebe só o "
+      + "par, a mensagem não é lida nem classificada e a pergunta considerada é a do par (#584)")
+  void contestacaoDeLeiComValorErradoDoProdutor() {
+    ParConferido par = new ParConferido("a soja tem redução?", "Tem redução de 60%.", "v1.a.b",
+        new CargaTurno(EXP, Intencao.LEGISLACAO, false, null, null, null, false,
+            new LeiAssinada(LeiAssinada.Classe.CONFIRMADA, new CargaTurno.Faixa(0, 5), null,
+                null, false, false, null)), 0, false);
+    when(reconferencia.reconferir(eq(par), any())).thenReturn(new ReconferenciaLei.Resultado(
+        ResultadoRota.aceita(ReconferenciaLei.CONFIRMA),
+        DesfechoContinuidade.RECONFERENCIA_CONFIRMOU, true));
+
+    ResultadoOrquestracao r = responder("tem certeza? acho que a redução é de 30%",
+        confirmacao(par, CaminhoCota.RECONFERENCIA));
+
+    assertThat(r.texto()).isEqualTo(ReconferenciaLei.CONFIRMA).doesNotContain("30");
+    assertThat(r.perguntaConsiderada()).isEqualTo("a soja tem redução?");
+    verify(reconferencia).reconferir(eq(par), any());
+    verifyNoInteractions(classificador, rotaLegislacao);
+  }
+
+  @Test
   @DisplayName("Reescrita aplicada: a considerada vai à classificação e às rotas")
   void reescritaAplicada() {
     ParConferido par = parDeDados("tenho nota rejeitada?",

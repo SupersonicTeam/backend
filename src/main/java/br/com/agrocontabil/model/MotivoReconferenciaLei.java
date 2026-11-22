@@ -109,5 +109,32 @@ public enum MotivoReconferenciaLei {
   /** Concordância: o trecho da correção não está entre os da rota normal. */
   CORRIJO_CONCORDANCIA_SEM_TRECHO,
   /** Concordância: nenhuma frase da rota normal tem o número novo sem o antigo. */
-  CORRIJO_CONCORDANCIA_SEM_FRASE
+  CORRIJO_CONCORDANCIA_SEM_FRASE;
+
+  /** O veredito do modelo que o motivo representa, para ler a medição por grupo (#584). */
+  public enum Veredito {
+    /** CORRIJO: o aviso, a guarda que o barrou ou o apoio neutro por chave. */
+    CORRECAO,
+    /** CONFIRMO: a confirmação validada ou a que uma guarda descartou. */
+    CONFIRMACAO,
+    /** NAO_SUSTENTA. */
+    NAO_SUSTENTA,
+    /** Sem veredito: texto fixo, caminho sem modelo ou saída que não serve. */
+    NENHUM
+  }
+
+  /**
+   * O grupo do veredito. {@code CORRIGIU} e os {@code CORRIJO_*} são de correção (o aviso
+   * emitido, {@link #CORRIJO_AVISO_DIVERGENCIA}, e o barrado por guarda, cada um com o seu
+   * código); {@code CONFIRMOU} e os {@code CONFIRMO_*}, de confirmação; os demais, sem veredito.
+   */
+  public Veredito veredito() {
+    if (this == CORRIGIU || name().startsWith("CORRIJO_")) {
+      return Veredito.CORRECAO;
+    }
+    if (this == CONFIRMOU || name().startsWith("CONFIRMO_")) {
+      return Veredito.CONFIRMACAO;
+    }
+    return this == NAO_SUSTENTA ? Veredito.NAO_SUSTENTA : Veredito.NENHUM;
+  }
 }
