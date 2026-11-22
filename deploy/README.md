@@ -786,11 +786,13 @@ Ceres em curso**.
    ```bash
    cd /opt/agrocontabil
    docker compose exec -T postgres psql -U agrocontabil -d agrocontabil -v ON_ERROR_STOP=1 < apagar.sql
-   docker compose run --rm -v /opt/agrocontabil/legislacao:/legislacao:ro -e SPRING_PROFILES_ACTIVE=homolog,ingestao backend   --ingestao.arquivo=/legislacao/lcp214.htm --ingestao.norma='LC 214/2025'   --ingestao.url=https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm   --ingestao.data-captura=<hoje> --ingestao.vigencia-inicio=2025-01-16
+   docker compose run --rm -v /opt/agrocontabil/legislacao:/legislacao:ro -e SPRING_PROFILES_ACTIVE=homolog,ingestao -e DEMONSTRACAO_HABILITADA=false backend   --ingestao.arquivo=/legislacao/lcp214.htm --ingestao.norma='LC 214/2025'   --ingestao.url=https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp214.htm   --ingestao.data-captura=<hoje> --ingestao.vigencia-inicio=2025-01-16
    echo $?   # 0 = ingerida; 1 = falhou, motivo no log
    ```
 
-   Os outros três comandos seguem o padrão do passo 4. Se uma ingestão cair no meio, rode o **mesmo
+   O `-e DEMONSTRACAO_HABILITADA=false` importa: o compose da VPS liga o seed da banca e o profile
+   `ingestao` não o desliga, então sem isso o container da ingestão rodaria o seed junto do backend
+   no ar. Os outros três comandos seguem o padrão do passo 4. Se uma ingestão cair no meio, rode o **mesmo
    comando** de novo: é idempotente (pula o que já entrou) e a base não fica com vigência duplicada.
 6. **Conferir** (as quatro consultas têm de dar o resultado indicado):
 

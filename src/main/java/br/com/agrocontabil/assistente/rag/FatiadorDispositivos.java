@@ -96,7 +96,7 @@ public class FatiadorDispositivos {
   /**
    * Link de anotação do Planalto sem parênteses (às vezes com eles, às vezes com ponto final): o
    * texto <em>inteiro</em> do link. O consolidado acrescenta "Produção de efeitos" no fim do caput
-   * (70 vezes na LC 214), "Vigência" e "Sem eficácia" depois de dispositivos de MP e "Vide ..." às
+   * (cerca de 130 vezes na LC 214), "Vigência" e "Sem eficácia" depois de dispositivos de MP e "Vide ..." às
    * decisões do STF; nada disso é lei, e o link de uma referência de verdade tem mais texto
    * ("art. 5º", "Lei Complementar nº 214").
    */

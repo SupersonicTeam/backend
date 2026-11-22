@@ -72,6 +72,8 @@ class ComparacaoFatiamentoBaseManual {
   private static final Pattern TERMINA_EM_TITULO =
       Pattern.compile("(?s).*\\s(?:Do|Da|Dos|Das|DO|DA|DOS|DAS)\\s[^.;:!?]{3,200}[^.;:!?\\s]$");
   private static final int TRECHO_NO_RELATORIO = 140;
+  /** O diff por palavras usa uma matriz de a × b inteiros; acima disso vira {@code OUTRA}. */
+  private static final long LIMITE_CELULAS_DO_DIFF = 100_000_000L;
 
   /** Uma linha da base (ou do snapshot). */
   private record Linha(String norma, String dispositivo, String vigenciaInicio,
@@ -205,6 +207,10 @@ class ComparacaoFatiamentoBaseManual {
   private static Mudanca classificar(Linha antes, Linha depois) {
     String[] a = antes.content().split(" ", -1);
     String[] b = depois.content().split(" ", -1);
+    if ((long) a.length * b.length > LIMITE_CELULAS_DO_DIFF) {
+      // Matriz grande demais: não arrisca estourar a memória, e quem lê o relatório decide.
+      return new Mudanca(antes, depois, Tipo.OUTRA, List.of());
+    }
     int[][] lcs = new int[a.length + 1][b.length + 1];
     for (int i = a.length - 1; i >= 0; i--) {
       for (int j = b.length - 1; j >= 0; j--) {
@@ -282,12 +288,17 @@ class ComparacaoFatiamentoBaseManual {
 
   private static Map<String, Linha> indexar(List<Linha> linhas) {
     Map<String, Linha> mapa = new LinkedHashMap<>();
+    List<String> repetidas = new ArrayList<>();
     for (Linha l : linhas) {
-      Linha anterior = mapa.put(l.chave(), l);
-      if (anterior != null && !anterior.content().equals(l.content())) {
-        // Duas linhas com a mesma chave e textos diferentes: o relatório não saberia comparar.
-        mapa.put(l.chave(), anterior);
+      if (mapa.put(l.chave(), l) != null) {
+        repetidas.add(l.chave());
       }
+    }
+    if (!repetidas.isEmpty()) {
+      // Duas linhas com a mesma (norma, dispositivo, vigência): a comparação esconderia uma delas e o
+      // DELETE não a apagaria; a reingestão seria recusada depois. Quem lê decide antes.
+      throw new IllegalStateException("chave (norma|dispositivo|vigência) repetida em "
+          + repetidas.size() + " linha(s), a primeira: " + repetidas.get(0));
     }
     return mapa;
   }
