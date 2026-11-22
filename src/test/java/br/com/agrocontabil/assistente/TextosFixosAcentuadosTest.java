@@ -133,7 +133,8 @@ public class TextosFixosAcentuadosTest {
         ReconferenciaLei.CONFIRMA, ReconferenciaLei.O_QUE_DIZ, ReconferenciaLei.CORRIJO_UM,
         ReconferenciaLei.CORRIJO_DOIS, ReconferenciaLei.CORRECAO, ReconferenciaLei.ENQUADRAMENTO,
         ReconferenciaLei.APOIO, ReconferenciaLei.APOIO_RELIDO,
-        ReconferenciaLei.APOIO_RELIDO_PLURAL, ReconferenciaLei.APOIO_SEM_DISPOSITIVO,
+        ReconferenciaLei.APOIO_RELIDO_PLURAL, ReconferenciaLei.AVISO_DIVERGENCIA,
+        ReconferenciaLei.AVISO_DIVERGENCIA_PLURAL, ReconferenciaLei.APOIO_SEM_DISPOSITIVO,
         ReconferenciaLei.JA_RECONFERIDA, ReconferenciaLei.ATALHO, ReconferenciaLei.SO_TRECHOS,
         ReconferenciaLei.SEM_CONFIRMACAO, ReconferenciaLei.SEM_FUNDAMENTO)) {
       textos.put("continuidade " + textos.size(), texto);

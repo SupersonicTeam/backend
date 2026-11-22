@@ -45,9 +45,15 @@ public enum MotivoReconferenciaLei {
   NAO_SUSTENTA,
 
   /**
-   * O modelo indicou uma correção e a resposta saiu como apoio, sem a correção por texto
-   * ({@code app.assistente.continuidade.lei-corrijo-por-texto} desligada, o padrão): distingue
-   * este caso do apoio por descarte de uma guarda.
+   * O modelo indicou uma correção, as guardas do trecho passaram e a resposta foi o aviso fixo de
+   * divergência (#584): a resposta anterior não confere com o texto da lei, com o trecho literal.
+   */
+  CORRIJO_AVISO_DIVERGENCIA,
+
+  /**
+   * O modelo indicou uma correção e a resposta saiu como apoio neutro porque o aviso de divergência
+   * está desligado ({@code app.assistente.continuidade.lei-aviso-de-divergencia}): nenhuma guarda
+   * foi avaliada. Com o aviso ligado, cada guarda que descarta tem o seu código.
    */
   CORRIJO_INDICADO_APOIO,
 
@@ -82,10 +88,18 @@ public enum MotivoReconferenciaLei {
   CORRIJO_DADOS,
   /** Citações só de regime específico sem o setor na pergunta. */
   CORRIJO_REGIME,
-  /** Sem número que muda nem polaridade que muda (nada conferível). */
+  /**
+   * Sem divergência que o backend verifique: nem número da resposta sem apoio no trecho com outro
+   * número na citação, nem Sim/Não que muda (nada conferível).
+   */
   CORRIJO_SEM_DIFERENCA,
-  /** O número antigo tem apoio literal no trecho que a frase anterior citava. */
+  /**
+   * O número que a resposta anterior afirma no ponto tem apoio literal no trecho que sustenta o
+   * veredito: não há aviso (a resposta confere com o texto).
+   */
   CORRIJO_APOIO_LITERAL,
+  /** O trecho do fundamento do veredito não é um dos que a resposta anterior citou. */
+  CORRIJO_TRECHO_NAO_CITADO,
   /** Concordância: o modelo falhou na rota de lei normal. */
   CORRIJO_CONCORDANCIA_INDISPONIVEL,
   /** Concordância: a rota de lei normal não foi aceita (descartada, cortada, sem detalhe). */

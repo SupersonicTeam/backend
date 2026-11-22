@@ -84,6 +84,8 @@ class ReconferenciaLeiSoApoioTest {
   void montar() {
     contexto = new ContextoAssistente(UUID.randomUUID(), HOJE);
     propriedades = new AssistenteProperties();
+    // Estes testes cobrem o apoio neutro (#584, 2026-11-20): o aviso de divergencia vem desligado.
+    propriedades.getContinuidade().setLeiAvisoDeDivergencia(false);
     reconferencia = new ReconferenciaLei(modelo, busca, buscaTextual, new ValidadorCitacao(),
         new ValidadorNumeros(), new VerificadorAfirmacaoDados(), rotaLegislacao,
         trechosDasCompras, disponibilidade, propriedades);

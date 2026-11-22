@@ -65,8 +65,14 @@ public enum DesfechoContinuidade {
   /** Reconferência corrigiu um ou dois pontos. */
   RECONFERENCIA_CORRIGIU,
   /**
-   * O modelo indicou uma correção e a resposta saiu como apoio, sem a correção por texto (#584,
-   * o padrão): nenhuma frase do modelo vai ao produtor.
+   * O modelo indicou uma correção e as guardas do trecho passaram: aviso fixo do backend de que a
+   * resposta anterior não confere com o texto da lei, com o trecho literal (#584); nenhuma frase
+   * do modelo vai ao produtor.
+   */
+  RECONFERENCIA_AVISO_DIVERGENCIA,
+  /**
+   * O modelo indicou uma correção e a resposta saiu como apoio neutro porque o aviso de
+   * divergência está desligado (#584): nenhuma frase do modelo vai ao produtor.
    */
   RECONFERENCIA_APOIO_SEM_CORRECAO,
   /** O modelo disse que os trechos não sustentam: apoio. */

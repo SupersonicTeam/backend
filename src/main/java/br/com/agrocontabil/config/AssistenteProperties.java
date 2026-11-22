@@ -332,6 +332,25 @@ public class AssistenteProperties implements InitializingBean {
      */
     private boolean leiCorrijoPorTexto;
 
+    /**
+     * Aviso de divergência na contestação de lei ({@code AI_CONTINUIDADE_LEI_AVISO_DIVERGENCIA_
+     * HABILITADO}), ligado por padrão (decisão do Murillo, 2026-11-22, #584: "quero que ela aponte
+     * o erro"). Com o veredito de correção do modelo e as guardas que não dependem da frase de
+     * correção passando, a resposta é uma frase fixa do backend dizendo que a resposta anterior não
+     * confere com o texto da lei naquele ponto, mais o trecho literal com a citação; nenhuma prosa
+     * do modelo. Desligado, o veredito de correção sai como apoio neutro. Só vale com a correção
+     * por texto desligada (ela, ligada, vem antes) e com a continuidade ligada.
+     */
+    private boolean leiAvisoDeDivergencia = true;
+
+    public boolean isLeiAvisoDeDivergencia() {
+      return leiAvisoDeDivergencia;
+    }
+
+    public void setLeiAvisoDeDivergencia(boolean leiAvisoDeDivergencia) {
+      this.leiAvisoDeDivergencia = leiAvisoDeDivergencia;
+    }
+
     public boolean isLeiCorrijoPorTexto() {
       return leiCorrijoPorTexto;
     }

@@ -108,6 +108,20 @@ public class ReconferenciaLei {
       + "resposta anterior se baseia (%s). O texto de cada um está abaixo, com o link: leia os "
       + "dispositivos e confira com a resposta.";
 
+  /**
+   * Aviso de divergência, com um dispositivo (#584, decisão do Murillo de 2026-11-22): o modelo deu
+   * o veredito de correção e as guardas do trecho passaram. Frase fixa do backend, sem número, sem
+   * artigo além da lista de dispositivos e sem dizer o que é o certo: isso é o trecho abaixo.
+   */
+  public static final String AVISO_DIVERGENCIA = "Reli o texto da lei em que a resposta anterior "
+      + "se baseia (%s) e a resposta não confere com ele neste ponto. Vale o texto abaixo, com o "
+      + "link: leia o dispositivo.";
+
+  /** {@link #AVISO_DIVERGENCIA} com mais de um dispositivo, com o mesmo sentido. */
+  public static final String AVISO_DIVERGENCIA_PLURAL = "Reli o texto da lei nos dispositivos em "
+      + "que a resposta anterior se baseia (%s) e a resposta não confere com eles neste ponto. "
+      + "Vale o texto de cada um, abaixo, com o link: leia os dispositivos.";
+
   /** Apoio sem dispositivo resolvido. */
   public static final String APOIO_SEM_DISPOSITIVO = "A resposta anterior se baseia nos "
       + "dispositivos citados nela.";
@@ -316,13 +330,19 @@ public class ReconferenciaLei {
         porMarca, marcasCitadas, misto, contexto);
     return switch (tipo) {
       case "CONFIRMO" -> conferencia.confirmo(veredito.get(), dispositivos);
-      case "CORRIJO" -> propriedades.getContinuidade().isLeiCorrijoPorTexto()
-          ? conferencia.corrijo(veredito.get(), dispositivos)
-          // Decisão do Murillo (2026-11-20, #584): na contestação de lei a Ceres mostra só o trecho
-          // da lei. O CORRIJO do modelo não vira frase de correção nem chama a concordância.
-          : apoio(par, contexto, dispositivos,
-              DesfechoContinuidade.RECONFERENCIA_APOIO_SEM_CORRECAO, true,
-              MotivoReconferenciaLei.CORRIJO_INDICADO_APOIO);
+      case "CORRIJO" -> {
+        if (propriedades.getContinuidade().isLeiCorrijoPorTexto()) {
+          yield conferencia.corrijo(veredito.get(), dispositivos);
+        }
+        // Decisão do Murillo (2026-11-22, #584): a Ceres aponta o erro, sem a frase de correção do
+        // modelo nem a concordância: um aviso fixo e o trecho literal. Sem a chave do aviso, o
+        // apoio neutro de 2026-11-20.
+        yield propriedades.getContinuidade().isLeiAvisoDeDivergencia()
+            ? conferencia.aviso(veredito.get(), dispositivos)
+            : apoio(par, contexto, dispositivos,
+                DesfechoContinuidade.RECONFERENCIA_APOIO_SEM_CORRECAO, true,
+                MotivoReconferenciaLei.CORRIJO_INDICADO_APOIO);
+      }
       case "NAO_SUSTENTA" -> apoio(par, contexto, dispositivos,
           DesfechoContinuidade.RECONFERENCIA_NAO_SUSTENTA, true,
           MotivoReconferenciaLei.NAO_SUSTENTA);
@@ -504,6 +524,105 @@ public class ReconferenciaLei {
       String texto = abertura + "\n" + String.join("\n", itens) + "\n\n" + ENQUADRAMENTO;
       return saida(texto, citacoes, DesfechoContinuidade.RECONFERENCIA_CORRIGIU,
           MotivoReconferenciaLei.CORRIGIU);
+    }
+
+    /**
+     * O aviso de divergência (#584): o veredito de correção do modelo, conferido só pelo que não
+     * depende da frase de correção nem da âncora. Cada item precisa de um fundamento válido (marca
+     * de um trecho que a resposta anterior citou, citação que é pedaço literal dele, fora de regime
+     * específico sem o setor na pergunta) e de uma divergência que o backend vê no texto real da
+     * resposta anterior: um número dela sem apoio no trecho com outro número na citação, ou um
+     * Sim/Não que muda (só a palavra inicial da frase do modelo é lida, nunca mostrada). A saída é
+     * uma frase fixa e os trechos dos fundamentos: nenhuma prosa do modelo.
+     */
+    Resultado aviso(JsonNode no, List<String> dispositivos) {
+      JsonNode lista = no.path("correcoes");
+      if (!lista.isArray() || lista.isEmpty() || lista.size() > 2) {
+        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO,
+            MotivoReconferenciaLei.CORRIJO_FORMATO_LISTA);
+      }
+      Map<String, CitacaoLegal> citacoes = new LinkedHashMap<>();
+      for (JsonNode item : lista) {
+        Optional<Fundamento> fundamento = fundamento(item.get("fundamento"));
+        if (fundamento.isEmpty()) {
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO,
+              MotivoReconferenciaLei.CORRIJO_FORMATO_ITEM);
+        }
+        Fundamento f = fundamento.get();
+        TrechoRecuperado trecho = porMarca.get(f.marca());
+        if (trecho == null) {
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
+              MotivoReconferenciaLei.CORRIJO_MARCA_INEXISTENTE);
+        }
+        if (!marcasCitadas.contains(f.marca())) {
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
+              MotivoReconferenciaLei.CORRIJO_TRECHO_NAO_CITADO);
+        }
+        Optional<String> pedaco = pedacoLiteral(f.citacao(), trecho.texto());
+        if (pedaco.isEmpty()) {
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
+              MotivoReconferenciaLei.CORRIJO_CITACAO_NAO_LITERAL);
+        }
+        if (GuardaRegimeEspecifico.barra(perguntaLei, List.of(trecho.comoCitacao()))) {
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_REGIME,
+              MotivoReconferenciaLei.CORRIJO_REGIME);
+        }
+        MotivoReconferenciaLei divergencia = divergencia(item, f.marca(), trecho, pedaco.get());
+        if (divergencia == MotivoReconferenciaLei.CORRIJO_APOIO_LITERAL) {
+          return descartar(dispositivos,
+              DesfechoContinuidade.RECONFERENCIA_DESCARTADA_APOIO_LITERAL, divergencia);
+        }
+        if (divergencia != MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA) {
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_DIFERENCA,
+              divergencia);
+        }
+        citacoes.putIfAbsent(trecho.comoCitacao().referencia(), trecho.comoCitacao());
+      }
+      List<CitacaoLegal> daSaida = new ArrayList<>(citacoes.values());
+      String texto = (daSaida.size() > 1 ? AVISO_DIVERGENCIA_PLURAL : AVISO_DIVERGENCIA)
+          .formatted(referencias(daSaida)) + " " + ENQUADRAMENTO;
+      registrarParNovo(par, contexto, daSaida);
+      contexto.atualizarReconferenciaLei(
+          r -> r.comMotivo(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA));
+      log.info("Ceres: {}", DesfechoContinuidade.RECONFERENCIA_AVISO_DIVERGENCIA);
+      return new Resultado(new ResultadoRota(texto, DesfechoInteracao.RESPONDIDA, daSaida),
+          DesfechoContinuidade.RECONFERENCIA_AVISO_DIVERGENCIA, true);
+    }
+
+    /**
+     * A divergência que o backend vê, sem a frase de correção: {@code AVISO_DIVERGENCIA} se um
+     * número que a resposta anterior afirma nas frases que citam o trecho não está nele e a citação
+     * literal traz outro número, ou se o Sim/Não da resposta anterior difere do da frase do modelo
+     * (fora do MISTO); {@code APOIO_LITERAL} se os números dela têm apoio no trecho;
+     * {@code SEM_DIFERENCA} nos demais casos.
+     */
+    private MotivoReconferenciaLei divergencia(JsonNode item, String marca, TrechoRecuperado trecho,
+        String pedaco) {
+      Set<BigDecimal> doTrecho = ValidadorNumeros.valoresMencionados(semAnotacoes(trecho.texto()));
+      Set<BigDecimal> daResposta = new HashSet<>();
+      for (String frase : frases(marcada)) {
+        if (marcas(frase).contains(marca)) {
+          daResposta.addAll(ValidadorNumeros.valoresMencionados(
+              semGrupos(RotaLegislacao.semMarcas(frase))));
+        }
+      }
+      Set<BigDecimal> semApoio = new HashSet<>(daResposta);
+      semApoio.removeAll(doTrecho);
+      Set<BigDecimal> novos = new HashSet<>(ValidadorNumeros.valoresMencionados(pedaco));
+      novos.removeAll(daResposta);
+      if (!semApoio.isEmpty() && !novos.isEmpty()) {
+        return MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA;
+      }
+      if (!misto) {
+        String antes = polaridade(fatia);
+        String depois = polaridade(texto(item.get("fraseCorrigida")));
+        if (antes != null && depois != null && !antes.equals(depois)) {
+          return MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA;
+        }
+      }
+      return !daResposta.isEmpty() && semApoio.isEmpty()
+          ? MotivoReconferenciaLei.CORRIJO_APOIO_LITERAL
+          : MotivoReconferenciaLei.CORRIJO_SEM_DIFERENCA;
     }
 
     private Resultado saida(String texto, List<CitacaoLegal> daSaida,
