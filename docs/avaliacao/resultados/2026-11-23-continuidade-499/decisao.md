@@ -8,7 +8,8 @@ não foi repetida.
 produto. Dois (`M_credito_zero` e `M_caminho_fixo`) falham por um defeito do **executor** (a auditoria saiu
 vazia), e a maior parte de `M_rota_funcao` falha porque o conjunto da v3 não conhece as **aberturas novas**
 do desenho. Os números abaixo são os oficiais, como pontuados; a seção "Reanálise" mostra o que sobra depois de
-separar essas causas, sem que isso mude o veredito oficial.
+separar essas causas, sem que isso mude o veredito oficial. (Uma primeira versão da reanálise deixava 6 falhas
+sem causa; eram da própria reanálise, ver a seção.)
 
 ## O que rodou
 
@@ -76,11 +77,24 @@ ou rota) e `t-dados-17/r1-r3` (`citacao_contem`).
 ## Reanálise com a auditoria reanexada (não é a pontuação oficial)
 
 `reanalise_499.py` reanexa à volta de cada turno do braço ligado a linha de auditoria exportada do banco
-(`auditoria-ligado.csv`, 231 voltas) e pontua de novo com a mesma regra e o mesmo conjunto
-(`resumo-auditoria-reanexada.json`). Resultado: `M_credito_zero` 4 falhas em 18 (`t-dados-02/r1/t2`,
-`t-dados-15/r1-r3/t3`), `M_caminho_fixo` 2 falhas em 24 (`t-lei-03/r1/t3`, `r3/t3`); os outros critérios não
-mudam. Decisão da v3 continua `NAO_ENTRA` e a combinada continua `NAO_ENTRA`
-(`../2026-11-23-continuidade-l584/resumo-com-v3-reanexada.json`). As 6 falhas que restam em
-`M_credito_zero` e `M_caminho_fixo` falham mesmo com a auditoria; não foram investigadas.
+(`auditoria-ligado.csv`) e pontua de novo com a mesma regra e o mesmo conjunto
+(`resumo-auditoria-reanexada.json`). **Correção de 2026-11-23, tarde:** a primeira versão do script dava a
+cada volta todas as linhas de auditoria até o fim da janela dela, e a janela do turno 1 engolia a linha do
+turno 2 quando ele começava logo depois (turnos curtos, sem modelo); o turno 2 ficava sem auditoria e
+falhava por causa da reanálise, não do produto. Foi o que deixou 6 falhas "sem causa" (`t-dados-02/r1/t2`,
+`t-dados-15/r1-r3/t3`, `t-lei-03/r1,r3/t3`). Agora cada linha vai à volta que começou por último antes dela:
+238 voltas com auditoria (eram 231) e **`M_credito_zero` 0 falhas em 18, `M_caminho_fixo` 0 em 24**. As
+duas falhas de crédito e de caminho fixo da primeira rodada eram, portanto, só o defeito do executor.
+Sobram `M_rota_funcao` (23 de 87) e `M_lei_correcao` (6 de 6, que sai da combinação). Decisão da v3 continua
+`NAO_ENTRA` e a combinada continua `NAO_ENTRA`, agora só por `M_rota_funcao` e `M584_errada_nao_confirma`
+(`../2026-11-23-continuidade-l584/resumo-com-v3-reanexada.json`).
+
+**Das 23 falhas de `M_rota_funcao`:** 14 são de `abertura` (conjunto da v3 com as aberturas antigas) e as 9
+restantes são de dados e citação e **estão nas rodadas anteriores** (`t-dados-12/t2` e `t-dados-17/t2` falham
+nas 3 repetições em 18/11, 19/11 pós-591 e 19/11 variância; `t-dados-13` em 1 a 2). Não vêm do desenho novo.
+Com a regra `2026-11-23.4` do pontuador (aberturas fixas atuais aceitas, `regra-de-decisao.md`, escrita antes da
+segunda rodada), esta mesma rodada daria `M_rota_funcao` 9 falhas em 87 e `M_lei_corrijo_indevido` 1 falha
+em 27 (`t-lei-08/r3/t2`, aviso depois de uma resposta anterior certa; limiar zero). Isso é leitura de uma
+rodada que já foi feita, não medição.
 
 **A rodada pode ser repetida com o executor corrigido por quem decidir; este relatório não a repete.**

@@ -171,8 +171,6 @@
     ],
     "criterios_que_falham": [
       "M_rota_funcao",
-      "M_credito_zero",
-      "M_caminho_fixo",
       "M584_errada_nao_confirma"
     ],
     "problemas": [],

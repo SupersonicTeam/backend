@@ -31,7 +31,7 @@
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "d-dados-01/r2/t2",
@@ -42,7 +42,7 @@
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "d-dados-01/r3/t2",
@@ -257,7 +257,7 @@
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "d-dados-01/r2/t2",
@@ -268,7 +268,7 @@
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "d-dados-01/r3/t2",
@@ -285,33 +285,30 @@
           },
           "M_credito_zero": {
             "n": 3,
-            "falhas": 2,
-            "falharam": [
-              "d-dados-01/r1/t2",
-              "d-dados-01/r2/t2"
-            ],
+            "falhas": 0,
+            "falharam": [],
             "turnos": [
               {
                 "id": "d-dados-01/r1/t2",
-                "passou": false,
+                "passou": true,
                 "t_rota": 0.027,
                 "t_resposta": 0.047,
                 "credito": 3,
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "d-dados-01/r2/t2",
-                "passou": false,
+                "passou": true,
                 "t_rota": 0.05,
                 "t_resposta": 0.082,
                 "credito": 3,
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "d-dados-01/r3/t2",
@@ -744,45 +741,41 @@
           },
           "M_caminho_fixo": {
             "n": 3,
-            "falhas": 3,
-            "falharam": [
-              "d-fixo-01/r1/t2",
-              "d-fixo-01/r2/t2",
-              "d-fixo-01/r3/t2"
-            ],
+            "falhas": 0,
+            "falharam": [],
             "turnos": [
               {
                 "id": "d-fixo-01/r1/t2",
-                "passou": false,
+                "passou": true,
                 "t_rota": 0.032,
                 "t_resposta": 0.058,
                 "credito": 3,
                 "abertura": [
                   "LEI_SEM_CONFIRMACAO"
                 ],
-                "camada": null
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "d-fixo-01/r2/t2",
-                "passou": false,
+                "passou": true,
                 "t_rota": 0.047,
                 "t_resposta": 0.065,
                 "credito": 3,
                 "abertura": [
                   "LEI_SEM_CONFIRMACAO"
                 ],
-                "camada": null
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "d-fixo-01/r3/t2",
-                "passou": false,
+                "passou": true,
                 "t_rota": 0.049,
                 "t_resposta": 0.063,
                 "credito": 3,
                 "abertura": [
                   "LEI_SEM_CONFIRMACAO"
                 ],
-                "camada": null
+                "camada": "RECONFERENCIA_LEI"
               }
             ]
           }
@@ -794,14 +787,14 @@
           "turnos": [
             {
               "id": "d-dados-01/r1/t2",
-              "sem_modelo": false,
+              "sem_modelo": true,
               "credito": 3,
               "leitura": 3,
               "bate": true
             },
             {
               "id": "d-dados-01/r2/t2",
-              "sem_modelo": false,
+              "sem_modelo": true,
               "credito": 3,
               "leitura": 3,
               "bate": true
@@ -815,21 +808,21 @@
             },
             {
               "id": "d-fixo-01/r1/t2",
-              "sem_modelo": false,
+              "sem_modelo": true,
               "credito": 3,
               "leitura": 3,
               "bate": true
             },
             {
               "id": "d-fixo-01/r2/t2",
-              "sem_modelo": false,
+              "sem_modelo": true,
               "credito": 3,
               "leitura": 3,
               "bate": true
             },
             {
               "id": "d-fixo-01/r3/t2",
-              "sem_modelo": false,
+              "sem_modelo": true,
               "credito": 3,
               "leitura": 3,
               "bate": true
@@ -853,15 +846,8 @@
             "credito_medio": 7079,
             "tokens_entrada_p95": 6375
           },
-          "CONFIRMACAO|NENHUMA": {
-            "n": 2,
-            "t_resposta_mediana": 1.3860000000000001,
-            "t_resposta_p95": 1.473,
-            "credito_medio": 6728,
-            "tokens_entrada_p95": 6010
-          },
           "CONFIRMACAO|REEXECUCAO_MESMO": {
-            "n": 1,
+            "n": 3,
             "t_resposta_mediana": 0.082,
             "t_resposta_p95": 0.082,
             "credito_medio": 3,
@@ -895,26 +881,19 @@
             "credito_medio": 3319,
             "tokens_entrada_p95": 2070
           },
-          "REGRA|NENHUMA": {
-            "n": 16,
-            "t_resposta_mediana": 1.4689999999999999,
-            "t_resposta_p95": 2.071,
-            "credito_medio": 5193.25,
-            "tokens_entrada_p95": 7002
-          },
-          "sem_auditoria|LEI_SEM_CONFIRMACAO": {
+          "RECONFERENCIA_LEI|LEI_SEM_CONFIRMACAO": {
             "n": 3,
             "t_resposta_mediana": 0.063,
             "t_resposta_p95": 0.065,
             "credito_medio": 3,
             "tokens_entrada_p95": null
           },
-          "sem_auditoria|REEXECUCAO_MESMO": {
-            "n": 2,
-            "t_resposta_mediana": 0.0645,
-            "t_resposta_p95": 0.082,
-            "credito_medio": 3,
-            "tokens_entrada_p95": null
+          "REGRA|NENHUMA": {
+            "n": 18,
+            "t_resposta_mediana": 1.4635,
+            "t_resposta_p95": 2.071,
+            "credito_medio": 5363.78,
+            "tokens_entrada_p95": 7002
           }
         }
       },
@@ -1870,7 +1849,7 @@
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "t-dados-02/r2/t2",
@@ -2144,7 +2123,7 @@
                 "t_resposta": 2.569,
                 "credito": 8600,
                 "abertura": [],
-                "camada": "LLM"
+                "camada": null
               },
               {
                 "id": "t-dados-11/r3/t2",
@@ -2162,7 +2141,7 @@
                 "t_resposta": 3.353,
                 "credito": 8400,
                 "abertura": [],
-                "camada": "REGRA"
+                "camada": null
               },
               {
                 "id": "t-dados-12/r2/t2",
@@ -2189,7 +2168,7 @@
                 "t_resposta": 2.596,
                 "credito": 8073,
                 "abertura": [],
-                "camada": "REGRA"
+                "camada": null
               },
               {
                 "id": "t-dados-13/r2/t2",
@@ -2198,7 +2177,7 @@
                 "t_resposta": 2.274,
                 "credito": 8168,
                 "abertura": [],
-                "camada": "REGRA"
+                "camada": null
               },
               {
                 "id": "t-dados-13/r3/t2",
@@ -2207,7 +2186,7 @@
                 "t_resposta": 5.15,
                 "credito": 11425,
                 "abertura": [],
-                "camada": "REGRA"
+                "camada": null
               },
               {
                 "id": "t-dados-14/r1/t2",
@@ -2243,7 +2222,7 @@
                 "t_resposta": 1.903,
                 "credito": 7475,
                 "abertura": [],
-                "camada": "CONFIRMACAO"
+                "camada": "REGRA"
               },
               {
                 "id": "t-dados-15/r1/t3",
@@ -2254,7 +2233,7 @@
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "t-dados-15/r2/t2",
@@ -2263,7 +2242,7 @@
                 "t_resposta": 1.804,
                 "credito": 7475,
                 "abertura": [],
-                "camada": "CONFIRMACAO"
+                "camada": "REGRA"
               },
               {
                 "id": "t-dados-15/r2/t3",
@@ -2274,7 +2253,7 @@
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "t-dados-15/r3/t2",
@@ -2283,7 +2262,7 @@
                 "t_resposta": 1.676,
                 "credito": 7475,
                 "abertura": [],
-                "camada": "CONFIRMACAO"
+                "camada": "REGRA"
               },
               {
                 "id": "t-dados-15/r3/t3",
@@ -2294,7 +2273,7 @@
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "t-dados-16/r1/t2",
@@ -2332,7 +2311,7 @@
                 "abertura": [
                   "NAO_CONSEGUI_CONFIRMAR"
                 ],
-                "camada": "REGRA"
+                "camada": null
               },
               {
                 "id": "t-dados-17/r2/t2",
@@ -2343,7 +2322,7 @@
                 "abertura": [
                   "NAO_CONSEGUI_CONFIRMAR"
                 ],
-                "camada": "REGRA"
+                "camada": null
               },
               {
                 "id": "t-dados-17/r3/t2",
@@ -2354,7 +2333,7 @@
                 "abertura": [
                   "NAO_CONSEGUI_CONFIRMAR"
                 ],
-                "camada": "REGRA"
+                "camada": null
               },
               {
                 "id": "t-lei-01/r1/t2",
@@ -2629,7 +2608,7 @@
                 "abertura": [
                   "LEI_APOIO_RELIDO"
                 ],
-                "camada": "ATALHO_FIXO"
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "t-lei-11/r2/t2",
@@ -2640,7 +2619,7 @@
                 "abertura": [
                   "LEI_APOIO_RELIDO"
                 ],
-                "camada": "ATALHO_FIXO"
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "t-lei-11/r3/t2",
@@ -2795,7 +2774,7 @@
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "t-dados-02/r2/t2",
@@ -2897,7 +2876,7 @@
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "t-dados-15/r2/t3",
@@ -2908,7 +2887,7 @@
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "t-dados-15/r3/t3",
@@ -2919,7 +2898,7 @@
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "t-fixo-02/r1/t2",
@@ -2991,13 +2970,8 @@
           },
           "M_credito_zero": {
             "n": 18,
-            "falhas": 4,
-            "falharam": [
-              "t-dados-02/r1/t2",
-              "t-dados-15/r1/t3",
-              "t-dados-15/r2/t3",
-              "t-dados-15/r3/t3"
-            ],
+            "falhas": 0,
+            "falharam": [],
             "turnos": [
               {
                 "id": "t-dados-01/r1/t2",
@@ -3034,14 +3008,14 @@
               },
               {
                 "id": "t-dados-02/r1/t2",
-                "passou": false,
+                "passou": true,
                 "t_rota": 0.04,
                 "t_resposta": 0.057,
                 "credito": 5,
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "t-dados-02/r2/t2",
@@ -3103,36 +3077,36 @@
               },
               {
                 "id": "t-dados-15/r1/t3",
-                "passou": false,
+                "passou": true,
                 "t_rota": 0.036,
                 "t_resposta": 0.056,
                 "credito": 3,
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "t-dados-15/r2/t3",
-                "passou": false,
+                "passou": true,
                 "t_rota": 0.042,
                 "t_resposta": 0.058,
                 "credito": 3,
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "t-dados-15/r3/t3",
-                "passou": false,
+                "passou": true,
                 "t_rota": 0.041,
                 "t_resposta": 0.06,
                 "credito": 3,
                 "abertura": [
                   "REEXECUCAO_MESMO"
                 ],
-                "camada": null
+                "camada": "CONFIRMACAO"
               },
               {
                 "id": "t-fixo-02/r1/t2",
@@ -3566,7 +3540,7 @@
                 "abertura": [
                   "LEI_SO_TRECHOS"
                 ],
-                "camada": null
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "t-lei-03/r2/t2",
@@ -3610,7 +3584,7 @@
                 "abertura": [
                   "LEI_SO_TRECHOS"
                 ],
-                "camada": null
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "t-lei-08/r1/t2",
@@ -3720,7 +3694,7 @@
                 "abertura": [
                   "LEI_APOIO_RELIDO"
                 ],
-                "camada": "ATALHO_FIXO"
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "t-lei-11/r2/t2",
@@ -3731,7 +3705,7 @@
                 "abertura": [
                   "LEI_APOIO_RELIDO"
                 ],
-                "camada": "ATALHO_FIXO"
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "t-lei-11/r3/t2",
@@ -4123,7 +4097,7 @@
                 "abertura": [
                   "LEI_APOIO_RELIDO"
                 ],
-                "camada": "ATALHO_FIXO"
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "t-lei-11/r2/t2",
@@ -4134,7 +4108,7 @@
                 "abertura": [
                   "LEI_APOIO_RELIDO"
                 ],
-                "camada": "ATALHO_FIXO"
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "t-lei-11/r3/t2",
@@ -4323,22 +4297,19 @@
           },
           "M_caminho_fixo": {
             "n": 24,
-            "falhas": 2,
-            "falharam": [
-              "t-lei-03/r1/t3",
-              "t-lei-03/r3/t3"
-            ],
+            "falhas": 0,
+            "falharam": [],
             "turnos": [
               {
                 "id": "t-lei-03/r1/t3",
-                "passou": false,
+                "passou": true,
                 "t_rota": 0.059,
                 "t_resposta": 0.073,
                 "credito": 3,
                 "abertura": [
                   "LEI_SO_TRECHOS"
                 ],
-                "camada": null
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "t-lei-03/r2/t3",
@@ -4353,14 +4324,14 @@
               },
               {
                 "id": "t-lei-03/r3/t3",
-                "passou": false,
+                "passou": true,
                 "t_rota": 0.045,
                 "t_resposta": 0.058,
                 "credito": 3,
                 "abertura": [
                   "LEI_SO_TRECHOS"
                 ],
-                "camada": null
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "t-fixo-01/r1/t2",
@@ -4861,7 +4832,7 @@
                 "abertura": [
                   "LEI_APOIO_RELIDO"
                 ],
-                "camada": "ATALHO_FIXO"
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "t-lei-11/r2/t2",
@@ -4872,7 +4843,7 @@
                 "abertura": [
                   "LEI_APOIO_RELIDO"
                 ],
-                "camada": "ATALHO_FIXO"
+                "camada": "RECONFERENCIA_LEI"
               },
               {
                 "id": "t-lei-11/r3/t2",
@@ -4935,7 +4906,7 @@
                 "t_resposta": 2.234,
                 "credito": 3476,
                 "abertura": [],
-                "camada": "REGRA"
+                "camada": null
               },
               {
                 "id": "t-adv-02/r3/t2",
@@ -5143,7 +5114,7 @@
             },
             {
               "id": "t-dados-02/r1/t2",
-              "sem_modelo": false,
+              "sem_modelo": true,
               "credito": 5,
               "leitura": 5,
               "bate": true
@@ -5185,28 +5156,28 @@
             },
             {
               "id": "t-dados-15/r1/t3",
-              "sem_modelo": false,
+              "sem_modelo": true,
               "credito": 3,
               "leitura": 3,
               "bate": true
             },
             {
               "id": "t-dados-15/r2/t3",
-              "sem_modelo": false,
+              "sem_modelo": true,
               "credito": 3,
               "leitura": 3,
               "bate": true
             },
             {
               "id": "t-dados-15/r3/t3",
-              "sem_modelo": false,
+              "sem_modelo": true,
               "credito": 3,
               "leitura": 3,
               "bate": true
             },
             {
               "id": "t-lei-03/r1/t3",
-              "sem_modelo": false,
+              "sem_modelo": true,
               "credito": 3,
               "leitura": 3,
               "bate": true
@@ -5220,7 +5191,7 @@
             },
             {
               "id": "t-lei-03/r3/t3",
-              "sem_modelo": false,
+              "sem_modelo": true,
               "credito": 3,
               "leitura": 3,
               "bate": true
@@ -5426,18 +5397,11 @@
           "taxa": 1.0
         },
         "caminhos": {
-          "ATALHO_FIXO|LEI_APOIO_RELIDO": {
-            "n": 2,
-            "t_resposta_mediana": 1.51,
-            "t_resposta_p95": 1.581,
-            "credito_medio": 2438.5,
-            "tokens_entrada_p95": 1708
-          },
           "ATALHO_FIXO|NENHUMA": {
-            "n": 4,
-            "t_resposta_mediana": 0.0875,
+            "n": 6,
+            "t_resposta_mediana": 0.0955,
             "t_resposta_p95": 0.112,
-            "credito_medio": 9.25,
+            "credito_medio": 9.5,
             "tokens_entrada_p95": null
           },
           "CONFIRMACAO|CORRIJO_DADOS": {
@@ -5447,18 +5411,11 @@
             "credito_medio": 6583.93,
             "tokens_entrada_p95": 6374
           },
-          "CONFIRMACAO|NENHUMA": {
-            "n": 4,
-            "t_resposta_mediana": 1.74,
-            "t_resposta_p95": 1.903,
-            "credito_medio": 7139.5,
-            "tokens_entrada_p95": 6879
-          },
           "CONFIRMACAO|REEXECUCAO_MESMO": {
-            "n": 17,
-            "t_resposta_mediana": 0.066,
-            "t_resposta_p95": 0.094,
-            "credito_medio": 3.94,
+            "n": 21,
+            "t_resposta_mediana": 0.06,
+            "t_resposta_p95": 0.093,
+            "credito_medio": 3.86,
             "tokens_entrada_p95": null
           },
           "CONVERSA_LEVE|NENHUMA": {
@@ -5476,10 +5433,10 @@
             "tokens_entrada_p95": null
           },
           "EMBEDDING|NENHUMA": {
-            "n": 12,
-            "t_resposta_mediana": 1.0755,
+            "n": 13,
+            "t_resposta_mediana": 1.086,
             "t_resposta_p95": 2.113,
-            "credito_medio": 4926,
+            "credito_medio": 5018.85,
             "tokens_entrada_p95": 7903
           },
           "FILTRO_INJECAO|NENHUMA": {
@@ -5490,11 +5447,11 @@
             "tokens_entrada_p95": null
           },
           "LLM|NENHUMA": {
-            "n": 10,
-            "t_resposta_mediana": 1.9805000000000001,
-            "t_resposta_p95": 2.742,
-            "credito_medio": 4437,
-            "tokens_entrada_p95": 7984
+            "n": 7,
+            "t_resposta_mediana": 1.932,
+            "t_resposta_p95": 2.183,
+            "credito_medio": 4364.29,
+            "tokens_entrada_p95": 14823
           },
           "RECONFERENCIA_LEI|LEI_APOIO": {
             "n": 3,
@@ -5504,11 +5461,11 @@
             "tokens_entrada_p95": null
           },
           "RECONFERENCIA_LEI|LEI_APOIO_RELIDO": {
-            "n": 9,
-            "t_resposta_mediana": 1.682,
+            "n": 11,
+            "t_resposta_mediana": 1.581,
             "t_resposta_p95": 1.879,
-            "credito_medio": 3143.67,
-            "tokens_entrada_p95": 2475
+            "credito_medio": 3015.45,
+            "tokens_entrada_p95": 3755
           },
           "RECONFERENCIA_LEI|LEI_ATALHO": {
             "n": 3,
@@ -5522,7 +5479,7 @@
             "t_resposta_mediana": 1.4315,
             "t_resposta_p95": 1.785,
             "credito_medio": 2774.5,
-            "tokens_entrada_p95": 2178
+            "tokens_entrada_p95": 3630
           },
           "RECONFERENCIA_LEI|LEI_DIVERGENCIA": {
             "n": 7,
@@ -5539,24 +5496,17 @@
             "tokens_entrada_p95": null
           },
           "RECONFERENCIA_LEI|LEI_SO_TRECHOS": {
-            "n": 1,
+            "n": 3,
             "t_resposta_mediana": 0.063,
-            "t_resposta_p95": 0.063,
+            "t_resposta_p95": 0.073,
             "credito_medio": 3,
             "tokens_entrada_p95": null
           },
-          "REGRA|NAO_CONSEGUI_CONFIRMAR": {
-            "n": 3,
-            "t_resposta_mediana": 3.707,
-            "t_resposta_p95": 3.818,
-            "credito_medio": 4550.33,
-            "tokens_entrada_p95": 8489
-          },
           "REGRA|NENHUMA": {
-            "n": 68,
-            "t_resposta_mediana": 1.258,
-            "t_resposta_p95": 2.274,
-            "credito_medio": 5599.49,
+            "n": 71,
+            "t_resposta_mediana": 1.152,
+            "t_resposta_p95": 1.983,
+            "credito_medio": 5756.32,
             "tokens_entrada_p95": 12900
           },
           "REGRA|REFIZ_COM": {
@@ -5566,25 +5516,18 @@
             "credito_medio": 7478,
             "tokens_entrada_p95": 6882
           },
-          "sem_auditoria|LEI_SO_TRECHOS": {
-            "n": 2,
-            "t_resposta_mediana": 0.0655,
-            "t_resposta_p95": 0.073,
-            "credito_medio": 3,
+          "sem_auditoria|NAO_CONSEGUI_CONFIRMAR": {
+            "n": 3,
+            "t_resposta_mediana": 3.707,
+            "t_resposta_p95": 3.818,
+            "credito_medio": 4550.33,
             "tokens_entrada_p95": null
           },
           "sem_auditoria|NENHUMA": {
-            "n": 10,
-            "t_resposta_mediana": 0.9949999999999999,
-            "t_resposta_p95": 1.222,
-            "credito_medio": 5230.8,
-            "tokens_entrada_p95": null
-          },
-          "sem_auditoria|REEXECUCAO_MESMO": {
-            "n": 4,
-            "t_resposta_mediana": 0.0575,
-            "t_resposta_p95": 0.06,
-            "credito_medio": 3.5,
+            "n": 11,
+            "t_resposta_mediana": 2.569,
+            "t_resposta_p95": 5.15,
+            "credito_medio": 5509,
             "tokens_entrada_p95": null
           }
         }
@@ -9178,9 +9121,9 @@
     },
     "M_credito_zero": {
       "n": 18,
-      "falhas": 4,
+      "falhas": 0,
       "limiar": "zero falhas",
-      "cumpre": false
+      "cumpre": true
     },
     "M_dados_correcao": {
       "n": 15,
@@ -9208,9 +9151,9 @@
     },
     "M_caminho_fixo": {
       "n": 24,
-      "falhas": 2,
+      "falhas": 0,
       "limiar": "zero falhas",
-      "cumpre": false
+      "cumpre": true
     },
     "M_lei_correcao": {
       "n": 6,

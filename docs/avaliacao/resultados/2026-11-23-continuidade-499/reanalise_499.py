@@ -21,17 +21,30 @@ aud = list(csv.DictReader(open(pasta / "auditoria-ligado.csv", encoding="utf-8")
 for a in aud:
     t = a["criado_em"].replace(" ", "T")
     a["t"] = dt.datetime.fromisoformat(t + ":00" if t[-3] == "+" else t)
-usadas = set()
+# Cada linha de auditoria vai à volta que começou por último antes dela (ini - 1 s <= horário <= ini + duração + 2 s).
+# A versão anterior dava ao turno 1 todas as linhas até o fim da janela dele, e a janela do turno 1 engolia a
+# linha do turno 2 quando o turno 2 começava logo depois (turnos curtos, sem modelo): o turno 2 ficava sem
+# auditoria e falhava em M_credito_zero e M_caminho_fixo por causa da própria reanálise.
+voltas = sorted((x for x in linhas if x.get("tipo") == "pergunta" and x.get("braco") == "ligado"),
+                key=lambda x: x["horario"])
+inicio = [dt.datetime.fromisoformat(v["horario"]) for v in voltas]
+donas = collections.defaultdict(list)
+for i, a in enumerate(aud):
+    dono = None
+    for k, ini in enumerate(inicio):
+        if ini - dt.timedelta(seconds=1) <= a["t"]:
+            dono = k
+        else:
+            break
+    if dono is not None:
+        fim = inicio[dono] + dt.timedelta(seconds=float(voltas[dono].get("segundos") or 0) + 2)
+        if a["t"] <= fim:
+            donas[dono].append(a)
 anexadas = 0
-for l in sorted((x for x in linhas if x.get("tipo") == "pergunta" and x.get("braco") == "ligado"),
-                key=lambda x: x["horario"]):
-    ini = dt.datetime.fromisoformat(l["horario"])
-    fim = ini + dt.timedelta(seconds=float(l.get("segundos") or 0) + 2)
-    cand = [i for i, a in enumerate(aud) if i not in usadas and ini - dt.timedelta(seconds=1) <= a["t"] <= fim]
-    if not cand:
+for k, l in enumerate(voltas):
+    rs = donas.get(k)
+    if not rs:
         continue
-    usadas.update(cand)
-    rs = [aud[i] for i in cand]
     soma = lambda c: sum(int(r[c]) for r in rs if r[c].isdigit()) or None  # noqa: E731
     ult = rs[-1]
     l["auditoria"] = {"rota": ult["rota"], "desfecho": ult["desfecho"],
