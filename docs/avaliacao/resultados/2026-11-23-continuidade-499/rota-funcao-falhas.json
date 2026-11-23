@@ -1,0 +1,40 @@
+{
+  "turnos_rota_funcao_que_falharam": 23,
+  "por_conferencia": {
+    "rotas": 4,
+    "alternativas": 5,
+    "citacao_contem": 3,
+    "abertura": 14
+  },
+  "por_conversa": {
+    "t-dados-11": {
+      "rotas,alternativas": 1
+    },
+    "t-dados-12": {
+      "alternativas": 1,
+      "rotas,alternativas": 2
+    },
+    "t-dados-13": {
+      "alternativas": 1,
+      "rotas": 1
+    },
+    "t-dados-17": {
+      "citacao_contem": 3
+    },
+    "t-lei-02": {
+      "abertura": 2
+    },
+    "t-lei-04": {
+      "abertura": 3
+    },
+    "t-lei-05": {
+      "abertura": 3
+    },
+    "t-lei-07": {
+      "abertura": 3
+    },
+    "t-lei-11": {
+      "abertura": 3
+    }
+  }
+}
