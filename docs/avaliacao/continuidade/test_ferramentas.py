@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import datetime as dt
 import io
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -281,6 +282,45 @@ class Pontuacao(unittest.TestCase):
                                      linha(2, self.APOIO_RELIDO), None))
         self.assertFalse(pc.conferir("abertura", apoio, linha(2, self.AVISO), None))
         self.assertEqual(pc.VERSAO_REGRA_V3, "2026-11-23.4")
+
+    def test_cada_abertura_fixa_do_commit_99be9804_cai_numa_categoria_so(self):
+        # Textos literais de ReconferenciaLei no 99be9804 (%s trocado por dispositivos). Se a redação mudar, este
+        # teste quebra e a regra ganha versão nova.
+        textos = {
+            "LEI_CONFIRMA": ["Conferi de novo a resposta anterior com o texto da lei, e ela se confirma."],
+            "LEI_CORRIJO": ["Conferi de novo a resposta anterior com o texto da lei e corrijo um ponto:",
+                            "Conferi de novo a resposta anterior com o texto da lei e corrijo dois pontos:"],
+            "LEI_APOIO": ["A resposta anterior se baseia em LC 214/2025, art. 346. O texto de cada dispositivo "
+                          "está abaixo, com o link.",
+                          "A resposta anterior se baseia nos dispositivos citados nela."],
+            "LEI_APOIO_RELIDO": [
+                "Reli o texto da lei em que a resposta anterior se baseia (LC 214/2025, art. 346). Ele está "
+                "abaixo, com o link: leia o dispositivo e confira com a resposta.",
+                "Reli o texto da lei nos dispositivos em que a resposta anterior se baseia (LC 214/2025, art. "
+                "346 e LC 214/2025, art. 343). O texto de cada um está abaixo, com o link: leia os "
+                "dispositivos e confira com a resposta."],
+            "LEI_DIVERGENCIA": [
+                "Reli o texto da lei em que a resposta anterior se baseia (LC 214/2025, art. 346) e a resposta "
+                "não confere com ele neste ponto. Vale o texto abaixo, com o link: leia o dispositivo.",
+                "Reli o texto da lei nos dispositivos em que a resposta anterior se baseia (LC 214/2025, art. "
+                "346 e LC 214/2025, art. 343) e a resposta não confere com eles neste ponto. Vale o texto de "
+                "cada um, abaixo, com o link: leia os dispositivos."],
+            "LEI_JA": ["Essa resposta já passou por uma nova conferência com o texto da lei. Ela se baseia em "
+                       "LC 214/2025, art. 346, com o texto abaixo."],
+            "LEI_ATALHO": ["Essa explicação é um texto revisado pela equipe do AgroConIA e se baseia nos "
+                           "dispositivos citados abaixo, com o link."],
+            "LEI_SO_TRECHOS": ["A resposta anterior trouxe os trechos de lei que tratam do assunto, sem afirmar "
+                               "uma regra sobre o seu caso. Eles estão abaixo para consulta."],
+            "LEI_SEM_CONFIRMACAO": ["A resposta anterior não afirmou uma regra: ela trouxe os trechos de lei "
+                                    "mais próximos da pergunta, que estão abaixo para consulta."],
+            "LEI_SEM_FUNDAMENTO": ["A resposta anterior não encontrou fundamento na base de legislação que eu "
+                                   "consulto."],
+        }
+        for categoria, frases in textos.items():
+            for frase in frases:
+                inicio = pc.ct.normalizar(frase)[:300]
+                casam = [c for c, p in pc.vc.CATEGORIAS_ABERTURA.items() if re.search(p, inicio)]
+                self.assertEqual(casam, [categoria], frase)
 
     def test_o_aviso_longo_ainda_vale_no_lugar_do_corrijo(self):
         lista = ", ".join(f"LC 214/2025, Anexo III, item {n}" for n in range(1, 13))

@@ -46,8 +46,12 @@ desenho do produto e não por resultado de limiar:**
   (`pontuar_l584.py --v3`), como na primeira rodada.
 - **Também antes da rodada:** o executor desta rodada é o corrigido do #605 (a leitura da auditoria pelo
   `psql` deixava de comer as colunas vazias do fim da linha, e `M_credito_zero` e `M_caminho_fixo` falhavam
-  por isso na primeira rodada). A reanálise da primeira rodada com a auditoria reanexada pela janela de cada
-  volta (e não pela janela do turno anterior, que engolia a linha do turno seguinte) dá zero falhas nas duas.
+  por isso na primeira rodada).
+- **Artefato da reanálise, não do produto:** uma primeira reanálise da primeira rodada deixava 6 falhas de
+  crédito e de caminho fixo "sem causa" (`t-dados-02/r1/t2`, `t-dados-15/r1-r3/t3`, `t-lei-03/r1,r3/t3`).
+  Vinham do script de reanálise, que dava a cada volta todas as linhas de auditoria até o fim da janela dela;
+  a janela do turno 1 engolia a linha do turno 2, que ficava sem auditoria. Com cada linha na volta que começou
+  por último antes dela, as duas métricas dão zero falhas (`M_credito_zero` 0 de 18, `M_caminho_fixo` 0 de 24).
 - **Resultado da reanálise da primeira rodada com a regra nova (não é rodada oficial):** `M_rota_funcao` 9
   falhas em 87 (as de dados e citação de `t-dados-11`, `12`, `13` e `17`, estáveis em rodadas anteriores:
   `t-dados-12` e `t-dados-17` falham nas 3 repetições de 18/11, 19/11 e 19/11), e `M_lei_corrijo_indevido`
