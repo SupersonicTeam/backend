@@ -11,6 +11,20 @@ do desenho. Os números abaixo são os oficiais, como pontuados; a seção "Rean
 separar essas causas, sem que isso mude o veredito oficial. (Uma primeira versão da reanálise deixava 6 falhas
 sem causa; eram da própria reanálise, ver a seção.)
 
+
+## Desfecho da medição (decidido pelo Murillo em 2026-11-23)
+
+**Esta é a decisão oficial e única, a da primeira rodada, no commit `99be9804`: v3 `NAO_ENTRA` e decisão combinada com a l584 `NAO_ENTRA`.** Depois dela houve
+uma correção do produto feita às cegas (PR #604, head `5bc3e758`: confirmação só com prova literal por frase,
+sinal do aviso mais apertado, auditoria que grava o sinal), por uma sessão que recebeu só ids, contagens e
+códigos de auditoria. **Esse commit não foi medido.** Uma segunda rodada foi preparada (regra l584
+`2026-11-23.1`, regra v3 `2026-11-23.4`) e **não rodou**: pelas classes do conjunto, a estimativa era
+`M584_errada_aponta` entre 28 e 38 de 60 (piso 42), e a regra fecharia a medição num segundo `NAO_CUMPRE`;
+ninguém mexeu em limiar. A #584 fecha com a continuidade desligada na banca. Fica para depois da banca um
+conjunto novo para medir o `5bc3e758` e a decisão da troca entre apontar o erro e nunca avisar em resposta
+certa. A regra v3 `2026-11-23.4` e a correção do reanexador valem para a próxima medição; a v3 nova não foi
+usada em rodada oficial.
+
 ## O que rodou
 
 - **Commit medido:** `99be98041caa4e4dd4c9ef81598f51807b22cb4a` (o mesmo da l584), modelo

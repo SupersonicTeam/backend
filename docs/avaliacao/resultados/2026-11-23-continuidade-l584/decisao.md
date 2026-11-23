@@ -5,6 +5,20 @@ falha em 60 (zero era o limiar). Todos os outros cumprem. Decisão combinada com
 `../2026-11-23-continuidade-499/decisao.md`). Só ids, códigos e contagens; nenhum texto de pergunta ou de
 resposta está neste arquivo. A rodada não foi repetida.
 
+
+## Desfecho da medição (decidido pelo Murillo em 2026-11-23)
+
+**Esta é a decisão oficial e única, a da primeira rodada, no commit `99be9804`: l584 `NAO_CUMPRE` (`M584_errada_nao_confirma` 1 de 60) e decisão combinada com a v3 `NAO_ENTRA`.** Depois dela houve
+uma correção do produto feita às cegas (PR #604, head `5bc3e758`: confirmação só com prova literal por frase,
+sinal do aviso mais apertado, auditoria que grava o sinal), por uma sessão que recebeu só ids, contagens e
+códigos de auditoria. **Esse commit não foi medido.** Uma segunda rodada foi preparada (regra l584
+`2026-11-23.1`, regra v3 `2026-11-23.4`) e **não rodou**: pelas classes do conjunto, a estimativa era
+`M584_errada_aponta` entre 28 e 38 de 60 (piso 42), e a regra fecharia a medição num segundo `NAO_CUMPRE`;
+ninguém mexeu em limiar. A #584 fecha com a continuidade desligada na banca. Fica para depois da banca um
+conjunto novo para medir o `5bc3e758` e a decisão da troca entre apontar o erro e nunca avisar em resposta
+certa. A regra v3 `2026-11-23.4` e a correção do reanexador valem para a próxima medição; a v3 nova não foi
+usada em rodada oficial.
+
 ## O que rodou
 
 - **Commit medido:** `99be98041caa4e4dd4c9ef81598f51807b22cb4a` (branch do PR #604, o aviso de divergência).
