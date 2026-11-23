@@ -45,10 +45,17 @@ public enum MotivoReconferenciaLei {
   NAO_SUSTENTA,
 
   /**
-   * O modelo indicou uma correção, as guardas do trecho passaram e a resposta foi o aviso fixo de
-   * divergência (#584): a resposta anterior não confere com o texto da lei, com o trecho literal.
+   * O modelo indicou uma correção, as guardas do trecho passaram e o sinal que liberou o aviso fixo
+   * de divergência foi o número (#584): nenhum número da resposta anterior está no trecho que ela
+   * cita, que traz outro na citação literal.
    */
-  CORRIJO_AVISO_DIVERGENCIA,
+  CORRIJO_AVISO_DIVERGENCIA_NUMERO,
+
+  /**
+   * Idem, com o sinal do sentido (#584): o Sim/Não da resposta anterior contra uma citação e um
+   * trecho do mesmo assunto que negam (ou que não negam), com a negação estrita para o "Sim".
+   */
+  CORRIJO_AVISO_DIVERGENCIA_SENTIDO,
 
   /**
    * O modelo indicou uma correção e a resposta saiu como apoio neutro porque o aviso de divergência
@@ -138,7 +145,7 @@ public enum MotivoReconferenciaLei {
 
   /**
    * O grupo do veredito. {@code CORRIGIU} e os {@code CORRIJO_*} são de correção (o aviso
-   * emitido, {@link #CORRIJO_AVISO_DIVERGENCIA}, e o barrado por guarda, cada um com o seu
+   * emitido, {@link #CORRIJO_AVISO_DIVERGENCIA_NUMERO} e {@link #CORRIJO_AVISO_DIVERGENCIA_SENTIDO}, e o barrado por guarda, cada um com o seu
    * código); {@code CONFIRMOU} e os {@code CONFIRMO_*}, de confirmação; os demais, sem veredito.
    */
   public Veredito veredito() {

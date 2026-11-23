@@ -130,7 +130,7 @@ class ReconferenciaLeiAvisoTest {
         parDeLei("A soja tem redução de 40% da alíquota"), contexto);
 
     assertThat(r.desfecho()).isEqualTo(DesfechoContinuidade.RECONFERENCIA_AVISO_DIVERGENCIA);
-    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA);
+    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA_NUMERO);
     assertThat(r.rota().desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
     assertThat(r.rota().texto()).isEqualTo(AVISO_ESPERADO)
         .doesNotContain("60").doesNotContain("40").doesNotContain("corrijo");
@@ -157,7 +157,7 @@ class ReconferenciaLeiAvisoTest {
     ReconferenciaLei.Resultado r = reconferencia.reconferir(
         parDeLei("Sim, a redução de 60% alcança os produtos industrializados"), contexto);
 
-    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA);
+    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA_SENTIDO);
     assertThat(r.rota().texto()).isEqualTo(AVISO_ESPERADO);
   }
 
@@ -181,18 +181,75 @@ class ReconferenciaLeiAvisoTest {
       + "nega, não")
   void polaridadeDeNaoParaSim() {
     when(modelo.chamar(any())).thenReturn(resposta(correcao(
-        "Não, a soja não tem redução da alíquota [T1]", "Sim, a soja tem redução da alíquota [T1]",
-        "T1", CITACAO)));
-    reconferencia.reconferir(parDeLei("Não, a soja não tem redução da alíquota"), contexto);
-    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA);
+        "Não, as alíquotas do IBS e da CBS não ficam reduzidas [T1]",
+        "Sim, as alíquotas do IBS e da CBS ficam reduzidas [T1]", "T1", CITACAO)));
+    reconferencia.reconferir(
+        parDeLei("Não, as alíquotas do IBS e da CBS não ficam reduzidas"), contexto);
+    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA_SENTIDO);
 
     contexto = new ContextoAssistente(UUID.randomUUID(), HOJE);
     org.mockito.Mockito.doReturn(List.of(VEDADO)).when(buscaTextual)
         .buscarDispositivos(anyList(), eq(HOJE));
     when(modelo.chamar(any())).thenReturn(resposta(correcao(
-        "Não, a soja não tem redução da alíquota [T1]", "Sim, a soja tem redução da alíquota [T1]",
-        "T1", CITACAO_VEDADO)));
-    reconferencia.reconferir(parDeLei("Não, a soja não tem redução da alíquota"), contexto);
+        "Não, as alíquotas do IBS e da CBS não ficam reduzidas [T1]",
+        "Sim, as alíquotas do IBS e da CBS ficam reduzidas [T1]", "T1", CITACAO_VEDADO)));
+    reconferencia.reconferir(
+        parDeLei("Não, as alíquotas do IBS e da CBS não ficam reduzidas"), contexto);
+    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_SEM_DIFERENCA);
+  }
+
+  @Test
+  @DisplayName("Resposta certa com número de outro ponto (um ano) e a citação com outro número: "
+      + "há número em comum com o trecho, sem aviso")
+  void numeroEmComumNaoAvisa() {
+    TrechoRecuperado doisNumeros = new TrechoRecuperado(null, "t137", "LC 214/2025",
+        "art. 137, § 1º", "https://planalto", "Ficam reduzidas em 60% (sessenta por cento) as "
+            + "alíquotas do IBS, pagas em 30 dias contados da entrada.", 0.9);
+    org.mockito.Mockito.doReturn(List.of(doisNumeros)).when(buscaTextual)
+        .buscarDispositivos(anyList(), eq(HOJE));
+    when(modelo.chamar(any())).thenReturn(resposta(correcao(
+        "A soja tem redução de 60% a partir de 2027 [T1]",
+        "A soja tem redução de 60% a partir de 2026 [T1]", "T1",
+        "pagas em 30 dias contados da entrada")));
+
+    ReconferenciaLei.Resultado r = reconferencia.reconferir(
+        parDeLei("A soja tem redução de 60% a partir de 2027"), contexto);
+
+    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_SEM_DIFERENCA);
+    assertThat(r.rota().texto()).isEqualTo(APOIO_NEUTRO).doesNotContain("não confere");
+  }
+
+  @Test
+  @DisplayName("'Sim' certa e o trecho só restringe ('exceto'): restrição não é negação "
+      + "estrita, sem aviso")
+  void restricaoNaoBastaParaAvisarUmSim() {
+    TrechoRecuperado comExcecao = new TrechoRecuperado(null, "t137", "LC 214/2025",
+        "art. 137, § 1º", "https://planalto", "Aplica-se a redução às operações com produtos "
+            + "industrializados, exceto os de uso pessoal.", 0.9);
+    org.mockito.Mockito.doReturn(List.of(comExcecao)).when(buscaTextual)
+        .buscarDispositivos(anyList(), eq(HOJE));
+    when(modelo.chamar(any())).thenReturn(resposta(correcao(
+        "Sim, a redução alcança os produtos industrializados [T1]",
+        "Não, a redução não alcança os produtos industrializados [T1]", "T1",
+        "Aplica-se a redução às operações com produtos industrializados")));
+
+    reconferencia.reconferir(
+        parDeLei("Sim, a redução alcança os produtos industrializados"), contexto);
+
+    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_SEM_DIFERENCA);
+  }
+
+  @Test
+  @DisplayName("'Sim' e um trecho que nega, mas de outro assunto: sem palavras em comum, sem aviso")
+  void outroAssuntoNaoAvisa() {
+    org.mockito.Mockito.doReturn(List.of(VEDADO)).when(buscaTextual)
+        .buscarDispositivos(anyList(), eq(HOJE));
+    when(modelo.chamar(any())).thenReturn(resposta(correcao(
+        "Sim, o regime opcional vale para cooperativas [T1]",
+        "Não, o regime opcional não vale para cooperativas [T1]", "T1", CITACAO_VEDADO)));
+
+    reconferencia.reconferir(parDeLei("Sim, o regime opcional vale para cooperativas"), contexto);
+
     assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_SEM_DIFERENCA);
   }
 
@@ -221,7 +278,9 @@ class ReconferenciaLeiAvisoTest {
   @DisplayName("Cada motivo pertence a um grupo de veredito: aviso e barrado por guarda são "
       + "correção; confirmação, confirmação descartada; o resto, sem veredito")
   void grupoDoVeredito() {
-    assertThat(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA.veredito())
+    assertThat(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA_NUMERO.veredito())
+        .isEqualTo(MotivoReconferenciaLei.Veredito.CORRECAO);
+    assertThat(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA_SENTIDO.veredito())
         .isEqualTo(MotivoReconferenciaLei.Veredito.CORRECAO);
     assertThat(MotivoReconferenciaLei.CORRIJO_APOIO_LITERAL.veredito())
         .isEqualTo(MotivoReconferenciaLei.Veredito.CORRECAO);
@@ -257,7 +316,7 @@ class ReconferenciaLeiAvisoTest {
 
     ReconferenciaLei.Resultado r = reconferencia.reconferir(par, contexto);
 
-    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA);
+    assertThat(motivo()).isEqualTo(MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA_NUMERO);
     assertThat(r.rota().texto()).isEqualTo("Reli o texto da lei nos dispositivos em que a "
         + "resposta anterior se baseia (" + REFERENCIA + " e LC 214/2025, art. 138) e a resposta "
         + "não confere com eles neste ponto. Vale o texto de cada um, abaixo, com o link: leia "
