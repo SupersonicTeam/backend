@@ -27,7 +27,9 @@ do conjunto e mudou o sha256 deles. O teste que roda passou a `b0a7cf3e…`, e o
 continua o `23b1221c…` (`README.md`, seção "Versões").
 
 **Versão `2026-11-23.4` (2026-11-23), escrita ANTES da segunda rodada oficial, por mudança de
-desenho do produto e não por resultado de limiar:**
+desenho do produto e não por resultado de limiar. Esta versão NÃO foi usada em rodada oficial: a segunda rodada
+não rodou (decisão do Murillo de 2026-11-23, `regra-de-decisao-l584.md`), e a decisão oficial da v3 é a da
+primeira rodada, `NAO_ENTRA`, pela regra v3 anterior. Vale para a próxima medição:**
 
 - **Motivo:** a primeira rodada no desenho novo (aviso fixo de divergência e apoio neutro, decisão do
   Murillo de 2026-11-22; PR #604) mostrou que 14 das 23 falhas de `M_rota_funcao` eram de `abertura`:

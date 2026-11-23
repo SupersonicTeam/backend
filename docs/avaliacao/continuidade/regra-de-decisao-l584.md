@@ -3,18 +3,28 @@
 **Versão da regra:** `2026-11-23.1`. Mesmos limiares, mesmas métricas, mesmas classes e **o mesmo conjunto**
 (sha256 `a3672896…`) da `2026-11-22.1`, que foi escrita em 2026-11-22 antes de qualquer rodada oficial.
 
-**Segunda rodada, de 2026-11-23, depois de uma correção feita às cegas (esta versão só registra isso).** A
-primeira rodada oficial (commit `99be9804`, 2026-11-23) deu `NAO_CUMPRE`: 1 falha em 60 em
-`M584_errada_nao_confirma` (zero era o limiar) e `M584_errada_aponta` com 43 de 60 (piso 42). O Murillo
-decidiu **tentar mais uma vez** no mesmo dia, sem mudar limiar e **sem conjunto novo** (não há tempo antes do
-congelamento de 26/11). A sessão de código corrigiu o produto sabendo só **ids, contagens e códigos de
-auditoria** (colunas `reconferencia_*`, rota, camada, desfecho), nunca o texto de uma pergunta, de uma
-resposta, de um dispositivo ou do gabarito. Mesmo assim, **a segunda rodada vale menos que uma primeira**:
-o conjunto é o mesmo que gerou os números que orientaram a correção, e as 17 execuções sem aviso da primeira
-rodada vêm de conversas que se repetem (`l584-02`, `l584-03` e `l584-05` deram o mesmo código nas 5
-repetições), de modo que uma melhora nelas é, em parte, ajuste a essas conversas. O relatório da segunda
-rodada diz isso na primeira página e traz a primeira ao lado. Um `CUMPRE` desta rodada não substitui a
-leitura do `NAO_CUMPRE` anterior; um `NAO_CUMPRE` fecha a medição.
+**Desfecho da medição (2026-11-23): a decisão oficial e única é a da primeira rodada, e a segunda rodada não
+rodou.** Esta versão (`2026-11-23.1`) foi escrita para uma segunda rodada e fica como registro do que foi
+preparado; nenhum limiar, métrica, classe ou resultado oficial mudou.
+
+- **Decisão oficial:** a primeira rodada, no commit `99be9804` (2026-11-23), deu **`NAO_CUMPRE`**: 1 falha em
+  60 em `M584_errada_nao_confirma` (limiar zero) e `M584_errada_aponta` com 43 de 60 (piso 42). A decisão
+  combinada com a v3 é **`NAO_ENTRA`**.
+- **Correção às cegas, não medida:** depois dela houve uma correção do produto (PR #604, head `5bc3e758`:
+  a confirmação só sai com prova literal por frase, o sinal do aviso ficou mais apertado e a auditoria grava o
+  sinal), feita por uma sessão que recebeu só **ids, contagens e códigos de auditoria** (colunas
+  `reconferencia_*`, rota, camada, desfecho), nunca o texto de uma pergunta, de uma resposta, de um dispositivo
+  ou do gabarito. **Esse commit não foi medido.**
+- **A segunda rodada foi preparada e não rodou, por decisão do Murillo (2026-11-23).** Pelas classes do
+  conjunto, a estimativa era `M584_errada_aponta` entre 28 e 38 de 60 (piso 42; a primeira rodada deixou 1
+  execução de folga): a conversa de número misturado (`l584-12`, 5 avisos) vira apoio neutro pelo aperto, e as de
+  "Não" errada (`l584-10`, `l584-13`) e as de número por inteiro dependem do que o trecho citado contém. Com a
+  regra de que um segundo `NAO_CUMPRE` fecharia a medição, e **sem tocar no limiar**, a #584 fecha com a
+  continuidade **desligada** na banca.
+- **Fica para depois da banca:** um conjunto novo para medir o `5bc3e758`, e decidir a troca entre apontar o
+  erro (`M584_errada_aponta`) e nunca avisar em resposta certa (`M584_sem_aviso_indevido`). O conjunto
+  `l584` atual já orientou a correção e vale menos para essa medição (conversas estáveis: `l584-02`, `l584-03`
+  e `l584-05` deram o mesmo código nas 5 repetições).
 
 **Aprovação.** A versão anterior, `2026-11-20.1`, teve os limiares aprovados pelo Murillo em 2026-11-20
 ("Aprovo como estão"). Em 2026-11-22 ele decidiu mudar o desenho: a Ceres passa a **apontar a
