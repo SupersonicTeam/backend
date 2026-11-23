@@ -156,12 +156,14 @@ CATEGORIAS_ABERTURA = {
     # Abertura do apoio quando o modelo foi chamado (#584, aprovada pelo Murillo em 2026-11-20): "Reli
     # o texto da lei em que a resposta anterior se baseia (...)". Tolerante ao singular, ao plural e ao
     # trecho entre parênteses; o apoio sem chamada ao modelo segue com LEI_APOIO.
-    "LEI_APOIO_RELIDO": r"reli (o|os|a|as) [^.]{0,60}em que a resposta anterior se baseia",
+    "LEI_APOIO_RELIDO": r"reli (o|os|a|as) [^.]{0,60}em que a resposta anterior se baseia(?!.{0,600}?\bnao confere com (ele|eles)\b)",
     # Aviso de divergência (#584, decisão do Murillo de 2026-11-22): com o veredito de correção do modelo e as
-    # guardas que sobram, a resposta abre com uma frase FIXA do backend dizendo que a resposta anterior não
-    # confere com o texto da lei, seguida do trecho literal. PROVISÓRIO: o texto exato ainda não foi aprovado;
-    # o padrão é tolerante e muda com a versão da regra se o texto aprovado não casar.
-    "LEI_DIVERGENCIA": r"(a )?resposta anterior nao (confere|bate|corresponde)( com| ao| a)? (o )?(texto|que diz) ?(da|a) lei",
+    # guardas que sobram, a resposta abre com uma frase FIXA do backend: "Reli o texto da lei em que a resposta
+    # anterior se baseia (%s) e a resposta não confere com ele neste ponto. Vale o texto abaixo…" (no plural,
+    # "…nos dispositivos em que… e a resposta não confere com eles…"). O aviso e o apoio neutro com o modelo
+    # chamado começam igual; o que os separa é "não confere", então o padrão prende só essas palavras (o texto
+    # ainda pode ganhar ajuste de redação) e o do apoio recusa a frase que traz "não confere com ele(s)".
+    "LEI_DIVERGENCIA": r"\bnao confere com (ele|eles|o texto da lei|a lei)\b|\bresposta anterior nao (confere|bate|corresponde)\b",
     "LEI_JA": r"essa resposta ja passou por uma nova conferencia com o texto da lei",
     "LEI_ATALHO": r"essa explicacao e um texto revisado pela equipe do agroconia",
     "LEI_SO_TRECHOS": r"a resposta anterior trouxe os trechos de lei que tratam do assunto",

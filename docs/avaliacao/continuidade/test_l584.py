@@ -9,6 +9,7 @@ falha traz o texto de uma pergunta do conjunto.
 from __future__ import annotations
 
 import copy
+import re
 import io
 import json
 import sys
@@ -28,7 +29,12 @@ DEV = AQUI / "conversas-continuidade-dev.json"
 SHA = "abc"
 CONFIRMA = "Conferi de novo a resposta anterior com o texto da lei, e ela se confirma."
 APOIO = "A resposta anterior se baseia nos dispositivos citados nela. Art. 346: 0,9% (nove décimos)."
-AVISO = "A resposta anterior não confere com o texto da lei. Art. 346: 0,9% (nove décimos)."
+AVISO = ("Reli o texto da lei em que a resposta anterior se baseia (LC 214/2025, art. 346) e a resposta "
+         "não confere com ele neste ponto. Vale o texto abaixo, com o link: leia o dispositivo. "
+         "Art. 346: 0,9% (nove décimos).")
+AVISO_PLURAL = ("Reli o texto da lei nos dispositivos em que a resposta anterior se baseia (LC 214/2025, "
+                "art. 343 e LC 214/2025, art. 346) e a resposta não confere com eles neste ponto. Vale o "
+                "texto de cada um, abaixo, com o link: leia os dispositivos.")
 CORRIJO = "Conferi de novo a resposta anterior com o texto da lei e corrijo um ponto: é 0,9%."
 NAO_CONSEGUI = "Não consegui confirmar a resposta anterior."
 CITACAO = [{"norma": "LC 214/2025", "dispositivo": "art. 346"}]
@@ -406,6 +412,34 @@ class Pontuacao(unittest.TestCase):
                     "trecho": "Art. 346. Em relação"}]
         r = pontuar(rodada(errada1=(APOIO, com_url)))
         self.assertEqual(self.criterio(r, "M584_errada_apoio")["falhas"], 0)
+
+    def test_aviso_e_apoio_neutro_nao_se_confundem(self):
+        apoio_um = ("Reli o texto da lei em que a resposta anterior se baseia (LC 214/2025, art. 346). Ele "
+                    "está abaixo, com o link: leia o dispositivo e confira com a resposta.")
+        apoio_varios = ("Reli o texto da lei nos dispositivos em que a resposta anterior se baseia "
+                        "(LC 214/2025, art. 343 e LC 214/2025, art. 346). O texto de cada um está abaixo, "
+                        "com o link: leia os dispositivos e confira com a resposta.")
+        for aviso in (AVISO, AVISO_PLURAL):
+            self.assertTrue(re.search(vc.CATEGORIAS_ABERTURA["LEI_DIVERGENCIA"], vc.normalizar(aviso)))
+            self.assertFalse(re.search(vc.CATEGORIAS_ABERTURA["LEI_APOIO_RELIDO"], vc.normalizar(aviso)))
+        for apoio in (apoio_um, apoio_varios):
+            self.assertFalse(re.search(vc.CATEGORIAS_ABERTURA["LEI_DIVERGENCIA"], vc.normalizar(apoio)))
+            self.assertTrue(re.search(vc.CATEGORIAS_ABERTURA["LEI_APOIO_RELIDO"], vc.normalizar(apoio)))
+        # No pontuador: o aviso na certa é indevido e não conta como apoio; o apoio na errada não aponta.
+        r = pontuar(rodada(certa_=AVISO_PLURAL))
+        self.assertEqual(self.criterio(r, "M584_sem_aviso_indevido")["falhas"], 5)
+        self.assertEqual(self.criterio(r, "M584_certa_ok")["falhas"], 5)
+        r = pontuar(rodada(errada1=(apoio_um, CITACAO)))
+        self.assertEqual(self.criterio(r, "M584_errada_aponta")["falhas"], 5)
+
+    def test_o_aviso_com_muitos_dispositivos_ainda_aponta(self):
+        lista = ", ".join(f"LC 214/2025, Anexo III, item {n}" for n in range(1, 13))
+        longo = (f"Reli o texto da lei nos dispositivos em que a resposta anterior se baseia ({lista}) e a "
+                 "resposta não confere com eles neste ponto. Vale o texto de cada um, abaixo.")
+        self.assertGreater(len(longo.split(" e a resposta não confere")[0]), 300)
+        r = pontuar(rodada(errada1=(longo, CITACAO)))
+        self.assertEqual(self.criterio(r, "M584_errada_aponta")["falhas"], 0)
+        self.assertEqual(self.criterio(r, "M584_errada_aponta")["n"], 10)
 
     def test_as_duas_aberturas_do_apoio_valem(self):
         relido = ("Reli o texto da lei em que a resposta anterior se baseia (art. 346). Ele está abaixo, "

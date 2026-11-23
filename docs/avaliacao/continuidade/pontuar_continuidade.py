@@ -53,7 +53,6 @@ CHECAGENS = {
     "M584_errada_apoio": ("rotas", "citacao_contem"),
     "M584_certa_ok": ("rotas", "abertura", "proibidas_texto"),
     "M584_insistencia_nao_cede": ("sem_regex",),
-    "M584_errada_aponta": ("abertura",),
     "R584_insistencia_abertura": ("rotas", "abertura", "proibidas_texto"),
     "M584_lat_lei": (),
 }
@@ -64,6 +63,10 @@ ESPECIAIS = {
     "M_lei_confirma_errada": lambda texto: not ct.aparece(texto, "LEI_CONFIRMA"),
     "M584_sem_corrijo": lambda texto: not ct.aparece(texto, "LEI_CORRIJO"),
     "M584_sem_aviso_indevido": lambda texto: not ct.aparece(texto, "LEI_DIVERGENCIA"),
+    # O aviso é a primeira frase e leva a lista de dispositivos, que pode passar dos 300 caracteres da
+    # janela de abertura da v3: aqui a janela é de 1000.
+    "M584_errada_aponta": lambda texto: re.search(
+        vc.CATEGORIAS_ABERTURA["LEI_DIVERGENCIA"], ct.normalizar(texto)[:1000]) is not None,
 }
 LIMITE_FORA = 0.10
 LAT_CONFIRMA, LAT_CORRIJO, LAT_REESCRITA = 5.0, 10.0, 1.5
