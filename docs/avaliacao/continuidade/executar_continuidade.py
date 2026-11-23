@@ -226,7 +226,10 @@ class Banco:
 
     def consulta(self, sql: str) -> list[list[str]]:
         saida = subprocess.run(self.base + [sql], capture_output=True, text=True,
-                               check=True, encoding="utf-8").stdout.strip()
+                               check=True, encoding="utf-8").stdout.strip("\r\n")
+        # Só as quebras de linha das pontas saem: um strip() geral comia as tabulações do fim da última
+        # linha (colunas vazias, como as da reconferência) e a auditoria de toda chamada sem reconferência
+        # saía vazia (#584, achado da rodada de 2026-11-23).
         return [linha.split("\t") for linha in saida.splitlines() if linha]
 
     def produtor(self, nome: str) -> str:

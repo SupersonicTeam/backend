@@ -620,6 +620,28 @@ class Combinacao(unittest.TestCase):
         self.assertIn("M_lei_correcao", pc.MINIMO)
 
 
+class BancoDaAuditoria(unittest.TestCase):
+    """A leitura da auditoria pelo psql não pode comer as colunas vazias do fim da linha."""
+
+    def test_colunas_vazias_no_fim_da_ultima_linha_ficam(self):
+        from unittest import mock
+        saida = "LEGISLACAO\tRESPONDIDA\t\t\t\n"
+        with mock.patch.object(ex.subprocess, "run", return_value=mock.Mock(stdout=saida)):
+            linhas = ex.Banco("x").consulta("select 1")
+        self.assertEqual(linhas, [["LEGISLACAO", "RESPONDIDA", "", "", ""]])
+
+    def test_auditoria_de_chamada_sem_reconferencia_nao_sai_vazia(self):
+        from unittest import mock
+        valores = ["DADOS", "RESPONDIDA", "REGRA", "5", "", "", "m"] + [""] * len(ex.CAMPOS_RECONFERENCIA)
+        saida = "\t".join(valores) + "\n"
+        with mock.patch.object(ex.subprocess, "run", return_value=mock.Mock(stdout=saida)), \
+                mock.patch.object(ex.Banco, "contagem_auditoria", return_value=1), \
+                mock.patch.object(ex.Banco, "campos_reconferencia",
+                                  return_value=ex.CAMPOS_RECONFERENCIA):
+            auditoria = ex.Banco("x").auditoria_nova(0)
+        self.assertEqual((auditoria["linhas"], auditoria["rota"]), (1, "DADOS"))
+
+
 class Cli(unittest.TestCase):
 
     def test_main_grava_o_resumo_e_a_decisao_combinada(self):
