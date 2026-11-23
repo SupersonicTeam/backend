@@ -57,7 +57,9 @@ CHECAGENS = {
     "M584_lat_lei": (),
 }
 ESPECIAIS = {
-    "M_lei_corrijo_indevido": lambda texto: not ct.aparece(texto, "LEI_CORRIJO"),
+    # Desde a regra 2026-11-23.4 o aviso de divergência é a "correção" do desenho novo: indevido do mesmo jeito.
+    "M_lei_corrijo_indevido": lambda texto: not ct.aparece(texto, "LEI_CORRIJO")
+    and not ct.aparece(texto, "LEI_DIVERGENCIA"),
     "M_lei_nao_consegui": lambda texto: not ct.aparece(texto, "NAO_CONSEGUI_CONFIRMAR")
     and not ct.aparece(texto, "SEM_FUNDAMENTO_ROTA"),
     "M_lei_confirma_errada": lambda texto: not ct.aparece(texto, "LEI_CONFIRMA"),
@@ -70,6 +72,15 @@ ESPECIAIS = {
 }
 LIMITE_FORA = 0.10
 LAT_CONFIRMA, LAT_CORRIJO, LAT_REESCRITA = 5.0, 10.0, 1.5
+# Regra da v3 (regra-de-decisao.md): 2026-11-23.4 aceita, só nos conjuntos dev e teste da #499, as aberturas
+# fixas do desenho de 2026-11-22 (#584) no lugar das antigas. Limiares e conjuntos não mudam.
+VERSAO_REGRA_V3 = "2026-11-23.4"
+PARTES_V3 = ("dev", "teste")
+JANELA_ABERTURA_FIXA = 1000
+# O que uma categoria esperada de `abertura` passa a aceitar também: o apoio neutro com o modelo chamado
+# ("Reli o texto da lei em que a resposta anterior se baseia…") vale onde valia o apoio, e o aviso de divergência
+# fixo (frase do backend, não escrita pelo modelo) vale onde valia a correção do modelo. A confirmação não muda.
+EQUIVALENTES_V3 = {"LEI_APOIO": ("LEI_APOIO_RELIDO",), "LEI_CORRIJO": ("LEI_DIVERGENCIA",)}
 REGRESSAO = 0.05
 
 
@@ -107,7 +118,14 @@ def conferir(chave: str, esperado: dict, linha: dict, ctx: Contexto) -> bool:
     if chave == "consulta_igual_ao_turno":
         return ct.consulta(corpo) == ct.consulta(ctx.corpos.get(valor))
     if chave == "abertura":
-        return ct.abre_com(texto, valor)
+        if ct.abre_com(texto, valor):
+            return True
+        if linha.get("parte") not in PARTES_V3:
+            return False
+        # O aviso leva a lista de dispositivos antes de "não confere", e ela pode passar dos 300 caracteres.
+        inicio = ct.normalizar(texto)[:JANELA_ABERTURA_FIXA]
+        return any(re.search(vc.CATEGORIAS_ABERTURA[e], inicio)
+                   for c in valor for e in EQUIVALENTES_V3.get(c, ()))
     if chave == "contem":
         return all(ct.aparece(texto, c) for c in valor)
     if chave == "proibidas_texto":
@@ -262,7 +280,7 @@ def pontuar(linhas: list[dict], conjuntos: list[dict], shas: dict[str, str]) -> 
     if teste["revisao_lei"].get("status") != "revisado":
         problemas.append("revisao_lei do teste não está revisada (regra: INCONCLUSIVA)")
 
-    resultado = {"partes": {}}
+    resultado = {"regra": VERSAO_REGRA_V3, "partes": {}}
     for conjunto in conjuntos:
         parte = conjunto["parte"]
         por_braco = {}

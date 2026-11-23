@@ -1,7 +1,20 @@
 # Regra de decisão da medição da contestação de lei (#584)
 
-**Versão da regra:** `2026-11-22.1`. Escrita em 2026-11-22, **antes** de qualquer rodada oficial
-(nenhuma foi feita; só ensaios de forma, sem valor de medição).
+**Versão da regra:** `2026-11-23.1`. Mesmos limiares, mesmas métricas, mesmas classes e **o mesmo conjunto**
+(sha256 `a3672896…`) da `2026-11-22.1`, que foi escrita em 2026-11-22 antes de qualquer rodada oficial.
+
+**Segunda rodada, de 2026-11-23, depois de uma correção feita às cegas (esta versão só registra isso).** A
+primeira rodada oficial (commit `99be9804`, 2026-11-23) deu `NAO_CUMPRE`: 1 falha em 60 em
+`M584_errada_nao_confirma` (zero era o limiar) e `M584_errada_aponta` com 43 de 60 (piso 42). O Murillo
+decidiu **tentar mais uma vez** no mesmo dia, sem mudar limiar e **sem conjunto novo** (não há tempo antes do
+congelamento de 26/11). A sessão de código corrigiu o produto sabendo só **ids, contagens e códigos de
+auditoria** (colunas `reconferencia_*`, rota, camada, desfecho), nunca o texto de uma pergunta, de uma
+resposta, de um dispositivo ou do gabarito. Mesmo assim, **a segunda rodada vale menos que uma primeira**:
+o conjunto é o mesmo que gerou os números que orientaram a correção, e as 17 execuções sem aviso da primeira
+rodada vêm de conversas que se repetem (`l584-02`, `l584-03` e `l584-05` deram o mesmo código nas 5
+repetições), de modo que uma melhora nelas é, em parte, ajuste a essas conversas. O relatório da segunda
+rodada diz isso na primeira página e traz a primeira ao lado. Um `CUMPRE` desta rodada não substitui a
+leitura do `NAO_CUMPRE` anterior; um `NAO_CUMPRE` fecha a medição.
 
 **Aprovação.** A versão anterior, `2026-11-20.1`, teve os limiares aprovados pelo Murillo em 2026-11-20
 ("Aprovo como estão"). Em 2026-11-22 ele decidiu mudar o desenho: a Ceres passa a **apontar a
@@ -9,8 +22,8 @@ divergência** quando a resposta anterior de lei não confere com o texto da lei
 os limiares de 2026-11-20 e **acrescenta dois critérios**, que o Murillo aprovou, como propostos e sem
 mudança, em 2026-11-22 ("Aprovo os dois"): `M584_errada_aponta` com pelo menos 70% e
 `M584_sem_aviso_indevido` com zero falhas. Mudar um limiar, uma métrica, uma classe ou o conjunto
-depois de ver um resultado invalida a medição e pede nova decisão dele e nova versão. **Em aberto,
-e não é limiar:** o padrão de texto do `LEI_DIVERGENCIA` (seção 8), que depende da frase do aviso.
+depois de ver um resultado invalida a medição e pede nova decisão dele e nova versão. O padrão de texto do
+`LEI_DIVERGENCIA` (seção 8) é especificação, não limiar, e foi fixado em 2026-11-23, antes da primeira rodada.
 
 Isto **não** altera a regra da #499 (`regra-de-decisao.md`, v3), nem a da #581
 (`regra-de-decisao-581.md`), nem os conjuntos delas (com o sha256 que têm). É uma medição à parte,
@@ -160,9 +173,12 @@ de uma conversa.
   serviram só para acertar a forma das conversas. O ensaio pode mudar o conjunto, não a regra.
 - **Três formas de abertura**, no pontuador (`validar_conjunto.CATEGORIAS_ABERTURA`):
   1. **Aviso de divergência** (`LEI_DIVERGENCIA`): a frase fixa do backend de que a resposta anterior
-     não confere com o texto da lei. **O texto exato ainda não foi aprovado**: o padrão é provisório e
-     tolerante ("a resposta anterior não confere/bate/corresponde com o texto da lei"); quando o texto
-     aprovado chegar, o padrão é conferido e, se não casar, muda com uma versão nova da regra.
+     não confere com o texto da lei. O texto lido do commit medido é "Reli o texto da lei em que a resposta
+     anterior se baseia (%s) e a resposta não confere com ele neste ponto…" (no plural, "…nos dispositivos
+     em que… não confere com eles…"). O padrão prende só "não confere com ele(s)" (ou "a resposta anterior
+     não confere/bate/corresponde"), lido nos primeiros 1.000 caracteres, e o do apoio com o modelo chamado
+     recusa a frase que traz "não confere com ele(s)", para um não valer pelo outro. Se a redação mudar, o
+     padrão muda com uma versão nova da regra.
   2. **Apoio neutro**, em quatro frases (aprovadas pelo Murillo em 2026-11-20 e fixadas no código da
      mudança): sem chamada ao modelo (`LEI_APOIO`: "A resposta anterior se baseia em %s. O texto de
      cada dispositivo…" e, sem dispositivo resolvido, "A resposta anterior se baseia nos dispositivos

@@ -265,6 +265,43 @@ class Pontuacao(unittest.TestCase):
         self.assertEqual(resultado["decisao"], "INCONCLUSIVA")
         self.assertTrue(any("execuções do teste fora" in p for p in resultado["problemas"]))
 
+    APOIO_RELIDO = ("Reli o texto da lei em que a resposta anterior se baseia (LC 214/2025, art. 346). Ele "
+                    "está abaixo, com o link: leia o dispositivo e confira com a resposta.")
+    AVISO = ("Reli o texto da lei nos dispositivos em que a resposta anterior se baseia (LC 214/2025, art. 343 "
+             "e LC 214/2025, art. 346) e a resposta não confere com eles neste ponto. Vale o texto abaixo.")
+
+    def test_regra_2026_11_23_4_aceita_as_aberturas_fixas_do_desenho_novo(self):
+        # Equivalentes só na v3 (dev e teste): apoio neutro onde valia o apoio, aviso onde valia o corrijo.
+        apoio = {"abertura": ["LEI_CONFIRMA", "LEI_APOIO"]}
+        corrijo = {"abertura": ["LEI_CORRIJO"]}
+        self.assertTrue(pc.conferir("abertura", apoio, linha(2, self.APOIO_RELIDO), None))
+        self.assertTrue(pc.conferir("abertura", corrijo, linha(2, self.AVISO), None))
+        self.assertFalse(pc.conferir("abertura", corrijo, linha(2, self.APOIO_RELIDO), None))
+        self.assertFalse(pc.conferir("abertura", {"abertura": ["LEI_CONFIRMA"]},
+                                     linha(2, self.APOIO_RELIDO), None))
+        self.assertFalse(pc.conferir("abertura", apoio, linha(2, self.AVISO), None))
+        self.assertEqual(pc.VERSAO_REGRA_V3, "2026-11-23.4")
+
+    def test_o_aviso_longo_ainda_vale_no_lugar_do_corrijo(self):
+        lista = ", ".join(f"LC 214/2025, Anexo III, item {n}" for n in range(1, 13))
+        longo = (f"Reli o texto da lei nos dispositivos em que a resposta anterior se baseia ({lista}) e a "
+                 "resposta não confere com eles neste ponto.")
+        self.assertTrue(pc.conferir("abertura", {"abertura": ["LEI_CORRIJO"]}, linha(2, longo), None))
+
+    def test_as_equivalencias_nao_valem_fora_dos_conjuntos_da_v3(self):
+        for parte in ("l584", "581"):
+            self.assertFalse(pc.conferir("abertura", {"abertura": ["LEI_CORRIJO"]},
+                                         linha(2, self.AVISO, parte=parte), None), parte)
+            self.assertFalse(pc.conferir("abertura", {"abertura": ["LEI_APOIO"]},
+                                         linha(2, self.APOIO_RELIDO, parte=parte), None), parte)
+
+    def test_o_aviso_numa_resposta_certa_reprova_o_corrijo_indevido(self):
+        passa = pc.ESPECIAIS["M_lei_corrijo_indevido"]
+        self.assertFalse(passa(self.AVISO))
+        self.assertFalse(passa(self.CORRIJO))
+        self.assertTrue(passa(self.APOIO_RELIDO))
+        self.assertTrue(passa(self.CONFIRMA))
+
     def test_credito_zero_confere_que_nao_houve_chamada_ao_modelo(self):
         # Regra v3 (#511): o turno sem modelo paga a leitura e mesmo assim passa.
         sem_tokens = {"linhas": 1, "modelo": "m", "tokens_entrada": None, "tokens_saida": None}

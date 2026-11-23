@@ -26,6 +26,33 @@ resultado:**
 do conjunto e mudou o sha256 deles. O teste que roda passou a `b0a7cf3e…`, e o conteúdo revisado
 continua o `23b1221c…` (`README.md`, seção "Versões").
 
+**Versão `2026-11-23.4` (2026-11-23), escrita ANTES da segunda rodada oficial, por mudança de
+desenho do produto e não por resultado de limiar:**
+
+- **Motivo:** a primeira rodada no desenho novo (aviso fixo de divergência e apoio neutro, decisão do
+  Murillo de 2026-11-22; PR #604) mostrou que 14 das 23 falhas de `M_rota_funcao` eram de `abertura`:
+  os conjuntos dev e teste (sha256 inalterados) esperam as aberturas antigas (`LEI_APOIO`, `LEI_CORRIJO`)
+  e o produto passou a escrever outras. Nenhuma foi falha de conteúdo.
+- **O que muda, só no pontuador e só nas partes `dev` e `teste`:** a `abertura` esperada `LEI_APOIO` passa a
+  aceitar também `LEI_APOIO_RELIDO` (o apoio neutro com o modelo chamado) e a esperada `LEI_CORRIJO` passa a
+  aceitar também `LEI_DIVERGENCIA` (o aviso fixo do backend), esta lida nos primeiros 1.000 caracteres e não
+  nos 300, porque o aviso leva a lista dos dispositivos antes de "não confere". `LEI_CONFIRMA` não muda.
+- **O que fica mais rígido, não mais frouxo:** `M_lei_corrijo_indevido` (zero falhas) passa a reprovar
+  também o aviso de divergência numa resposta anterior certa, porque no desenho novo o aviso é o que a
+  correção era.
+- **O que não mudou:** os conjuntos (sha256), todos os limiares, as outras métricas. `M_lei_correcao`
+  (`correcao_contem` lê o texto que o modelo escrevia depois do "corrijo") não tem equivalente no desenho
+  novo e continua como está: falha por construção e sai da decisão combinada com a l584
+  (`pontuar_l584.py --v3`), como na primeira rodada.
+- **Também antes da rodada:** o executor desta rodada é o corrigido do #605 (a leitura da auditoria pelo
+  `psql` deixava de comer as colunas vazias do fim da linha, e `M_credito_zero` e `M_caminho_fixo` falhavam
+  por isso na primeira rodada). A reanálise da primeira rodada com a auditoria reanexada pela janela de cada
+  volta (e não pela janela do turno anterior, que engolia a linha do turno seguinte) dá zero falhas nas duas.
+- **Resultado da reanálise da primeira rodada com a regra nova (não é rodada oficial):** `M_rota_funcao` 9
+  falhas em 87 (as de dados e citação de `t-dados-11`, `12`, `13` e `17`, estáveis em rodadas anteriores:
+  `t-dados-12` e `t-dados-17` falham nas 3 repetições de 18/11, 19/11 e 19/11), e `M_lei_corrijo_indevido`
+  1 falha em 27 (`t-lei-08/r3/t2`: aviso depois de uma resposta certa).
+
 ## O que se mede
 
 - **Decide só o teste:** `conversas-continuidade-teste.json` (versão `continuidade-v2-teste`,
