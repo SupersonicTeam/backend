@@ -66,8 +66,21 @@ public enum MotivoReconferenciaLei {
   CONFIRMO_CITACAO_NAO_LITERAL,
   /** Número de uma frase da fatia que não está no trecho que ela cita. */
   CONFIRMO_NUMERO_FATIA,
-  /** Número da fatia que não está nas citações, ou citação sem 2 palavras de conteúdo da fatia. */
+  /**
+   * Número de uma frase da fatia que não está na citação literal do trecho que ela cita (a prova é
+   * por frase, não pela união das citações; #584).
+   */
   CONFIRMO_NUMERO_CITACAO,
+  /**
+   * Sentido sem prova literal (#584): frase afirmativa com negação ou restrição na citação, frase
+   * que nega sem negação na citação, ou "Sim" inicial com negação ou restrição no trecho citado.
+   */
+  CONFIRMO_SENTIDO,
+  /**
+   * Frase sem número cujas palavras de conteúdo o trecho citado e a citação cobrem em menos da
+   * metade (#584).
+   */
+  CONFIRMO_COBERTURA,
 
   // --- CORRIJO descartado (na ordem das guardas) ---
   /** Lista de correções ausente, vazia ou com mais de 2 itens. */

@@ -46,6 +46,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.Message;
@@ -391,7 +392,7 @@ public class ReconferenciaLei {
       }
       List<String> linhas = new ArrayList<>();
       List<CitacaoLegal> citacoes = new ArrayList<>();
-      List<String> pedacos = new ArrayList<>();
+      Map<String, List<String>> pedacosPorMarca = new HashMap<>();
       for (JsonNode item : lista) {
         Optional<Fundamento> fundamento = fundamento(item);
         if (fundamento.isEmpty()) {
@@ -409,17 +410,17 @@ public class ReconferenciaLei {
           return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
               MotivoReconferenciaLei.CONFIRMO_CITACAO_NAO_LITERAL);
         }
-        pedacos.add(pedaco.get());
+        pedacosPorMarca.computeIfAbsent(f.marca(), m -> new ArrayList<>()).add(pedaco.get());
         linhas.add(O_QUE_DIZ.formatted(trecho.comoCitacao().referencia(), pedaco.get()));
         citacoes.add(trecho.comoCitacao());
       }
-      if (!numerosDaFatiaNosTrechos()) {
-        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO,
-            MotivoReconferenciaLei.CONFIRMO_NUMERO_FATIA);
-      }
-      if (!numerosDaFatiaNasCitacoes(pedacos)) {
-        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO,
-            MotivoReconferenciaLei.CONFIRMO_NUMERO_CITACAO);
+      MotivoReconferenciaLei semProva = provaDaConfirmacao(pedacosPorMarca);
+      if (semProva != null) {
+        return descartar(dispositivos, switch (semProva) {
+          case CONFIRMO_SENTIDO -> DesfechoContinuidade.RECONFERENCIA_DESCARTADA_SENTIDO;
+          case CONFIRMO_COBERTURA -> DesfechoContinuidade.RECONFERENCIA_DESCARTADA_COBERTURA;
+          default -> DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO;
+        }, semProva);
       }
       String texto = CONFIRMA + "\n\n" + String.join("\n", linhas) + "\n\n" + ENQUADRAMENTO;
       return saida(texto, citacoes, DesfechoContinuidade.RECONFERENCIA_CONFIRMOU,
@@ -661,48 +662,83 @@ public class ReconferenciaLei {
       return apoio(par, contexto, dispositivos, desfecho, true, motivo);
     }
 
-    /** (b) do CONFIRMO: cada número de cada frase está no trecho que ela cita. */
-    private boolean numerosDaFatiaNosTrechos() {
+    /**
+     * A prova da confirmação, frase por frase (#584): "nunca confirma o erro" como propriedade do
+     * código. Cada frase da resposta anterior que cita trecho precisa, nos trechos que ela cita e
+     * nas citações literais do modelo para eles, de: (1) cada número dela no trecho e na citação
+     * (não pela união das citações); (2) o sentido: frase afirmativa sem negação nem restrição na
+     * citação, frase que nega com negação na citação e um "Sim" inicial sem negação nem restrição no
+     * trecho; (3) sem número, metade das palavras de conteúdo dela no trecho ou na citação. Frase
+     * com número e sem trecho citado não tem prova. Sem prova, o chamador devolve o apoio neutro.
+     *
+     * @return o motivo da falta de prova, ou {@code null} se toda frase tem prova
+     */
+    private MotivoReconferenciaLei provaDaConfirmacao(Map<String, List<String>> pedacosPorMarca) {
       for (String frase : frases(marcada)) {
-        Set<BigDecimal> numeros = ValidadorNumeros.valoresMencionados(semGrupos(
-            RotaLegislacao.semMarcas(frase)));
-        if (numeros.isEmpty()) {
+        String lida = semGrupos(RotaLegislacao.semMarcas(frase));
+        Set<BigDecimal> numeros = ValidadorNumeros.valoresMencionados(lida);
+        List<String> marcasDaFrase = marcas(frase).stream().distinct()
+            .filter(porMarca::containsKey).toList();
+        if (marcasDaFrase.isEmpty()) {
+          if (!numeros.isEmpty()) {
+            return MotivoReconferenciaLei.CONFIRMO_NUMERO_FATIA;
+          }
           continue;
         }
-        Set<BigDecimal> doTrecho = new HashSet<>();
-        for (String marca : marcas(frase)) {
-          TrechoRecuperado t = porMarca.get(marca);
-          if (t != null) {
-            doTrecho.addAll(ValidadorNumeros.valoresMencionados(semAnotacoes(t.texto())));
+        List<String> textosDosTrechos = marcasDaFrase.stream()
+            .map(m -> semAnotacoes(porMarca.get(m).texto())).toList();
+        List<String> pedacos = marcasDaFrase.stream()
+            .flatMap(m -> pedacosPorMarca.getOrDefault(m, List.of()).stream()).toList();
+        if (!numeros.isEmpty()) {
+          Set<BigDecimal> doTrecho = new HashSet<>();
+          textosDosTrechos.forEach(t -> doTrecho.addAll(ValidadorNumeros.valoresMencionados(t)));
+          if (!doTrecho.containsAll(numeros)) {
+            return MotivoReconferenciaLei.CONFIRMO_NUMERO_FATIA;
+          }
+          Set<BigDecimal> naCitacao = new HashSet<>();
+          pedacos.forEach(p -> naCitacao.addAll(ValidadorNumeros.valoresMencionados(p)));
+          if (!naCitacao.containsAll(numeros)) {
+            return MotivoReconferenciaLei.CONFIRMO_NUMERO_CITACAO;
           }
         }
-        if (!doTrecho.containsAll(numeros)) {
-          return false;
+        if (!sentidoComProva(frase, lida, textosDosTrechos, pedacos)) {
+          return MotivoReconferenciaLei.CONFIRMO_SENTIDO;
+        }
+        if (numeros.isEmpty() && !coberta(lida, textosDosTrechos, pedacos)) {
+          return MotivoReconferenciaLei.CONFIRMO_COBERTURA;
         }
       }
-      return true;
+      return null;
     }
 
-    /** (c) do CONFIRMO: números da fatia nas citações; sem número, 2 palavras de conteúdo. */
-    private boolean numerosDaFatiaNasCitacoes(List<String> pedacos) {
-      Set<BigDecimal> daFatia = ValidadorNumeros.valoresMencionados(semGrupos(
-          RotaLegislacao.semMarcas(marcada)));
-      if (!daFatia.isEmpty()) {
-        Set<BigDecimal> nasCitacoes = new HashSet<>();
-        pedacos.forEach(p -> nasCitacoes.addAll(ValidadorNumeros.valoresMencionados(p)));
-        return nasCitacoes.containsAll(daFatia);
+    /** O sentido da frase tem prova literal nas citações e, no "Sim" inicial, no trecho. */
+    private boolean sentidoComProva(String frase, String lida, List<String> textosDosTrechos,
+        List<String> pedacos) {
+      boolean fraseNega = NEGACAO.matcher(RegrasClassificacao.normalizar(lida)).find();
+      boolean citacaoNega = pedacos.stream()
+          .anyMatch(p -> NEGACAO.matcher(RegrasClassificacao.normalizar(p)).find());
+      if (fraseNega ? !citacaoNega : citacaoNega) {
+        return false;
       }
-      List<String> conteudoFatia = TextoContinuidade.palavras(TextoContinuidade.normalizar(
-          RotaLegislacao.semMarcas(marcada))).stream().filter(TextoContinuidade::conteudo).toList();
-      for (String pedaco : pedacos) {
-        long comuns = TextoContinuidade.palavras(TextoContinuidade.normalizar(pedaco)).stream()
-            .filter(TextoContinuidade::conteudo).distinct()
-            .filter(p -> TextoContinuidade.contemPorPrefixo(conteudoFatia, p)).count();
-        if (comuns < 2) {
-          return false;
-        }
+      boolean trechoNega = textosDosTrechos.stream()
+          .anyMatch(t -> NEGACAO.matcher(RegrasClassificacao.normalizar(t)).find());
+      return !("SIM".equals(polaridade(RotaLegislacao.semMarcas(frase))) && trechoNega);
+    }
+
+    /** Metade das palavras de conteúdo da frase está no trecho citado ou na citação. */
+    private static boolean coberta(String lida, List<String> textosDosTrechos,
+        List<String> pedacos) {
+      List<String> daFrase = TextoContinuidade.palavras(TextoContinuidade.normalizar(lida))
+          .stream().filter(TextoContinuidade::conteudo).distinct().toList();
+      if (daFrase.isEmpty()) {
+        return true;
       }
-      return true;
+      List<String> doTexto = new ArrayList<>();
+      Stream.concat(textosDosTrechos.stream(), pedacos.stream()).forEach(t -> doTexto.addAll(
+          TextoContinuidade.palavras(TextoContinuidade.normalizar(t))));
+      long achadas = daFrase.stream().filter(w -> TextoContinuidade.contemPorPrefixo(doTexto, w))
+          .count();
+      return achadas * 2 >= daFrase.size();
     }
 
     /** (g) o número antigo está no trecho que a frase anterior citava. */

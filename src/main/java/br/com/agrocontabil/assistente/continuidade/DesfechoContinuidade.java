@@ -83,6 +83,16 @@ public enum DesfechoContinuidade {
   RECONFERENCIA_DESCARTADA_CITACAO,
   /** Número sem apoio no trecho: apoio. */
   RECONFERENCIA_DESCARTADA_NUMERO,
+  /**
+   * A confirmação sem prova literal do sentido (Sim/Não ou negação) da resposta anterior no
+   * trecho: apoio (#584).
+   */
+  RECONFERENCIA_DESCARTADA_SENTIDO,
+  /**
+   * A confirmação de frase sem número cujas palavras de conteúdo o trecho não cobre: apoio
+   * (#584).
+   */
+  RECONFERENCIA_DESCARTADA_COBERTURA,
   /** Frase anterior que não está na resposta: apoio. */
   RECONFERENCIA_DESCARTADA_ANCORA,
   /** Correção que fala dos dados do produtor: apoio. */
