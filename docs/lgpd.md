@@ -225,11 +225,26 @@ mais cedo que o prazo deles.
 
 ## Termos de uso (#498, #519)
 
-O backend grava o aceite (`credencial_usuario.termos_aceitos_em`, `termos_versao`) e a versão vem de
-`app.termos.versao` (2026-11-11, **provisória**). **O texto dos termos não existe no backend** (nem
-em `docs/`, nem em `resources/`, nem endpoint) e esta issue não o redige. Falta decidir onde ele
-mora (página da landing ou backend, como a política); quando existir, a versão dele vira o valor de
-`TERMOS_VERSAO`. Os aceites gravados até lá são de um texto que ainda não existia.
+**O texto existe desde 2026-11-24** (decisão do Murillo, "vamos fazer"; **sem revisão jurídica**, como
+a política: escrito pela equipe, lido pelo Murillo antes do merge). Mora no backend, como a
+política: `TermosUsoService` + `GET /api/termos-de-uso` (público; versão, controlador, contato e dez
+seções em texto puro, sem HTML). A página `/termos-de-uso` e o link no texto do aceite do cadastro
+são do frontend (contrato no corpo do PR da #498).
+
+- **Versão:** `app.termos.versao` (`TERMOS_VERSAO`), padrão **2026-11-24**, é a data do texto e a
+  mesma que o cadastro grava em `credencial_usuario.termos_aceitos_em`/`termos_versao`: o endpoint e
+  o aceite leem a mesma propriedade. Mudou o texto, mude a versão.
+- **Aceites com `2026-11-11` são anteriores ao texto.** Essa versão foi a provisória da #519 (marcava
+  que houve aceite, sem texto). O próprio texto diz isso na seção "Mudanças nestes termos e
+  versões". O sistema **não pede reaceite** quando a versão muda: quem aceitou a provisória segue
+  com ela gravada.
+- **`CADASTRO_EXIGIR_ACEITE_TERMOS` segue `false`** (ligar é passo da VPS, decisão à parte).
+- **Não está no texto, de propósito** (decisão da GWNext, listada no PR da #498): foro e lei
+  aplicável, limitação ou exclusão de responsabilidade, aceite por uso continuado e reaceite,
+  suspensão de conta pela GWNext por abuso, idade mínima e representação, licença e propriedade
+  intelectual, guarda de registros de acesso (Marco Civil, art. 15).
+- O texto cita só o que o sistema faz hoje: SEFAZ simulada (#263, enquanto durar), escopo do cálculo
+  (`docs/premissas-e-escopo.md`), a Ceres, a conta, o escritório, a exclusão e a política.
 
 ## Limites conhecidos
 

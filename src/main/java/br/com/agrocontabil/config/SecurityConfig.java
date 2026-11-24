@@ -88,6 +88,8 @@ public class SecurityConfig {
       "/api/v1/health/**",
       // Politica de dados (LGPD, #148): o titular le antes de se cadastrar.
       "/api/politica-dados",
+      // Termos de uso (#498): lidos antes do cadastro, como a politica.
+      "/api/termos-de-uso",
       "/v3/api-docs/**",
       "/swagger-ui/**",
       "/swagger-ui.html",

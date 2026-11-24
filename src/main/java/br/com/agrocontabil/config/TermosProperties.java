@@ -6,17 +6,18 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 /**
  * Termos de uso, em {@code app.termos} (issue #519).
  *
- * <p>O backend só registra o aceite: quando e qual versão. O texto e a página dos termos ficam com
- * a GWNext, junto com o jurídico (#498); mudou o texto, muda a versão ({@code TERMOS_VERSAO}), e o
- * próximo aceite grava a nova.
+ * <p>O cadastro registra o aceite (quando e qual versão) e o {@code TermosUsoService} serve o texto
+ * em {@code GET /api/termos-de-uso} com esta mesma versão (#498). Mudou o texto, mude a versão
+ * ({@code TERMOS_VERSAO} ou o valor padrão) para a data da mudança: o próximo aceite grava a nova.
+ * O padrão vive no {@code application.yml}, no {@code deploy/compose.yaml} (que vale mais que o
+ * yml na VPS) e no {@code .env.example}; o {@code TermosVersaoCoerenteTest} confere os três.
  *
- * <p><strong>Valor provisório:</strong> enquanto o texto não existe, a versão padrão
- * ({@code 2026-11-11}, a data da decisão da #519) só marca que houve aceite. Os aceites gravados com
- * ela são anteriores ao texto: quando a #498 publicar os termos, a versão muda e quem aceitou a
- * provisória pode ser chamado a aceitar de novo.
+ * <p>A versão {@code 2026-11-11}, a data da decisão da #519, é <strong>provisória</strong>: foi
+ * gravada nos cadastros feitos antes de o texto existir, e o próprio texto diz isso. O sistema não
+ * pede reaceite quando a versão muda.
  *
  * @param versao versão dos termos que o cadastro grava na credencial junto com o aceite
  */
 @ConfigurationProperties(prefix = "app.termos")
-public record TermosProperties(@DefaultValue("2026-11-11") String versao) {
+public record TermosProperties(@DefaultValue("2026-11-24") String versao) {
 }

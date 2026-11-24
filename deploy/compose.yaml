@@ -140,9 +140,11 @@ services:
       # o SPRING_MAIL_HOST vazio, se este compose chegar antes dela.
       MANAGEMENT_HEALTH_MAIL_ENABLED: 'false'
       # Aceite dos termos no cadastro (#519): ligue o exigir quando a tela nova mandar o campo;
-      # mude a versao quando o texto dos termos mudar (#498).
+      # mude a versao quando o texto dos termos mudar (#498). O padrao daqui tem de ser o mesmo do
+      # app.termos.versao do application.yml (o TermosVersaoCoerenteTest quebra se divergir): se
+      # este compose fixasse a versao antiga, o endpoint serviria a versao provisoria com o texto novo.
       CADASTRO_EXIGIR_ACEITE_TERMOS: ${CADASTRO_EXIGIR_ACEITE_TERMOS:-false}
-      TERMOS_VERSAO: ${TERMOS_VERSAO:-2026-11-11}
+      TERMOS_VERSAO: ${TERMOS_VERSAO:-2026-11-24}
       SEED_SENHA: ${SEED_SENHA:-}
       # Escritorio, carteira e notas da banca (#315), com as contas na SEED_SENHA. Idempotente.
       DEMONSTRACAO_HABILITADA: 'true'

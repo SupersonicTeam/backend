@@ -198,7 +198,7 @@ class CadastroIntegrationTest {
     CredencialUsuario credencial =
         credencialRepository.findByEmail("patricia@exemplo.com.br").orElseThrow();
     assertThat(credencial.getTermosAceitosEm()).isNotNull();
-    assertThat(credencial.getTermosVersao()).isEqualTo("2026-11-11");
+    assertThat(credencial.getTermosVersao()).isEqualTo("2026-11-24");
     Contador contador = contadorRepository.findById(credencial.getContadorId()).orElseThrow();
     assertThat(contador.getNomeCompleto()).isEqualTo("Patrícia Moreira");
     assertThat(contador.getCpfCnpj()).isEqualTo(CPF);
@@ -404,7 +404,7 @@ class CadastroIntegrationTest {
     CredencialUsuario credencial =
         credencialRepository.findByEmail("termos@fazenda.com.br").orElseThrow();
     assertThat(credencial.getTermosAceitosEm()).isNotNull();
-    assertThat(credencial.getTermosVersao()).isEqualTo("2026-11-11");
+    assertThat(credencial.getTermosVersao()).isEqualTo("2026-11-24");
   }
 
   @Test

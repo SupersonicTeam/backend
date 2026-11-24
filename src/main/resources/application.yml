@@ -414,11 +414,12 @@ app:
   # Desligado ate a tela nova mandar o campo; liga por env, sem mudar codigo.
   cadastro:
     exigir-aceite-termos: ${CADASTRO_EXIGIR_ACEITE_TERMOS:false}
-  # Termos de uso (#519): versao gravada na credencial com o aceite. O texto dos termos NAO existe
-  # em nenhum lugar do backend (docs/lgpd.md, secao "Termos de uso"); quando existir, a versao dele
-  # entra aqui. 2026-11-11 e PROVISORIA: os aceites com ela sao anteriores ao texto.
+  # Termos de uso (#519, #498): versao gravada na credencial com o aceite e servida em
+  # GET /api/termos-de-uso (TermosUsoService). 2026-11-24 e a data do texto; mudou o texto, mude a
+  # versao. 2026-11-11 foi a versao PROVISORIA (o texto nao existia): os aceites com ela sao
+  # anteriores ao texto, e o proprio texto diz isso.
   termos:
-    versao: ${TERMOS_VERSAO:2026-11-11}
+    versao: ${TERMOS_VERSAO:2026-11-24}
   # Autenticacao (Sprint 8).
   seguranca:
     senha:
