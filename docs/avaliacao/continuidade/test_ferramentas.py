@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import datetime as dt
 import io
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -264,6 +265,82 @@ class Pontuacao(unittest.TestCase):
         self.assertEqual(ligado["metricas"]["M_lei_corrijo_indevido"]["n"], 3)
         self.assertEqual(resultado["decisao"], "INCONCLUSIVA")
         self.assertTrue(any("execuções do teste fora" in p for p in resultado["problemas"]))
+
+    APOIO_RELIDO = ("Reli o texto da lei em que a resposta anterior se baseia (LC 214/2025, art. 346). Ele "
+                    "está abaixo, com o link: leia o dispositivo e confira com a resposta.")
+    AVISO = ("Reli o texto da lei nos dispositivos em que a resposta anterior se baseia (LC 214/2025, art. 343 "
+             "e LC 214/2025, art. 346) e a resposta não confere com eles neste ponto. Vale o texto abaixo.")
+
+    def test_regra_2026_11_23_4_aceita_as_aberturas_fixas_do_desenho_novo(self):
+        # Equivalentes só na v3 (dev e teste): apoio neutro onde valia o apoio, aviso onde valia o corrijo.
+        apoio = {"abertura": ["LEI_CONFIRMA", "LEI_APOIO"]}
+        corrijo = {"abertura": ["LEI_CORRIJO"]}
+        self.assertTrue(pc.conferir("abertura", apoio, linha(2, self.APOIO_RELIDO), None))
+        self.assertTrue(pc.conferir("abertura", corrijo, linha(2, self.AVISO), None))
+        self.assertFalse(pc.conferir("abertura", corrijo, linha(2, self.APOIO_RELIDO), None))
+        self.assertFalse(pc.conferir("abertura", {"abertura": ["LEI_CONFIRMA"]},
+                                     linha(2, self.APOIO_RELIDO), None))
+        self.assertFalse(pc.conferir("abertura", apoio, linha(2, self.AVISO), None))
+        self.assertEqual(pc.VERSAO_REGRA_V3, "2026-11-23.4")
+
+    def test_cada_abertura_fixa_do_commit_99be9804_cai_numa_categoria_so(self):
+        # Textos literais de ReconferenciaLei no 99be9804 (%s trocado por dispositivos). Se a redação mudar, este
+        # teste quebra e a regra ganha versão nova.
+        textos = {
+            "LEI_CONFIRMA": ["Conferi de novo a resposta anterior com o texto da lei, e ela se confirma."],
+            "LEI_CORRIJO": ["Conferi de novo a resposta anterior com o texto da lei e corrijo um ponto:",
+                            "Conferi de novo a resposta anterior com o texto da lei e corrijo dois pontos:"],
+            "LEI_APOIO": ["A resposta anterior se baseia em LC 214/2025, art. 346. O texto de cada dispositivo "
+                          "está abaixo, com o link.",
+                          "A resposta anterior se baseia nos dispositivos citados nela."],
+            "LEI_APOIO_RELIDO": [
+                "Reli o texto da lei em que a resposta anterior se baseia (LC 214/2025, art. 346). Ele está "
+                "abaixo, com o link: leia o dispositivo e confira com a resposta.",
+                "Reli o texto da lei nos dispositivos em que a resposta anterior se baseia (LC 214/2025, art. "
+                "346 e LC 214/2025, art. 343). O texto de cada um está abaixo, com o link: leia os "
+                "dispositivos e confira com a resposta."],
+            "LEI_DIVERGENCIA": [
+                "Reli o texto da lei em que a resposta anterior se baseia (LC 214/2025, art. 346) e a resposta "
+                "não confere com ele neste ponto. Vale o texto abaixo, com o link: leia o dispositivo.",
+                "Reli o texto da lei nos dispositivos em que a resposta anterior se baseia (LC 214/2025, art. "
+                "346 e LC 214/2025, art. 343) e a resposta não confere com eles neste ponto. Vale o texto de "
+                "cada um, abaixo, com o link: leia os dispositivos."],
+            "LEI_JA": ["Essa resposta já passou por uma nova conferência com o texto da lei. Ela se baseia em "
+                       "LC 214/2025, art. 346, com o texto abaixo."],
+            "LEI_ATALHO": ["Essa explicação é um texto revisado pela equipe do AgroConIA e se baseia nos "
+                           "dispositivos citados abaixo, com o link."],
+            "LEI_SO_TRECHOS": ["A resposta anterior trouxe os trechos de lei que tratam do assunto, sem afirmar "
+                               "uma regra sobre o seu caso. Eles estão abaixo para consulta."],
+            "LEI_SEM_CONFIRMACAO": ["A resposta anterior não afirmou uma regra: ela trouxe os trechos de lei "
+                                    "mais próximos da pergunta, que estão abaixo para consulta."],
+            "LEI_SEM_FUNDAMENTO": ["A resposta anterior não encontrou fundamento na base de legislação que eu "
+                                   "consulto."],
+        }
+        for categoria, frases in textos.items():
+            for frase in frases:
+                inicio = pc.ct.normalizar(frase)[:300]
+                casam = [c for c, p in pc.vc.CATEGORIAS_ABERTURA.items() if re.search(p, inicio)]
+                self.assertEqual(casam, [categoria], frase)
+
+    def test_o_aviso_longo_ainda_vale_no_lugar_do_corrijo(self):
+        lista = ", ".join(f"LC 214/2025, Anexo III, item {n}" for n in range(1, 13))
+        longo = (f"Reli o texto da lei nos dispositivos em que a resposta anterior se baseia ({lista}) e a "
+                 "resposta não confere com eles neste ponto.")
+        self.assertTrue(pc.conferir("abertura", {"abertura": ["LEI_CORRIJO"]}, linha(2, longo), None))
+
+    def test_as_equivalencias_nao_valem_fora_dos_conjuntos_da_v3(self):
+        for parte in ("l584", "581"):
+            self.assertFalse(pc.conferir("abertura", {"abertura": ["LEI_CORRIJO"]},
+                                         linha(2, self.AVISO, parte=parte), None), parte)
+            self.assertFalse(pc.conferir("abertura", {"abertura": ["LEI_APOIO"]},
+                                         linha(2, self.APOIO_RELIDO, parte=parte), None), parte)
+
+    def test_o_aviso_numa_resposta_certa_reprova_o_corrijo_indevido(self):
+        passa = pc.ESPECIAIS["M_lei_corrijo_indevido"]
+        self.assertFalse(passa(self.AVISO))
+        self.assertFalse(passa(self.CORRIJO))
+        self.assertTrue(passa(self.APOIO_RELIDO))
+        self.assertTrue(passa(self.CONFIRMA))
 
     def test_credito_zero_confere_que_nao_houve_chamada_ao_modelo(self):
         # Regra v3 (#511): o turno sem modelo paga a leitura e mesmo assim passa.

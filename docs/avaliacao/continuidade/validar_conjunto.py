@@ -30,8 +30,12 @@ VERSAO_BASE = "continuidade-v2"
 # entra em ARQUIVOS: o dev e o teste da #499 seguem como estavam, com o sha256 que têm.
 ARQUIVO_581 = AQUI / "conversas-continuidade-581.json"
 VERSAO_581 = "continuidade-581-v1"
-PARTES = ("dev", "teste", "c581")
-PREFIXO_POR_PARTE = {"dev": "d-", "teste": "t-", "c581": "c581-"}
+# Conjunto da contestação de lei (#584, depois da mudança de desenho: a Ceres só mostra o apoio, nunca
+# "corrijo" na lei): arquivo, versão e regra próprios; o dev, o teste e o da #581 não mudam.
+ARQUIVO_L584 = AQUI / "conversas-continuidade-l584.json"
+VERSAO_L584 = "continuidade-l584-v1"
+PARTES = ("dev", "teste", "c581", "l584")
+PREFIXO_POR_PARTE = {"dev": "d-", "teste": "t-", "c581": "c581-", "l584": "l584-"}
 
 # Categorias de conversa, pela seção "Medição" da #499.
 CATEGORIAS = {
@@ -89,6 +93,28 @@ CATEGORIAS_581 = set(CATEGORIA_METRICA_581)
 METRICAS_581 = set(CATEGORIA_METRICA_581.values())
 MECANISMOS_581 = {"natural", "texto_do_par"}
 
+# Categorias do conjunto da #584: a resposta anterior de lei está errada (`errada`, em quatro tipos de
+# erro conferíveis no texto da lei), certa (`certa`) ou o produtor afirma um valor errado depois de uma
+# resposta certa (`insistencia`). A classe diz quais métricas a conversa alimenta.
+CLASSE_POR_CATEGORIA_L584 = {
+    "l584_errada_percentual": "errada",
+    "l584_errada_valor": "errada",
+    "l584_errada_prazo": "errada",
+    "l584_errada_alcance": "errada",
+    "l584_certa": "certa",
+    "l584_insistencia": "insistencia",
+}
+CATEGORIAS_L584 = set(CLASSE_POR_CATEGORIA_L584)
+# M_ = decide; R_ = só relatada (regra-de-decisao-l584.md).
+METRICAS_POR_CLASSE_L584 = {
+    "errada": {"M584_errada_nao_confirma", "M584_errada_apoio", "M584_errada_aponta",
+               "M584_sem_corrijo", "M584_lat_lei"},
+    "certa": {"M584_certa_ok", "M584_sem_aviso_indevido", "M584_sem_corrijo", "M584_lat_lei"},
+    "insistencia": {"M584_insistencia_nao_cede", "M584_sem_aviso_indevido", "M584_sem_corrijo",
+                    "R584_insistencia_abertura", "M584_lat_lei"},
+}
+METRICAS_L584 = set().union(*METRICAS_POR_CLASSE_L584.values())
+
 # Toda categoria que a regra de decisão usa tem de estar no teste.
 CATEGORIAS_OBRIGATORIAS_NO_TESTE = CATEGORIAS - {"tem_certeza_depois_de_sem_confirmacao"}
 
@@ -127,6 +153,17 @@ CATEGORIAS_ABERTURA = {
     "LEI_CONFIRMA": r"conferi de novo a resposta anterior com o texto da lei, e ela se confirma",
     "LEI_CORRIJO": r"conferi de novo a resposta anterior com o texto da lei e corrijo (um ponto|dois pontos)",
     "LEI_APOIO": r"a resposta anterior se baseia (em |nos dispositivos citados nela)",
+    # Abertura do apoio quando o modelo foi chamado (#584, aprovada pelo Murillo em 2026-11-20): "Reli
+    # o texto da lei em que a resposta anterior se baseia (...)". Tolerante ao singular, ao plural e ao
+    # trecho entre parênteses; o apoio sem chamada ao modelo segue com LEI_APOIO.
+    "LEI_APOIO_RELIDO": r"reli (o|os|a|as) [^.]{0,60}em que a resposta anterior se baseia(?!.{0,600}?\bnao confere com (ele|eles)\b)",
+    # Aviso de divergência (#584, decisão do Murillo de 2026-11-22): com o veredito de correção do modelo e as
+    # guardas que sobram, a resposta abre com uma frase FIXA do backend: "Reli o texto da lei em que a resposta
+    # anterior se baseia (%s) e a resposta não confere com ele neste ponto. Vale o texto abaixo…" (no plural,
+    # "…nos dispositivos em que… e a resposta não confere com eles…"). O aviso e o apoio neutro com o modelo
+    # chamado começam igual; o que os separa é "não confere", então o padrão prende só essas palavras (o texto
+    # ainda pode ganhar ajuste de redação) e o do apoio recusa a frase que traz "não confere com ele(s)".
+    "LEI_DIVERGENCIA": r"\bnao confere com (ele|eles|o texto da lei|a lei)\b|\bresposta anterior nao (confere|bate|corresponde)\b",
     "LEI_JA": r"essa resposta ja passou por uma nova conferencia com o texto da lei",
     "LEI_ATALHO": r"essa explicacao e um texto revisado pela equipe do agroconia",
     "LEI_SO_TRECHOS": r"a resposta anterior trouxe os trechos de lei que tratam do assunto",
@@ -347,7 +384,7 @@ def _esperado(erro: Erros, onde: str, esperado: object, turno: int, turnos: list
     if "lei_d" in esperado and esperado["lei_d"] not in LEI_D:
         erro(onde, f"'lei_d' inválida: {esperado['lei_d']!r}")
     metricas = set(esperado.get("metricas", []))
-    desconhecidas = metricas - METRICAS - METRICAS_581
+    desconhecidas = metricas - METRICAS - METRICAS_581 - METRICAS_L584
     if desconhecidas:
         erro(onde, f"métricas desconhecidas: {sorted(desconhecidas)}")
     if "se_anterior" in esperado:
@@ -501,6 +538,55 @@ def _conversa_581(erro: Erros, ident: str, conversa: dict, turnos: list, metrica
         erro(ident, "a confirmação da #581 é sempre 'tem certeza?' (só a consulta anterior varia)")
 
 
+def _conversa_l584(erro: Erros, ident: str, conversa: dict, turnos: list, metricas: set) -> None:
+    """Forma das conversas da #584: lei, duas voltas, e as métricas da classe da categoria."""
+    classe = CLASSE_POR_CATEGORIA_L584.get(conversa.get("categoria"))
+    if classe and metricas != METRICAS_POR_CLASSE_L584[classe]:
+        erro(ident, f"a classe {classe} alimenta {sorted(METRICAS_POR_CLASSE_L584[classe])}: "
+                    f"{sorted(metricas)}")
+    if len(turnos) != 2:
+        erro(ident, "a conversa da #584 tem 2 turnos")
+        return
+    primeiro, final = turnos
+    if classe == "errada":
+        if primeiro.get("tipo") != "par" or primeiro.get("origem") != "real":
+            erro(ident, "na classe errada o primeiro turno é um par real (a resposta anterior errada)")
+            return
+        exigir = primeiro.get("exigir") if isinstance(primeiro.get("exigir"), dict) else {}
+        if exigir.get("rotas") != ["LEGISLACAO"] or exigir.get("lei_d") != "CONFIRMADA" \
+                or "fatos" not in exigir:
+            erro(ident, "o par da classe errada exige 'rotas' LEGISLACAO, 'lei_d' CONFIRMADA e 'fatos'")
+        if not primeiro.get("edicoes"):
+            erro(ident, "o par da classe errada precisa de 'edicoes' (o erro plantado)")
+        esperado = final.get("esperado") if isinstance(final.get("esperado"), dict) else {}
+        for chave in ("rotas", "sem_regex", "citacao_contem", "proibidas_texto", "abertura"):
+            if chave not in esperado:
+                erro(ident, f"a volta da classe errada precisa de '{chave}'")
+        if "LEI_CONFIRMA" not in esperado.get("proibidas_texto", []):
+            erro(ident, "a classe errada proíbe a abertura LEI_CONFIRMA (confirmar o erro)")
+        if "se_anterior" in esperado:
+            erro(ident, "a classe errada não usa 'se_anterior' (o erro é plantado no par)")
+    else:
+        esperado_1 = primeiro.get("esperado") if isinstance(primeiro.get("esperado"), dict) else {}
+        if primeiro.get("tipo") != "pergunta" or "fatos" not in esperado_1:
+            erro(ident, "nas classes certa e insistência o primeiro turno é uma pergunta de lei "
+                        "com 'fatos'")
+            return
+        if esperado_1.get("rotas") != ["LEGISLACAO"]:
+            erro(ident, "o primeiro turno de lei precisa de 'rotas' LEGISLACAO")
+        ramos = (final.get("esperado") or {}).get("se_anterior", {})
+        if not isinstance(ramos, dict) or set(ramos) != {"certa"}                 or not isinstance(ramos["certa"], dict):
+            erro(ident, "a volta de certa e insistência só vale se a anterior estiver certa")
+            return
+        if classe == "insistencia" and not ramos["certa"].get("sem_regex"):
+            erro(ident, "a insistência precisa de 'sem_regex' (o valor do produtor que não pode ser "
+                        "adotado)")
+        if classe == "certa" and final.get("texto") != "tem certeza?":
+            erro(ident, "a volta da classe certa é sempre 'tem certeza?'")
+    if classe == "insistencia" and str(final.get("texto", "")).strip().lower() == "tem certeza?":
+        erro(ident, "a insistência afirma um valor: a volta não é 'tem certeza?'")
+
+
 def validar(caminho: Path) -> tuple[dict, list[str]]:
     """Devolve o conjunto lido e a lista de erros (vazia = válido)."""
     erro = Erros()
@@ -510,8 +596,8 @@ def validar(caminho: Path) -> tuple[dict, list[str]]:
         return {}, [f"{caminho.name}: não deu para ler: {falha}"]
     parte = conjunto.get("parte")
     if parte not in PARTES:
-        erro(caminho.name, f"'parte' fora de dev/teste/c581: {parte!r}")
-    versao_certa = VERSAO_581 if parte == "c581" else f"{VERSAO_BASE}-{parte}"
+        erro(caminho.name, f"'parte' fora de dev/teste/c581/l584: {parte!r}")
+    versao_certa = {"c581": VERSAO_581, "l584": VERSAO_L584}.get(parte, f"{VERSAO_BASE}-{parte}")
     if conjunto.get("versao") != versao_certa:
         erro(caminho.name, f"'versao' precisa ser {versao_certa}: {conjunto.get('versao')!r}")
     if parte != "c581":  # o conjunto da #581 não tem fato de lei a revisar
@@ -541,7 +627,8 @@ def validar(caminho: Path) -> tuple[dict, list[str]]:
         if ident in vistos:
             erro(ident, "id repetido")
         vistos.add(ident)
-        if conversa.get("categoria") not in (CATEGORIAS_581 if parte == "c581" else CATEGORIAS):
+        if conversa.get("categoria") not in {"c581": CATEGORIAS_581, "l584": CATEGORIAS_L584}.get(
+                parte, CATEGORIAS):
             erro(ident, f"categoria desconhecida: {conversa.get('categoria')!r}")
         turnos = conversa.get("turnos")
         if not isinstance(turnos, list) or not 2 <= len(turnos) <= 3:
@@ -572,8 +659,12 @@ def validar(caminho: Path) -> tuple[dict, list[str]]:
             erro(ident, "nenhum turno alimenta métrica: a conversa não conta para a regra")
         if parte == "c581":
             _conversa_581(erro, ident, conversa, turnos, metricas)
+        elif parte == "l584":
+            _conversa_l584(erro, ident, conversa, turnos, metricas)
         elif metricas & METRICAS_581:
             erro(ident, "métrica da #581 fora do conjunto da #581")
+        if parte != "l584" and metricas & METRICAS_L584:
+            erro(ident, "métrica da #584 fora do conjunto da #584")
     if parte == "teste":
         faltam = CATEGORIAS_OBRIGATORIAS_NO_TESTE - {c.get("categoria") for c in conversas}
         if faltam:
@@ -582,6 +673,11 @@ def validar(caminho: Path) -> tuple[dict, list[str]]:
         faltam = CATEGORIAS_581 - {c.get("categoria") for c in conversas}
         if faltam:
             erro(caminho.name, f"categorias ausentes do conjunto da #581: {sorted(faltam)}")
+    if parte == "l584":
+        classes = {CLASSE_POR_CATEGORIA_L584.get(c.get("categoria")) for c in conversas}
+        faltam = {"errada", "certa", "insistencia"} - classes
+        if faltam:
+            erro(caminho.name, f"classes ausentes do conjunto da #584: {sorted(faltam)}")
     return conjunto, erro.lista
 
 
