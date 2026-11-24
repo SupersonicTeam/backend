@@ -221,9 +221,34 @@ public class AssistenteProperties implements InitializingBean {
    * @return créditos
    */
   public long tetoDaPergunta(double fator, CaminhoCota caminho) {
-    long teto = cota.tetoDaPergunta(tetos, fator, caminho);
-    return juizDaLeiPodeRodar() && caminho != CaminhoCota.SEM_MODELO
+    CaminhoCota efetivo = caminhoEfetivo(caminho);
+    long teto = cota.tetoDaPergunta(tetos, fator, efetivo);
+    return juizDaLeiPodeRodar() && rodaARotaDeLei(efetivo)
         ? teto + cota.tetoDoJuiz(tetoSaidaDoJuiz(), fator) : teto;
+  }
+
+  /**
+   * O caminho que de fato roda (#584): sem a correção por texto (o padrão), a reconferência de lei
+   * não faz a concordância, a segunda chamada ao modelo, e a reserva é a do caminho sem ela.
+   */
+  CaminhoCota caminhoEfetivo(CaminhoCota caminho) {
+    if (continuidade.isLeiCorrijoPorTexto()) {
+      return caminho;
+    }
+    return switch (caminho) {
+      case RECONFERENCIA -> CaminhoCota.RECONFERENCIA_APOIO;
+      case RECONFERENCIA_MISTO -> CaminhoCota.RECONFERENCIA_MISTO_APOIO;
+      default -> caminho;
+    };
+  }
+
+  /**
+   * O caminho passa pela rota de lei, onde o juiz da fidelidade roda: os que chamam o modelo, menos
+   * os da reconferência só com apoio, que não têm a concordância (#584).
+   */
+  private static boolean rodaARotaDeLei(CaminhoCota caminho) {
+    return caminho != CaminhoCota.SEM_MODELO && caminho != CaminhoCota.RECONFERENCIA_APOIO
+        && caminho != CaminhoCota.RECONFERENCIA_MISTO_APOIO;
   }
 
   /**
@@ -296,6 +321,43 @@ public class AssistenteProperties implements InitializingBean {
      * modelo julga se são produtos diferentes. Falha fecha: sem prova, a consulta é reexecutada.
      */
     private boolean julgamentoDeProduto = true;
+
+    /**
+     * Correção de lei por texto ({@code AI_CONTINUIDADE_LEI_CORRIJO_HABILITADO}), desligada por
+     * padrão (decisão do Murillo, 2026-11-20, #584): na contestação de lei ("tem certeza?") o
+     * veredito {@code CORRIJO} do modelo não vira texto de correção; a resposta é o apoio, com o
+     * trecho literal da lei, e a concordância (a segunda chamada ao modelo) não roda. Ligada,
+     * volta a correção por texto com as guardas de ancora a concordância. Só tem efeito com a
+     * continuidade ligada.
+     */
+    private boolean leiCorrijoPorTexto;
+
+    /**
+     * Aviso de divergência na contestação de lei ({@code AI_CONTINUIDADE_LEI_AVISO_DIVERGENCIA_
+     * HABILITADO}), ligado por padrão (decisão do Murillo, 2026-11-22, #584: "quero que ela aponte
+     * o erro"). Com o veredito de correção do modelo e as guardas que não dependem da frase de
+     * correção passando, a resposta é uma frase fixa do backend dizendo que a resposta anterior não
+     * confere com o texto da lei naquele ponto, mais o trecho literal com a citação; nenhuma prosa
+     * do modelo. Desligado, o veredito de correção sai como apoio neutro. Só vale com a correção
+     * por texto desligada (ela, ligada, vem antes) e com a continuidade ligada.
+     */
+    private boolean leiAvisoDeDivergencia = true;
+
+    public boolean isLeiAvisoDeDivergencia() {
+      return leiAvisoDeDivergencia;
+    }
+
+    public void setLeiAvisoDeDivergencia(boolean leiAvisoDeDivergencia) {
+      this.leiAvisoDeDivergencia = leiAvisoDeDivergencia;
+    }
+
+    public boolean isLeiCorrijoPorTexto() {
+      return leiCorrijoPorTexto;
+    }
+
+    public void setLeiCorrijoPorTexto(boolean leiCorrijoPorTexto) {
+      this.leiCorrijoPorTexto = leiCorrijoPorTexto;
+    }
 
     public boolean isHabilitada() {
       return habilitada;

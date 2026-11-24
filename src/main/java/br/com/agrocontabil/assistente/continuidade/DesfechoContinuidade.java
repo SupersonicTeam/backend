@@ -64,6 +64,17 @@ public enum DesfechoContinuidade {
   RECONFERENCIA_CONFIRMOU,
   /** Reconferência corrigiu um ou dois pontos. */
   RECONFERENCIA_CORRIGIU,
+  /**
+   * O modelo indicou uma correção e as guardas do trecho passaram: aviso fixo do backend de que a
+   * resposta anterior não confere com o texto da lei, com o trecho literal (#584); nenhuma frase
+   * do modelo vai ao produtor.
+   */
+  RECONFERENCIA_AVISO_DIVERGENCIA,
+  /**
+   * O modelo indicou uma correção e a resposta saiu como apoio neutro porque o aviso de
+   * divergência está desligado (#584): nenhuma frase do modelo vai ao produtor.
+   */
+  RECONFERENCIA_APOIO_SEM_CORRECAO,
   /** O modelo disse que os trechos não sustentam: apoio. */
   RECONFERENCIA_NAO_SUSTENTA,
   /** Saída fora do formato ou cortada: apoio. */
@@ -72,6 +83,16 @@ public enum DesfechoContinuidade {
   RECONFERENCIA_DESCARTADA_CITACAO,
   /** Número sem apoio no trecho: apoio. */
   RECONFERENCIA_DESCARTADA_NUMERO,
+  /**
+   * A confirmação sem prova literal do sentido (Sim/Não ou negação) da resposta anterior no
+   * trecho: apoio (#584).
+   */
+  RECONFERENCIA_DESCARTADA_SENTIDO,
+  /**
+   * A confirmação de frase sem número cujas palavras de conteúdo o trecho não cobre: apoio
+   * (#584).
+   */
+  RECONFERENCIA_DESCARTADA_COBERTURA,
   /** Frase anterior que não está na resposta: apoio. */
   RECONFERENCIA_DESCARTADA_ANCORA,
   /** Correção que fala dos dados do produtor: apoio. */

@@ -44,6 +44,26 @@ public enum MotivoReconferenciaLei {
   /** O modelo disse que os trechos não sustentam a resposta anterior: apoio. */
   NAO_SUSTENTA,
 
+  /**
+   * O modelo indicou uma correção, as guardas do trecho passaram e o sinal que liberou o aviso fixo
+   * de divergência foi o número (#584): nenhum número da resposta anterior está no trecho que ela
+   * cita, que traz outro na citação literal.
+   */
+  CORRIJO_AVISO_DIVERGENCIA_NUMERO,
+
+  /**
+   * Idem, com o sinal do sentido (#584): o Sim/Não da resposta anterior contra uma citação e um
+   * trecho do mesmo assunto que negam (ou que não negam), com a negação estrita para o "Sim".
+   */
+  CORRIJO_AVISO_DIVERGENCIA_SENTIDO,
+
+  /**
+   * O modelo indicou uma correção e a resposta saiu como apoio neutro porque o aviso de divergência
+   * está desligado ({@code app.assistente.continuidade.lei-aviso-de-divergencia}): nenhuma guarda
+   * foi avaliada. Com o aviso ligado, cada guarda que descarta tem o seu código.
+   */
+  CORRIJO_INDICADO_APOIO,
+
   // --- CONFIRMO descartado ---
   /** Lista de fundamentos ausente, vazia, com mais de 3 itens ou item fora do formato. */
   CONFIRMO_FORMATO,
@@ -53,8 +73,21 @@ public enum MotivoReconferenciaLei {
   CONFIRMO_CITACAO_NAO_LITERAL,
   /** Número de uma frase da fatia que não está no trecho que ela cita. */
   CONFIRMO_NUMERO_FATIA,
-  /** Número da fatia que não está nas citações, ou citação sem 2 palavras de conteúdo da fatia. */
+  /**
+   * Número de uma frase da fatia que não está na citação literal do trecho que ela cita (a prova é
+   * por frase, não pela união das citações; #584).
+   */
   CONFIRMO_NUMERO_CITACAO,
+  /**
+   * Sentido sem prova literal (#584): frase afirmativa com negação ou restrição na citação, frase
+   * que nega sem negação na citação, ou "Sim" inicial com negação ou restrição no trecho citado.
+   */
+  CONFIRMO_SENTIDO,
+  /**
+   * Frase sem número cujas palavras de conteúdo o trecho citado e a citação cobrem em menos da
+   * metade (#584).
+   */
+  CONFIRMO_COBERTURA,
 
   // --- CORRIJO descartado (na ordem das guardas) ---
   /** Lista de correções ausente, vazia ou com mais de 2 itens. */
@@ -75,10 +108,18 @@ public enum MotivoReconferenciaLei {
   CORRIJO_DADOS,
   /** Citações só de regime específico sem o setor na pergunta. */
   CORRIJO_REGIME,
-  /** Sem número que muda nem polaridade que muda (nada conferível). */
+  /**
+   * Sem divergência que o backend verifique: nem número da resposta sem apoio no trecho com outro
+   * número na citação, nem Sim/Não que muda (nada conferível).
+   */
   CORRIJO_SEM_DIFERENCA,
-  /** O número antigo tem apoio literal no trecho que a frase anterior citava. */
+  /**
+   * O número que a resposta anterior afirma no ponto tem apoio literal no trecho que sustenta o
+   * veredito: não há aviso (a resposta confere com o texto).
+   */
   CORRIJO_APOIO_LITERAL,
+  /** O trecho do fundamento do veredito não é um dos que a resposta anterior citou. */
+  CORRIJO_TRECHO_NAO_CITADO,
   /** Concordância: o modelo falhou na rota de lei normal. */
   CORRIJO_CONCORDANCIA_INDISPONIVEL,
   /** Concordância: a rota de lei normal não foi aceita (descartada, cortada, sem detalhe). */
@@ -88,5 +129,32 @@ public enum MotivoReconferenciaLei {
   /** Concordância: o trecho da correção não está entre os da rota normal. */
   CORRIJO_CONCORDANCIA_SEM_TRECHO,
   /** Concordância: nenhuma frase da rota normal tem o número novo sem o antigo. */
-  CORRIJO_CONCORDANCIA_SEM_FRASE
+  CORRIJO_CONCORDANCIA_SEM_FRASE;
+
+  /** O veredito do modelo que o motivo representa, para ler a medição por grupo (#584). */
+  public enum Veredito {
+    /** CORRIJO: o aviso, a guarda que o barrou ou o apoio neutro por chave. */
+    CORRECAO,
+    /** CONFIRMO: a confirmação validada ou a que uma guarda descartou. */
+    CONFIRMACAO,
+    /** NAO_SUSTENTA. */
+    NAO_SUSTENTA,
+    /** Sem veredito: texto fixo, caminho sem modelo ou saída que não serve. */
+    NENHUM
+  }
+
+  /**
+   * O grupo do veredito. {@code CORRIGIU} e os {@code CORRIJO_*} são de correção (o aviso
+   * emitido, {@link #CORRIJO_AVISO_DIVERGENCIA_NUMERO} e {@link #CORRIJO_AVISO_DIVERGENCIA_SENTIDO}, e o barrado por guarda, cada um com o seu
+   * código); {@code CONFIRMOU} e os {@code CONFIRMO_*}, de confirmação; os demais, sem veredito.
+   */
+  public Veredito veredito() {
+    if (this == CORRIGIU || name().startsWith("CORRIJO_")) {
+      return Veredito.CORRECAO;
+    }
+    if (this == CONFIRMOU || name().startsWith("CONFIRMO_")) {
+      return Veredito.CONFIRMACAO;
+    }
+    return this == NAO_SUSTENTA ? Veredito.NAO_SUSTENTA : Veredito.NENHUM;
+  }
 }

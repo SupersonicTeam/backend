@@ -573,6 +573,19 @@ app:
       # quando a tabela de produto nao decide. Falha fecha (sem prova, reexecuta a consulta).
       # Para desligar: AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO=false.
       julgamento-de-produto: ${AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO:true}
+      # Correcao de lei por texto (#584): desligada por padrao (decisao do Murillo, 2026-11-20).
+      # Na contestacao de lei ("tem certeza?") o veredito CORRIJO do modelo nao vira texto de
+      # correcao: a resposta e o apoio, com o trecho literal da lei, e a concordancia (a segunda
+      # chamada ao modelo) nao roda. Para voltar a correcao por texto, com as guardas de ancora a
+      # concordancia: AI_CONTINUIDADE_LEI_CORRIJO_HABILITADO=true.
+      lei-corrijo-por-texto: ${AI_CONTINUIDADE_LEI_CORRIJO_HABILITADO:false}
+      # Aviso de divergencia na contestacao de lei (#584, decisao do Murillo de 2026-11-22: "quero
+      # que ela aponte o erro"): ligado por padrao. Com o veredito de correcao do modelo e as guardas
+      # que nao dependem da frase de correcao passando, a resposta e uma frase fixa do backend (a
+      # resposta anterior nao confere com o texto da lei naquele ponto) mais o trecho literal; sem
+      # prosa do modelo e sem segunda chamada. Desligado: o veredito sai como apoio neutro. Para
+      # desligar: AI_CONTINUIDADE_LEI_AVISO_DIVERGENCIA_HABILITADO=false.
+      lei-aviso-de-divergencia: ${AI_CONTINUIDADE_LEI_AVISO_DIVERGENCIA_HABILITADO:true}
     # Cota semanal de creditos (issue #166). creditos = ceil((entrada x peso-entrada + saida x
     # peso-saida) x fator do modelo / tokens-por-credito). Desde a #511, 1 credito por token
     # ponderado (tokens-por-credito = 1) e as cotas em milhares de vezes as de antes. Semana de

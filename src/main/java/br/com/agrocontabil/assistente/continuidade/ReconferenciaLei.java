@@ -46,6 +46,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.Message;
@@ -95,6 +96,33 @@ public class ReconferenciaLei {
   public static final String APOIO = "A resposta anterior se baseia em %s. O texto de cada "
       + "dispositivo está abaixo, com o link.";
 
+  /**
+   * Apoio depois de o modelo ser chamado e responder (CORRIJO, NAO_SUSTENTA e descartes), com um
+   * dispositivo. Frase aprovada pelo Murillo em 2026-11-20 (#584): não afirma erro nem confirma, e
+   * convida a ler o trecho. Sem chamar o modelo vale {@link #APOIO}.
+   */
+  public static final String APOIO_RELIDO = "Reli o texto da lei em que a resposta anterior se "
+      + "baseia (%s). Ele está abaixo, com o link: leia o dispositivo e confira com a resposta.";
+
+  /** {@link #APOIO_RELIDO} com mais de um dispositivo, com o mesmo sentido. */
+  public static final String APOIO_RELIDO_PLURAL = "Reli o texto da lei nos dispositivos em que a "
+      + "resposta anterior se baseia (%s). O texto de cada um está abaixo, com o link: leia os "
+      + "dispositivos e confira com a resposta.";
+
+  /**
+   * Aviso de divergência, com um dispositivo (#584, decisão do Murillo de 2026-11-22): o modelo deu
+   * o veredito de correção e as guardas do trecho passaram. Frase fixa do backend, sem número, sem
+   * artigo além da lista de dispositivos e sem dizer o que é o certo: isso é o trecho abaixo.
+   */
+  public static final String AVISO_DIVERGENCIA = "Reli o texto da lei em que a resposta anterior "
+      + "se baseia (%s) e a resposta não confere com ele neste ponto. Vale o texto abaixo, com o "
+      + "link: leia o dispositivo.";
+
+  /** {@link #AVISO_DIVERGENCIA} com mais de um dispositivo, com o mesmo sentido. */
+  public static final String AVISO_DIVERGENCIA_PLURAL = "Reli o texto da lei nos dispositivos em "
+      + "que a resposta anterior se baseia (%s) e a resposta não confere com eles neste ponto. "
+      + "Vale o texto de cada um, abaixo, com o link: leia os dispositivos.";
+
   /** Apoio sem dispositivo resolvido. */
   public static final String APOIO_SEM_DISPOSITIVO = "A resposta anterior se baseia nos "
       + "dispositivos citados nela.";
@@ -142,6 +170,13 @@ public class ReconferenciaLei {
       "^[\\s\\p{Punct}\\u2013\\u2014]*(sim(?=[\\s\\p{Punct}\\u2013\\u2014]|$)"
           + "|n[a\\u00e3]o[*_]*\\s*[,.;:!\\u2013\\u2014-])",
       Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+  /** Negação e restrição no texto normalizado (sem acento nem caixa), para o sentido do trecho. */
+  private static final Pattern NEGACAO = Pattern.compile(
+      "\\b(nao|nem|nenhum[a]?|vedad[oa]s?|vedacao|veda|proibid[oa]s?|proibicao|exceto|excetuad[oa]s?"
+          + "|exclui|excluid[oa]s?|ressalvad[oa]s?|salvo)\\b");
+  /** Negação estrita, sem as restrições ("exceto", "salvo"), que acompanham uma regra afirmativa. */
+  private static final Pattern NEGACAO_ESTRITA = Pattern.compile(
+      "\\b(nao|vedad[oa]s?|vedacao|veda|proibid[oa]s?|proibicao)\\b");
   private static final Pattern FIM_DE_FRASE = Pattern.compile("(?<=[.!?])\\s+");
   private static final Pattern TOKEN = Pattern.compile("[\\p{L}\\p{N}]+(?:\\.\\p{N}+)*");
 
@@ -154,6 +189,7 @@ public class ReconferenciaLei {
   private final RotaLegislacao rotaLegislacao;
   private final TrechosDasCompras trechosDasCompras;
   private final DisponibilidadeModelo disponibilidade;
+  private final AssistenteProperties propriedades;
   private final int teto;
 
   /** Constrói a reconferência; o teto é {@code app.assistente.tetos.reconferencia}. */
@@ -171,6 +207,7 @@ public class ReconferenciaLei {
     this.rotaLegislacao = rotaLegislacao;
     this.trechosDasCompras = trechosDasCompras;
     this.disponibilidade = disponibilidade;
+    this.propriedades = propriedades;
     this.teto = propriedades.getTetos().getReconferencia();
   }
 
@@ -301,7 +338,19 @@ public class ReconferenciaLei {
         porMarca, marcasCitadas, misto, contexto);
     return switch (tipo) {
       case "CONFIRMO" -> conferencia.confirmo(veredito.get(), dispositivos);
-      case "CORRIJO" -> conferencia.corrijo(veredito.get(), dispositivos);
+      case "CORRIJO" -> {
+        if (propriedades.getContinuidade().isLeiCorrijoPorTexto()) {
+          yield conferencia.corrijo(veredito.get(), dispositivos);
+        }
+        // Decisão do Murillo (2026-11-22, #584): a Ceres aponta o erro, sem a frase de correção do
+        // modelo nem a concordância: um aviso fixo e o trecho literal. Sem a chave do aviso, o
+        // apoio neutro de 2026-11-20.
+        yield propriedades.getContinuidade().isLeiAvisoDeDivergencia()
+            ? conferencia.aviso(veredito.get(), dispositivos)
+            : apoio(par, contexto, dispositivos,
+                DesfechoContinuidade.RECONFERENCIA_APOIO_SEM_CORRECAO, true,
+                MotivoReconferenciaLei.CORRIJO_INDICADO_APOIO);
+      }
       case "NAO_SUSTENTA" -> apoio(par, contexto, dispositivos,
           DesfechoContinuidade.RECONFERENCIA_NAO_SUSTENTA, true,
           MotivoReconferenciaLei.NAO_SUSTENTA);
@@ -346,7 +395,7 @@ public class ReconferenciaLei {
       }
       List<String> linhas = new ArrayList<>();
       List<CitacaoLegal> citacoes = new ArrayList<>();
-      List<String> pedacos = new ArrayList<>();
+      Map<String, List<String>> pedacosPorMarca = new HashMap<>();
       for (JsonNode item : lista) {
         Optional<Fundamento> fundamento = fundamento(item);
         if (fundamento.isEmpty()) {
@@ -364,17 +413,17 @@ public class ReconferenciaLei {
           return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
               MotivoReconferenciaLei.CONFIRMO_CITACAO_NAO_LITERAL);
         }
-        pedacos.add(pedaco.get());
+        pedacosPorMarca.computeIfAbsent(f.marca(), m -> new ArrayList<>()).add(pedaco.get());
         linhas.add(O_QUE_DIZ.formatted(trecho.comoCitacao().referencia(), pedaco.get()));
         citacoes.add(trecho.comoCitacao());
       }
-      if (!numerosDaFatiaNosTrechos()) {
-        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO,
-            MotivoReconferenciaLei.CONFIRMO_NUMERO_FATIA);
-      }
-      if (!numerosDaFatiaNasCitacoes(pedacos)) {
-        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO,
-            MotivoReconferenciaLei.CONFIRMO_NUMERO_CITACAO);
+      MotivoReconferenciaLei semProva = provaDaConfirmacao(pedacosPorMarca);
+      if (semProva != null) {
+        return descartar(dispositivos, switch (semProva) {
+          case CONFIRMO_SENTIDO -> DesfechoContinuidade.RECONFERENCIA_DESCARTADA_SENTIDO;
+          case CONFIRMO_COBERTURA -> DesfechoContinuidade.RECONFERENCIA_DESCARTADA_COBERTURA;
+          default -> DesfechoContinuidade.RECONFERENCIA_DESCARTADA_NUMERO;
+        }, semProva);
       }
       String texto = CONFIRMA + "\n\n" + String.join("\n", linhas) + "\n\n" + ENQUADRAMENTO;
       return saida(texto, citacoes, DesfechoContinuidade.RECONFERENCIA_CONFIRMOU,
@@ -485,6 +534,142 @@ public class ReconferenciaLei {
           MotivoReconferenciaLei.CORRIGIU);
     }
 
+    /**
+     * O aviso de divergência (#584): o veredito de correção do modelo, conferido só pelo que não
+     * depende da frase de correção nem da âncora. Cada item precisa de um fundamento válido (marca
+     * de um trecho que a resposta anterior citou, citação que é pedaço literal dele, fora de regime
+     * específico sem o setor na pergunta) e de uma divergência que o backend vê no texto real da
+     * resposta anterior: um número dela sem apoio no trecho com outro número na citação, ou um
+     * Sim/Não que muda (só a palavra inicial da frase do modelo é lida, nunca mostrada). A saída é
+     * uma frase fixa e os trechos dos fundamentos: nenhuma prosa do modelo.
+     */
+    Resultado aviso(JsonNode no, List<String> dispositivos) {
+      JsonNode lista = no.path("correcoes");
+      if (!lista.isArray() || lista.isEmpty() || lista.size() > 2) {
+        return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO,
+            MotivoReconferenciaLei.CORRIJO_FORMATO_LISTA);
+      }
+      Map<String, CitacaoLegal> citacoes = new LinkedHashMap<>();
+      MotivoReconferenciaLei sinal = null;
+      for (JsonNode item : lista) {
+        Optional<Fundamento> fundamento = fundamento(item.get("fundamento"));
+        if (fundamento.isEmpty()) {
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_FORMATO,
+              MotivoReconferenciaLei.CORRIJO_FORMATO_ITEM);
+        }
+        Fundamento f = fundamento.get();
+        TrechoRecuperado trecho = porMarca.get(f.marca());
+        if (trecho == null) {
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
+              MotivoReconferenciaLei.CORRIJO_MARCA_INEXISTENTE);
+        }
+        if (!marcasCitadas.contains(f.marca())) {
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
+              MotivoReconferenciaLei.CORRIJO_TRECHO_NAO_CITADO);
+        }
+        Optional<String> pedaco = pedacoLiteral(f.citacao(), trecho.texto());
+        if (pedaco.isEmpty()) {
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_CITACAO,
+              MotivoReconferenciaLei.CORRIJO_CITACAO_NAO_LITERAL);
+        }
+        if (GuardaRegimeEspecifico.barra(perguntaLei, List.of(trecho.comoCitacao()))) {
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_REGIME,
+              MotivoReconferenciaLei.CORRIJO_REGIME);
+        }
+        MotivoReconferenciaLei divergencia = divergencia(item, f.marca(), trecho, pedaco.get());
+        if (divergencia == MotivoReconferenciaLei.CORRIJO_APOIO_LITERAL) {
+          return descartar(dispositivos,
+              DesfechoContinuidade.RECONFERENCIA_DESCARTADA_APOIO_LITERAL, divergencia);
+        }
+        if (divergencia != MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA_NUMERO
+            && divergencia != MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA_SENTIDO) {
+          return descartar(dispositivos, DesfechoContinuidade.RECONFERENCIA_DESCARTADA_DIFERENCA,
+              divergencia);
+        }
+        // O sinal gravado: o número se algum item foi liberado por ele, senão o sentido.
+        if (sinal != MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA_NUMERO) {
+          sinal = divergencia;
+        }
+        citacoes.putIfAbsent(trecho.comoCitacao().referencia(), trecho.comoCitacao());
+      }
+      List<CitacaoLegal> daSaida = new ArrayList<>(citacoes.values());
+      String texto = (daSaida.size() > 1 ? AVISO_DIVERGENCIA_PLURAL : AVISO_DIVERGENCIA)
+          .formatted(referencias(daSaida)) + " " + ENQUADRAMENTO;
+      registrarParNovo(par, contexto, daSaida);
+      MotivoReconferenciaLei sinalGravado = sinal;
+      contexto.atualizarReconferenciaLei(r -> r.comMotivo(sinalGravado));
+      log.info("Ceres: {}", DesfechoContinuidade.RECONFERENCIA_AVISO_DIVERGENCIA);
+      return new Resultado(new ResultadoRota(texto, DesfechoInteracao.RESPONDIDA, daSaida),
+          DesfechoContinuidade.RECONFERENCIA_AVISO_DIVERGENCIA, true);
+    }
+
+    /**
+     * A divergência que o backend vê, sem a frase de correção, contra o trecho que a resposta
+     * anterior citou (um conjunto fixo, não o que o modelo devolveu): {@code AVISO_DIVERGENCIA_NUMERO}
+     * se nenhum número que a resposta anterior afirma nas frases que citam o trecho está nele e a
+     * citação literal traz outro número; {@code AVISO_DIVERGENCIA_SENTIDO} se o Sim/Não da resposta
+     * anterior difere do da frase do modelo (fora do MISTO) e a citação e o trecho, do mesmo
+     * assunto, dão o sinal ({@link #sentidoDivergente}); {@code APOIO_LITERAL} se os números dela
+     * têm apoio no trecho; {@code SEM_DIFERENCA} nos demais casos. Na dúvida, não avisa.
+     */
+    private MotivoReconferenciaLei divergencia(JsonNode item, String marca, TrechoRecuperado trecho,
+        String pedaco) {
+      Set<BigDecimal> doTrecho = ValidadorNumeros.valoresMencionados(semAnotacoes(trecho.texto()));
+      Set<BigDecimal> daResposta = new HashSet<>();
+      for (String frase : frases(marcada)) {
+        if (marcas(frase).contains(marca)) {
+          daResposta.addAll(ValidadorNumeros.valoresMencionados(
+              semGrupos(RotaLegislacao.semMarcas(frase))));
+        }
+      }
+      Set<BigDecimal> semApoio = new HashSet<>(daResposta);
+      semApoio.removeAll(doTrecho);
+      Set<BigDecimal> novos = new HashSet<>(ValidadorNumeros.valoresMencionados(pedaco));
+      novos.removeAll(daResposta);
+      // Um número em comum (a resposta acerta o percentual e erra outro número, ou traz um ano ou
+      // prazo de outro dispositivo) não é divergência do ponto: só o conjunto inteiro sem apoio.
+      boolean nenhumEmComum = daResposta.stream().noneMatch(doTrecho::contains);
+      if (!semApoio.isEmpty() && !novos.isEmpty() && nenhumEmComum) {
+        return MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA_NUMERO;
+      }
+      if (!misto) {
+        String antes = polaridade(fatia);
+        String depois = polaridade(texto(item.get("fraseCorrigida")));
+        if (antes != null && depois != null && !antes.equals(depois)
+            && sentidoDivergente(antes, pedaco, trecho)) {
+          return MotivoReconferenciaLei.CORRIJO_AVISO_DIVERGENCIA_SENTIDO;
+        }
+      }
+      return !daResposta.isEmpty() && semApoio.isEmpty()
+          ? MotivoReconferenciaLei.CORRIJO_APOIO_LITERAL
+          : MotivoReconferenciaLei.CORRIJO_SEM_DIFERENCA;
+    }
+
+    /**
+     * A palavra do modelo sozinha não prova o sentido: o trecho citado e a citação literal têm de
+     * dar o sinal, e do mesmo assunto da resposta anterior (duas palavras de conteúdo em comum com
+     * o trecho). Uma resposta "Sim" só diverge se a citação e o trecho trazem negação estrita
+     * ("não", "vedado", "proibido"; restrição como "exceto" ou "salvo" acompanha regra afirmativa e
+     * não basta); uma "Não" só se nem a citação nem o trecho trazem negação nem restrição.
+     */
+    private boolean sentidoDivergente(String antes, String pedaco, TrechoRecuperado trecho) {
+      String doTrecho = RegrasClassificacao.normalizar(semAnotacoes(trecho.texto()));
+      String citacao = RegrasClassificacao.normalizar(pedaco);
+      List<String> daResposta = TextoContinuidade.palavras(TextoContinuidade.normalizar(
+          semGrupos(RotaLegislacao.semMarcas(marcada)))).stream()
+          .filter(TextoContinuidade::conteudo).distinct().toList();
+      List<String> palavrasDoTrecho = TextoContinuidade.palavras(doTrecho);
+      long emComum = daResposta.stream()
+          .filter(w -> TextoContinuidade.contemPorPrefixo(palavrasDoTrecho, w)).count();
+      if (emComum < 2) {
+        return false;
+      }
+      if ("SIM".equals(antes)) {
+        return NEGACAO_ESTRITA.matcher(citacao).find() && NEGACAO_ESTRITA.matcher(doTrecho).find();
+      }
+      return !NEGACAO.matcher(citacao).find() && !NEGACAO.matcher(doTrecho).find();
+    }
+
     private Resultado saida(String texto, List<CitacaoLegal> daSaida,
         DesfechoContinuidade desfecho, MotivoReconferenciaLei motivo) {
       List<CitacaoLegal> anteriores = new ArrayList<>();
@@ -506,48 +691,83 @@ public class ReconferenciaLei {
       return apoio(par, contexto, dispositivos, desfecho, true, motivo);
     }
 
-    /** (b) do CONFIRMO: cada número de cada frase está no trecho que ela cita. */
-    private boolean numerosDaFatiaNosTrechos() {
+    /**
+     * A prova da confirmação, frase por frase (#584): "nunca confirma o erro" como propriedade do
+     * código. Cada frase da resposta anterior que cita trecho precisa, nos trechos que ela cita e
+     * nas citações literais do modelo para eles, de: (1) cada número dela no trecho e na citação
+     * (não pela união das citações); (2) o sentido: frase afirmativa sem negação nem restrição na
+     * citação, frase que nega com negação na citação e um "Sim" inicial sem negação nem restrição no
+     * trecho; (3) sem número, metade das palavras de conteúdo dela no trecho ou na citação. Frase
+     * com número e sem trecho citado não tem prova. Sem prova, o chamador devolve o apoio neutro.
+     *
+     * @return o motivo da falta de prova, ou {@code null} se toda frase tem prova
+     */
+    private MotivoReconferenciaLei provaDaConfirmacao(Map<String, List<String>> pedacosPorMarca) {
       for (String frase : frases(marcada)) {
-        Set<BigDecimal> numeros = ValidadorNumeros.valoresMencionados(semGrupos(
-            RotaLegislacao.semMarcas(frase)));
-        if (numeros.isEmpty()) {
+        String lida = semGrupos(RotaLegislacao.semMarcas(frase));
+        Set<BigDecimal> numeros = ValidadorNumeros.valoresMencionados(lida);
+        List<String> marcasDaFrase = marcas(frase).stream().distinct()
+            .filter(porMarca::containsKey).toList();
+        if (marcasDaFrase.isEmpty()) {
+          if (!numeros.isEmpty()) {
+            return MotivoReconferenciaLei.CONFIRMO_NUMERO_FATIA;
+          }
           continue;
         }
-        Set<BigDecimal> doTrecho = new HashSet<>();
-        for (String marca : marcas(frase)) {
-          TrechoRecuperado t = porMarca.get(marca);
-          if (t != null) {
-            doTrecho.addAll(ValidadorNumeros.valoresMencionados(semAnotacoes(t.texto())));
+        List<String> textosDosTrechos = marcasDaFrase.stream()
+            .map(m -> semAnotacoes(porMarca.get(m).texto())).toList();
+        List<String> pedacos = marcasDaFrase.stream()
+            .flatMap(m -> pedacosPorMarca.getOrDefault(m, List.of()).stream()).toList();
+        if (!numeros.isEmpty()) {
+          Set<BigDecimal> doTrecho = new HashSet<>();
+          textosDosTrechos.forEach(t -> doTrecho.addAll(ValidadorNumeros.valoresMencionados(t)));
+          if (!doTrecho.containsAll(numeros)) {
+            return MotivoReconferenciaLei.CONFIRMO_NUMERO_FATIA;
+          }
+          Set<BigDecimal> naCitacao = new HashSet<>();
+          pedacos.forEach(p -> naCitacao.addAll(ValidadorNumeros.valoresMencionados(p)));
+          if (!naCitacao.containsAll(numeros)) {
+            return MotivoReconferenciaLei.CONFIRMO_NUMERO_CITACAO;
           }
         }
-        if (!doTrecho.containsAll(numeros)) {
-          return false;
+        if (!sentidoComProva(frase, lida, textosDosTrechos, pedacos)) {
+          return MotivoReconferenciaLei.CONFIRMO_SENTIDO;
+        }
+        if (numeros.isEmpty() && !coberta(lida, textosDosTrechos, pedacos)) {
+          return MotivoReconferenciaLei.CONFIRMO_COBERTURA;
         }
       }
-      return true;
+      return null;
     }
 
-    /** (c) do CONFIRMO: números da fatia nas citações; sem número, 2 palavras de conteúdo. */
-    private boolean numerosDaFatiaNasCitacoes(List<String> pedacos) {
-      Set<BigDecimal> daFatia = ValidadorNumeros.valoresMencionados(semGrupos(
-          RotaLegislacao.semMarcas(marcada)));
-      if (!daFatia.isEmpty()) {
-        Set<BigDecimal> nasCitacoes = new HashSet<>();
-        pedacos.forEach(p -> nasCitacoes.addAll(ValidadorNumeros.valoresMencionados(p)));
-        return nasCitacoes.containsAll(daFatia);
+    /** O sentido da frase tem prova literal nas citações e, no "Sim" inicial, no trecho. */
+    private boolean sentidoComProva(String frase, String lida, List<String> textosDosTrechos,
+        List<String> pedacos) {
+      boolean fraseNega = NEGACAO.matcher(RegrasClassificacao.normalizar(lida)).find();
+      boolean citacaoNega = pedacos.stream()
+          .anyMatch(p -> NEGACAO.matcher(RegrasClassificacao.normalizar(p)).find());
+      if (fraseNega ? !citacaoNega : citacaoNega) {
+        return false;
       }
-      List<String> conteudoFatia = TextoContinuidade.palavras(TextoContinuidade.normalizar(
-          RotaLegislacao.semMarcas(marcada))).stream().filter(TextoContinuidade::conteudo).toList();
-      for (String pedaco : pedacos) {
-        long comuns = TextoContinuidade.palavras(TextoContinuidade.normalizar(pedaco)).stream()
-            .filter(TextoContinuidade::conteudo).distinct()
-            .filter(p -> TextoContinuidade.contemPorPrefixo(conteudoFatia, p)).count();
-        if (comuns < 2) {
-          return false;
-        }
+      boolean trechoNega = textosDosTrechos.stream()
+          .anyMatch(t -> NEGACAO.matcher(RegrasClassificacao.normalizar(t)).find());
+      return !("SIM".equals(polaridade(RotaLegislacao.semMarcas(frase))) && trechoNega);
+    }
+
+    /** Metade das palavras de conteúdo da frase está no trecho citado ou na citação. */
+    private static boolean coberta(String lida, List<String> textosDosTrechos,
+        List<String> pedacos) {
+      List<String> daFrase = TextoContinuidade.palavras(TextoContinuidade.normalizar(lida))
+          .stream().filter(TextoContinuidade::conteudo).distinct().toList();
+      if (daFrase.isEmpty()) {
+        return true;
       }
-      return true;
+      List<String> doTexto = new ArrayList<>();
+      Stream.concat(textosDosTrechos.stream(), pedacos.stream()).forEach(t -> doTexto.addAll(
+          TextoContinuidade.palavras(TextoContinuidade.normalizar(t))));
+      long achadas = daFrase.stream().filter(w -> TextoContinuidade.contemPorPrefixo(doTexto, w))
+          .count();
+      return achadas * 2 >= daFrase.size();
     }
 
     /** (g) o número antigo está no trecho que a frase anterior citava. */
@@ -694,8 +914,7 @@ public class ReconferenciaLei {
       MotivoReconferenciaLei motivoAuditado) {
     contexto.atualizarReconferenciaLei(r -> r.comMotivo(motivoAuditado));
     List<CitacaoLegal> citacoes = citacoes(dispositivos, contexto);
-    String texto = (citacoes.isEmpty() ? APOIO_SEM_DISPOSITIVO
-        : APOIO.formatted(referencias(citacoes))) + " " + ENQUADRAMENTO;
+    String texto = abertura(citacoes, modeloRespondeu) + " " + ENQUADRAMENTO;
     if (modeloRespondeu) {
       registrarParNovo(par, contexto, citacoes);
     } else {
@@ -704,6 +923,22 @@ public class ReconferenciaLei {
     log.info("Ceres: {}", motivo);
     return new Resultado(new ResultadoRota(texto, DesfechoInteracao.RECONFERENCIA_DESCARTADA,
         citacoes), motivo, modeloRespondeu);
+  }
+
+  /**
+   * A abertura do apoio: depois de o modelo responder, a frase de quem releu o trecho (singular ou
+   * plural pelo número de referências); sem ele, a de sempre. Sem dispositivo resolvido, não há o
+   * que ler abaixo e vale a frase sem link.
+   */
+  private static String abertura(List<CitacaoLegal> citacoes, boolean modeloRespondeu) {
+    if (citacoes.isEmpty()) {
+      return APOIO_SEM_DISPOSITIVO;
+    }
+    if (!modeloRespondeu) {
+      return APOIO.formatted(referencias(citacoes));
+    }
+    boolean varios = citacoes.stream().map(CitacaoLegal::referencia).distinct().count() > 1;
+    return (varios ? APOIO_RELIDO_PLURAL : APOIO_RELIDO).formatted(referencias(citacoes));
   }
 
   private static void devolverOrigem(ParConferido par, ContextoAssistente contexto) {
