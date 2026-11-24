@@ -82,7 +82,10 @@ public final class RegrasClassificacao {
       "\\bquanto (eu )?(gastei|paguei|recebi) (com|de|em) (o |a |os |as )?" + OBJETO_DADOS
           + "\\b",
       "\\bo que eu (comprei|vendi)\\b",
-      "\\bnotas? (n[or]?\\s?)?\\d{2,9}\\b",
+      // Nota nomeada pelo numero ("a nota 3191", "a nota n 3191", "a nota numero 3191", "a nota
+      // fiscal numero 3191"): dado do produtor, mesmo com CST/ICMS na frase (#612). "nota fiscal
+      // 2026" sem marcador de numero nao entra: poderia ser um ano.
+      "\\bnotas? (?:(?:fiscal )?(?:numero|num|n[or]?)\\s?)?\\d{2,9}\\b",
       "\\btenho (algum |alguma )?(guias?|notas?|creditos?|debitos?|alertas?|pendencias?)\\b",
       "\\btenho impostos? (a|para) pagar\\b",
       "\\b(quais impostos|que impostos|quais guias|guias? que) vence[m]?\\b",

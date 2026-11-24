@@ -53,6 +53,22 @@ class ClassificadorEmCamadasTest {
   }
 
   @Test
+  @DisplayName("#612: nota nomeada pelo numero e dados pela regra, mesmo que as embeddings votem lei")
+  void notaNomeadaPeloNumero() {
+    String pergunta = "A nota número 3191 está com o CST do ICMS definido?";
+    // Na VPS, de 24/11, os vizinhos do treino (CST do IBS, fim do ICMS) davam LEGISLACAO.
+    when(embeddings.classificar(anyString())).thenReturn(Optional.of(
+        new ClassificacaoIntencao(Intencao.LEGISLACAO, 0.9, null, CamadaClassificacao.EMBEDDING)));
+
+    ClassificacaoIntencao c = classificador.classificar(pergunta, contexto);
+
+    assertThat(c.intencao()).isEqualTo(Intencao.DADOS);
+    assertThat(c.camada()).isEqualTo(CamadaClassificacao.REGRA);
+    verify(embeddings, never()).classificar(anyString());
+    verify(llm, never()).classificar(anyString(), any());
+  }
+
+  @Test
   @DisplayName("embeddings acima do limiar decidem; abaixo, o modelo desempata")
   void embeddingsEDesempate() {
     when(embeddings.classificar("A soja tem reducao?")).thenReturn(Optional.of(

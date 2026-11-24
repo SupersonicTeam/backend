@@ -34,6 +34,25 @@ class RegrasClassificacaoTest {
       "Quais impostos vencem na semana que vem?                   | DADOS",
       "Quantas vendas fiz em outubro?                             | DADOS",
       "Quanto gastei com defensivos em abril?                     | DADOS",
+      // nota nomeada pelo numero e dado do produtor, mesmo com CST/ICMS na frase (#612)
+      "A nota numero 3191 esta com o CST do ICMS definido?        | DADOS",
+      "A nota número 3191 está com o CST do ICMS definido?        | DADOS",
+      "A nota 3191 tem o CST do ICMS definido?                    | DADOS",
+      "Qual o CST do ICMS da nota n° 3191?                        | DADOS",
+      "A nota nº 3191 tem CST de ICMS?                            | DADOS",
+      "O CST do ICMS da nota fiscal numero 3191 foi preenchido?   | DADOS",
+      "Em que status esta a nota num 3191?                        | DADOS",
+      "A nota numero 3191 ja foi enviada para a SEFAZ?            | DADOS",
+      // contraexemplo de lei sobre ICMS e CST, sem nota nomeada: nao vira dados (#612)
+      "Qual o CST do ICMS no diferimento?                         | NADA",
+      "O CST do ICMS precisa estar definido na nota fiscal?       | NADA",
+      "Qual CST de ICMS vale para venda de soja?                  | NADA",
+      "Nota fiscal de produtor rural precisa de CST do ICMS?      | NADA",
+      "Qual o numero do CST do ICMS no diferimento total?         | NADA",
+      "Nota fiscal 2026 muda o CST do ICMS?                       | NADA",
+      // nota nomeada com termo de lei ou regra: dois lados, nao decide
+      "A nota numero 3191 paga IBS?                               | NADA",
+      "A nota numero 3191 pode ter ICMS diferido pela regra?      | NADA",
       // os dois lados: nao decide
       "Quanto de IBS eu devo neste mes?                           | NADA",
       "Minhas vendas tem split payment?                           | NADA",
