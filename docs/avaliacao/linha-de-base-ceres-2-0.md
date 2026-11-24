@@ -12,7 +12,7 @@
 >   [comparação nos casos adversários](resultados/2026-11-15-comparacao-haiku-qwen-adversarios.md).
 >
 > O que esta página previa e essas duas medições não trazem (p95 do classificador com o Ollama ocioso e
-> ocupado, proporção de desempate) segue sem número. O texto abaixo fica como registro do plano.
+> ocupado, proporção de desempate) não consta dessas duas medições. O texto abaixo fica como registro do plano.
 
 É o ponto de comparação das etapas 2 a 8 da milestone Ceres 2.0. Toda etapa registra a tabela
 "antes/depois" contra esta linha de base, **no mesmo gabarito e no mesmo seed**, com 3 repetições.
