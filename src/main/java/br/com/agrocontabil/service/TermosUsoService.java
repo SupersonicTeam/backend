@@ -163,8 +163,8 @@ public class TermosUsoService {
                 + "e-mail e de modelo de linguagem fora do Brasil) e por quanto tempo guarda está "
                 + "na Política de privacidade.",
             "Você pode pedir a eliminação dos seus dados pessoais, com a senha atual da conta ou "
-                + "pelo contato abaixo. Os dados pessoais são anonimizados, a conta é encerrada e todas as sessões "
-                + "caem. Não dá para desfazer.",
+                + "pelo contato abaixo. Os dados pessoais são anonimizados, a conta é encerrada e "
+                + "todas as sessões caem. Não dá para desfazer.",
             "Os documentos fiscais (notas, guias e apurações) continuam guardados por 5 anos, por "
                 + "obrigação legal (Código Tributário Nacional, art. 173), com o CPF ou o CNPJ "
                 + "do contribuinte. Por isso, depois da exclusão, o produtor não consegue criar "
