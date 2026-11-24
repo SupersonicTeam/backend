@@ -243,8 +243,9 @@ pergunta. Resultado na capacidade comum (relatório, "Conclusão para a banca"):
    `qwen3:4b-instruct` da Ceres 2.0). A citação é a medida mais fraca de toda a matriz, e as inéditas
    são cerca de 77% de rota de lei. Perguntas parecidas com os exemplos que o modelo vê explicam só
    parte: sem as 14 parecidas, a fração de perguntas respondidas **inteiramente certas** (todos os critérios que
-   se aplicam) na capacidade comum da Ceres 2.0 com o `4b` cai 4,2 p.p. (47,7% para 43,6%). A contagem das perguntas parecidas ainda está em revisão (o README fala
-   em 4 pares e o relatório lista 38 no conjunto inteiro).
+   se aplicam) na capacidade comum da Ceres 2.0 com o `4b` cai 4,2 p.p. (47,7% para 43,6%). A contagem das perguntas parecidas está em revisão da equipe, no
+   repositório cego (processo e espaço do resultado no [README](README.md), "Revisão do aviso de
+   semelhança (#564)"); o relatório lista 38 no conjunto inteiro e o número muda a cada versão do conjunto.
 
 ## O que não vale
 
@@ -300,6 +301,77 @@ inteiro, o p50 do Haiku sem a fidelidade é 1,6 s (tabela de latência acima).
 A citação (e, no conjunto inteiro, o número: 88,2% para 86,3%) cai **por descarte, não por erro novo**; o que a fidelidade compra (a resposta infiel
 que o produtor deixa de receber) o acerto da régua não mede. Nas inéditas a citação vai de 48,7% a 39,3%.
 A decisão de ligar a flag fica com o Murillo e não é tomada por este benchmark.
+
+## O que mudou depois da rodada
+
+**Os números deste documento são do `2bfb1ef3` (14/11/2026, 13:52), e só dele.** Desde então a `main`
+andou 37 commits (hoje `231a775c`). Pela decisão do Murillo de 24/11/2026 (#583), **o benchmark não roda
+de novo antes da banca**: vale a rodada oficial de 14/11. Esta seção diz o que mudou depois dela, para
+quem lê os números saber a que código e a que base eles se referem. **Ela só lista: não estima o efeito de
+nenhuma mudança, e nenhuma delas foi medida pelo benchmark.** A lista vem do `git log
+2bfb1ef3..main` nos arquivos de `src/main/java/br/com/agrocontabil/assistente/` e da base de lei, mais os
+dois PRs de fora desse pacote que mudam o que a Ceres responde (#580 e #598).
+
+### A base de lei em produção não é a que foi medida
+
+**A rota de lei em produção roda sobre uma base de lei diferente da que o benchmark mediu.** A rodada de
+14/11 mediu a base como o fatiador antigo a produziu: o nome da seção seguinte ficava colado ao fim do
+último dispositivo de cada seção, e as anotações do Planalto ("Produção de efeitos", "Vigência", "Sem
+eficácia") ficavam no texto. O PR #607 corrigiu o fatiador. **A base da VPS foi reingerida em 23/11/2026**
+com o fatiador corrigido (informação do Murillo; o registro da execução na VPS não está neste repositório,
+só o procedimento e a duração da reingestão local de 22/11, 847 s, em `deploy/README.md`, "Reingestão por
+nome de seção e anotação coladas (#606)", e a duração, no PR #608). Na comparação a seco do #607, **1.247
+dos 8.304 trechos da base mudam** (1.068 da LC 214/2025, 97 da LC 227/2026, 29 da Lei 8.212/1991 e 53 da
+EC 132/2023; a Lei 9.528/1997 não muda). Os trechos que mudam ganham texto e **embedding novos**; os
+outros ficam como estavam. Busca, citação e conferência da rota de lei leem essa base.
+
+Além da base, a VPS roda com a **fidelidade da rota de lei ligada desde 16/11/2026** (as variáveis
+`AI_FIDELIDADE_LEI_*` no `.env` de lá; o padrão do código segue desligado). Os números oficiais de 14/11
+são **sem** ela, e a célula opcional `claude-haiku-5-5+fidelidade-lei` (seção anterior) foi medida
+localmente no `2bfb1ef3`, com a base antiga. O tempo da rota de lei na VPS com a fidelidade ligada e com a
+base nova não foi medido.
+
+### O que muda a resposta com as flags no padrão da VPS
+
+Mudanças **sem flag** (valem em todo ambiente, já na `main`):
+
+| PR | O que mudou | Flag |
+|---|---|---|
+| #607 (reingestão: ação manual, #608 é a duração) | Fatiador da base de lei: não cola nome de seção nem anotação do Planalto ao dispositivo. **Só altera a base depois da reingestão, feita na VPS em 23/11** | nenhuma (o código nada altera sozinho) |
+| #557 | Atalho da pergunta de definição ("o que é o IBS?"): resposta pelo glossário e pelo dispositivo que institui o termo, sem modelo; camada `ATALHO_DEFINICAO` | nenhuma |
+| #569 | Rota de lei sem fundamento e `TRECHOS_SEM_CONFIRMACAO` com textos novos (a Ceres diz que não localizou, com encaminhamento ao contador); recusa gentil com encaminhamento ao contador; ajuste no `SinalRecusaFirme` para a contraparte da operação ("comprei de outro produtor"), que deixa de ser lida como pedido de dado de terceiro | nenhuma |
+| #575 | `DataSanitizer` troca por `[CNPJ]` o CNPJ alfanumérico, com o dígito verificador conferido | nenhuma |
+| #595 | Frase do sinal de nota "parece serviço" cita o CT-e no frete entre municípios | nenhuma |
+| #580 (fora do pacote da Ceres) | O resumo do produtor examina todas as notas a conferir, com os sinais em lote (antes, só as 10 candidatas mais recentes) | nenhuma |
+| #598 (fora do pacote da Ceres) | cClassTrib 200020 na venda do associado à cooperativa optante: o validador, o tratamento do produto e o seed da banca passam a conhecê-lo | nenhuma |
+
+Fora de PR, mas **ativa só na VPS**: a **fidelidade da rota de lei** (acima), por variável no `.env`.
+
+### O que entrou atrás de flag desligada
+
+Tudo abaixo vale **só com `AI_CONTINUIDADE_HABILITADA=true`**; o padrão do código é `false` e a #584 fecha
+com ela **desligada na banca**. Nenhum desses PRs foi medido pelo benchmark.
+
+| PR | O que mudou | Flag e padrão |
+|---|---|---|
+| #505 | Continuidade da conversa: histórico assinado das últimas trocas, reescrita da mensagem, "tem certeza?" com reconferência de lei, autocorreção, cota por caminho. **Mexe também em arquivos do caminho normal** (`AssistenteService`, `OrquestradorService`, `RotaDados`, `RotaLegislacao`, `PromptsCeres`, `RegrasClassificacao`, `FiltroInjecao`, `CotaUsoAssistenteService`, `AssistenteChatRequest`/`Response`: a lista é a dos arquivos do PR); o PR declara a continuidade atrás da flag, e **o benchmark não mediu o código depois dele** | `AI_CONTINUIDADE_HABILITADA`, `false` |
+| #582 | Autocorreção sem símbolo solto nem eco do modelo; faixas da carga em ordem | a mesma, `false` |
+| #592 | "Corrijo" na confirmação de dados só com prova de erro (`ConferenciaConsulta`: `PASSA`, `SEM_PROVA`, `CONTRADIZ`) | a mesma, `false` |
+| #601 | Julgamento de produto (chamada curta ao modelo quando a tabela de produto não decide) ligado por padrão, **só com efeito com a continuidade ligada** | `AI_CONTINUIDADE_JULGAMENTO_PRODUTO_HABILITADO`, `true`; sem efeito com a continuidade desligada |
+| #602 | Auditoria grava o motivo e o que foi ao prompt da reconferência de lei (changeSet **0066**, 11 colunas nulas em `assistente_interacao`; só códigos e contagens). A coluna existe em todo ambiente depois do deploy; só é preenchida quando a reconferência roda | nenhuma para o schema; a gravação depende da continuidade |
+| #604 | Na contestação de lei, a Ceres aponta o erro com um aviso de divergência fixo do backend mais o trecho literal da lei (e a confirmação só sai com prova literal). **Não medido**: o head medido nas rodadas de 23/11 foi o `99be9804`, e este PR traz correção feita depois, às cegas | `AI_CONTINUIDADE_LEI_AVISO_DIVERGENCIA_HABILITADO`, `true`; só com a continuidade ligada. `AI_CONTINUIDADE_LEI_CORRIJO_HABILITADO`, `false` |
+
+### O que não muda resposta
+
+Os outros 24 commits são documentação, ferramenta de medição, teste ou código fora da Ceres, sem efeito no que ela responde:
+#559, #566, #568, #570, #571, #573, #574, #576, #577, #578 (aviso de subida da demonstração), #586
+(política de dados, que cita a Resend e a Anthropic; código de `LgpdProperties` e `PoliticaDadosService`), #587, #588, #589, #590, #593, #594, #596, #599,
+#600, #603, #605, #608 e #609. Os números de 14/11 não dependem de nenhum deles.
+
+**O que isso quer dizer para quem lê os resultados.** O que o benchmark mediu é o `2bfb1ef3` com a base
+de lei de antes da correção do fatiador e **sem a fidelidade da rota de lei**. O que roda hoje na VPS é a
+`main` com a base reingerida, a fidelidade ligada e a continuidade desligada. Os resultados não foram
+refeitos sobre esse conjunto, e esta página não diz qual seria a diferença.
 
 ## Procedência
 

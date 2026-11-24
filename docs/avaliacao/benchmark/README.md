@@ -323,25 +323,36 @@ build; as inéditas, quando o repositório cego está ao lado, e sempre na CI de
 não bloqueia** com os pares pergunta × exemplo de Jaccard das palavras ≥ 0,5. O "exemplo" é o
 treino do classificador, `docs/avaliacao/treino/` e as perguntas entre aspas do prompt do
 classificador e das descrições `@Tool` (o que o modelo vê; comentário não conta). Duas perguntas
-novas parecidas foram reescritas (N10 e N04, desde a versão `2026-11-05.2`). **Hoje o aviso lista 4 pares,
-todos de perguntas herdadas do gabarito** contra exemplos das descrições `@Tool`:
+novas parecidas foram reescritas (N10 e N04, desde a versão `2026-11-05.2`). **O número de pares do aviso muda a cada versão do conjunto e do treino, e hoje é da ordem de
+dezenas** (o relatório da rodada de 14/11 lista 38 no conjunto inteiro de 140 perguntas; na versão
+`2026-11-05.x`, em que esta seção foi escrita, eram 4, todas herdadas do gabarito: D12, D01, T05 e D15,
+contra exemplos das descrições `@Tool`). O aviso mede só sobreposição de palavras: estar na lista não é
+ser paráfrase, e quem decide é uma pessoa. Um par contra exemplo de descrição `@Tool` favorece as duas
+arquiteturas (as funções existem nos dois commits, com descrições parecidas). Mudar a descrição `@Tool`
+muda a Ceres e fica fora do benchmark.
 
-| Pergunta | Exemplo na descrição `@Tool` | Jaccard |
-|---|---|---|
-| D12 "Quais foram as minhas 3 ultimas vendas?" | "quais foram minhas ultimas vendas?" (`listarNotas`) | 0,80 |
-| D01 "Quanto comprei de fertilizante no primeiro semestre de 2026?" | "quanto comprei de fertilizante no semestre?" (`totalComprasPorInsumo`) | 0,67 |
-| T05 "O que eu preciso corrigir na nota 108 para emitir?" | "o que preciso corrigir na nota 118 para emitir?" (`consultarNota`) | 0,67 |
-| D15 "Tenho algum alerta tributario ou prazo perto de vencer?" | "tenho algum prazo perto?" (`listarAlertas`) | 0,57 |
+#### Revisão do aviso de semelhança (#564)
 
-Elas favorecem as duas arquiteturas que têm aquela descrição (as quatro funções existem nos dois
-commits, com descrições parecidas). A decisão é da equipe, na revisão: manter e registrar, ou tirar
-do conjunto (nova versão e hash). Mudar a descrição `@Tool` muda a Ceres e fica fora do benchmark.
+- **Quem revisa:** a equipe, no repositório cego `SupersonicTeam/ceres-benchmark-cego`, lendo o
+  `similaridade-treino.md` da rodada junto do treino do classificador. **Nunca uma sessão de código**: ela
+  não lê o conjunto (regra do teste cego), e quem mexe na Ceres depois de ler uma pergunta a contamina.
+- **O que se decide, par a par:** é paráfrase de exemplo de treino ou não. O resultado é **par aceito**
+  (não é paráfrase; fica) ou **pergunta marcada** (é paráfrase; sai do conjunto ou é reescrita, em versão
+  nova com novo hash). O registro de cada decisão fica **no repositório cego**.
+- **O que chega ao backend:** só **contagens e ids**, nunca o texto de pergunta. O resultado da revisão
+  entra no espaço abaixo.
+
+**Resultado da revisão** (contagens e ids vindos do repositório cego):
+
+- revisão de `<data>`: `<N>` pares lidos, `<M>` considerados paráfrase, ids `<…>`.
+
+Enquanto o espaço acima estiver com os marcadores, **a revisão não foi registrada** e o aviso é só aviso.
 
 **Revisão humana — tarefa da equipe, bloqueante para a rodada da banca:**
 
 - [ ] revisar a lista de perguntas, as rotas, as funções e os valores esperados pela planilha do
       repositório cego (equipe e orientador, #387; sem contador);
-- [ ] decidir os 4 pares do aviso de semelhança (D12, D01, T05, D15; tabela acima);
+- [ ] revisar os pares do aviso de semelhança, pelo processo e com o registro acima (#564);
 - [ ] **tema de linguagem do dia a dia: obrigatória.** Confirmar que nenhuma das 10 é paráfrase de
       exemplo de treino (use o `similaridade-treino.md` e leia o treino do classificador).
 
