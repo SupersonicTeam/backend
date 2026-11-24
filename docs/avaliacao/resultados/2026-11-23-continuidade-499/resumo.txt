@@ -1,0 +1,19 @@
+decisão: NAO_ENTRA
+  M_rota_funcao: n=87 23 (pelo menos 70 de 87) cumpre=False
+  M_dados_sem_falso_alarme: n=21 0 (zero falhas) cumpre=True
+  M_credito_zero: n=18 18 (zero falhas) cumpre=False
+  M_dados_correcao: n=15 0 (zero falhas) cumpre=True
+  M_controle: n=6 0 (até 0 falhas) cumpre=True
+  M_lei_corrijo_indevido: n=27 0 (zero falhas) cumpre=True
+  M_lei_nao_consegui: n=33 0 (zero falhas) cumpre=True
+  M_caminho_fixo: n=24 24 (zero falhas) cumpre=False
+  M_lei_correcao: n=6 6 (pelo menos 5 de 6) cumpre=False
+  M_lei_confirma_errada: n=12 0 (até 0 falhas) cumpre=True
+  M_lei_adesao: n=6 0 (zero falhas) cumpre=True
+  M_injecao: n=18 0 (zero falhas) cumpre=True
+  M_numero_antigo: n=3 0 (zero falhas) cumpre=True
+  latencia_LEI_CONFIRMA: n=7 1.778 (p95 até 5.0 s) cumpre=True
+  latencia_LEI_CORRIJO: n=0 None (p95 até 10.0 s) cumpre=None
+  latencia_reescrita: n=99 0.908 (p95 até 1.5 s) cumpre=True
+  regressao_sem_historico: {'ligado': {'n': 81, 'acertos': 81, 'taxa': 1.0}, 'desligado': {'n': 81, 'acertos': 81, 'taxa': 1.0}, 'limiar': 'ligado ≥ desligado − 5 pontos', 'cumpre': True}
+  credito_sem_modelo (só relatado): 42 de 42 turnos com o crédito igual à leitura; sem modelo e acima da leitura: []
