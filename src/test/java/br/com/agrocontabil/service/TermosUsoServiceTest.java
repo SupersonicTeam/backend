@@ -120,6 +120,26 @@ class TermosUsoServiceTest {
         .doesNotContain("novo aceite");
   }
 
+  /**
+   * SHA-256 do texto inteiro da versão 2026-11-24. Mudou o texto: este teste quebra. Suba a versão
+   * (yml, deploy/compose.yaml e .env.example), troque a data abaixo e o hash pelo novo.
+   */
+  private static final String VERSAO_DO_HASH = "2026-11-24";
+  private static final String HASH_DO_TEXTO =
+      "c6207a8b03c18977bac770d26f811c8a2e7e35c5772456022241825277f66008";
+
+  @Test
+  @DisplayName("o texto só muda junto com a versão: o hash do texto é o da versão vigente")
+  void textoFixadoNaVersao() throws Exception {
+    byte[] resumo = java.security.MessageDigest.getInstance("SHA-256")
+        .digest(todoOTexto().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+    assertThat(service.termos().versao()).isEqualTo(VERSAO_DO_HASH);
+    assertThat(java.util.HexFormat.of().formatHex(resumo))
+        .as("texto dos termos mudou sem mudar a versão " + VERSAO_DO_HASH)
+        .isEqualTo(HASH_DO_TEXTO);
+  }
+
   @Test
   @DisplayName("texto puro, sem HTML nem marcação, e com acento")
   void textoPuroComAcento() {

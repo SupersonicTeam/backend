@@ -16,9 +16,11 @@ import org.springframework.stereotype.Service;
  * no PR da #498). É texto da equipe de 2026-11-24, <strong>sem revisão jurídica</strong>.
  *
  * <p>A versão é a de {@code app.termos.versao}, a mesma que o cadastro grava na credencial com o
- * aceite: servir e gravar vêm da mesma propriedade. Mudou o texto, mude o valor padrão de
- * {@code app.termos.versao} para a data da mudança. {@link #VERSAO_PROVISORIA} não muda nunca: é
- * o que já foi gravado antes de o texto existir.
+ * aceite: servir e gravar vêm da mesma propriedade. Mudou o texto, mude o padrão de
+ * {@code app.termos.versao} para a data da mudança, nos três lugares (yml, {@code deploy/compose.yaml}
+ * e {@code .env.example}, que o {@code TermosVersaoCoerenteTest} confere) e o hash do
+ * {@code TermosUsoServiceTest}, que quebra quando o texto muda sem a versão.
+ * {@link #VERSAO_PROVISORIA} não muda nunca: é o que já foi gravado antes de o texto existir.
  */
 @Service
 public class TermosUsoService {
@@ -124,13 +126,13 @@ public class TermosUsoService {
 
   private static SecaoTermosResponse conta() {
     return secao("conta", "Sua conta",
-        List.of("Você é responsável pela sua conta:"),
+        List.of("Ao usar a sua conta, você deve:"),
         List.of(
             "informar dados verdadeiros e mantê-los atualizados;",
             "guardar a sua senha e não a compartilhar; se suspeitar que alguém a usa, troque a "
                 + "senha, o que também encerra todas as sessões;",
-            "o conteúdo do que você emite: o sistema valida e sinaliza o que encontra, mas não "
-                + "garante que a nota esteja correta;",
+            "responder pelo conteúdo do que você emite: o sistema valida e sinaliza o que "
+                + "encontra, mas não garante que a nota esteja correta;",
             "não acessar nem tentar acessar a conta ou os dados de outra pessoa, não contornar "
                 + "os limites de uso e não enviar arquivos com vírus (os anexos passam por "
                 + "antivírus);",
