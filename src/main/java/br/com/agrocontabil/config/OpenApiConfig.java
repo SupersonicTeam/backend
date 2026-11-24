@@ -44,7 +44,7 @@ public class OpenApiConfig {
                 "/api/vinculos/**", "/api/pendencias/**", "/api/notificacao/**",
                 "/api/auditoria/**", "/api/calendario-fiscal/**", "/api/guias/**"},
             "auth", new String[] {"/api/auth/**", "/api/usuarios/**", "/api/politica-dados",
-                "/api/v1/health"},
+                "/api/termos-de-uso", "/api/v1/health"},
             "publico", new String[] {"/api/publico/**"});
 
     @Bean

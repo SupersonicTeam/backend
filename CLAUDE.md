@@ -162,7 +162,8 @@ benchmark da banca (#348), só na Ceres 2.0: a Ceres 1 (`2463c27`) não tem o pr
   o art. 7º, V), **decisão da equipe sem revisão jurídica** (Murillo, 2026-11-17: "não temos
   jurídico"). **Pendente:** a retenção da conta da Anthropic, que o Murillo confere no Console
   (a política a diz "em verificação" e não promete retenção zero), o aviso na tela
-  (`conversaVaiAoProvedor`) e o texto dos termos de uso, que não existe.
+  (`conversaVaiAoProvedor`). Os termos de uso existem desde 2026-11-24 (`GET /api/termos-de-uso`,
+  sem revisão jurídica, `docs/lgpd.md`, seção "Termos de uso").
 
 **Benchmark da banca (#348):** `python3 docs/avaliacao/benchmark/executar_matriz.py` roda a matriz
 2 arquiteturas (Ceres 1 = `2463c27`, Ceres 2.0 = `main`) × 3 modelos (`qwen3:0.6b`, `1.7b`,
@@ -466,6 +467,7 @@ br.com.agrocontabil
 | POST | `/api/auth/senha/redefinir` | **Público.** `{token, novaSenha}` → 204 e cookie apagado; encerra todas as sessões; link inválido/expirado/usado → 400 `TOKEN_REDEFINICAO_INVALIDO`; senha fraca → 400 `SENHA_FRACA` (o link segue valendo) |
 | POST | `/api/auth/senha/alterar` | Autenticado. `{senhaAtual, novaSenha}` → 204; encerra todas as sessões; senha atual errada (ou conta travada por tentativas) → 400 `SENHA_ATUAL_INCORRETA` |
 | GET | `/api/politica-dados` | **Público.** Política de tratamento de dados pessoais (LGPD art. 9º, #148). Desde a #498 (versão 2026-11-17) traz também `operadoresExternos[]` (Resend e Anthropic: `nome`, `servico`, `localizacao`, `finalidade`, `dadosEnviados`, `dadosNaoEnviados`, `baseTransferencia`, `retencao`, `comoExercerDireitos`), campo aditivo |
+| GET | `/api/termos-de-uso` | **Público** (#498). Termos de uso do AgroConIA em texto puro: `{versao, controlador, contato, secoes[{id, titulo, paragrafos[], itens[]}]}`. `versao` = `app.termos.versao` (`TERMOS_VERSAO`, padrão 2026-11-24), a mesma que o cadastro grava com o aceite; a `2026-11-11` foi a provisória (aceites anteriores ao texto, dito no próprio texto; o sistema não pede reaceite). Texto da equipe, **sem revisão jurídica**, sem foro nem limitação de responsabilidade (`TermosUsoService`). Sem `Cache-Control` explícito, como a política |
 | DELETE | `/api/usuarios/{id}/dados` | Autenticado, só o próprio titular (404 para outro). `{senha}` → 204; anonimiza dados pessoais, mantém os fiscais (guarda de 5 anos), apaga a conta e encerra as sessões (#148) |
 | GET | `/api/auditoria?produtorId=&page=&size=` | Auditoria das operações críticas do produtor (#149, RNF012): só contador (produtor 403), só produtor da carteira (404 fora); padrão 50, máx. 200; corpo array + total em `X-Total-Count` |
 | POST | `/api/auth/logout-todos` | Autenticado. Revoga todas as sessões e invalida todos os access tokens já emitidos → 204 (#207) |
@@ -541,7 +543,7 @@ br.com.agrocontabil
 
   | Rota | Produtor | Contador |
   |------|----------|----------|
-  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro`, `/login`, `/refresh`, `/logout`, `/senha/esqueci`, `/senha/redefinir`, `GET /api/politica-dados`, `GET /api/publico/escritorios/{slug}` (#464) | público | público |
+  | `/api/v1/health`, `/v3/api-docs`, `/swagger-ui`, `/actuator`, `POST /api/auth/cadastro`, `/login`, `/refresh`, `/logout`, `/senha/esqueci`, `/senha/redefinir`, `GET /api/politica-dados`, `GET /api/termos-de-uso` (#498), `GET /api/publico/escritorios/{slug}` (#464) | público | público |
   | `GET /interno/tls/permitido` (#464) | público na cadeia, protegido pela chave e pela rede interna | idem |
   | `/api/notas/**`, `/api/dashboard`, `/api/apuracao/**`, `/api/creditos`, `/api/relatorios/**`, `/api/assistente/**`, `/api/alertas`, `/api/notificacao/**` (#182) | próprios dados | **403** no service — o contador usa as rotas da carteira (linha abaixo, #255) |
   | `GET /api/contador/produtores/{produtorId}/apuracao`, `/relatorios/conformidade/**`, `/creditos`, `/dashboard` (#255) | **403** | qualquer membro, carteira ativa (404 fora dela) |

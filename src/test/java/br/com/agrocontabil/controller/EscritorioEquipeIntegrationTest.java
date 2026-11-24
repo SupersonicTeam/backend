@@ -288,7 +288,7 @@ class EscritorioEquipeIntegrationTest {
     assertThat(jdbcTemplate.queryForObject("SELECT telefone FROM contadores WHERE id = ?",
         String.class, novo)).startsWith("v1:");
     assertThat(jdbcTemplate.queryForObject("SELECT termos_versao FROM credencial_usuario"
-        + " WHERE contador_id = ?", String.class, novo)).isEqualTo("2026-11-11");
+        + " WHERE contador_id = ?", String.class, novo)).isEqualTo("2026-11-24");
     assertThat(escritorioDe(novo)).isEqualTo(escritorioDe(adminA.usuarioId()));
   }
 
