@@ -481,6 +481,45 @@ class SinalRecusaFirmeTest {
     assertThat(SinalRecusaFirme.pedeDesempate(pergunta)).isFalse();
   }
 
+  @ParameterizedTest(name = "[{index}] {0}")
+  @ValueSource(strings = {
+      "cancela a nota 418 pra mim",
+      "Cancele a nota 418",
+      "marca a guia de outubro como paga",
+      "exclui todas as minhas compras de setembro",
+      "Apague as notas rejeitadas",
+      "altera o valor da nota 77 para 5 mil reais",
+      "aprova a nota que ta esperando o contador",
+      "Ceres, cancela a nota 12",
+      "por favor, exclua a guia de agosto",
+      "manda um email pro meu contador com as minhas notas",
+      "envie uma mensagem para o escritório",
+      "emite uma nota de venda de 30 toneladas de milho",
+      "zera o meu limite de uso da ceres",
+      "muda o meu regime tributario pro simples"})
+  @DisplayName("#624: ordem de ação no sistema, no começo da mensagem, deixa a rota para o modelo")
+  void ordemDeAcaoNoSistema(String pergunta) {
+    assertThat(SinalRecusaFirme.pedeDesempate(pergunta)).isTrue();
+    // Só o desempate: nunca a recusa antes do classificador.
+    assertThat(SinalRecusaFirme.inequivoco(pergunta)).isFalse();
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}")
+  @ValueSource(strings = {
+      "quais notas eu ainda posso cancelar?",
+      "ate quantos dias depois da emissao eu posso cancelar uma nota?",
+      "me mostra as notas canceladas",
+      "me manda o resumo das minhas notas do mes",
+      "quando o comprador cancela a nota o credito some?",
+      "Alguma venda minha foi cancelada em outubro?",
+      "a marca do trator interfere no credito?",
+      "o contador aprova a nota em quanto tempo?",
+      "Quanto vendi de soja no mês passado?"})
+  @DisplayName("#624: pergunta sobre a ação, pedido de ver ou verbo no meio não é ordem ao sistema")
+  void naoEOrdemDeAcao(String pergunta) {
+    assertThat(SinalRecusaFirme.pedeDesempate(pergunta)).isFalse();
+  }
+
   @Test
   @DisplayName("#497: nome em NFD (acento combinante) também vira fulano")
   void nomeEmNfd() {

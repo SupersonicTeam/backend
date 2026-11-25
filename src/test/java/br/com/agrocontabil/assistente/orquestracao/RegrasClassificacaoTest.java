@@ -36,6 +36,11 @@ class RegrasClassificacaoTest {
       "Explica pra mim como funciona o split payment              | LEGISLACAO",
       "Eu tenho que pagar IBS sendo pessoa fisica?                | LEGISLACAO",
       "Tive uma duvida sobre o credito presumido                  | LEGISLACAO",
+      // dado do produtor com pergunta de credito ou ressarcimento: candidato a MISTO (#624)
+      "quanto comprei de diesel esse mes e isso da credito?       | NADA",
+      "tenho credito acumulado? posso pedir ressarcimento?        | NADA",
+      "minhas compras de adubo geram credito?                     | NADA",
+      "Tenho algum credito para pedir de volta?                   | DADOS",
       // dados, sem termo de lei
       "Quanto vendi de cafe no ano passado?                       | DADOS",
       "Quais foram as minhas 5 ultimas compras?                   | DADOS",

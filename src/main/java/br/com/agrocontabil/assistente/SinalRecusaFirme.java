@@ -15,7 +15,8 @@ import java.util.regex.Pattern;
  *   <li>{@link #presente}: só escolhe o texto de uma pergunta que já foi recusada (fora de escopo,
  *       ou sem função na rota de dados) (#494). Um falso positivo custa apenas um texto mais seco,
  *       então os sinais são largos de propósito ("dele", "do produtor", "terceiro").</li>
- *   <li>{@link #pedeDesempate}: marca de terceiro ou de ordem ao sistema. As regras e as
+ *   <li>{@link #pedeDesempate}: marca de terceiro ou de ordem ao sistema (desde a #624,
+ *       também a ordem de ação no começo da mensagem: "cancela a nota"). As regras e as
  *       embeddings não decidem a rota dessa pergunta: quem decide é o modelo, que separa "as notas
  *       do meu vizinho" de "vendi para o meu vizinho" (#497). O custo de um falso positivo é uma
  *       chamada ao classificador por modelo. Ficam de fora o "do produtor" genérico, que é comum
@@ -144,6 +145,22 @@ public final class SinalRecusaFirme {
    */
   private static final Pattern REVELAR = Pattern.compile("\\b(repita|repete|revele|revela"
       + "|imprima|imprime)\\b");
+
+  /**
+   * Ordem de ação no sistema, no começo da mensagem (#624): "cancela a nota 418", "marca a guia
+   * como paga", "exclui as compras de setembro", "manda um e-mail pro contador". A Ceres só lê;
+   * regra e embeddings punham esses pedidos na rota de dados, pelas palavras "nota" e "guia", e o
+   * modelo os lê como fora de escopo. Só no começo (depois de um vocativo ou "por favor"), para não
+   * pegar a pergunta sobre a ação ("quais notas eu posso cancelar?", "quando o comprador cancela
+   * a nota..."); "me mostra", "me lista" e "me manda o resumo" são pedidos de ver o dado e ficam de
+   * fora. Só leva ao desempate: nunca recusa antes do classificador.
+   */
+  private static final Pattern ACAO_NO_SISTEMA = Pattern.compile(
+      "^\\W*(?:(?:ceres|oi|ola|por favor|pfv?)\\W+)*(?:cancela|cancele|exclui|exclua|apaga"
+          + "|apague|deleta|delete|remove|remova|altera|altere|muda|mude|edita|edite|corrige"
+          + "|corrija|marca|marque|aprova|aprove|emite|emita|zera|zere|reseta|resete|lanca|lance"
+          + "|cadastra|cadastre|transmite|transmita|desbloqueia|desbloqueie|libera|libere"
+          + "|(?:manda|mande|envia|envie) (?:um |uma )?(?:e-?mail|mensagem|whats\\w*|zap|sms))\\b");
 
   /** Depois de "o texto anterior": não é a redação antiga da lei ("o texto anterior da LC 214"). */
   private static final String NAO_E_DA_LEI = "(?! (?:\\w+ )?(?:lei|leis|lc|ec|emenda|artigos?"
@@ -570,6 +587,7 @@ public final class SinalRecusaFirme {
         || PAPEL_OU_CREDENCIAL.matcher(texto).find()
         || (REVELAR.matcher(texto).find() && O_QUE_O_SISTEMA_GUARDA.matcher(texto).find())
         || MOSTRE_O_INTERNO.matcher(texto).find()
+        || ACAO_NO_SISTEMA.matcher(texto).find()
         || documentoSemDono(pergunta, texto) || inequivoco(pergunta, texto);
   }
 

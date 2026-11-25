@@ -76,3 +76,49 @@ do NCM 0901.11.10?" (pelo prompt, produto e NCM são DADOS); "qual o faturamento
 DADOS; "apaga as notas rejeitadas da minha conta" vai a DADOS pelas embeddings. Uma regra de
 tratamento de produto específico foi tentada e retirada: o teste de zero erros das regras no gabarito
 a recusou.
+
+## Segundo conjunto e resultado da #624 (2026-11-25)
+
+`perguntas-rota-dev-2.json` (versão `2026-11-25.1`) tem 65 perguntas escritas às cegas pela sessão de
+código da #624, que nunca leu o gabarito nem o benchmark, nos padrões de erro que sobraram da #497:
+terceiro com e sem leitura legítima (`terceiro`, `terceiro-legitimo`), ordem ao sistema (`ordem`,
+`ordem-legitima`), MISTO curto (`misto-curto`), pergunta curta (`curta-dados`, `curta-lei`,
+`curta-fora`) e votos do kNN entre dados e lei (`voto-knn`). As mesmas regras do primeiro: é
+desenvolvimento, não teste da banca, e nunca entra em pasta de treino. Para rodar:
+
+```
+CONJUNTO=docs/avaliacao/rota-dev/perguntas-rota-dev-2.json \
+  bash docs/avaliacao/rota-dev/rodar_diagnostico.sh <arquivo.md> --modelo
+```
+
+Correção (as duas só mandam a pergunta adiante; nenhuma decide rota nova):
+
+- **Ordem de ação no sistema vai ao desempate** (`SinalRecusaFirme.pedeDesempate`): "cancela a nota
+  418", "marca a guia como paga", "exclui as compras", "altera o valor da nota", "aprova a nota",
+  "manda um e-mail pro contador", no começo da mensagem. Regra e embeddings os punham em DADOS pelas
+  palavras "nota" e "guia"; o modelo os lê como fora de escopo.
+- **Pergunta de direito ao crédito impede a regra de decidir DADOS** (`RegrasClassificacao`,
+  `LEI_GENERICA`): "isso dá crédito?", "gera crédito", "ressarcimento" junto do dado do produtor são
+  candidatos a MISTO.
+
+Haiku nas perguntas que chegam ao desempate, 2 repetições, temperatura 1,0:
+
+| | antes (`main` em `df122843`) | depois |
+|---|---|---|
+| Conjunto 2 (65) | 48 certas (73,8%) | 56 certas (86,2%) |
+| Conjunto 1 (130) | 125 certas (96,2%, rodada da #497) | 127 certas (97,7%) |
+| Regras, erros no conjunto 2 | 9 | 3 |
+| Chamadas ao classificador por modelo, conjunto 2 | 33 | 41 |
+| Chamadas ao classificador por modelo, conjunto 1 | 65 | 66 |
+
+Diagnósticos: `diagnostico-624-conjunto2-antes.md`, `diagnostico-624-conjunto2-depois.md` e
+`diagnostico-624-conjunto1-depois.md`. O R09 do conjunto 1 ("apaga as notas rejeitadas da minha
+conta") deixou de errar. Erros que ficam no conjunto 2: o modelo põe "meu crédito de CBS?" e "quanto
+de crédito eu tive nas compras de defensivo?" em MISTO e "minha guia de IBS vence quando e o que
+acontece se eu atrasar?" em DADOS; o kNN vota DADOS com 0,91 em "até quantos dias depois da emissão
+eu posso cancelar uma nota?"; a regra põe "a fazenda do lado" em lei, "e o funrural do mês?" em lei
+e "como calculo o ICMS da minha venda de gado?" em dados. Dois rótulos são discutíveis (K02 e K03:
+produto específico com redução é DADOS pela convenção do prompt).
+
+**Isto muda o que a banca mede:** entra só depois da medição pela regra da comparação da #497 e com o
+OK do Murillo.
