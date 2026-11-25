@@ -93,7 +93,7 @@ class PrivacidadeIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.controlador").value("GWNext"))
         .andExpect(jsonPath("$.contatoEncarregado").value("contato@gwnext.com.br"))
-        .andExpect(jsonPath("$.versao").value("2026-11-17"))
+        .andExpect(jsonPath("$.versao").value("2026-11-24"))
         // CRC, telefones, dados do escritorio e o aceite dos termos vem do cadastro (#519).
         .andExpect(jsonPath("$.dadosColetados").value(org.hamcrest.Matchers.hasItems(
             org.hamcrest.Matchers.containsString("registro no CRC"),

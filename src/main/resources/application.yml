@@ -407,9 +407,10 @@ app:
   lgpd:
     controlador: ${LGPD_CONTROLADOR:GWNext}
     contato-encarregado: ${LGPD_CONTATO_ENCARREGADO:contato@gwnext.com.br}
-    # 2026-11-17 (#498): cita a Resend e a Anthropic como operadoras, com o art. 33. Mudou o texto
-    # da politica (PoliticaDadosService), mude a versao.
-    versao-politica: 2026-11-17
+    # 2026-11-17 (#498): cita a Resend e a Anthropic como operadoras, com o art. 33. 2026-11-24:
+    # retencao da Anthropic conferida no Console. Mudou o texto da politica (PoliticaDadosService),
+    # mude a versao.
+    versao-politica: 2026-11-24
   # Cadastro de conta (#519). exigir-aceite-termos: sem o campo aceiteTermos, o cadastro e 400.
   # Desligado ate a tela nova mandar o campo; liga por env, sem mudar codigo.
   cadastro:
