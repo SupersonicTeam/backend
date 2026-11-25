@@ -243,9 +243,9 @@ pergunta. Resultado na capacidade comum (relatório, "Conclusão para a banca"):
    `qwen3:4b-instruct` da Ceres 2.0). A citação é a medida mais fraca de toda a matriz, e as inéditas
    são cerca de 77% de rota de lei. Perguntas parecidas com os exemplos que o modelo vê explicam só
    parte: sem as 14 parecidas, a fração de perguntas respondidas **inteiramente certas** (todos os critérios que
-   se aplicam) na capacidade comum da Ceres 2.0 com o `4b` cai 4,2 p.p. (47,7% para 43,6%). A contagem das perguntas parecidas está em revisão da equipe, no
-   repositório cego (processo e espaço do resultado no [README](README.md), "Revisão do aviso de
-   semelhança (#564)"); o relatório lista 38 no conjunto inteiro e o número muda a cada versão do conjunto.
+   se aplicam) na capacidade comum da Ceres 2.0 com o `4b` cai 4,2 p.p. (47,7% para 43,6%). As perguntas parecidas foram revisadas pela equipe em 24/11
+   (README, "Revisão do aviso de semelhança (#564)"; resumo em "O que mudou depois da rodada"): 10 pares
+   de paráfrase, todos de perguntas herdadas, nenhum de pergunta inédita.
 
 ## O que não vale
 
@@ -367,6 +367,17 @@ Os outros 24 commits são documentação, ferramenta de medição, teste ou cód
 #559, #566, #568, #570, #571, #573, #574, #576, #577, #578 (aviso de subida da demonstração), #586
 (política de dados, que cita a Resend e a Anthropic; código de `LgpdProperties` e `PoliticaDadosService`), #587, #588, #589, #590, #593, #594, #596, #599,
 #600, #603, #605, #608 e #609. Os números de 14/11 não dependem de nenhum deles.
+
+### Perguntas parecidas com o treino: revisão de 24/11 (#564)
+
+A equipe revisou o aviso de semelhança desta rodada (38 linhas, 25 pares distintos, 19 perguntas):
+**10 pares são paráfrase, todos de perguntas herdadas do gabarito** (P04, D12, D01, L03, T05, X17, A02,
+L09, L01, L08); 15 são "mesma intenção" (só duas inéditas aparecem no aviso inteiro, N02 e N07, e ficaram
+aí); 0 coincidência; **nenhuma inédita em paráfrase**. Em 3 das 10 (D12, D01 e T05) o exemplo parecido
+está na descrição `@Tool` que o modelo vê, e o acerto delas em 14/11 pode estar favorecido; nas outras 7
+ele está só em conjuntos de medição de `docs/avaliacao/treino/`, que a Ceres não lê. A rodada não é
+refeita. Detalhe, limites e a classificação mais discutível (P04 e P01) no [README](README.md), "Revisão
+do aviso de semelhança (#564)". Depois da banca: reescrever os exemplos ou marcar as perguntas.
 
 **O que isso quer dizer para quem lê os resultados.** O que o benchmark mediu é o `2bfb1ef3` com a base
 de lei de antes da correção do fatiador e **sem a fidelidade da rota de lei**. O que roda hoje na VPS é a

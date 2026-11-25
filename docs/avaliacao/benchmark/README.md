@@ -324,9 +324,9 @@ não bloqueia** com os pares pergunta × exemplo de Jaccard das palavras ≥ 0,5
 treino do classificador, `docs/avaliacao/treino/` e as perguntas entre aspas do prompt do
 classificador e das descrições `@Tool` (o que o modelo vê; comentário não conta). Duas perguntas
 novas parecidas foram reescritas (N10 e N04, desde a versão `2026-11-05.2`). **O número de pares do aviso muda a cada versão do conjunto e do treino, e hoje é da ordem de
-dezenas** (o relatório da rodada de 14/11 lista 38 no conjunto inteiro de 140 perguntas; na versão
-`2026-11-05.x`, em que esta seção foi escrita, eram 4, todas herdadas do gabarito: D12, D01, T05 e D15,
-contra exemplos das descrições `@Tool`). O aviso mede só sobreposição de palavras: estar na lista não é
+dezenas** (o relatório da rodada de 14/11 lista 38 linhas, 25 pares distintos de 19 perguntas, no conjunto
+inteiro de 140; na versão `2026-11-05.x`, em que esta seção foi escrita, eram 4, todas herdadas do
+gabarito; o resultado da revisão da rodada de 14/11 está abaixo). O aviso mede só sobreposição de palavras: estar na lista não é
 ser paráfrase, e quem decide é uma pessoa. Um par contra exemplo de descrição `@Tool` favorece as duas
 arquiteturas (as funções existem nos dois commits, com descrições parecidas). Mudar a descrição `@Tool`
 muda a Ceres e fica fora do benchmark.
@@ -344,15 +344,46 @@ muda a Ceres e fica fora do benchmark.
 
 **Resultado da revisão** (contagens e ids vindos do repositório cego):
 
-- revisão de `<data>`: `<N>` pares lidos, `<M>` considerados paráfrase, ids `<…>`.
+- **revisão de 24/11/2026: 25 pares lidos (38 linhas do aviso), 10 considerados paráfrase, ids P04, D12,
+  D01, L03, T05, X17, A02, L09, L01, L08.** Primeira leitura, aceita pelo Murillo sem ajuste.
+- **Origem:** o `similaridade-treino.md` da rodada oficial `2026-11-14-1635` (repositório cego): 38
+  linhas = 25 pares distintos (pergunta × exemplo) de 19 perguntas.
+- **Paráfrase: 10 pares, todos de perguntas herdadas do gabarito** (ids acima; L03 e L01 têm também um
+  segundo exemplo classificado como "mesma intenção"). **Mesma intenção: 15 pares**; só duas inéditas
+  aparecem no aviso inteiro, N02 e N07, e as duas ficaram nessa classe. **Coincidência: 0. Nenhuma
+  inédita em paráfrase.**
+- **Fronteira declarada:** P04 (paráfrase) e P01 (mesma intenção) casam com um exemplo de uma palavra só;
+  é a classificação mais discutível.
+- **Limites:** a leitura foi feita por um subagente sobre o texto e aceita sem ajuste; a planilha com os
+  textos está no clone do repositório cego, ainda sem commit lá. O arquivo da rodada não diz **onde** está
+  cada exemplo; a localização abaixo foi recalculada.
 
-Enquanto o espaço acima estiver com os marcadores, **a revisão não foi registrada** e o aviso é só aviso.
+**Onde está o exemplo parecido** (recalculado com a rotina do executor sobre as 87 herdadas, no estado do
+`2bfb1ef3`; dá 36 linhas de 17 herdadas, e as duas das inéditas completam as 38; só ids e arquivos, a
+rotina acha onde a sobreposição de palavras passa de 0,5 e não diz qual par exato foi lido):
+
+- **Na descrição `@Tool` (`FerramentasDadosProdutor`), que o modelo vê em toda chamada:** D12, D01 e T05
+  (e D15, que a revisão não classificou como paráfrase).
+- **Só em conjuntos de medição de uso único de `docs/avaliacao/treino/`** (#442/#443, #452, #452 v2, #497
+  e o diagnóstico de lei): P04, L03, X17, A02, L09, L01 e L08. O README da pasta diz que esses conjuntos
+  não servem para ajustar a Ceres, e nada em `src/main` lê a pasta em execução (só a guarda de separação
+  da avaliação). Eles entram no aviso porque o executor os conta como treino.
+- **No treino embutido do classificador (`src/main/resources/ceres/treino/`) e nos prompts do
+  `PromptsCeres`:** nenhuma pergunta herdada passa do limiar.
+
+**Consequência, sem estimar efeito.** O acerto de 14/11 das 10 herdadas em paráfrase pode estar favorecido
+**nas 3 que têm exemplo quase igual na descrição `@Tool`** (D12, D01 e T05), porque o modelo a vê. Nas
+outras 7, o exemplo parecido está em conjuntos de medição que a Ceres não lê; pelo que o repositório
+mostra, o favorecimento ali não passa por treino nem por prompt. **Nenhuma pergunta inédita está em
+paráfrase.** A rodada **não é refeita** (decisão do Murillo, #583) e isto entra na declaração da
+apresentação. Depois da banca (#564): reescrever os exemplos ou marcar as perguntas, em versão nova do
+conjunto com novo hash.
 
 **Revisão humana — tarefa da equipe, bloqueante para a rodada da banca:**
 
 - [ ] revisar a lista de perguntas, as rotas, as funções e os valores esperados pela planilha do
       repositório cego (equipe e orientador, #387; sem contador);
-- [ ] revisar os pares do aviso de semelhança, pelo processo e com o registro acima (#564);
+- [x] revisar os pares do aviso de semelhança, pelo processo e com o registro acima (#564; feito em 24/11/2026 para a rodada de 14/11; a próxima versão do conjunto pede revisão nova);
 - [ ] **tema de linguagem do dia a dia: obrigatória.** Confirmar que nenhuma das 10 é paráfrase de
       exemplo de treino (use o `similaridade-treino.md` e leia o treino do classificador).
 
