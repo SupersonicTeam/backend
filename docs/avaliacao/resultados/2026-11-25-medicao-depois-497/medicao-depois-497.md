@@ -103,16 +103,55 @@ A embedding quase sai do caminho (de 9 decisões para 2 ou 3 nas repetições 1 
 modelo caem de 5 / 5 / 4 na base para 4 / 4 / 4 (o P02 passou a ser decidido pela embedding; os 4 restantes
 são P03, X01, X15 e X16).
 
-**Ponto de atenção, para a sessão de código:** na repetição 3 a embedding decidiu 10 perguntas, contra 2
-e 3 nas outras (a mais, M01, M06, F01, F04, X12, X13, X19 e C01 foram decididas por ela em vez de pelo
-modelo). Só o X13 errou. Não muda a decisão, mas a camada mudar de comportamento entre repetições da mesma
-rodada sugere que a condição "modelo no ar" que o PR descreve para o limiar de 0,9 não valeu para parte da
-repetição 3. A medição não diz a causa.
+### Duas observações da rodada, conferidas no log da aplicação
 
-**Latência por rota:** o p95 do MISTO sozinho foi de 5,3 s na base para **9,1 s** (as 3 respostas mais
-lentas do MISTO: 4,9 s, 9,1 s e 13,0 s; na base 5,2 s, 5,3 s e 7,4 s) em 21 respostas. O teto da regra é do
-p95 geral (3,9 s), que passou; o MISTO é a rota com chamadas a mais, e vale olhar os dois valores
-isolados.
+Pedido da orquestradora, com a hipótese da sessão de código (leitura do código, não verificada aqui):
+na repetição 3 o limiar das embeddings teria caído de 0,9 para 0,6 por falha da API (disjuntor aberto,
+com respostas `MODO_FALLBACK`, ou falha só da chamada de desempate, com um `WARN Falha ao chamar o modelo
+de linguagem`). O log da rodada foi guardado (21.172 linhas na base, 20.796 no depois; fora do repositório,
+em arquivo de trabalho). **Nenhuma rodada nova foi feita.**
+
+1. **WARN de falha da chamada ao modelo:** **zero** nas duas rodadas, em todas as repetições (o mesmo
+   vale para qualquer linha com "Falha ao" ou "modo fallback"; nenhum registro de retry, 429, `disjuntor`
+   ou timeout). Os únicos `WARN` do log são os de subida (cifra de desenvolvimento, seed, antivírus e mock
+   da SEFAZ desligados ou de dev) e, só na base, um descarte de resposta de legislação por número fora dos
+   trechos. O pacote do assistente loga `WARN` normalmente (o descarte da base está no log), então a
+   ausência não é de nível de log.
+2. **As 8 perguntas que a embedding decidiu a mais na repetição 3** (M01, M06, F01, F04, X12, X13, X19,
+   C01): nenhuma saiu como `MODO_FALLBACK` (0 respostas com `modoFallback` ou desfecho `MODO_FALLBACK` em
+   toda a rodada). Desfechos na repetição 3: M01, M06, X19 e C01 `RESPONDIDA`; F01, F04 e X12
+   `FORA_DE_ESCOPO`; X13 `SEM_RESPOSTA`. Elas não formam uma janela: aparecem sozinhas (M01, 00h12m56s) ou em
+   grupos de perguntas adjacentes (M06, F01 e F04 em 2 s, às 00h13m14s; X12 e X13, 00h13m56s; X19 e C01,
+   00h14m09s), separados por dezenas de segundos, e as perguntas entre elas seguiram pelo modelo (F02 e
+   F03, entre F01 e F04, ficaram com a camada LLM). Sem WARN nesses
+   instantes. As respostas ficaram mais rápidas, como se a chamada de desempate não tivesse acontecido:
+   F01 0,17 s, F04 0,16 s e X12 0,10 s, contra 0,63 a 0,69 s com o modelo nas repetições 1 e 2; M01 3,9 s
+   contra 4,6 s; X19 1,6 s contra 1,8 s.
+3. **MISTO por repetição** (respostas das 7 perguntas com rota esperada MISTO; mesmos 7 ids nas duas
+   rodadas, então a composição não mudou):
+
+   | Repetição | n | Base: p95 / máximo | Depois: p95 / máximo |
+   |---|---|---|---|
+   | 1 | 7 | 7.384 / 7.384 ms | **13.018 / 13.018 ms** (M04 13,0 s e M03 9,1 s, ambas camada LLM) |
+   | 2 | 7 | 5.342 / 5.342 ms | 4.876 / 4.876 ms |
+   | 3 | 7 | 5.027 / 5.027 ms | 4.509 / 4.509 ms |
+
+   O salto está **na repetição 1** (duas respostas lentas, M03 e M04), **não na 3**; nas repetições 2 e 3
+   o MISTO ficou mais rápido que na base. O conjunto de perguntas que **saíram por MISTO** (rota obtida)
+   perdeu ids e não ganhou nenhum: repetição 1, saíram D05, D07, X04 e X05 (13 → 9 respostas); repetição 2,
+   nenhum (9 e 9); repetição 3, saíram X04 e X05 (11 → 9). Entraram 0 ids nas 3 repetições. Nas duas lentas
+   da repetição 1 não há WARN nem retry no log.
+
+**Conclusões (uma linha cada):**
+
+- **A repetição 3 é explicada por falha da API?** **Não é confirmado, e o registro contraria:** zero `WARN`
+  de falha de chamada e zero `MODO_FALLBACK` na rodada, e as perguntas não formam uma janela de 30 s. O que
+  o log mostra é só o efeito (desempate pulado, respostas mais rápidas); a causa da troca de camada nessa
+  repetição fica **não identificada** pela medição.
+- **O p95 do MISTO é ruído, API ou mudança de composição?** **Ruído de duas respostas lentas na repetição
+  1** (M03 e M04, sem registro de falha no log, então "API" **não confirmado**); a composição **não** mudou
+  (mesmos 7 ids esperados, nenhum id entrou no MISTO obtido). O teto da regra é do p95 geral (3,9 s) e
+  passou.
 
 ## Semelhança com o treino e com o conjunto de desenvolvimento
 
