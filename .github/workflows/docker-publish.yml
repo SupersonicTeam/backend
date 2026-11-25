@@ -1,11 +1,19 @@
 name: Docker - Backend (GHCR + deploy)
 
-# CD do backend: so roda depois do "CI - Backend" verde num push na main (nunca publica imagem de
-# commit com teste quebrado). Publica a imagem no GHCR (amd64 + arm64, VPS Oracle Ampere) e faz o
-# deploy na VPS pelo deploy.sh (deploy/README.md): lock da VPS compartilhado com o frontend, so o
-# servico backend e recriado, rollback para a tag anterior se nao ficar healthy.
+# CD do backend: depois do "CI - Backend" de um push na main, publica a imagem no GHCR (amd64 + arm64,
+# VPS Oracle Ampere) e faz o deploy na VPS pelo deploy.sh (deploy/README.md): lock da VPS
+# compartilhado com o frontend, so o servico backend e recriado, rollback para a tag anterior se nao
+# ficar healthy.
 #
-# workflow_dispatch: republica e reimplanta o commit escolhido sem esperar a CI (ex.: VPS recriada).
+# Cada execucao e so um "aviso" (#621): o commit publicado NAO e o que disparou a execucao, e sim o
+# mais novo da main (primeiro pai) com a CI verde, resolvido quando a execucao comeca. As execucoes
+# rodam uma por vez, sem cancelar a que esta rodando; a pendente que for cancelada por outra mais
+# nova nao faz falta, porque a mais nova comeca depois e ve tudo o que ela veria. Assim a VPS termina
+# no commit verde mais novo qualquer que seja a ordem de termino das CIs, e um commit antigo nunca
+# publica por cima de um novo. Prova por casos no PR do #621 e no deploy/README.md (CI/CD).
+#
+# workflow_dispatch e reexecucao: reimplantam a ponta verde da main (ex.: VPS recriada), nunca um
+# commit escolhido. Versao especifica: deploy.sh na VM (deploy/README.md).
 on:
   workflow_run:
     workflows: ['CI - Backend']
@@ -16,72 +24,17 @@ on:
 permissions:
   contents: read
   packages: write
+  actions: read # ler as execucoes da CI para achar o commit verde mais novo
 
 jobs:
-  publish:
-    name: Build and push
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
-    runs-on: ubuntu-latest
-    # Um publish por vez; o mais novo cancela o que ainda espera.
-    concurrency:
-      group: docker-publish-backend
-      cancel-in-progress: true
-    outputs:
-      tag: ${{ steps.tag.outputs.tag }}
-
-    steps:
-      # Commit que a CI testou (no workflow_run o github.sha e o topo da main, que pode ser outro).
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-
-      - name: Image name and tag
-        id: tag
-        env:
-          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-        run: |
-          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-          echo "tag=sha-${SHA::7}" >> "$GITHUB_OUTPUT"
-
-      # Só o estágio final (apk add, adduser) roda emulado em arm64; o Maven roda nativo
-      # (FROM --platform=$BUILDPLATFORM no Dockerfile).
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ${{ steps.tag.outputs.image }}:${{ steps.tag.outputs.tag }}
-            ${{ steps.tag.outputs.image }}:latest
-          labels: |
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha || github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   deploy:
-    name: Deploy na VPS
-    needs: publish
+    name: Build, push e deploy na VPS
+    # Sem "if" de proposito: ate a CI que falhou dispara a execucao, que reimplanta a ponta verde
+    # (no-op na VPS se ela ja esta la). Um job pulado nao pode, assim, ocupar a fila no lugar de um
+    # aviso necessario.
     runs-on: ubuntu-latest
-    # Deploys do backend em fila (sem cancelar o que ja esta na VPS); o lock da VPS serializa com o
-    # frontend.
+    # Uma execucao por vez, sem cancelar a que esta rodando (a pendente pode ser trocada pela mais
+    # nova, que cobre o que ela faria).
     concurrency:
       group: deploy-vps-backend
       cancel-in-progress: false
@@ -90,16 +43,140 @@ jobs:
       url: https://${{ vars.VPS_SITE_HOST }}
 
     steps:
+      # Ponta atual da main (nao o github.sha do evento, que fica parado no momento do disparo).
+      - name: Checkout da main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 100
+
+      # Commit a publicar: o primeiro da main (primeiro pai, do mais novo para o mais antigo) com uma
+      # execucao de push do "CI - Backend" verde em qualquer tentativa (uma reexecucao que falhe
+      # depois nao tira o commit do conjunto, senao a VPS poderia voltar para um commit anterior).
+      - name: Commit verde mais novo da main
+        id: alvo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISPARO_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          DISPARO_CONCLUSAO: ${{ github.event.workflow_run.conclusion || 'workflow_dispatch' }}
+        run: |
+          set -euo pipefail
+          gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+            -f branch=main -f event=push -f status=completed -f per_page=100 \
+            --jq '.workflow_runs[] | "\(.head_sha) \(.conclusion) \(.id) \(.run_attempt)"' > "$RUNNER_TEMP/ci.txt"
+          while read -r sha conclusao id tentativas; do
+            if [ "$conclusao" = success ]; then echo "$sha"; continue; fi
+            for ((a = 1; a < tentativas; a++)); do
+              if [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/attempts/$a" --jq .conclusion < /dev/null)" = success ]; then
+                echo "$sha"; break
+              fi
+            done
+          done < "$RUNNER_TEMP/ci.txt" > "$RUNNER_TEMP/verdes.txt"
+          alvo=$(git rev-list --first-parent --max-count=100 HEAD | grep -Fx -m1 -f "$RUNNER_TEMP/verdes.txt" || true)
+          {
+            echo "### Deploy do backend"
+            echo "- Disparo: \`${DISPARO_SHA::7}\` ($GITHUB_EVENT_NAME, CI: $DISPARO_CONCLUSAO)"
+            echo "- Ponta da main agora: \`$(git rev-parse --short=7 HEAD)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$alvo" ]; then
+            echo "- **Nada publicado:** nenhum dos 100 ultimos commits da main tem a CI verde." >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Nenhum dos 100 ultimos commits da main tem o CI - Backend verde; nada publicado."
+            exit 1
+          fi
+          git checkout -q --detach "$alvo"
+          echo "- Alvo (commit verde mais novo da main): \`${alvo::7}\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$alvo" != "$DISPARO_SHA" ]; then
+            echo "- O alvo nao e o commit do disparo: publica-se a ponta verde, nunca um commit mais antigo." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          {
+            echo "sha=$alvo"
+            echo "image=ghcr.io/${GITHUB_REPOSITORY,,}"
+            echo "tag=sha-${alvo::7}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Imagem do alvo ja publicada (aviso repetido, reexecucao): so move o latest, sem novo build. Um
+      # build novo da mesma tag mudaria o digest e recriaria o container na VPS sem motivo.
+      - name: Imagem ja publicada?
+        id: existe
+        env:
+          IMAGEM: ${{ steps.alvo.outputs.image }}:${{ steps.alvo.outputs.tag }}
+        run: |
+          if docker buildx imagetools inspect "$IMAGEM" > /dev/null 2>&1; then
+            echo "sim=true" >> "$GITHUB_OUTPUT"
+            echo "- Imagem \`$IMAGEM\` ja estava no GHCR: sem novo build." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "sim=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Só o estágio final (apk add, adduser) roda emulado em arm64; o Maven roda nativo
+      # (FROM --platform=$BUILDPLATFORM no Dockerfile).
+      - name: Set up QEMU
+        if: steps.existe.outputs.sim == 'false'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        if: steps.existe.outputs.sim == 'false'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        if: steps.existe.outputs.sim == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ steps.alvo.outputs.image }}:${{ steps.alvo.outputs.tag }}
+            ${{ steps.alvo.outputs.image }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.alvo.outputs.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Mover o latest
+        if: steps.existe.outputs.sim == 'true'
+        env:
+          IMAGEM: ${{ steps.alvo.outputs.image }}
+          TAG: ${{ steps.alvo.outputs.tag }}
+        run: docker buildx imagetools create -t "$IMAGEM:latest" "$IMAGEM:$TAG"
+
       # A chave so executa "deploy <servico> <tag>" (command= forcado no authorized_keys da VPS).
       - name: Deploy
         env:
           SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           KNOWN_HOSTS: ${{ vars.VPS_KNOWN_HOSTS }}
           HOST: ${{ vars.VPS_HOST }}
-          TAG: ${{ needs.publish.outputs.tag }}
+          TAG: ${{ steps.alvo.outputs.tag }}
         run: |
+          set -o pipefail
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-            -o ServerAliveInterval=30 "ubuntu@$HOST" "deploy backend $TAG"
+            -o ServerAliveInterval=30 "ubuntu@$HOST" "deploy backend $TAG" 2>&1 | tee "$RUNNER_TEMP/deploy.log"
+
+      # Conferencia: o deploy.sh so escreve "ok: backend em <tag>" depois de gravar a tag no .env,
+      # recriar o servico e ve-lo healthy; a linha "<antes> -> <tag>" diz o que estava no ar. A chave da
+      # CI nao tem outro comando na VPS, entao a conferencia e pelo relatorio do proprio deploy.sh.
+      - name: Conferir a imagem no ar
+        if: always() && steps.alvo.outcome == 'success'
+        env:
+          TAG: ${{ steps.alvo.outputs.tag }}
+        run: |
+          log="$RUNNER_TEMP/deploy.log"
+          antes=$(grep -oE "\] [^ ]+ -> ${TAG}\$" "$log" 2>/dev/null | head -n1 | sed -E 's/^\] ([^ ]+) -> .*/\1/' || true)
+          if grep -qE "\] ok: backend em ${TAG}\$" "$log" 2>/dev/null; then
+            echo "- **Publicado:** backend em \`$TAG\` na VPS (antes: \`${antes:-desconhecido}\`)." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "- **Falhou:** a VPS nao confirmou o backend em \`$TAG\` (antes: \`${antes:-desconhecido}\`). Veja o passo Deploy: rollback ou lock ocupado." >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::A VPS nao confirmou o backend em $TAG (o deploy.sh nao escreveu 'ok: backend em $TAG'). Confira o passo Deploy."
+          exit 1

@@ -833,9 +833,35 @@ Enquanto uma norma é refeita, os trechos apagados dela ficam fora da base: faç
 PR ──► CI (testes) ──► merge na main ──► CI verde ──► docker-publish.yml ──► GHCR ──► deploy na VPS
 ```
 
-- O `docker-publish.yml` de cada repo dispara por `workflow_run` **só quando a CI do push na `main`
-  passa** (backend: `CI - Backend`; frontend: `CI`) e publica `sha-xxxxxxx` + `latest`.
-- O job **Deploy na VPS** entra por SSH com uma chave só da CI. Na VPS ela tem
+- O `docker-publish.yml` de cada repo dispara por `workflow_run` quando a CI do push na `main`
+  termina (backend: `CI - Backend`; frontend: `CI`) e publica `sha-xxxxxxx` + `latest`.
+- **Backend: o commit publicado é a ponta verde da `main`, não o que disparou (#621).** Em 25/11 dois
+  merges seguidos deixaram a VPS no commit mais antigo: a CI do mais novo terminou primeiro, o publish
+  dele foi cancelado pelo do mais antigo (`cancel-in-progress: true`) e o mais antigo publicou por
+  cima, sem nenhuma execução vermelha. Desde então o workflow do backend tem um job só (build, push e
+  deploy) e:
+  - **resolve o alvo quando a execução começa:** o primeiro commit da `main` (primeiro pai, do mais
+    novo para trás, até 100) com uma execução de push do `CI - Backend` verde em qualquer tentativa.
+    O disparo é só um aviso de que algo mudou; até a CI que falhou avisa (e reimplanta a ponta verde,
+    sem efeito na VPS se ela já está lá);
+  - **uma execução por vez** (grupo `deploy-vps-backend`, `cancel-in-progress: false`): a que roda
+    nunca é cancelada; a pendente pode ser cancelada pela que chega depois, que começa mais tarde e
+    publica o que ela publicaria ou algo mais novo (por isso uma execução **cancelada** na lista é
+    esperada em merges seguidos);
+  - **não refaz a imagem** se a tag do alvo já está no GHCR (só move o `latest`): um build novo da
+    mesma tag mudaria o digest e recriaria o container sem motivo;
+  - **confere no fim** pelo relatório do `deploy.sh` (`<antes> -> <tag>` e `ok: backend em <tag>`,
+    escrito só com a tag no `.env` e o container `healthy`); sem ele, a execução falha com a mensagem.
+    O resumo da execução diz o disparo, a ponta da `main`, o alvo, a tag publicada e a de antes.
+
+  Consequências: a VPS termina no commit verde mais novo qualquer que seja a ordem de término das CIs;
+  um commit antigo nunca publica por cima de um mais novo (as execuções são em série e o alvo só
+  avança). **Reexecutar** uma execução antiga, ou o *Run workflow* manual, reimplanta a ponta verde,
+  nunca o commit daquela execução: uma versão específica só pelo `deploy.sh` na VM (abaixo). Não
+  reexecute execuções anteriores ao PR do #621: elas usam o workflow antigo e publicariam o commit
+  delas. O frontend ainda tem o desenho antigo (publish com `cancel-in-progress: true`) e o mesmo
+  defeito: depois de merges seguidos lá, confira o `FRONTEND_TAG` da VPS.
+- O deploy entra por SSH com uma chave só da CI. Na VPS ela tem
   `command="/opt/agrocontabil/ssh-forcado.sh"` no `authorized_keys`: não abre shell e só aceita
   `deploy <backend|frontend> <sha-xxxxxxx|latest>`.
 - `deploy.sh` (nesta pasta, copiado para `/opt/agrocontabil`):
@@ -846,7 +872,8 @@ PR ──► CI (testes) ──► merge na main ──► CI verde ──► do
   - espera `healthy` (5 min); se não ficar, **rollback** para a tag anterior e o job falha.
 - Configuração no GitHub (cada repo): secret `VPS_SSH_KEY` (chave privada da CI) e variáveis
   `VPS_HOST`, `VPS_SITE_HOST` e `VPS_KNOWN_HOSTS` (saída de `ssh-keyscan -t ed25519 <ip>`).
-- Reimplantar sem novo commit: *Actions → Docker - … (GHCR + deploy) → Run workflow*.
+- Reimplantar sem novo commit: *Actions → Docker - … (GHCR + deploy) → Run workflow* (no backend,
+  reimplanta a ponta verde da `main`, qualquer que seja o ref escolhido).
 
 Deploy manual de uma versão (na VM): `./deploy.sh backend sha-xxxxxxx`.
 
