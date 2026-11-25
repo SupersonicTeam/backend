@@ -12,8 +12,9 @@ Roteiro de **uma vez só**, para o Murillo rodar na VPS. Inventário, decisões 
 1. **A partir de 27/11/2026, com o OK explícito do Murillo.** Nada abaixo, nem o merge do PR, antes
    disso: todo merge na `main` recria o backend na VPS. A regra escrita do repositório (skill
    `project-conventions`, "Git / PRs") diz que **de 26/11 a 03/12 só entra correção urgente com OK
-   do Murillo**: fazer a janela antes de 03/12 é abrir uma exceção a ela. Em 25/11 o Murillo pediu
-   que saísse o quanto antes.
+   do Murillo**: fazer a janela antes de 03/12 é abrir uma exceção a ela. Em 25/11 o Murillo decidiu
+   que a janela **pode ser antes de 03/12**. Isso não marca a data nem é o OK do merge: os dois são
+   dados na hora, com os demais pré-requisitos prontos.
 2. O repositório `infra-borda` pronto e revisado, com:
    - `docker-compose.yml`: Caddy `2.10-alpine` no **mesmo digest** do `compose.yaml` daqui, portas
      `80`, `443` e `443/udp`, rede `borda` externa com `ipv4_address: 172.31.255.2`, e o volume
