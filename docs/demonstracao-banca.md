@@ -227,7 +227,9 @@ intacto). Na VPS a pasta do deploy é **`/opt/agrocontabil`** (`deploy/README.md
    subiria o backend no meio do reset): `exec 9>/opt/agrocontabil/.deploy.lock && flock 9`. Ele fica
    preso até o passo 9.
 3. **Backup**: `./backup.sh` (o mesmo `pg_dump` do cron).
-4. **Tirar o site do ar e parar o backend**: `docker compose stop agroconia-caddy backend`. O
+4. **Tirar o site do ar e parar o backend**: `docker compose stop agroconia-caddy backend`
+   (**antes da [migração para a borda](../deploy/migracao-borda.md)**, o serviço chama-se `caddy`,
+   aqui e no passo 9; confira com `docker compose ps` que o proxy e o backend pararam). O
    proxy fica parado até o seed terminar (a borda responde 502; não pare a borda, que atende os
    outros sistemas): as contas da demonstração (e-mails e CPFs deste repositório) não
    existem durante a semeadura, e um cadastro com um deles quebraria o seed.

@@ -19,7 +19,7 @@ TMPW=$(cd "$TMP" && (pwd -W 2>/dev/null || pwd))
 FALHAS=0
 
 limpar() {
-  docker rm -f $P-borda $P-proxy $P-backend $P-frontend >/dev/null 2>&1
+  docker rm -fv $P-borda $P-proxy $P-backend $P-frontend >/dev/null 2>&1
   docker network rm $P-borda $P-interna >/dev/null 2>&1
   rm -rf "$TMP"
 }
@@ -170,14 +170,20 @@ checar "html na pasta da jornada nao sai (404)" bash -c 'grep -qE "^HTTP/[0-9.]+
 echo "--- ask, porta 8081 e administracao"
 checar "/interno pela internet nao chega ao backend" contem \
   "$(pedir $W "/interno/tls/permitido?chave=$CHAVE&domain=$E")" "frontend uri=/interno"
-checar "ask na 8081 autoriza o slug servido" bash -c \
-  "docker run --rm --network $P-borda $IMAGEM wget -qO /dev/null 'http://agroconia-caddy:8081/interno/tls/permitido?chave=$CHAVE&domain=$E'"
-checar "ask na 8081 com chave errada: 404" contem \
-  "$(da_borda wget -qO- "http://agroconia-caddy:8081/interno/tls/permitido?chave=errada&domain=$E")" "404"
-checar "8081 nao repassa a API" contem "$(da_borda wget -qO- http://agroconia-caddy:8081/api/eco)" "404"
+ask() { docker exec "$1" wget -qO /dev/null "http://agroconia-caddy:8081/interno/tls/permitido?chave=$2&domain=$E" 2>&1; }
+checar "ask na 8081, vindo da borda, autoriza o slug servido" ask $P-borda $CHAVE
+checar "ask na 8081 com chave errada: 404" contem "$(ask $P-borda errada)" "404"
+checar "ask na 8081 pela rede interna (conferencia na VPS)" ask $P-backend $CHAVE
+checar "outro container da borda nao usa a 8081, nem com a chave" contem \
+  "$(da_borda wget -qO- "http://agroconia-caddy:8081/interno/tls/permitido?chave=$CHAVE&domain=$E")" "404"
+checar "8081 nao repassa a API" contem \
+  "$(docker exec $P-borda wget -qO- http://agroconia-caddy:8081/api/eco 2>&1)" "404"
+saude=$(grep -oE "wget -q -O /dev/null http://127\.0\.0\.1:8081/ping" "$DEPLOY/compose.yaml")
+checar "o comando do healthcheck do compose passa no proxy" docker exec $P-proxy sh -c "${saude:-false}"
 checar "API de administracao do proxy fora da rede borda" contem \
   "$(da_borda wget -qO- -T 5 http://agroconia-caddy:2019/config/)" "refused"
-checar "reload do proxy funciona" docker exec -w /etc/caddy $P-proxy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1
+recarrega() { docker exec -w /etc/caddy $P-proxy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; }
+checar "reload do proxy funciona" recarrega
 sem_nome() { ! docker run --rm --network $P-borda "$IMAGEM" getent hosts "$1" >/dev/null 2>&1; }
 checar "agroconia-caddy resolve na rede borda" bash -c \
   "docker run --rm --network $P-borda $IMAGEM getent hosts agroconia-caddy >/dev/null"

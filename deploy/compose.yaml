@@ -125,8 +125,8 @@ services:
       ESCRITORIO_CONVITE_URL_FRONTEND: https://${SITE_HOST}/equipe/convite
       # Endereco proprio do escritorio, {slug}.SITE_DOMINIO (#464): o dominio base dos subdominios e a
       # chave do "ask" da borda (GET /interno/tls/permitido, que chega pelo agroconia-caddy; a
-      # mesma chave vai no .env da borda). Passo a passo no
-      # deploy/README.md, secao Endereco proprio do escritorio.
+      # mesma chave vai no .env da borda). Ver o deploy/README.md, secao Endereco proprio do
+      # escritorio.
       APP_ESCRITORIO_DOMINIO_BASE: ${SITE_DOMINIO:?defina SITE_DOMINIO no .env (deploy/README.md, Endereco proprio do escritorio)}
       APP_ESCRITORIO_TLS_ASK_CHAVE: ${TLS_ASK_CHAVE:?defina TLS_ASK_CHAVE no .env (deploy/README.md, Endereco proprio do escritorio)}
       # E-mail (#460). DESLIGADO ate o passo a passo do README; credenciais so no .env. Com SMTP, host,

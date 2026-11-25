@@ -7,8 +7,8 @@ ClamAV e o proxy `agroconia-caddy` numa VM só. A VM é compartilhada: o HTTPS e
 | Item | Valor |
 |------|-------|
 | VM | `agrocontabil`, Oracle Cloud, Brazil Southeast (Vinhedo), VM.Standard.A1.Flex (Ampere **arm64**), 8 OCPU / 47 GiB de RAM, disco de 96 GB (conferido em 2026-11-06), Ubuntu 24.04 |
-| Endereço | `https://www.agroconia.com.br` (`SITE_HOST`). `agroconia.com.br` e o antigo `agrocontabil.<ip-com-hífens>.sslip.io` redirecionam para ele (`SITE_REDIRECIONA`) |
-| DNS | Hostinger (`dns-parking.com`): registro `A` de `@` e de `www` para o IP da VPS, sem `AAAA` (a VM não tem IPv6). O `A *` dos endereços dos escritórios entra pela seção [Endereço próprio do escritório](#endereço-próprio-do-escritório-464) |
+| Endereço | `https://www.agroconia.com.br` (`SITE_HOST`). `agroconia.com.br` e o antigo `agrocontabil.<ip-com-hífens>.sslip.io` redirecionam para ele ([`borda/agroconia.caddy`](borda/agroconia.caddy)) |
+| DNS | Hostinger (`dns-parking.com`): registro `A` de `@` e de `www` para o IP da VPS, sem `AAAA` (a VM não tem IPv6). O `A *` serve os [endereços dos escritórios](#endereço-próprio-do-escritório-464) |
 | Acesso SSH | `ssh -i ~/.ssh/agrocontabil_lightsail ubuntu@<ip>` (a chave privada fica só no PC de quem fez o deploy) |
 | Pasta na VM | `/opt/agrocontabil` — `compose.yaml`, `caddy/`, `.env` (600), `certs/nfe-teste.p12`, `jornada/` (quadros da landing, seção [Jornada da landing](#jornada-da-landing-frontend174)) |
 | Imagens | `ghcr.io/supersonicteam/backend` e `ghcr.io/supersonicteam/frontend` (workflow `docker-publish.yml` de cada repo, amd64 + arm64) |
@@ -82,6 +82,10 @@ docker compose exec -w /etc/caddy agroconia-caddy caddy reload --config /etc/cad
 Se o `validate` ou o `reload` falhar, **restaure o arquivo na hora**: inválido no disco, o proxy não
 sobe no próximo reinício.
 
+**Tirar os endereços dos escritórios do ar** (o `www` segue): remova o bloco `*.agroconia.com.br`
+do `borda/agroconia.caddy` e instale o arquivo na borda. Sem o bloco, o `www` pode ficar como está.
+Apagar o registro `A *` na Hostinger também corta, mas só quando o TTL vencer.
+
 **Aplicar mudança no `borda/agroconia.caddy`:** pelo script do `infra-borda`, que valida com o
 Caddyfile real, instala em `/opt/borda/sites/` e recarrega. Nunca copie direto para a pasta: um
 arquivo inválido derruba a borda inteira, com os outros sistemas, no próximo reinício.
@@ -100,7 +104,10 @@ arquivo inválido derruba a borda inteira, com os outros sistemas, no próximo r
   1 h de bloqueio). No Ubuntu 24.04 a unidade é `ssh.service`, então o
   `/etc/fail2ban/jail.d/sshd.local` fixa o `journalmatch` — o padrão do fail2ban nunca casaria.
 - **Arquivos de configuração** (`compose.yaml`, `caddy/`, `borda/`, scripts) não vão pelo CD, que só troca
-  imagem: ao mudar algum, copie para `/opt/agrocontabil` e rode `docker compose up -d`.
+  imagem. `compose.yaml` e scripts: copie para `/opt/agrocontabil` e rode `docker compose up -d`. Os
+  dois arquivos do Caddy **não** entram com o `up`: siga [Borda e proxy](#borda-e-proxy). **Até a
+  [janela da migração](migracao-borda.md), não copie o `compose.yaml` novo:** ele não tem o serviço
+  `caddy` que está no ar.
 
 ## E-mail (#460)
 
@@ -393,7 +400,8 @@ reescrita (44 créditos) mais um; o job da segunda-feira e a subida ajustam a se
 O QR do cartão de visita leva a `https://www.agroconia.com.br/?utm_source=cartao`. Para contar as
 escaneadas, o `agroconia-caddy` registra os acessos à página inicial do `www`, num arquivo do volume
 `acessos`, que sobrevive aos deploys. Os registros de antes da migração para a borda ficam em
-`/data/acessos` do volume `agrocontabil_caddy_data`, que passou a ser da borda. Conta acessos, não pessoas: a mesma pessoa que escaneia
+`/data/acessos` do volume `agrocontabil_caddy_data`, que passou a ser da borda (o roteiro da migração
+manda contar e apagar). Conta acessos, não pessoas: a mesma pessoa que escaneia
 duas vezes conta duas.
 
 **O que entra (minimizado, sem dado pessoal):**
@@ -501,6 +509,7 @@ basta.
 ```bash
 cd /opt/agrocontabil
 mkdir -p jornada                                  # antes do up: se faltar, o Docker cria a pasta vazia e do root
+docker compose run --rm --no-deps agroconia-caddy caddy validate --config /etc/caddy/Caddyfile   # Valid configuration; senao, pare
 docker compose up -d --no-deps agroconia-caddy    # recria só o proxy; o site cai por alguns segundos
 curl -s https://www.agroconia.com.br/healthz      # UP
 ```

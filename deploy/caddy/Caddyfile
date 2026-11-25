@@ -152,6 +152,17 @@ http://{$SITE_HOST} {
 # chama (o backend nao entra na rede borda), e o healthcheck do compose. A borda nunca encaminha
 # requisicao publica para ca; a porta 80 acima nunca repassa /interno ao backend.
 :8081 {
+	# Na rede borda, so o Caddy da borda: os containers dos outros inquilinos nao tem o que fazer
+	# aqui, e o /interno fica fora dos limites de taxa do backend. A rede interna segue podendo
+	# (healthcheck e conferencias de dentro da VPS).
+	@vizinho {
+		remote_ip 172.31.255.0/24
+		not remote_ip 172.31.255.2/32
+	}
+	handle @vizinho {
+		respond 404
+	}
+
 	handle /ping {
 		respond "ok" 200
 	}
