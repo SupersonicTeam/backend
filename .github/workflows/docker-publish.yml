@@ -30,8 +30,9 @@ jobs:
   deploy:
     name: Build, push e deploy na VPS
     # Sem "if" de proposito: ate a CI que falhou dispara a execucao, que reimplanta a ponta verde
-    # (no-op na VPS se ela ja esta la). Um job pulado nao pode, assim, ocupar a fila no lugar de um
-    # aviso necessario.
+    # (com a mesma tag o deploy.sh nao recria o container). Assim nenhum job pulado ocupa a fila no
+    # lugar de um aviso necessario. Um PR de fork vindo de uma branch "main" tambem dispara: so
+    # reimplanta a ponta verde da main, sem rodar codigo do PR.
     runs-on: ubuntu-latest
     # Uma execucao por vez, sem cancelar a que esta rodando (a pendente pode ser trocada pela mais
     # nova, que cobre o que ela faria).
@@ -51,18 +52,19 @@ jobs:
           fetch-depth: 100
 
       # Commit a publicar: o primeiro da main (primeiro pai, do mais novo para o mais antigo) com uma
-      # execucao de push do "CI - Backend" verde em qualquer tentativa (uma reexecucao que falhe
-      # depois nao tira o commit do conjunto, senao a VPS poderia voltar para um commit anterior).
+      # execucao de push do "CI - Backend" verde em qualquer tentativa (uma reexecucao em andamento
+      # ou que falhe depois nao tira o commit do conjunto, senao a VPS poderia voltar para um commit
+      # anterior; por isso a lista nao filtra por status=completed).
       - name: Commit verde mais novo da main
         id: alvo
         env:
           GH_TOKEN: ${{ github.token }}
           DISPARO_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-          DISPARO_CONCLUSAO: ${{ github.event.workflow_run.conclusion || 'workflow_dispatch' }}
+          DISPARO_CONCLUSAO: ${{ github.event.workflow_run.conclusion }}
         run: |
           set -euo pipefail
           gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
-            -f branch=main -f event=push -f status=completed -f per_page=100 \
+            -f branch=main -f event=push -f per_page=100 \
             --jq '.workflow_runs[] | "\(.head_sha) \(.conclusion) \(.id) \(.run_attempt)"' > "$RUNNER_TEMP/ci.txt"
           while read -r sha conclusao id tentativas; do
             if [ "$conclusao" = success ]; then echo "$sha"; continue; fi
@@ -75,7 +77,11 @@ jobs:
           alvo=$(git rev-list --first-parent --max-count=100 HEAD | grep -Fx -m1 -f "$RUNNER_TEMP/verdes.txt" || true)
           {
             echo "### Deploy do backend"
-            echo "- Disparo: \`${DISPARO_SHA::7}\` ($GITHUB_EVENT_NAME, CI: $DISPARO_CONCLUSAO)"
+            if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then
+              echo "- Disparo: CI de \`${DISPARO_SHA::7}\` terminou com \`$DISPARO_CONCLUSAO\`"
+            else
+              echo "- Disparo: $GITHUB_EVENT_NAME (reimplanta a ponta verde da main)"
+            fi
             echo "- Ponta da main agora: \`$(git rev-parse --short=7 HEAD)\`"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ -z "$alvo" ]; then
@@ -85,8 +91,8 @@ jobs:
           fi
           git checkout -q --detach "$alvo"
           echo "- Alvo (commit verde mais novo da main): \`${alvo::7}\`" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$alvo" != "$DISPARO_SHA" ]; then
-            echo "- O alvo nao e o commit do disparo: publica-se a ponta verde, nunca um commit mais antigo." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$GITHUB_EVENT_NAME" = workflow_run ] && [ "$alvo" != "$DISPARO_SHA" ]; then
+            echo "- O alvo nao e o commit do disparo (CI dele nao verde, ou ja ha commit verde mais novo): vai a ponta verde." >> "$GITHUB_STEP_SUMMARY"
           fi
           {
             echo "sha=$alvo"
@@ -108,11 +114,12 @@ jobs:
         env:
           IMAGEM: ${{ steps.alvo.outputs.image }}:${{ steps.alvo.outputs.tag }}
         run: |
-          if docker buildx imagetools inspect "$IMAGEM" > /dev/null 2>&1; then
+          if docker buildx imagetools inspect "$IMAGEM" > /dev/null 2> "$RUNNER_TEMP/inspect.err"; then
             echo "sim=true" >> "$GITHUB_OUTPUT"
             echo "- Imagem \`$IMAGEM\` ja estava no GHCR: sem novo build." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "sim=false" >> "$GITHUB_OUTPUT"
+            echo "Imagem nao encontrada (ou GHCR sem resposta), segue o build: $(head -c 300 "$RUNNER_TEMP/inspect.err")"
           fi
 
       # Só o estágio final (apk add, adduser) roda emulado em arm64; o Maven roda nativo
@@ -150,6 +157,7 @@ jobs:
 
       # A chave so executa "deploy <servico> <tag>" (command= forcado no authorized_keys da VPS).
       - name: Deploy
+        id: deploy
         env:
           SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           KNOWN_HOSTS: ${{ vars.VPS_KNOWN_HOSTS }}
@@ -170,7 +178,13 @@ jobs:
         if: always() && steps.alvo.outcome == 'success'
         env:
           TAG: ${{ steps.alvo.outputs.tag }}
+          DEPLOY: ${{ steps.deploy.outcome }}
         run: |
+          if [ "$DEPLOY" != success ] && [ "$DEPLOY" != failure ]; then
+            echo "- **Falhou antes do deploy** (build, push ou login): a VPS nao foi tocada. Veja os passos anteriores." >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::O deploy nao rodou: falha antes dele (build, push ou login). A VPS nao foi tocada."
+            exit 1
+          fi
           log="$RUNNER_TEMP/deploy.log"
           antes=$(grep -oE "\] [^ ]+ -> ${TAG}\$" "$log" 2>/dev/null | head -n1 | sed -E 's/^\] ([^ ]+) -> .*/\1/' || true)
           if grep -qE "\] ok: backend em ${TAG}\$" "$log" 2>/dev/null; then

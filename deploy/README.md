@@ -835,15 +835,16 @@ PR ──► CI (testes) ──► merge na main ──► CI verde ──► do
 
 - O `docker-publish.yml` de cada repo dispara por `workflow_run` quando a CI do push na `main`
   termina (backend: `CI - Backend`; frontend: `CI`) e publica `sha-xxxxxxx` + `latest`.
-- **Backend: o commit publicado é a ponta verde da `main`, não o que disparou (#621).** Em 25/11 dois
+- **Backend: o commit publicado é a ponta verde da `main`, não o que disparou (#621).** Em 2026-11-25 dois
   merges seguidos deixaram a VPS no commit mais antigo: a CI do mais novo terminou primeiro, o publish
   dele foi cancelado pelo do mais antigo (`cancel-in-progress: true`) e o mais antigo publicou por
   cima, sem nenhuma execução vermelha. Desde então o workflow do backend tem um job só (build, push e
   deploy) e:
   - **resolve o alvo quando a execução começa:** o primeiro commit da `main` (primeiro pai, do mais
     novo para trás, até 100) com uma execução de push do `CI - Backend` verde em qualquer tentativa.
-    O disparo é só um aviso de que algo mudou; até a CI que falhou avisa (e reimplanta a ponta verde,
-    sem efeito na VPS se ela já está lá);
+    O disparo é só um aviso de que algo mudou; até a CI que falhou avisa e reimplanta a ponta verde
+    (com a mesma tag, o `deploy.sh` não recria o container, a menos que o `.env` ou o compose tenham
+    mudado à mão sem recriar);
   - **uma execução por vez** (grupo `deploy-vps-backend`, `cancel-in-progress: false`): a que roda
     nunca é cancelada; a pendente pode ser cancelada pela que chega depois, que começa mais tarde e
     publica o que ela publicaria ou algo mais novo (por isso uma execução **cancelada** na lista é
@@ -856,7 +857,8 @@ PR ──► CI (testes) ──► merge na main ──► CI verde ──► do
 
   Consequências: a VPS termina no commit verde mais novo qualquer que seja a ordem de término das CIs;
   um commit antigo nunca publica por cima de um mais novo (as execuções são em série e o alvo só
-  avança). **Reexecutar** uma execução antiga, ou o *Run workflow* manual, reimplanta a ponta verde,
+  avança). Lista da CI lida sem filtro de estado: a reexecução em andamento de um commit verde não o
+  tira do conjunto. **Reexecutar** uma execução antiga, ou o *Run workflow* manual, reimplanta a ponta verde,
   nunca o commit daquela execução: uma versão específica só pelo `deploy.sh` na VM (abaixo). Não
   reexecute execuções anteriores ao PR do #621: elas usam o workflow antigo e publicariam o commit
   delas. O frontend ainda tem o desenho antigo (publish com `cancel-in-progress: true`) e o mesmo
@@ -873,7 +875,7 @@ PR ──► CI (testes) ──► merge na main ──► CI verde ──► do
 - Configuração no GitHub (cada repo): secret `VPS_SSH_KEY` (chave privada da CI) e variáveis
   `VPS_HOST`, `VPS_SITE_HOST` e `VPS_KNOWN_HOSTS` (saída de `ssh-keyscan -t ed25519 <ip>`).
 - Reimplantar sem novo commit: *Actions → Docker - … (GHCR + deploy) → Run workflow* (no backend,
-  reimplanta a ponta verde da `main`, qualquer que seja o ref escolhido).
+  reimplanta a ponta verde da `main`; escolha a `main`: um ref antigo roda a versão antiga do workflow).
 
 Deploy manual de uma versão (na VM): `./deploy.sh backend sha-xxxxxxx`.
 
