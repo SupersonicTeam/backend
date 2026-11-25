@@ -27,3 +27,6 @@ docs/avaliacao/fidelidade-lei/perguntas-fidelidade-lei-v2.json -text
 docs/avaliacao/fidelidade-lei/perguntas-fidelidade-lei-v3.json -text
 # Conjunto congelado da #443 (ressalva do enquadramento): o hash .sha256 e dos bytes, CRLF o quebraria.
 docs/avaliacao/ressalva-tratamento-443/perguntas-ressalva-443.json -text
+# A borda e o agroconia-caddy rodam no Linux da VPS (#464): CRLF atrapalha o diff dos arquivos copiados.
+*.caddy text eol=lf
+*Caddyfile text eol=lf

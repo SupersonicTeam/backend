@@ -585,12 +585,17 @@ br.com.agrocontabil
   chama `/api` na mesma origem. **Invariante:** todo subdomínio serve o mesmo SPA, sem conteúdo
   enviado pelo cliente (o `SameSite=Strict` não separa subdomínios). A única pasta servida do disco
   é a `jornada/` dos quadros da landing (frontend#174, `/jornada/*`): só a equipe publica nela e o
-  Caddy só entrega dela imagem e JSON (`deploy/README.md`, "Jornada da landing"). **Infra:** no Caddy, os
-  endereços dos escritórios são um site *catch-all* `https://` com `tls { on_demand }` e o "ask" do
-  backend (`deploy/Caddyfile`), com o mesmo snippet `(app)` de cabeçalhos do `www` e
-  `X-Robots-Tag: noindex` (frontend#175); **nunca** o site curinga `*.{$SITE_DOMINIO}`, que no Caddy 2.10 faz o
-  `www` perder o certificado próprio (testado em 2026-11-09). Ligar é manual (registro `A *`,
-  `.env`, CA de staging antes): passo a passo em `deploy/README.md`. O slug pode ser dado pessoal (o unipessoal nasce com o nome do contador): nunca vai a
+  Caddy só entrega dela imagem e JSON (`deploy/README.md`, "Jornada da landing"). **Infra:** a VPS é
+  compartilhada, e o HTTPS é da **borda** neutra (repositório `GWNexT-Technologies/infra-borda`); o
+  AgroConIA é inquilino: `deploy/borda/agroconia.caddy` (domínios, TLS, HSTS, redirects; instalado
+  na borda) e o proxy interno `agroconia-caddy` (`deploy/caddy/Caddyfile`: roteamento, cabeçalhos,
+  `noindex` dos escritórios (frontend#175), log de acessos, ponte do "ask" na porta 8081; sem porta
+  publicada, e só ele entra na rede `borda`; confia em `X-Forwarded-*` só de `172.31.255.2/32`). O
+  `*.agroconia.com.br` com `on_demand` fica no arquivo do inquilino, e por isso o `www` precisa de
+  `tls force_automate` **e** `tls { key_type p256 }` (sem as duas ele fica sem certificado).
+  **Mudou um desses arquivos ou a imagem do Caddy: rode `bash deploy/ensaio-borda/ensaio.sh`.** A
+  migração na VPS é manual (`deploy/migracao-borda.md`); até ela, vale o `caddy` antigo.
+  O slug pode ser dado pessoal (o unipessoal nasce com o nome do contador): nunca vai a
   log nem à auditoria, só existe com CNPJ, e a exclusão de dados o apaga sem carência. **Só é servido
   com o CNPJ verificado (#520):** `escritorio.cnpj_verificado_em`/`cnpj_verificacao_metodo`
   (changeSet 0063) nas três consultas do `EscritorioRepository` (ask, página pública, login e refresh
@@ -670,7 +675,7 @@ br.com.agrocontabil
 - **Cobertura atual: 2.346 testes, sem falha** (2026-11-07, `./mvnw test` da `main` em `4a0b3a8`, 4 ignorados) (JUnit 5 + Mockito; `./mvnw test`). Com Docker local, os testes contra PostgreSQL 16 (Testcontainers: Liquibase, pgvector, reset da demonstração e fluxos críticos) também rodam; sem Docker ficam *skipped*.
 - **Contagem de statements (#153, #432):** `ContagemStatementsPostgresIntegrationTest` compara a contagem de comandos SQL de dashboard, listagem de notas, apuração (12 meses) e calendário fiscal numa base pequena e noutra seis vezes maior; N+1 quebra o build. **Endpoint novo de leitura pesada (lista, agregação, janela de datas) entra nesse teste.** A medição de p95 com k6 contra uma stack isolada (`docs/performance/`: `compose.yaml`, `seed-volume.sql`, `k6/carga.js`; limite RNF001: p95 < 2 s) **foi feita na VPS em 25/11/2026 (#585): RNF001 atendido nos quatro endpoints medidos, maior p95 de 47 ms** (20.000 notas, 10 usuários virtuais, três execuções; tabelas e limites do que ela cobre em `docs/performance/README.md`).
 - **Teste em PostgreSQL novo (#152):** estende `support/PostgresIntegrationTestBase` (Liquibase ligado, `ddl-auto: validate`). A limpeza é `limparDominio()`, DELETE de filho para pai, nunca TRUNCATE CASCADE, que apagaria os modelos de obrigação. Produtor com contador ativo só gera XML de nota `APROVADA`: nos fluxos de emissão não vincule contador. `FluxosCriticosPostgresIntegrationTest` cobre emissão até `AUTORIZADA`, cancelamento dentro e fora do prazo e reabertura dentro e fora do limite; a importação segue em H2.
-- **Swagger travado por teste (#154):** `OpenApiConfig.GRUPOS` é a lista única dos grupos (`/v3/api-docs/<grupo>`: notas, apuracao, chat, relatorios, contador, auth). Rota com prefixo novo entra num grupo, mapeamento novo exige `@Operation(summary)` e DTO novo, inclusive aninhado, exige `@Schema` na classe; senão o `OpenApiDocumentacaoIntegrationTest` quebra. O springdoc só é desligado em `prod`, mas na VPS o Caddy (`deploy/Caddyfile`) só encaminha `/api/*` ao backend: no domínio público, `/swagger-ui.html` e `/v3/api-docs` devolvem o `index.html` do Angular, com 200. Para ver o Swagger, rode local (`http://localhost:8080/swagger-ui.html`).
+- **Swagger travado por teste (#154):** `OpenApiConfig.GRUPOS` é a lista única dos grupos (`/v3/api-docs/<grupo>`: notas, apuracao, chat, relatorios, contador, auth). Rota com prefixo novo entra num grupo, mapeamento novo exige `@Operation(summary)` e DTO novo, inclusive aninhado, exige `@Schema` na classe; senão o `OpenApiDocumentacaoIntegrationTest` quebra. O springdoc só é desligado em `prod`, mas na VPS o proxy (`deploy/caddy/Caddyfile`) só encaminha `/api/*` ao backend: no domínio público, `/swagger-ui.html` e `/v3/api-docs` devolvem o `index.html` do Angular, com 200. Para ver o Swagger, rode local (`http://localhost:8080/swagger-ui.html`).
 - **E2E com Playwright (#321, RNF010):** `e2e/` (TypeScript, `package.json` próprio) cobre UC001 a UC005 com o navegador sobre o frontend (imagem do GHCR, `main`) e o backend deste checkout, numa stack **isolada** (`e2e/compose.yaml`, projeto `agroconia-e2e`, banco em tmpfs, profile `homolog` com o seed da banca, SEFAZ simulada, `AI_CHAT_PROVIDER=none`: a Ceres só pelos atalhos da tela, sem modelo). `bash e2e/rodar.sh` gera os segredos de **teste** no `e2e/.env` (fora do git; nunca os da VPS), sobe, roda e derruba; guia em `e2e/README.md`. No GitHub Actions só **sob demanda** (`.github/workflows/e2e.yml`, `workflow_dispatch`), com relatório, traces e log da stack no artefato: a CI normal e o `./mvnw verify` não rodam a suíte. Seletores só por papel, rótulo e texto; faltou nome acessível, issue no frontend. O cenário da suíte (`e2e/support/cenario.ts`) espelha o `CenarioDemonstracao`: mudou o seed do Carlos ou do comprador da soja, mude lá.
 - **JaCoCo 0.8.15** (Onda 4): a 0.8.12 abortava com `Unsupported class file major version` ao instrumentar os mocks que o Byte Buddy gera em runtime — eles nascem na versão do JDK em execução, não no `release 21` do compilador. Qualquer teste com Mockito falhava em JDK novo.
 

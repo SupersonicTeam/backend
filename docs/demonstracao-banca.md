@@ -41,8 +41,8 @@ E-mails no domínio reservado `example.com`.
 O escritório é a **Contabilidade Rural Oeste** (Cascavel/PR), com o endereço próprio `ruraloeste`
 (`ruraloeste.agroconia.com.br`, #464). O endereço só chega à VPS pelo reset dos dados da
 demonstração (abaixo), rodado depois do deploy da versão com o changeSet 0059: o seed não regrava
-um escritório que já existe. O subdomínio só abre depois do registro `A *` e do Caddyfile curinga
-(`deploy/README.md`). As contas do `DataLoader` (João, Maria e o Escritório Campo Certo) continuam
+um escritório que já existe. O subdomínio depende do registro `A *` e do certificado sob demanda
+da borda (`deploy/README.md`). As contas do `DataLoader` (João, Maria e o Escritório Campo Certo) continuam
 existindo, num escritório à parte.
 
 O escritório é **empresarial** (#519): tem equipe, CNPJ, telefone e endereço postal (Rua Parana,
@@ -227,8 +227,9 @@ intacto). Na VPS a pasta do deploy é **`/opt/agrocontabil`** (`deploy/README.md
    subiria o backend no meio do reset): `exec 9>/opt/agrocontabil/.deploy.lock && flock 9`. Ele fica
    preso até o passo 9.
 3. **Backup**: `./backup.sh` (o mesmo `pg_dump` do cron).
-4. **Tirar o site do ar e parar o backend**: `docker compose stop caddy backend`. O Caddy fica
-   parado até o seed terminar: as contas da demonstração (e-mails e CPFs deste repositório) não
+4. **Tirar o site do ar e parar o backend**: `docker compose stop agroconia-caddy backend`. O
+   proxy fica parado até o seed terminar (a borda responde 502; não pare a borda, que atende os
+   outros sistemas): as contas da demonstração (e-mails e CPFs deste repositório) não
    existem durante a semeadura, e um cadastro com um deles quebraria o seed.
 5. **Conferir** (só leitura) o que vai ser apagado. Esperado: 1 escritório, 3 contadores,
    9 produtores, 12 credenciais, ~160 notas. As duas últimas linhas são alertas:
@@ -256,7 +257,7 @@ intacto). Na VPS a pasta do deploy é **`/opt/agrocontabil`** (`deploy/README.md
    vínculos, notas e itens voltam às contagens esperadas acima. Sessões, interações da Ceres,
    notificações e os alertas e meses fechados pelos jobs **não** voltam aos números de antes: eram
    uso dos ensaios, que o seed não recria.
-9. **Voltar o site** (`docker compose start caddy`) e soltar o lock (`exec 9>&-`, ou sair do shell).
+9. **Voltar o site** (`docker compose start agroconia-caddy`) e soltar o lock (`exec 9>&-`, ou sair do shell).
 
 Mudou o `CenarioDemonstracao` (nome do escritório, CNPJ, nomes da carteira ou da equipe)? O
 `ScriptsResetDemonstracaoTest` (sem banco, roda em qualquer máquina) quebra até os dois scripts
