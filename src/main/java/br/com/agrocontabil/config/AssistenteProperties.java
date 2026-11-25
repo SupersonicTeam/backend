@@ -106,6 +106,8 @@ public class AssistenteProperties implements InitializingBean {
               + rag.getSimilaridadeMinima());
     }
     if (classificacao.getLimiarConfianca() < 0 || classificacao.getLimiarConfianca() > 1
+        || classificacao.getLimiarConfiancaSemModelo() < 0
+        || classificacao.getLimiarConfiancaSemModelo() > 1
         || classificacao.getSimilaridadeMinima() < -1 || classificacao.getSimilaridadeMinima() > 1
         || classificacao.getVizinhos() < 1 || classificacao.getVizinhos() > 50) {
       throw new IllegalStateException("app.assistente.classificacao fora de faixa: limiar e"
@@ -475,8 +477,19 @@ public class AssistenteProperties implements InitializingBean {
      */
     private boolean camadas = true;
 
-    /** Confiança mínima do voto das embeddings; abaixo dela, o modelo desempata. */
-    private double limiarConfianca = 0.6;
+    /**
+     * Confiança mínima do voto das embeddings com o modelo no ar; abaixo dela, o modelo desempata.
+     * 0,9 (#497): só o voto quase unânime. Com 0,6 as embeddings decidiam com quatro ou cinco
+     * vizinhos de sete e erravam mais que o modelo.
+     */
+    private double limiarConfianca = 0.9;
+
+    /**
+     * Confiança mínima com o modelo em pausa (disjuntor aberto): sem desempate, o voto das
+     * embeddings vale mais que as palavras-chave do modo fallback, então o limiar fica o de antes
+     * da #497.
+     */
+    private double limiarConfiancaSemModelo = 0.6;
 
     /** Vizinhos que votam no kNN. */
     private int vizinhos = 7;
@@ -524,6 +537,14 @@ public class AssistenteProperties implements InitializingBean {
 
     public void setLimiarConfianca(double limiarConfianca) {
       this.limiarConfianca = limiarConfianca;
+    }
+
+    public double getLimiarConfiancaSemModelo() {
+      return limiarConfiancaSemModelo;
+    }
+
+    public void setLimiarConfiancaSemModelo(double limiarConfiancaSemModelo) {
+      this.limiarConfiancaSemModelo = limiarConfiancaSemModelo;
     }
 
     public int getVizinhos() {

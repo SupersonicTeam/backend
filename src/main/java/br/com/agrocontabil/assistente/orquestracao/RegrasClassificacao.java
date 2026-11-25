@@ -19,6 +19,9 @@ import java.util.regex.Pattern;
  *   <li><strong>Marcador de dados</strong> é o produtor falando dos dados dele ("minhas notas",
  *       "quanto vendi", "a nota 107", "tenho alguma guia"). Pronome solto não conta: "meu vizinho
  *       paga Funrural?" e "minha dúvida é sobre o split payment" não falam dos dados dele.</li>
+ *   <li><strong>Fato do produtor</strong> ("vendi", "emiti", "retiveram de mim", "tenho
+ *       algum") com termo de lei não decide LEGISLACAO: pode ser a regra aplicada aos dados dele
+ *       (MISTO), e o modelo separa (#497).</li>
  *   <li><strong>Lei + produto específico</strong> ("arroz paga IBS?") não é decidido aqui: o
  *       tratamento de um produto sai da tabela oficial pela rota de dados (#283), e a regra geral
  *       ("hortícolas têm alíquota zero?") pela de lei — fronteira para as embeddings.</li>
@@ -127,6 +130,22 @@ public final class RegrasClassificacao {
   private static final Pattern FATO_DO_PRODUTOR = Pattern.compile("\\b(vendi|comprei|paguei"
       + "|emiti|recebi|faturei|colhi|entreguei|exportei|tive|fiz)\\b");
 
+  /**
+   * O produtor como parte da operação (#497): um fato dele ("vendi", "emiti", "as compras que eu
+   * fiz"), um valor retido ou cobrado dele ("retiveram de mim"), algo que o sistema mostra a ele
+   * ("o crédito que aparece pra mim") ou algo que ele tem ("eu tenho algum?", "tenho saldo").
+   * Impede a regra de decidir LEGISLACAO: "o Funrural que retiveram de mim está na alíquota da
+   * lei?" e "pelas notas que eu emiti, já pago IBS?" precisam dos dados dele. Não contam o
+   * possessivo solto ("minha dúvida é...", "a minha cooperativa é obrigada a reter?"), o "pra mim"
+   * da conversa ("explica pra mim o split payment"), a obrigação ("eu tenho que pagar IBS?") nem
+   * "tive" e "fiz" soltos ("tive uma dúvida sobre o Funrural").
+   */
+  private static final Pattern PRODUTOR_NA_OPERACAO = Pattern.compile("\\b(?:vendi|comprei"
+      + "|paguei|emiti|recebi|faturei|colhi|entreguei|exportei)\\b|\\bque (?:eu )?(?:fiz|tive)\\b"
+      + "|\\b(?:retiveram|reteve|retido|retida|descontaram|descontou|descontado|descontada"
+      + "|cobraram|cobrou|cobrado|cobrada) de mim\\b|\\baparece (?:pra|para) mim\\b"
+      + "|\\btenho (?:algum|alguma|alguns|algumas|saldo|credito|creditos)\\b");
+
   /** Tema tributário do caso hipotético. */
   private static final Pattern TEMA_TRIBUTARIO = Pattern.compile("\\b(impostos?|tributos?"
       + "|tribut\\w*|guias?|venc\\w*|prazos?|recolh\\w*|retenc\\w*|retid[oa]s?|creditos?"
@@ -185,12 +204,31 @@ public final class RegrasClassificacao {
     }
     if (lei && !dados) {
       return PRODUTO.matcher(texto).find() || QUANTIA_PESSOAL.matcher(texto).find()
+          || produtorNaPergunta(texto)
           ? Optional.empty() : Optional.of(Intencao.LEGISLACAO);
     }
     if (dados && !lei && !LEI_GENERICA.matcher(texto).find()) {
       return Optional.of(Intencao.DADOS);
     }
     return Optional.empty();
+  }
+
+  /**
+   * {@code true} se a pergunta traz dado ou fato do próprio produtor: o marcador de dados ("minhas
+   * notas", "a nota 107") ou ele como parte da operação ("vendi", "emiti", "retiveram de mim",
+   * "tenho algum") (#497). Com esse sinal as embeddings não decidem LEGISLACAO sozinhas: o modelo
+   * separa a regra geral (LEGISLACAO) da regra aplicada aos dados dele (MISTO).
+   *
+   * @param pergunta pergunta do usuário
+   * @return se há sinal dos dados do produtor
+   */
+  public static boolean falaDosDadosDoProdutor(String pergunta) {
+    String texto = normalizar(pergunta);
+    return MARCADOR_DADOS.matcher(texto).find() || produtorNaPergunta(texto);
+  }
+
+  private static boolean produtorNaPergunta(String texto) {
+    return PRODUTOR_NA_OPERACAO.matcher(texto).find();
   }
 
   /** Sem acento, minúsculas, pontuação vira espaço (exceto ponto entre dígitos). */
