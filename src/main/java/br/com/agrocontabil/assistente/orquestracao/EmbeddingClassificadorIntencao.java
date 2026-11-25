@@ -230,13 +230,22 @@ public class EmbeddingClassificadorIntencao implements DisposableBean {
 
   /** Voto ponderado dos k vizinhos mais próximos. */
   Optional<ClassificacaoIntencao> votar(float[] consulta, float[][] treino) {
+    return voto(consulta, treino).map(v -> new ClassificacaoIntencao(v.vencedora(),
+        v.confianca(), null, CamadaClassificacao.EMBEDDING));
+  }
+
+  /**
+   * O voto inteiro: vizinhos, peso de cada rota, confiança da vencedora. Vazio sem vizinho acima
+   * da similaridade mínima. Também lido pelo diagnóstico do conjunto de desenvolvimento.
+   */
+  Optional<Voto> voto(float[] consulta, float[][] treino) {
     List<Vizinho> vizinhos = new ArrayList<>(treino.length);
     for (int i = 0; i < treino.length; i++) {
-      vizinhos.add(new Vizinho(exemplos.get(i).rota(), cosseno(consulta, treino[i])));
+      vizinhos.add(new Vizinho(i, exemplos.get(i).rota(), cosseno(consulta, treino[i])));
     }
     vizinhos.sort(Comparator.comparingDouble(Vizinho::similaridade).reversed());
-    List<Vizinho> proximos = vizinhos.subList(0, Math.min(propriedades.getVizinhos(),
-        vizinhos.size()));
+    List<Vizinho> proximos = List.copyOf(vizinhos.subList(0,
+        Math.min(propriedades.getVizinhos(), vizinhos.size())));
     if (proximos.isEmpty()
         || proximos.get(0).similaridade() < propriedades.getSimilaridadeMinima()) {
       return Optional.empty();
@@ -253,8 +262,8 @@ public class EmbeddingClassificadorIntencao implements DisposableBean {
     }
     Map.Entry<Intencao, Double> vencedora = pesos.entrySet().stream()
         .max(Map.Entry.comparingByValue()).orElseThrow();
-    return Optional.of(new ClassificacaoIntencao(vencedora.getKey(),
-        vencedora.getValue() / total, null, CamadaClassificacao.EMBEDDING));
+    return Optional.of(new Voto(proximos, pesos, vencedora.getKey(),
+        vencedora.getValue() / total));
   }
 
   /** Vetores prontos. */
@@ -307,8 +316,28 @@ public class EmbeddingClassificadorIntencao implements DisposableBean {
     }
   }
 
+  /** Vetores do treino (nulo até o aquecimento). Só para o diagnóstico. */
+  float[][] vetoresDoTreino() {
+    return vetores;
+  }
+
+  /** Exemplos do treino, na ordem dos vetores. */
+  List<Exemplo> exemplos() {
+    return exemplos;
+  }
+
+  /** Vetor normalizado da pergunta, sem prazo nem pausa. Só para o diagnóstico. */
+  float[] vetorDe(String pergunta) {
+    return normalizado(embeddingModel.getObject().embed(DataSanitizer.mascarar(pergunta)));
+  }
+
   /** Um exemplo do treino. */
   record Exemplo(Intencao rota, String pergunta) {}
 
-  private record Vizinho(Intencao rota, double similaridade) {}
+  /** Um vizinho: posição do exemplo no treino, rota e similaridade de cosseno. */
+  record Vizinho(int indice, Intencao rota, double similaridade) {}
+
+  /** Voto dos vizinhos: peso por rota e confiança da vencedora (peso dela sobre o total). */
+  record Voto(List<Vizinho> vizinhos, Map<Intencao, Double> pesos, Intencao vencedora,
+      double confianca) {}
 }

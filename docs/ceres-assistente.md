@@ -758,8 +758,9 @@ O `ClassificadorIntencao` devolve a intenção, a confiança e **qual camada dec
    sai com a gentil.
 2. **`RegrasClassificacao`**: só decide com **sinal de um lado só**, e só com âncora do domínio.
    Termo de lei **da reforma ou do Funrural** (IBS, CBS, split payment, Funrural, crédito presumido,
-   Anexo, LC 214, regime regular...) sem marcador de dados, sem produto específico e sem quantia ou
-   período do produtor ("quanto", "devo", "saldo", mês e ano) → `LEGISLACAO`. Marcador de dados
+   Anexo, LC 214, regime regular...) sem marcador de dados, sem produto específico, sem quantia ou
+   período do produtor ("quanto", "devo", "saldo", mês e ano) e sem fato ou presença dele na operação
+   ("vendi", "emiti", "retiveram de mim", "eu tenho algum", #497) → `LEGISLACAO`. Marcador de dados
    ancorado ("minhas notas", "quanto vendi", "quanto gastei com defensivos", "a nota 107", "tenho
    alguma guia", "o que vence este mês") sem termo de lei nem palavra de lei genérica → `DADOS`.
    Palavra genérica ("lei", "artigo", "alíquota", "redução", "isenção") nunca decide `LEGISLACAO`
@@ -774,14 +775,20 @@ O `ClassificadorIntencao` devolve a intenção, a confiança e **qual camada dec
    (`src/main/resources/ceres/treino/classificacao-rota.json`, ~260 perguntas da equipe, nenhuma do
    gabarito nem paráfrase dela, com a mesma guarda da #264). Os 7 vizinhos votam com peso
    similaridade⁸; decide se o mais próximo passar de `AI_CLASSIFICACAO_SIMILARIDADE_MINIMA` (0,5) e a
-   confiança passar de `AI_CLASSIFICACAO_LIMIAR` (0,6). Vetores do treino calculados uma vez, em
+   confiança passar de `AI_CLASSIFICACAO_LIMIAR` (0,9 desde a #497: só o voto quase unânime; com o
+   modelo em pausa, `AI_CLASSIFICACAO_LIMIAR_SEM_MODELO`, 0,6, o limiar de antes). Com o modelo no
+   ar, o voto MISTO segue a rota do modelo, que já é chamado para a `perguntaLei` (sem chamada a
+   mais), e o voto LEGISLACAO numa pergunta com dado ou fato do produtor
+   (`RegrasClassificacao.falaDosDadosDoProdutor`) vai ao desempate. Conjunto de desenvolvimento e
+   diagnóstico da mudança em `docs/avaliacao/rota-dev/`. Vetores do treino calculados uma vez, em
    segundo plano depois da subida (a subida nunca espera o Ollama); até lá, a camada não decide (o
    comando de avaliação os calcula antes da 1ª rodada e para se não conseguir). O embedding da
    pergunta tem prazo próprio (`AI_CLASSIFICACAO_TIMEOUT_EMBEDDING`, 500 ms; o read-timeout do
    cliente de IA é de minutos): vencido ou falhado, a camada não decide e pausa por
    `AI_CLASSIFICACAO_PAUSA_APOS_FALHA` (30 s), sem chamar o embedding.
-4. **`LlmClassificadorIntencao`** (Fase 1): **só no desempate**, e no MISTO decidido pelas
-   embeddings para separar a `perguntaLei` (as camadas 1 e 2 decidem só a rota). Sem decisão das
+4. **`LlmClassificadorIntencao`** (Fase 1): **só no desempate**, e no MISTO votado pelas
+   embeddings para separar a `perguntaLei`; desde a #497, nesse caso a rota também é a dele (com
+   confiança abaixo de `AI_CONFIANCA_MINIMA` ou resposta ilegível, fica o MISTO das embeddings). Sem decisão das
    camadas com o modelo em pausa: palavras-chave do `ModoFallback` (`PALAVRAS_CHAVE`).
 
 Com o modelo fora, regras e embeddings seguem decidindo. A camada vai à auditoria
