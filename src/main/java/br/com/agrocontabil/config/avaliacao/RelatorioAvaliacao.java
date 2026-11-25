@@ -297,7 +297,7 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
 
   /**
    * Perguntas que chegaram à camada de embeddings e ficaram sem o voto dela por pausa, falha, fila
-   * cheia ou vetores ausentes (#624): a camada que decidiu foi o modelo, mas não por voto fraco. É a
+   * cheia, vetores ausentes ou interrupção da pergunta (#624): a camada que decidiu foi o modelo, mas não por voto fraco. É a
    * condição de validade das medições de rota (zero pausas).
    *
    * @return ids, na ordem do gabarito
@@ -329,7 +329,8 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
     List<String> semVoto = semVotoDoEmbedding();
     md.append("\n").append(semVoto.isEmpty()
         ? "Nenhuma pergunta ficou sem o voto das embeddings por pausa, falha ou fila."
-        : "Sem o voto das embeddings (pausa, falha, fila ou sem vetores): "
+        : "Sem o voto das embeddings (pausa, falha, fila, sem vetores ou pergunta"
+            + " interrompida; o estado de cada uma está na tabela acima): "
             + String.join(", ", semVoto) + ".").append("\n");
     return md.toString();
   }

@@ -19,13 +19,11 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -312,6 +310,47 @@ class EmbeddingClassificadorIntencaoTest {
   }
 
   @Test
+  @DisplayName("#624: pausas seguidas sao um episodio so; a volta conta as perguntas de todas")
+  void pausasSeguidasSomam() {
+    ModeloControlavel modelo = new ModeloControlavel();
+    AssistenteProperties.Classificacao p = propriedades();
+    p.setTimeoutEmbedding(Duration.ofMillis(50));
+    p.setPausaAposFalha(Duration.ofSeconds(30));
+    AtomicLong agora = new AtomicLong();
+    EmbeddingClassificadorIntencao knn = new EmbeddingClassificadorIntencao(
+        com(modelo), p, TREINO, agora::get, new SimpleMeterRegistry());
+    ListAppender<ILoggingEvent> log = capturarLog();
+    try {
+      knn.aquecer();
+      modelo.lento.set(true);
+      knn.consultar("quanto vendi de soja");
+      knn.consultar("quanto vendi de milho");
+      agora.addAndGet(Duration.ofSeconds(31).toNanos());
+      // A sondagem depois da pausa vence o prazo de novo: mesmo episodio.
+      assertThat(knn.consultar("quanto vendi de trigo").estado())
+          .isEqualTo(EstadoEmbeddingClassificacao.PRAZO_VENCIDO);
+      knn.consultar("quanto vendi de cafe");
+      knn.consultar("quanto vendi de cafe");
+      modelo.lento.set(false);
+      agora.addAndGet(Duration.ofSeconds(31).toNanos());
+      assertThat(knn.consultar("quanto vendi de soja no mes").estado())
+          .isEqualTo(EstadoEmbeddingClassificacao.RESPONDEU);
+      knn.consultar("quanto vendi de soja no mes");
+
+      assertThat(log.list).filteredOn(e -> e.getFormattedMessage().contains("de volta"))
+          .singleElement()
+          .satisfies(e -> assertThat(e.getFormattedMessage())
+              .contains("3 perguntas foram ao modelo"));
+      assertThat(log.list).filteredOn(e -> e.getLevel() == Level.WARN)
+          .extracting(ILoggingEvent::getFormattedMessage)
+          .anySatisfy(m -> assertThat(m).contains("pausa 2 desde a subida"));
+    } finally {
+      soltarLog(log);
+      knn.destroy();
+    }
+  }
+
+  @Test
   @DisplayName("#624: falha do embedding = FALHA com WARN, e a camada pausa do mesmo jeito")
   void falhaVisivel() {
     ModeloControlavel modelo = new ModeloControlavel();
@@ -368,53 +407,42 @@ class EmbeddingClassificadorIntencaoTest {
     EmbeddingClassificadorIntencao knn = new EmbeddingClassificadorIntencao(
         com(preso), p, TREINO, () -> 0L, registro);
     ListAppender<ILoggingEvent> log = capturarLog();
-    ExecutorService perguntas = Executors.newFixedThreadPool(10);
+    // Onze perguntas ao mesmo tempo e o modelo preso: duas em curso e oito na fila tomam o pool,
+    // e a decima primeira e recusada na hora. So ela termina antes de o modelo soltar.
+    ExecutorService perguntas = Executors.newFixedThreadPool(11);
     try {
       // O aquecimento usa o embed em lote, que o modelo preso nao segura.
       assertThat(knn.aquecer()).isTrue();
-      // Duas em curso e oito na fila tomam o pool: a seguinte nao espera, vai ao modelo.
-      List<Future<EmbeddingClassificadorIntencao.Consulta>> presas = new ArrayList<>();
-      for (int i = 0; i < 10; i++) {
-        presas.add(perguntas.submit(() -> knn.consultar("quanto vendi")));
+      List<Future<EmbeddingClassificadorIntencao.Consulta>> todas = new ArrayList<>();
+      for (int i = 0; i < 11; i++) {
+        todas.add(perguntas.submit(() -> knn.consultar("quanto vendi")));
       }
       long limite = System.nanoTime() + Duration.ofSeconds(5).toNanos();
-      EstadoEmbeddingClassificacao estado = null;
-      while (estado != EstadoEmbeddingClassificacao.FILA_CHEIA && System.nanoTime() < limite) {
-        // Enquanto as dez nao entraram no pool, esta pode entrar na fila: so a rejeitada conta.
-        estado = presas.size() == 10 ? tentarSemEsperar(knn) : null;
-        Thread.sleep(20);
+      while (todas.stream().noneMatch(Future::isDone) && System.nanoTime() < limite) {
+        Thread.sleep(10);
       }
-      assertThat(estado).isEqualTo(EstadoEmbeddingClassificacao.FILA_CHEIA);
-      assertThat(contagem(registro, EstadoEmbeddingClassificacao.FILA_CHEIA)).isPositive();
+      List<Future<EmbeddingClassificadorIntencao.Consulta>> prontas =
+          todas.stream().filter(Future::isDone).toList();
+      assertThat(prontas).hasSize(1);
+      assertThat(prontas.get(0).get().estado()).isEqualTo(EstadoEmbeddingClassificacao.FILA_CHEIA);
+      assertThat(prontas.get(0).get().latenciaMs()).isNull();
+      assertThat(contagem(registro, EstadoEmbeddingClassificacao.FILA_CHEIA)).isEqualTo(1);
       assertThat(log.list).anySatisfy(e -> {
         assertThat(e.getLevel()).isEqualTo(Level.WARN);
         assertThat(e.getFormattedMessage()).contains("fila do embedding");
       });
       solta.countDown();
-      for (Future<EmbeddingClassificadorIntencao.Consulta> f : presas) {
-        assertThat(f.get(10, TimeUnit.SECONDS).estado())
-            .isIn(EstadoEmbeddingClassificacao.RESPONDEU, EstadoEmbeddingClassificacao.FILA_CHEIA);
+      for (Future<EmbeddingClassificadorIntencao.Consulta> f : todas) {
+        if (f != prontas.get(0)) {
+          assertThat(f.get(10, TimeUnit.SECONDS).estado())
+              .isEqualTo(EstadoEmbeddingClassificacao.RESPONDEU);
+        }
       }
     } finally {
       solta.countDown();
       perguntas.shutdownNow();
       soltarLog(log);
       knn.destroy();
-    }
-  }
-
-  /**
-   * Uma consulta que, se entrar na fila, fica presa ate o modelo soltar: roda numa thread a parte
-   * e so devolve o estado quando ela volta logo (a rejeitada volta na hora).
-   */
-  private static EstadoEmbeddingClassificacao tentarSemEsperar(
-      EmbeddingClassificadorIntencao knn) throws Exception {
-    CompletableFuture<EmbeddingClassificadorIntencao.Consulta> tentativa =
-        CompletableFuture.supplyAsync(() -> knn.consultar("quanto vendi de milho"));
-    try {
-      return tentativa.get(200, TimeUnit.MILLISECONDS).estado();
-    } catch (TimeoutException e) {
-      return null;
     }
   }
 }

@@ -102,7 +102,12 @@ public class EmbeddingClassificadorIntencao implements DisposableBean {
   private final Timer latencia;
   /** Pausas desde a subida, para o WARN dizer se é a primeira ou a décima. */
   private final AtomicLong pausas = new AtomicLong();
-  /** Perguntas que acharam a camada em pausa desde a última pausa (vão ao INFO da volta). */
+  /**
+   * Episódio de pausa em curso: da primeira pausa até a primeira resposta no prazo. Pausas seguidas
+   * (a sondagem depois da pausa vence o prazo de novo) são o mesmo episódio.
+   */
+  private final AtomicBoolean episodioDePausa = new AtomicBoolean();
+  /** Perguntas que acharam a camada em pausa no episódio em curso (vão ao INFO da volta). */
   private final AtomicInteger perguntasNaPausa = new AtomicInteger();
   private volatile float[][] vetores;
   private volatile long pausaAteNanos;
@@ -276,8 +281,8 @@ public class EmbeddingClassificadorIntencao implements DisposableBean {
     }
     long esperaNanos = System.nanoTime() - inicio;
     latencia.record(Duration.ofNanos(esperaNanos));
-    if (emPausa) {
-      emPausa = false;
+    emPausa = false;
+    if (episodioDePausa.compareAndSet(true, false)) {
       log.info("Ceres: camada de embeddings da classificacao de volta depois da pausa; {}"
           + " perguntas foram ao modelo durante ela", perguntasNaPausa.getAndSet(0));
     }
@@ -288,7 +293,9 @@ public class EmbeddingClassificadorIntencao implements DisposableBean {
   private Consulta pausar(EstadoEmbeddingClassificacao estado, String motivo, int esperaMs) {
     pausaAteNanos = relogioNanos.getAsLong() + propriedades.getPausaAposFalha().toNanos();
     emPausa = true;
-    perguntasNaPausa.set(0);
+    if (episodioDePausa.compareAndSet(false, true)) {
+      perguntasNaPausa.set(0);
+    }
     // O comeco da mensagem e o de antes da #624 ("... sem resposta (prazo de N ms vencido); a rota
     // cai no modelo e a camada pausa por PT30S"): as regras de medicao da #497 contam por ele.
     log.warn("Ceres: embedding da pergunta sem resposta ({}); a rota cai no modelo e a camada pausa"

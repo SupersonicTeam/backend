@@ -242,8 +242,9 @@ public record RelatorioRepeticoes(List<RelatorioAvaliacao> rodadas) {
       md.append(total).append(total == 1 ? " resposta" : " respostas")
           .append(" sem o voto das embeddings nas ").append(rodadas.size())
           .append(rodadas.size() == 1 ? " rodada" : " rodadas")
-          .append(" (a camada que decidiu foi o modelo por pausa, falha ou fila, não por voto"
-              + " fraco):\n\n").append(tabela);
+          .append(" (pausa, falha, fila ou pergunta interrompida: a camada que decidiu não veio"
+              + " de um voto fraco; o estado de cada uma está na seção da rodada):\n\n")
+          .append(tabela);
     }
     return md.toString();
   }

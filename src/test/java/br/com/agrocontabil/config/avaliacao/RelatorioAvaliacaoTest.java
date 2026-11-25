@@ -165,7 +165,7 @@ class RelatorioAvaliacaoTest {
         .contains("| PRAZO_VENCIDO | 1 |")
         .contains("| EM_PAUSA | 2 |")
         .contains("| não consultado | 1 |")
-        .contains("Sem o voto das embeddings (pausa, falha, fila ou sem vetores): D03, D04, D05.");
+        .contains("interrompida; o estado de cada uma está na tabela acima): D03, D04, D05.");
   }
 
   @Test
