@@ -109,4 +109,41 @@ class RelatorioRepeticoesTest {
     assertThat(uma.instaveis()).isEmpty();
     assertThat(uma.markdown()).contains("Uma rodada só", "1 rodada");
   }
+
+  private static ResultadoPergunta comEmbedding(String id,
+      br.com.agrocontabil.model.EstadoEmbeddingClassificacao estado) {
+    ExecucaoPergunta execucao = new ExecucaoPergunta(Intencao.DADOS, "texto",
+        DesfechoInteracao.RESPONDIDA, List.of(), List.of(), false, 1, null, null, null, null,
+        "LLM", estado);
+    return new ResultadoPergunta(id, Categoria.DADOS, execucao, List.of(), true, null, null,
+        null, null, null, null, Intencao.DADOS, false);
+  }
+
+  @Test
+  @DisplayName("#624: a pausa por rodada aparece no topo, com as perguntas atingidas em cada uma")
+  void pausaPorRodada() {
+    br.com.agrocontabil.model.EstadoEmbeddingClassificacao ok =
+        br.com.agrocontabil.model.EstadoEmbeddingClassificacao.RESPONDEU;
+    br.com.agrocontabil.model.EstadoEmbeddingClassificacao pausa =
+        br.com.agrocontabil.model.EstadoEmbeddingClassificacao.EM_PAUSA;
+    RelatorioRepeticoes r = new RelatorioRepeticoes(List.of(
+        rodada("g", comEmbedding("D01", ok), comEmbedding("D02", ok)),
+        rodada("g", comEmbedding("D01", pausa), comEmbedding("D02",
+            br.com.agrocontabil.model.EstadoEmbeddingClassificacao.PRAZO_VENCIDO)),
+        rodada("g", comEmbedding("D01", ok), comEmbedding("D02", ok))));
+
+    assertThat(r.markdown())
+        .contains("## Pausa da camada de embeddings (#624)")
+        .contains("| 1 | 0 | — |")
+        .contains("| 2 | 2 | D01, D02 |")
+        .contains("| 3 | 0 | — |")
+        .contains("2 respostas sem o voto das embeddings nas 3 rodadas");
+  }
+
+  @Test
+  @DisplayName("#624: sem pausa em nenhuma rodada, a secao diz zero")
+  void semPausa() {
+    assertThat(tres().markdown()).contains("## Pausa da camada de embeddings (#624)")
+        .contains("Nenhuma resposta ficou sem o voto das embeddings por pausa, falha ou fila");
+  }
 }

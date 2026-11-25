@@ -65,7 +65,7 @@ final class ExecucaoComPrazo implements AutoCloseable {
       return new ExecucaoPergunta(r.rota(), r.texto(), r.desfecho(), r.citacoes(),
           contexto.fontes(), r.modoFallback(), decorrido(inicio), null, contexto.desfechoDados(),
           contexto.desfechoLegislacao(), contexto.perguntaLeiReescrita(),
-          contexto.camadaClassificacao());
+          contexto.camadaClassificacao(), contexto.embeddingClassificacao());
     } catch (TimeoutException e) {
       contexto.interromper(DesfechoInteracao.TEMPO_ESGOTADO);
       futuro.cancel(true);
@@ -102,7 +102,7 @@ final class ExecucaoComPrazo implements AutoCloseable {
     return new ExecucaoPergunta(rota.get(), null, desfecho, List.of(), contexto.fontes(),
         false, decorrido(inicio), e.getClass().getSimpleName(), contexto.desfechoDados(),
         contexto.desfechoLegislacao(), contexto.perguntaLeiReescrita(),
-        contexto.camadaClassificacao());
+        contexto.camadaClassificacao(), contexto.embeddingClassificacao());
   }
 
   private static long decorrido(long inicioNs) {

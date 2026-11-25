@@ -737,6 +737,52 @@ class LiquibaseChangelogIntegrationTest {
   }
 
   @Test
+  @DisplayName("changeSet 0067: estado e latencia do embedding da classificacao, nulos sem ele (#624)")
+  void changeSet0067EmbeddingDaClassificacao() {
+    JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+    List<Map<String, Object>> colunas = jdbc.queryForList(
+        "SELECT column_name, data_type, is_nullable, character_maximum_length"
+            + " FROM information_schema.columns WHERE table_name = 'assistente_interacao'"
+            + " AND column_name IN ('embedding_classificacao', 'latencia_embedding_ms')"
+            + " ORDER BY column_name");
+    assertThat(colunas).extracting(c -> c.get("column_name"))
+        .containsExactly("embedding_classificacao", "latencia_embedding_ms");
+    assertThat(colunas).allSatisfy(c -> assertThat(c.get("is_nullable")).isEqualTo("YES"));
+    assertThat(colunas.get(0).get("data_type")).isEqualTo("character varying");
+    assertThat(((Number) colunas.get(0).get("character_maximum_length")).intValue())
+        .isEqualTo(20);
+    assertThat(colunas.get(1).get("data_type")).isEqualTo("integer");
+    // O maior estado cabe na coluna de 20.
+    assertThat(java.util.Arrays.stream(
+        br.com.agrocontabil.model.EstadoEmbeddingClassificacao.values())
+        .mapToInt(e -> e.name().length()).max().orElseThrow()).isLessThanOrEqualTo(20);
+
+    String produtor = UUID.randomUUID().toString();
+    jdbc.update("INSERT INTO produtores (id, nome_completo) VALUES (?::uuid, 'Produtor 0067')",
+        produtor);
+    UUID semEmbedding = interacaoService.registrar(AssistenteInteracao.builder()
+        .produtorId(UUID.fromString(produtor)).rota("DADOS")
+        .desfecho(DesfechoInteracao.RESPONDIDA).camadaClassificacao("REGRA").chamadasFuncao(1)
+        .latenciaMs(10).tamanhoPergunta(20).criadoEm(java.time.OffsetDateTime.now()).build());
+    UUID vencido = interacaoService.registrar(AssistenteInteracao.builder()
+        .produtorId(UUID.fromString(produtor)).rota("DADOS")
+        .desfecho(DesfechoInteracao.RESPONDIDA).camadaClassificacao("LLM")
+        .embeddingClassificacao(
+            br.com.agrocontabil.model.EstadoEmbeddingClassificacao.PRAZO_VENCIDO)
+        .latenciaEmbeddingClassificacaoMs(503).chamadasFuncao(1).latenciaMs(10)
+        .tamanhoPergunta(20).criadoEm(java.time.OffsetDateTime.now()).build());
+
+    assertThat(jdbc.queryForMap("SELECT embedding_classificacao, latencia_embedding_ms"
+        + " FROM assistente_interacao WHERE id = ?", semEmbedding))
+        .containsEntry("embedding_classificacao", null)
+        .containsEntry("latencia_embedding_ms", null);
+    assertThat(jdbc.queryForMap("SELECT embedding_classificacao, latencia_embedding_ms"
+        + " FROM assistente_interacao WHERE id = ?", vencido))
+        .containsEntry("embedding_classificacao", "PRAZO_VENCIDO")
+        .containsEntry("latencia_embedding_ms", 503);
+  }
+
+  @Test
   @DisplayName("changeSet 0030: desfecho por parte do MISTO, nulo fora dele, sem texto")
   void changeSet0030PartesDoMisto() {
     JdbcTemplate jdbc = new JdbcTemplate(dataSource);
@@ -1558,11 +1604,12 @@ class LiquibaseChangelogIntegrationTest {
         String.class);
 
     // As colunas da explicacao (#268, changeSet 0064), da fidelidade da lei (#269, changeSet
-    // 0065) e da reconferencia de lei (#584, changeSet 0066) tambem sao so codigo e metricas.
+    // 0065), da reconferencia de lei (#584, changeSet 0066) e do embedding da classificacao (#624,
+    // changeSet 0067) tambem sao so codigo e metricas.
     assertThat(colunas).containsExactly(
         "camada_classificacao", "chamadas_funcao", "criado_em", "desfecho", "desfecho_dados",
-        "desfecho_explicacao", "desfecho_legislacao", "fidelidade_lei",
-        "funcoes", "id", "latencia_explicacao_ms", "latencia_juiz_ms", "latencia_ms", "modelo",
+        "desfecho_explicacao", "desfecho_legislacao", "embedding_classificacao", "fidelidade_lei",
+        "funcoes", "id", "latencia_embedding_ms", "latencia_explicacao_ms", "latencia_juiz_ms", "latencia_ms", "modelo",
         "pergunta_lei_reescrita", "produtor_id", "reconferencia_busca",
         "reconferencia_caracteres_trechos", "reconferencia_concordancia",
         "reconferencia_dispositivos", "reconferencia_lei", "reconferencia_tokens_concordancia",

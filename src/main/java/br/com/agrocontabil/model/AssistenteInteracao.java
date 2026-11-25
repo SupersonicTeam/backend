@@ -79,6 +79,25 @@ public class AssistenteInteracao {
   private String camadaClassificacao;
 
   /**
+   * O que aconteceu com o embedding da pergunta na camada de embeddings da classificação (#624,
+   * changeSet 0067): respondeu, prazo vencido, falha, em pausa, fila cheia, sem vetores ou
+   * interrompida. Nulo quando a camada não foi consultada (regra, atalho, recusa, desempate
+   * direto, camadas desligadas). Com {@code camada_classificacao = LLM}, separa a pausa de um voto
+   * fraco das embeddings.
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "embedding_classificacao", length = 20, updatable = false,
+      columnDefinition = "VARCHAR(20)")
+  private EstadoEmbeddingClassificacao embeddingClassificacao;
+
+  /**
+   * Espera pelo embedding da classificação, da submissão à resposta, ao prazo vencido ou à falha
+   * (#624, changeSet 0067); nula quando ele não foi chamado.
+   */
+  @Column(name = "latencia_embedding_ms", updatable = false)
+  private Integer latenciaEmbeddingClassificacaoMs;
+
+  /**
    * Desfecho da conferência de fidelidade da resposta de lei (#269, changeSet 0065): aprovada,
    * aprovada com a citação corrigida ou o motivo da reprovação. Só o enum, nunca o texto (#144).
    * Nulo quando a conferência não rodou (flag desligada, outra rota, sem trecho, resposta cortada).

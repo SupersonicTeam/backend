@@ -191,6 +191,9 @@ public record RelatorioRepeticoes(List<RelatorioAvaliacao> rodadas) {
         + "\n\n");
     md.append(RelatorioAvaliacao.tabelaPorRota(porRotaAgregado(), "Respostas"));
 
+    md.append("\n## Pausa da camada de embeddings (#624)\n\n");
+    md.append(tabelaPausa());
+
     md.append("\n## Perguntas instáveis entre rodadas\n\n");
     Map<String, List<String>> instaveis = instaveis();
     if (rodadas.size() == 1) {
@@ -212,6 +215,36 @@ public record RelatorioRepeticoes(List<RelatorioAvaliacao> rodadas) {
       // Tira o título e as condições da rodada: já estão no topo.
       int metricasRodada = daRodada.indexOf("## Métricas");
       md.append(daRodada.substring(Math.max(0, metricasRodada)).replace("## ", "### "));
+    }
+    return md.toString();
+  }
+
+  /**
+   * Respostas sem o voto das embeddings por rodada (#624): com a pausa, a mesma pergunta pode ir ao
+   * modelo numa rodada e às embeddings na outra, e a diferença de rota entre rodadas deixa de ser
+   * do código.
+   */
+  private String tabelaPausa() {
+    StringBuilder md = new StringBuilder();
+    int total = 0;
+    StringBuilder tabela = new StringBuilder("| Rodada | Sem o voto | Perguntas |\n|---|---|---|\n");
+    for (int i = 0; i < rodadas.size(); i++) {
+      List<String> ids = rodadas.get(i).semVotoDoEmbedding();
+      total += ids.size();
+      tabela.append("| ").append(i + 1).append(" | ").append(ids.size()).append(" | ")
+          .append(ids.isEmpty() ? "—" : String.join(", ", ids)).append(" |\n");
+    }
+    if (total == 0) {
+      md.append("Nenhuma resposta ficou sem o voto das embeddings por pausa, falha ou fila nas ")
+          .append(rodadas.size()).append(rodadas.size() == 1 ? " rodada" : " rodadas")
+          .append(".\n");
+    } else {
+      md.append(total).append(total == 1 ? " resposta" : " respostas")
+          .append(" sem o voto das embeddings nas ").append(rodadas.size())
+          .append(rodadas.size() == 1 ? " rodada" : " rodadas")
+          .append(" (pausa, falha, fila ou pergunta interrompida: a camada que decidiu não veio"
+              + " de um voto fraco; o estado de cada uma está na seção da rodada):\n\n")
+          .append(tabela);
     }
     return md.toString();
   }

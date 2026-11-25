@@ -87,6 +87,11 @@ class ClassificacaoEmCamadasIntegrationTest {
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtor.getId()))
         .extracting(AssistenteInteracao::getCamadaClassificacao)
         .containsOnly("REGRA");
+    // #624: a regra decide antes da camada de embeddings, que nem e consultada.
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtor.getId()))
+        .extracting(AssistenteInteracao::getEmbeddingClassificacao,
+            AssistenteInteracao::getLatenciaEmbeddingClassificacaoMs)
+        .containsOnly(org.assertj.core.groups.Tuple.tuple(null, null));
   }
 
   @Test
@@ -108,6 +113,13 @@ class ClassificacaoEmCamadasIntegrationTest {
     assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtor.getId()))
         .extracting(AssistenteInteracao::getCamadaClassificacao)
         .containsExactlyInAnyOrder("EMBEDDING", "LLM");
+    // #624: nos dois casos o embedding respondeu no prazo; o LLM veio do voto, nao de uma pausa.
+    assertThat(interacaoRepository.findByProdutorIdOrderByCriadoEmDesc(produtor.getId()))
+        .allSatisfy(i -> {
+          assertThat(i.getEmbeddingClassificacao())
+              .isEqualTo(br.com.agrocontabil.model.EstadoEmbeddingClassificacao.RESPONDEU);
+          assertThat(i.getLatenciaEmbeddingClassificacaoMs()).isNotNull().isNotNegative();
+        });
   }
 
   @Test

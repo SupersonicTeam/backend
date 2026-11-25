@@ -6,6 +6,7 @@ import br.com.agrocontabil.assistente.porta.AuditoriaPorta;
 import br.com.agrocontabil.dto.AssistenteChatResponse.OrigemFonte;
 import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import br.com.agrocontabil.model.DesfechoInteracao;
+import br.com.agrocontabil.model.EstadoEmbeddingClassificacao;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -78,6 +79,8 @@ public final class ContextoAssistente {
   private final AtomicReference<Boolean> perguntaLeiReescrita = new AtomicReference<>();
   private final AtomicReference<String> camadaClassificacao = new AtomicReference<>();
   private final AtomicReference<DesfechoFidelidadeLei> fidelidadeLei = new AtomicReference<>();
+  private final AtomicReference<EmbeddingClassificacao> embeddingClassificacao =
+      new AtomicReference<>();
   private final AtomicReference<JuizLei> juizLei = new AtomicReference<>();
   private final AtomicReference<AuditoriaPorta.RegistroReconferenciaLei> reconferenciaLei =
       new AtomicReference<>();
@@ -159,6 +162,34 @@ public final class ContextoAssistente {
   public String camadaClassificacao() {
     return camadaClassificacao.get();
   }
+
+  /**
+   * Registra o que aconteceu com o embedding da pergunta na camada de embeddings da classificação
+   * (#624): respondeu, prazo vencido, em pausa... Vai à auditoria (changeSet 0067), para a camada
+   * {@code LLM} que veio de uma pausa não se confundir com a de um voto fraco.
+   *
+   * @param estado     estado do embedding
+   * @param latenciaMs espera pelo embedding; nula quando ele não foi chamado
+   */
+  public void registrarEmbeddingClassificacao(EstadoEmbeddingClassificacao estado,
+      Integer latenciaMs) {
+    embeddingClassificacao.set(new EmbeddingClassificacao(estado, latenciaMs));
+  }
+
+  /** Estado do embedding da classificação; nulo se a camada de embeddings não foi consultada. */
+  public EstadoEmbeddingClassificacao embeddingClassificacao() {
+    EmbeddingClassificacao e = embeddingClassificacao.get();
+    return e == null ? null : e.estado();
+  }
+
+  /** Espera pelo embedding da classificação; nula se ele não foi chamado. */
+  public Integer latenciaEmbeddingClassificacaoMs() {
+    EmbeddingClassificacao e = embeddingClassificacao.get();
+    return e == null ? null : e.latenciaMs();
+  }
+
+  /** Estado e espera do embedding da classificação, gravados juntos (#624). */
+  private record EmbeddingClassificacao(EstadoEmbeddingClassificacao estado, Integer latenciaMs) {}
 
   /**
    * Registra o desfecho da conferência de fidelidade da resposta de lei (#269, flag

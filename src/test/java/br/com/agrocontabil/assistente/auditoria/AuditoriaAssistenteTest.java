@@ -152,6 +152,30 @@ class AuditoriaAssistenteTest {
     assertThat(r.desfechoConcordancia()).isEqualTo(DesfechoInteracao.RESPONDIDA);
   }
 
+  @Test
+  @DisplayName("#624: o estado e a latencia do embedding da classificacao vao ao registro")
+  void embeddingDaClassificacao() {
+    contexto.registrarEmbeddingClassificacao(
+        br.com.agrocontabil.model.EstadoEmbeddingClassificacao.PRAZO_VENCIDO, 512);
+
+    auditoria.registrar(contexto, "DADOS", DesfechoInteracao.RESPONDIDA, "none/simulado", 10, 80);
+
+    RegistroInteracao r = capturar();
+    assertThat(r.embeddingClassificacao())
+        .isEqualTo(br.com.agrocontabil.model.EstadoEmbeddingClassificacao.PRAZO_VENCIDO);
+    assertThat(r.latenciaEmbeddingClassificacaoMs()).isEqualTo(512);
+  }
+
+  @Test
+  @DisplayName("#624: sem consulta ao embedding (regra, atalho), os dois campos vao nulos")
+  void semEmbeddingDaClassificacao() {
+    auditoria.registrar(contexto, "DADOS", DesfechoInteracao.RESPONDIDA, "none/simulado", 10, 80);
+
+    RegistroInteracao r = capturar();
+    assertThat(r.embeddingClassificacao()).isNull();
+    assertThat(r.latenciaEmbeddingClassificacaoMs()).isNull();
+  }
+
   private RegistroInteracao capturar() {
     ArgumentCaptor<RegistroInteracao> captor = ArgumentCaptor.forClass(RegistroInteracao.class);
     verify(porta).registrar(captor.capture());
