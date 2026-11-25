@@ -70,7 +70,10 @@ public class ClassificadorEmCamadas implements ClassificadorIntencao {
       boolean comModelo = disponibilidade.disponivel();
       double limiar = comModelo ? propriedades.getLimiarConfianca()
           : propriedades.getLimiarConfiancaSemModelo();
-      voto = embeddings.classificar(pergunta);
+      EmbeddingClassificadorIntencao.Consulta consulta = embeddings.consultar(pergunta);
+      // A pausa (ou a falha) deixa rastro na auditoria, ao lado da camada que decidiu (#624).
+      contexto.registrarEmbeddingClassificacao(consulta.estado(), consulta.latenciaMs());
+      voto = consulta.voto();
       Optional<ClassificacaoIntencao> vizinhos = voto
           .filter(c -> c.confianca() >= limiar)
           .filter(c -> !comModelo || !leiComDadosDoProdutor(c, pergunta));

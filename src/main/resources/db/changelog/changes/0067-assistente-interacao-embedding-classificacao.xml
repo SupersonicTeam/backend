@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <!-- ================================================================
+         0067-assistente-interacao-embedding-classificacao.xml
+         Ceres, issue #624: a pausa da camada de embeddings da classificacao
+         de rota deixa rastro. Antes, quando o embedding da pergunta passava
+         do prazo, a camada pausava por 30 s e a auditoria gravava so a
+         camada LLM, igual a um voto fraco das embeddings.
+
+         - embedding_classificacao: EstadoEmbeddingClassificacao (RESPONDEU,
+           PRAZO_VENCIDO, FALHA, EM_PAUSA, FILA_CHEIA, SEM_VETORES,
+           INTERROMPIDA). Nula quando a camada nao foi consultada (regra,
+           atalho, recusa, desempate direto, camadas desligadas) e nas
+           perguntas gravadas antes desta mudanca.
+         - latencia_embedding_ms: espera pelo embedding da pergunta, da
+           submissao a resposta (ou ao prazo vencido / a falha). Nula quando
+           o embedding nao foi chamado (pausa, fila cheia, sem vetores).
+         So codigo e metrica: nenhum texto de pergunta (#144).
+         ================================================================ -->
+
+    <changeSet id="0067-add-embedding-classificacao-assistente-interacao" author="supersonic-team">
+        <comment>Estado e latencia do embedding da classificacao de rota da Ceres (#624).</comment>
+        <addColumn tableName="assistente_interacao">
+            <column name="embedding_classificacao" type="VARCHAR(20)"/>
+            <column name="latencia_embedding_ms" type="INTEGER"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

@@ -3,6 +3,7 @@ package br.com.agrocontabil.config.avaliacao;
 import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.config.avaliacao.PerguntaGabarito.Categoria;
 import br.com.agrocontabil.model.DesfechoInteracao;
+import br.com.agrocontabil.model.EstadoEmbeddingClassificacao;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -68,6 +69,9 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
 
   /** Rótulo do grupo das perguntas sem rota esperada (ataques que só medem recusa e vazamento). */
   static final String SEM_ROTA = "SEM_ROTA";
+
+  /** Rótulo das perguntas que não chegaram à camada de embeddings (regra, atalho, recusa...). */
+  static final String NAO_CONSULTADO = "não consultado";
 
   /**
    * Indicadores de uma rota esperada (issue #264). Clareza só sobre as respostas redigidas pelo
@@ -240,6 +244,9 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
     md.append("\n## Por camada da classificação (#265)\n\n");
     md.append(tabelaPorCamada(porCamada()));
 
+    md.append("\n## Embedding da classificação (#624)\n\n");
+    md.append(tabelaEmbedding());
+
     md.append("\n## Por pergunta\n\n");
     md.append("Legenda: ✓ acertou, ✗ errou, · não se aplica. ");
     md.append("As respostas completas estão no JSON ao lado.\n\n");
@@ -286,6 +293,46 @@ public record RelatorioAvaliacao(Ambiente ambiente, List<ResultadoPergunta> resu
       }
     }
     return porCamada;
+  }
+
+  /**
+   * Perguntas que chegaram à camada de embeddings e ficaram sem o voto dela por pausa, falha, fila
+   * cheia, vetores ausentes ou interrupção da pergunta (#624): a camada que decidiu foi o modelo, mas não por voto fraco. É a
+   * condição de validade das medições de rota (zero pausas).
+   *
+   * @return ids, na ordem do gabarito
+   */
+  public List<String> semVotoDoEmbedding() {
+    return resultados.stream()
+        .filter(r -> r.execucao().embeddingClassificacao() != null
+            && r.execucao().embeddingClassificacao() != EstadoEmbeddingClassificacao.RESPONDEU)
+        .map(ResultadoPergunta::id)
+        .toList();
+  }
+
+  private String tabelaEmbedding() {
+    Map<String, Integer> porEstado = new LinkedHashMap<>();
+    for (EstadoEmbeddingClassificacao estado : EstadoEmbeddingClassificacao.values()) {
+      porEstado.put(estado.name(), 0);
+    }
+    porEstado.put(NAO_CONSULTADO, 0);
+    for (ResultadoPergunta r : resultados) {
+      EstadoEmbeddingClassificacao estado = r.execucao().embeddingClassificacao();
+      porEstado.merge(estado == null ? NAO_CONSULTADO : estado.name(), 1, Integer::sum);
+    }
+    StringBuilder md = new StringBuilder("| Estado | Perguntas |\n|---|---|\n");
+    porEstado.forEach((estado, n) -> {
+      if (n > 0) {
+        md.append("| ").append(estado).append(" | ").append(n).append(" |\n");
+      }
+    });
+    List<String> semVoto = semVotoDoEmbedding();
+    md.append("\n").append(semVoto.isEmpty()
+        ? "Nenhuma pergunta ficou sem o voto das embeddings por pausa, falha ou fila."
+        : "Sem o voto das embeddings (pausa, falha, fila, sem vetores ou pergunta"
+            + " interrompida; o estado de cada uma está na tabela acima): "
+            + String.join(", ", semVoto) + ".").append("\n");
+    return md.toString();
   }
 
   static String tabelaPorCamada(Map<String, int[]> porCamada) {
