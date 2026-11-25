@@ -4,9 +4,9 @@ Mede, com k6, o p95 de quatro endpoints do produtor — **dashboard**, **listage
 **apuração** (últimos 12 meses) e **calendário fiscal** — contra uma **stack isolada**, com volume
 sintético. Limite do plano (RNF001): **p95 < 2 s** em cada endpoint.
 
-Este diretório só prepara a medição. **Nenhum número foi medido**; a medição é da janela da S5, na
-VPS (`.specs/features/backlog-pre-banca/s5-roteiro-janela.md`, passo 7). Não rode isto no banco
-nem na stack da demonstração.
+Este diretório prepara e registra a medição. **Medido em 25/11/2026, na VPS (#585): RNF001 atendido,
+o maior p95 foi de 47 ms contra o limite de 2.000 ms** (seção "Medição de 25/11/2026", no fim). Não
+rode isto no banco nem na stack da demonstração.
 
 ## O que tem aqui
 
@@ -132,3 +132,54 @@ apuração e a exposição de `/actuator/metrics` são issues à parte (ver o re
 - Nenhum mês fechado: a apuração calcula todos os meses ao vivo (pior caso).
 - Sem Ceres (`AI_CHAT_PROVIDER=none`) e sem ClamAV: o benchmark é da API fiscal.
 - O tempo medido inclui a rede interna do compose, não o Caddy nem a internet.
+
+## Medição de 25/11/2026 (VPS, issue #585)
+
+**RNF001 atendido com folga: o maior p95 foi de 47 ms, contra o limite de 2.000 ms.** As três execuções
+terminaram com código 0 (nenhum limite do `carga.js` violado). Feita das 08h25 às 08h37, pelo passo a
+passo acima, sem desvio.
+
+**Condições**
+
+- Stack isolada `agro-perf` na VPS (8 CPUs, 47 GiB), pelos limites acima: Postgres 2 GiB/2 CPUs, backend
+  2 GiB/2 CPUs (`-Xmx1g`), k6 1 GiB/1 CPU; nenhuma porta publicada.
+- Imagem do backend: `ghcr.io/supersonicteam/backend:sha-596bc94`, a mesma em produção (`main`
+  `596bc941`).
+- Volume: 20.000 notas, 40.000 itens e 2.000 guias em 24 meses, todas do produtor que o k6 usa
+  (conferido no banco).
+- k6 1.0.0, 10 usuários virtuais, 30 s de subida, 3 min de patamar e 15 s de descida, três execuções
+  seguidas. Sem Ceres e sem ClamAV, como o guia prevê.
+- Nenhum merge na `main` durante a janela; nada foi otimizado nela.
+
+**Resultado por endpoint (ms; p50 / p95 / máximo)**
+
+| Endpoint | Execução 1 | Execução 2 | Execução 3 |
+|---|---|---|---|
+| Dashboard | 35 / 44 / 171 | 34 / 47 / 81 | 33 / 34 / 39 |
+| Listagem de notas | 11 / 18 / 71 | 10 / 11 / 34 | 10 / 11 / 15 |
+| Apuração (12 meses) | 23 / 27 / 100 | 23 / 36 / 70 | 21 / 22 / 27 |
+| Calendário fiscal | 20 / 29 / 234 | 19 / 22 / 67 | 19 / 20 / 25 |
+
+| | Execução 1 | Execução 2 | Execução 3 |
+|---|---|---|---|
+| Requisições | 13.681 (60,6/s) | 13.765 (60,9/s) | 13.913 (61,6/s) |
+| Falhas HTTP | 0 | 0 | 0 |
+| Respostas 429 | 0 | 0 | 0 |
+| Checks | 100% | 100% | 100% |
+| p95 geral / máximo geral | 38 / 742 | 37 / 405 | 34 / 349 |
+
+**Uso de recursos aos 2 min de cada execução (`docker stats`):** Postgres da medição 91% a 100% de uma CPU
+(teto de 2) e cerca de 100 MiB; backend da medição cerca de 50% de uma CPU e 680 MiB; k6 7% a 9% e 30 MiB.
+Carga média da VM entre 1,5 e 1,9 (a VM também hospeda o site da GWNext). A stack da demonstração ficou
+ociosa (backend a 0,1% de CPU) e respondendo. Erros no log do backend da medição: 0.
+
+**Encerramento:** `docker compose --profile k6 down -v` e pasta apagada; nenhum contêiner, volume ou rede
+`agro-perf` restou. Os `resumo.json` não são versionados (o guia manda ignorá-los); os números estão nas
+tabelas acima.
+
+**O que esta medição cobre, e o que não cobre:** uma conta só com todo o volume; nenhum mês fechado (a
+apuração calcula os 12 meses ao vivo); sem Ceres; o tempo inclui a rede interna do compose, não o Caddy
+nem a internet; backend com menos CPU e memória que o de produção (medição conservadora). A carga é de 10
+usuários simultâneos, cerca de 60 requisições por segundo: **não é teste de pico nem de estresse**, e o
+comportamento sob mais usuários, com a Ceres respondendo ou com contas diferentes ao mesmo tempo, não foi
+medido.
