@@ -20,7 +20,7 @@ como registro.
 A rota de lei ainda pode mudar até 2026-11-19 (#436, PR #425). Por isso a S5 começa pelo que não
 depende dela.
 
-- **Fase A (até a rota de lei fechar):** k6 da #153 (passo 7), `prompt_eval_count` com cache e efeito
+- **Fase A (até a rota de lei fechar):** k6 da #153 (passo 7; feito em 2026-11-25, #585), `prompt_eval_count` com cache e efeito
   na cota (passo 3), latência do classificador com o Ollama ocioso e ocupado (passo 6, parte
   numérica) e as comparações **relativas** de configuração (passos 1, 2, 4 e 5). Cada variante tem o
   **seu passo 0 na mesma noite e no mesmo SHA**, e o registro diz o SHA. Número absoluto da Fase A
@@ -205,7 +205,7 @@ API e ficam aqui como registro, para o caso de uma reversão. Pelo mesmo motivo,
 falam de `AI_CHAT_MODEL`, do cache de prefixo, de `OLLAMA_NUM_PARALLEL=1` como vaga do chat e do
 `ollama-init` com o modelo de chat, leia como texto da época do Ollama. O passo 5
 (`AI_TETO_LEGISLACAO`) não foi revisto para o Haiku. O passo 7 (k6 da #153) não é da Ceres e não
-muda.
+muda (feito em 2026-11-25, #585).
 
 **As contas de créditos das regras 5 e 8 estão desatualizadas.** Elas são anteriores à #511: hoje
 1 crédito é 1 token ponderado, a cota do produtor é de 1.000.000 por semana e a reserva por
@@ -577,6 +577,9 @@ nula.
 `agro-perf` (só o volume `agro-perf_pgdata_perf`). p95 por endpoint no comentário da #153; algum
 acima de 2 s vira issue própria.
 
+**Feito em 2026-11-25 (#585):** três execuções na VPS, imagem `sha-596bc94`, 20.000 notas; maior p95 de
+47 ms contra o limite de 2.000 ms. Números e condições em `docs/performance/README.md`.
+
 ## O que fica registrado, e onde
 
 | Medição | Onde |
@@ -584,7 +587,7 @@ acima de 2 s vira issue própria.
 | Tabela quantização × contexto × teto × modelo (p50/p95 por rota, acerto, RAM) | `docs/ceres-assistente.md`, seção da #270 |
 | Linha de base da Ceres 2.0 e números do classificador | `docs/avaliacao/linha-de-base-ceres-2-0.md` |
 | Resumos do harness e do `dev,avaliacao` (p50/p95, contagens, acerto) | em tabelas nos documentos acima; o JSON bruto, o CSV cego e a chave **não** vão ao repositório (têm texto das respostas) e ficam na VPS ou fora dele |
-| p95 da API (k6) | comentário na #153 e `docs/performance/README.md` |
+| p95 da API (k6) | `docs/performance/README.md` (medido em 2026-11-25, #585) e comentário na #585 |
 | Decisão do 8B com memória medida | `docs/ceres-assistente.md` e comentário na #270 |
 | Fase A (números relativos, por variante e noite) | seção "Registro das noites" deste arquivo, nunca a tabela oficial |
 
