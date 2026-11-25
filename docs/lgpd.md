@@ -158,8 +158,8 @@ histórico, por decisão do Murillo, para qualquer conta, inclusive as do cadast
 (`app.lgpd.versao-politica` 2026-11-24: descreve o fluxo, o provedor pelo nome, o art. 33 e a retenção
 de 30 dias conferida no Console) e o aviso na tela da Ceres (`GET /api/assistente/uso` devolve
 `conversaVaiAoProvedor`, frontend#183). O prazo de retenção deixou de ser pendência (conferido em
-2026-11-24, com a ressalva da chave, acima). A subida registra um `WARN` com a flag ligada e o provedor por API fora de
-`dev`/`test` (`config/AvisoContinuidadeConfig`). O mecanismo do art. 33 da #498 cobre este fluxo no
+2026-11-24, com a ressalva da chave, acima). A subida registra um `WARN` com a flag ligada e o
+provedor por API fora de `dev`/`test` (`config/AvisoContinuidadeConfig`). O mecanismo do art. 33 da #498 cobre este fluxo no
 mesmo texto (hipótese 1, abaixo), mas é aqui que ele fica mais exposto: texto livre escrito por
 terceiros (o escritório) vai ao provedor, e a hipótese de "necessidade" é mais difícil de sustentar
 para o histórico do que para a pergunta do próprio produtor (ver o risco na redação 1).
@@ -224,9 +224,9 @@ que a base é suficiente.
 com verdade hoje, sem prometer um aceite que não existe. Ela só afirma a base em que a GWNext se
 apoia, junto de tudo que a limita: a política diz que a GWNext "entende" a transferência como
 necessária (não que ela esteja provada), que as cláusulas-padrão da ANPD não foram assinadas pela
-Resend nem constam no DPA público da Anthropic, que a retenção da Anthropic é de 30 dias (conferida no
-Console, sem retenção zero) e que a exclusão não alcança os operadores. **A 3 é o reforço natural da Ceres** (a parte mais exposta), e o aviso do
-frontend#183 (`conversaVaiAoProvedor`) já é metade dela; o que falta é o texto de consentimento, o
+Resend nem constam no DPA público da Anthropic, que a retenção da Anthropic é de 30 dias (conferida
+no Console, sem retenção zero) e que a exclusão não alcança os operadores. **A 3 é o reforço natural
+da Ceres** (a parte mais exposta), e o aviso do frontend#183 (`conversaVaiAoProvedor`) já é metade dela; o que falta é o texto de consentimento, o
 registro do aceite e a recusa. Se o risco da 1 para o e-mail não for aceito, a saída é trocar para o
 SES em `sa-east-1` (sem transferência), não o consentimento.
 

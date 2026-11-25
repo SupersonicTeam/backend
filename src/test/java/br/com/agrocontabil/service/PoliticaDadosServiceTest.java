@@ -124,9 +124,38 @@ class PoliticaDadosServiceTest {
         .contains("não apaga o que");
   }
 
+  /**
+   * SHA-256 do texto inteiro da política na versão 2026-11-24. Mudou o texto: este teste quebra.
+   * Suba a versão (app.lgpd.versao-politica no yml e o padrão do LgpdProperties), troque a data
+   * abaixo e o hash pelo novo.
+   */
+  private static final String VERSAO_DO_HASH = "2026-11-24";
+  private static final String HASH_DO_TEXTO =
+      "ddb8c5faf103d377902d42ae769970353e0d542ad1a96bace19f785ef638db53";
+
+  @Test
+  @DisplayName("o texto só muda junto com a versão: o hash do texto é o da versão vigente")
+  void textoFixadoNaVersao() throws Exception {
+    byte[] resumo = java.security.MessageDigest.getInstance("SHA-256")
+        .digest(String.join("\n", todosOsTextos())
+            .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+    assertThat(service.politica().versao()).isEqualTo(VERSAO_DO_HASH);
+    assertThat(java.util.HexFormat.of().formatHex(resumo))
+        .as("texto da política mudou sem mudar a versão " + VERSAO_DO_HASH)
+        .isEqualTo(HASH_DO_TEXTO);
+  }
+
   @Test
   @DisplayName("texto que chega ao titular leva acento")
   void textoAcentuado() {
+    List<String> textos = todosOsTextos();
+
+    assertThat(textos).allSatisfy(t -> assertThat(SEM_ACENTO.matcher(t).find())
+        .as("palavra sem acento em: " + t).isFalse());
+  }
+
+  private List<String> todosOsTextos() {
     PoliticaDadosResponse politica = service.politica();
     List<String> textos = new ArrayList<>();
     textos.addAll(politica.dadosColetados());
@@ -146,8 +175,6 @@ class PoliticaDadosServiceTest {
       textos.add(o.retencao());
       textos.add(o.comoExercerDireitos());
     }
-
-    assertThat(textos).allSatisfy(t -> assertThat(SEM_ACENTO.matcher(t).find())
-        .as("palavra sem acento em: " + t).isFalse());
+    return textos;
   }
 }

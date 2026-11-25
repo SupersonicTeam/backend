@@ -164,8 +164,9 @@ benchmark da banca (#348), só na Ceres 2.0: a Ceres 1 (`2463c27`) não tem o pr
   retenção ativada, 30 dias, com acesso do provedor para segurança; retenção zero inativa;
   inferência com roteamento global e espaço de trabalho nos EUA); a política (versão 2026-11-24) a
   escreve assim e não promete retenção zero. **Ressalva:** não se conferiu que a chave da VPS é dessa
-  organização (`docs/lgpd.md`). **Pendente:** o aviso na tela (`conversaVaiAoProvedor`). Os termos de uso existem desde 2026-11-24 (`GET /api/termos-de-uso`,
-  sem revisão jurídica, `docs/lgpd.md`, seção "Termos de uso").
+  organização (`docs/lgpd.md`). **Pendente:** o aviso na tela (`conversaVaiAoProvedor`). Os termos
+  de uso existem desde 2026-11-24 (`GET /api/termos-de-uso`, sem revisão jurídica, `docs/lgpd.md`,
+  seção "Termos de uso").
 
 **Benchmark da banca (#348):** `python3 docs/avaliacao/benchmark/executar_matriz.py` roda a matriz
 2 arquiteturas (Ceres 1 = `2463c27`, Ceres 2.0 = `main`) × 3 modelos (`qwen3:0.6b`, `1.7b`,
@@ -976,8 +977,9 @@ no cadastro (decisão do Murillo, 2026-10-19).
   libere o slug de escritório não verificado depois de N dias resolve; a verificação automática (e-mail
   no domínio do CNPJ, Receita/QSA) também fica para depois da banca.
 - **LGPD e os operadores de fora do Brasil (#483, #498):** a política cita a Resend e a Anthropic com o
-  art. 33, IX, sem revisão jurídica; a retenção da Anthropic foi conferida no Console em 2026-11-24 (30 dias; falta ligar a
-  chave da VPS a essa organização) e nenhum dos dois assina as cláusulas-padrão da ANPD. Falta o advogado ler a seção "Transferência
+  art. 33, IX, sem revisão jurídica; a retenção da Anthropic foi conferida no Console em 2026-11-24
+  (30 dias; falta ligar a chave da VPS a essa organização) e nenhum dos dois assina as
+  cláusulas-padrão da ANPD. Falta o advogado ler a seção "Transferência
   internacional (art. 33)" do `docs/lgpd.md` (três redações, risco de cada uma) antes de a Ceres
   atender produtores reais; o consentimento (redação 3) para a Ceres exige tela e registro do aceite.
 - **Haiku 5.5 e os casos adversários (#483):** investigado no PR #568 (ver acima): X01, X15 e X16
