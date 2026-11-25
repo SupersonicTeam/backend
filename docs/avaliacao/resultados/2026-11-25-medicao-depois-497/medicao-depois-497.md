@@ -22,7 +22,7 @@ par novo de semelhança com o treino, ver abaixo). **Uma rodada só**, sem repet
 
 | Item | Valor |
 |---|---|
-| Commit do depois | `53979aa90dc2daa6bc41604d6e2224c49b1cda85` (head do PR #617, CI `Build and Test` verde, estado `CLEAN`; conferido antes e depois da rodada), JAR do próprio commit, árvore limpa |
+| Commit do depois | `53979aa90dc2daa6bc41604d6e2224c49b1cda85` (head do PR #617, CI `Build and Test` verde, estado `CLEAN`; conferido antes da rodada, que começou às 00h07 de 25/11, e de novo às 00h17, depois dela: o mesmo head), JAR do próprio commit, árvore limpa |
 | Commit da base | `c7273b0d` (rodada de 2026-11-24 22:35) |
 | Comando, modelo, gabarito, seed, "hoje", máquina, flags | os mesmos da base: `anthropic/claude-haiku-5-5` (raciocínio desligado, temperatura 1,0), `bge-m3` local em CPU, gabarito `2026-11-05.3` (87 perguntas), seed v4, 3 repetições, "hoje" 2026-09-15, fidelidade da lei, continuidade e explicação desligadas (padrões do código; a VPS roda com a fidelidade ligada) |
 | Execução | 2026-11-25 00:07, 404 s no total (base 421 s); banco `agrocontabil` local |
@@ -99,8 +99,9 @@ Rota; "com rota esperada" são as 82 perguntas em que a rota é avaliada; por re
 | SINAL_RECUSA_FIRME (rota não avaliada) | 2 / 2 / 2 → 2 / 2 / 2 | — |
 | **Total de erros de rota** | 12 / 7 / 9 → **5 / 5 / 6** | |
 
-A embedding quase sai do caminho (de 9 decisões para 2 ou 3 nas repetições 1 e 2), e os 14 erros do
-modelo na base (os 5 ids estáveis) seguem sendo 4 por repetição.
+A embedding quase sai do caminho (de 9 decisões para 2 ou 3 nas repetições 1 e 2), e os erros do
+modelo caem de 5 / 5 / 4 na base para 4 / 4 / 4 (o P02 passou a ser decidido pela embedding; os 4 restantes
+são P03, X01, X15 e X16).
 
 **Ponto de atenção, para a sessão de código:** na repetição 3 a embedding decidiu 10 perguntas, contra 2
 e 3 nas outras (a mais, M01, M06, F01, F04, X12, X13, X19 e C01 foram decididas por ela em vez de pelo

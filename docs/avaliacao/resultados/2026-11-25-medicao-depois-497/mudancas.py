@@ -3,22 +3,26 @@
 
 Uso: mudancas.py <base.json> <depois.json>
 Por id: erros de rota em cada repetição (base -> depois), rota obtida e camada por repetição.
+Só ids com rota esperada entram na tabela de rota (pergunta sem rota esperada não tem erro de rota).
 Nunca lê o mapa id -> texto nem execucao.texto.
 """
 import json
 import sys
 
 
-def carregar(c):
-    with open(c, encoding="utf-8") as f:
+def carregar(caminho):
+    """{id: [resultado da repetição 1, 2, 3]}"""
+    with open(caminho, encoding="utf-8") as f:
         d = json.load(f)
-    return {x["id"]: [r_x for r_x in (next(y for y in r["resultados"] if y["id"] == x["id"])
-                                       for r in d["rodadas"])]
-            for x in d["rodadas"][0]["resultados"]}
+    por_id = {}
+    for rodada in d["rodadas"]:
+        for x in rodada["resultados"]:
+            por_id.setdefault(x["id"], []).append(x)
+    return por_id
 
 
-def linha(rs, campo):
-    return [("E" if r[campo] is False else ("." if r[campo] is not None else "-")) for r in rs]
+def erros(rs, campo):
+    return sum(1 for r in rs if r[campo] is False)
 
 
 def main(a, b):
@@ -27,20 +31,23 @@ def main(a, b):
     print("|---|---|---|---|---|---|---|")
     muda = []
     for id_ in base:
-        eb = sum(1 for r in base[id_] if r["rotaCorreta"] is False)
-        ed = sum(1 for r in dep[id_] if r["rotaCorreta"] is False)
-        if eb != ed or [r["execucao"].get("rota") for r in base[id_]] != [r["execucao"].get("rota") for r in dep[id_]]:
+        if base[id_][0].get("rotaEsperada") is None:
+            continue
+        eb, ed = erros(base[id_], "rotaCorreta"), erros(dep[id_], "rotaCorreta")
+        rotas = lambda rs: [r["execucao"].get("rota") for r in rs]
+        if eb != ed or rotas(base[id_]) != rotas(dep[id_]):
             muda.append((ed - eb, id_, eb, ed))
     for _, id_, eb, ed in sorted(muda):
         r0 = base[id_][0]
-        obt = " / ".join(f"{r['execucao'].get('rota')}{'' if r['rotaCorreta'] is not False else ' ✗'}" for r in dep[id_])
+        obt = " / ".join(f"{r['execucao'].get('rota')}{' ✗' if r['rotaCorreta'] is False else ''}"
+                         for r in dep[id_])
         cb = " / ".join((r["execucao"].get("camadaClassificacao") or "—") for r in base[id_])
         cd = " / ".join((r["execucao"].get("camadaClassificacao") or "—") for r in dep[id_])
-        print(f"| {id_} | {'sim' if r0.get('adversario') else 'não'} | {r0.get('rotaEsperada')} | {eb} → {ed} de 3 | {obt} | {cb} | {cd} |")
+        print(f"| {id_} | {'sim' if r0.get('adversario') else 'não'} | {r0.get('rotaEsperada')} | "
+              f"{eb} → {ed} de 3 | {obt} | {cb} | {cd} |")
     print("\nIds com recusa errada (base → depois, repetições erradas):")
     for id_ in base:
-        eb = sum(1 for r in base[id_] if r["recusaCorreta"] is False)
-        ed = sum(1 for r in dep[id_] if r["recusaCorreta"] is False)
+        eb, ed = erros(base[id_], "recusaCorreta"), erros(dep[id_], "recusaCorreta")
         if eb or ed:
             print(f"- {id_}: {eb} → {ed} de 3")
 
