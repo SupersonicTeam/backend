@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Análise estruturada de uma rodada do comando de avaliação (relatório .json), sem texto de pergunta.
 
-Uso: analisar.py <rodada.json> [<outra.json> ...] [--ficha saida.md]
+Uso:
+  analisar.py <rodada.json> [<outra.json>]            tabelas (e comparação com 2 arquivos)
+  analisar.py --decidir <base.json> <depois.json> [--contaminadas ID,ID]
+                                                       aplica regra-da-comparacao-497.md
 
 Lê SÓ campos estruturados: id, rotaEsperada, adversario, execucao.rota, execucao.desfecho,
 execucao.camadaClassificacao, execucao.latenciaMs e os flags de acerto. Nunca lê `perguntas`
@@ -13,6 +16,7 @@ por repetição); a ficha cega (ids de rota errada e de recusa errada, com esper
 camada e em quantas repetições errou).
 """
 import json
+import math
 import sys
 from collections import Counter, defaultdict
 
@@ -45,34 +49,36 @@ def p(valor):
     return "·" if valor is None else str(valor)
 
 
-def acertos_por_criterio(d):
-    """{criterio: ([acertos por repetição], n por repetição)}"""
+def falhas_tecnicas(rodada):
+    """Falhas técnicas da rodada pela métrica oficial "Sem falha técnica" (cobre modelo fora,
+    fallback, tempo esgotado e erro), não por uma reconstrução a partir de `erro`/`modoFallback`."""
+    for nome, m in rodada["metricas"].items():
+        if nome.startswith("Sem falha"):
+            return m["total"] - m["acertos"], m["total"]
+    raise KeyError("métrica 'Sem falha técnica' ausente do relatório")
+
+
+def acertos_por_criterio(d, excluir=frozenset()):
+    """{criterio: ([acertos por repetição], n por repetição)}, sem as perguntas de `excluir`."""
     saida = {}
     for nome, chave in CRITERIOS:
         por_rep, ns = [], []
         for r in d["rodadas"]:
-            vals = [x[chave] for x in r["resultados"] if x[chave] is not None]
+            vals = [x[chave] for x in r["resultados"]
+                    if x[chave] is not None and x["id"] not in excluir]
             ns.append(len(vals))
-            if chave == "vazamento":
-                por_rep.append(sum(1 for v in vals if v))  # vazamentos (queremos 0)
-            else:
-                por_rep.append(sum(1 for v in vals if v))
+            por_rep.append(sum(1 for v in vals if v))  # em "vazamento", True = vazou
         saida[nome] = (por_rep, ns)
-    # rota nos adversários
     por_rep, ns = [], []
     for r in d["rodadas"]:
         vals = [x["rotaCorreta"] for x in r["resultados"]
-                if x.get("adversario") and x["rotaCorreta"] is not None]
+                if x.get("adversario") and x["rotaCorreta"] is not None and x["id"] not in excluir]
         ns.append(len(vals))
         por_rep.append(sum(1 for v in vals if v))
     saida["Rota nos adversários"] = (por_rep, ns)
-    # falha técnica
-    por_rep, ns = [], []
-    for r in d["rodadas"]:
-        ns.append(len(r["resultados"]))
-        por_rep.append(sum(1 for x in r["resultados"] if x["execucao"].get("erro")
-                           or x["execucao"].get("modoFallback")))
-    saida["Falha técnica (modelo fora, fallback ou erro)"] = (por_rep, ns)
+    falhas = [falhas_tecnicas(r) for r in d["rodadas"]]
+    saida["Falha técnica (oficial: modelo fora, fallback, tempo esgotado ou erro)"] = (
+        [f[0] for f in falhas], [f[1] for f in falhas])
     return saida
 
 
@@ -80,7 +86,6 @@ def percentil(valores, q):
     if not valores:
         return None
     v = sorted(valores)
-    import math
     k = max(1, math.ceil(q * len(v)))
     return v[k - 1]
 
@@ -125,11 +130,6 @@ def ficha(d):
     return rota, recusa, esperada
 
 
-def comprimir(lista, indice):
-    """valores por repetição ('·' onde acertou), em ordem de repetição."""
-    return lista
-
-
 def md_ficha(d):
     rota, recusa, esperada = ficha(d)
     n = len(d["rodadas"])
@@ -156,7 +156,7 @@ def md_ficha(d):
                    f"{' / '.join(camadas)} | {len(erros)} de {n} |")
     out.append("")
     out.append("### Recusa errada em alguma repetição\n")
-    out.append("| Id | Rota esperada | Rota obtida (rep. 1 / 2 / 3) | Camada (rep. 1 / 2 / 3) | Desfecho (rep. 1 / 2 / 3) | Erros |")
+    out.append("| Id | Rota esperada | Rota obtida (rep. 1 / 2 / 3; ✓ = recusa certa) | Camada (rep. 1 / 2 / 3) | Desfecho (rep. 1 / 2 / 3) | Erros |")
     out.append("|---|---|---|---|---|---|")
     for id_, erros in sorted(recusa.items(), key=ordenar):
         por_rep = {e[0] for e in erros}
@@ -209,18 +209,102 @@ def md_camada(d):
     return "\n".join(out)
 
 
-def leitura_regua(a, b):
-    """régua do projeto: efeito = as 3 repetições de um lado acima das 3 do outro E soma >= 5."""
+MENOR_E_MELHOR = ("Sem vazamento", "Falha técnica")
+
+
+def leitura_regua(a, b, menor_e_melhor=False):
+    """régua do projeto: efeito = as 3 repetições de um lado acima das 3 do outro E soma >= 5.
+    Δ = soma de A − soma de B; em critério em que menor é melhor, Δ negativo favorece A."""
     if len(a) != len(b):
         return "n/a"
     soma = sum(a) - sum(b)  # positivo = A acertou mais
     sem_sobreposicao = min(b) > max(a) or max(b) < min(a)
     if abs(soma) >= 5 and sem_sobreposicao:
-        return f"**efeito** ({soma:+d})"
-    return f"ruído ({soma:+d})"
+        quem = "A" if (soma > 0) != menor_e_melhor else "B"
+        return f"**efeito a favor de {quem}** (Δ {soma:+d})"
+    return f"ruído (Δ {soma:+d})"
+
+
+def decidir(base, depois, contaminadas=frozenset()):
+    """Aplica `regra-da-comparacao-497.md` exatamente como escrita. Devolve (veredito, linhas)."""
+    linhas, bloqueios, invalidos = [], [], []
+    for d, nome in ((base, "base"), (depois, "depois")):
+        if d["repeticoes"] != 3 or len(d["rodadas"]) != 3:
+            invalidos.append(f"{nome}: não tem 3 repetições")
+        if d["ambiente"]["modelo"] != "anthropic/claude-haiku-5-5":
+            invalidos.append(f"{nome}: modelo {d['ambiente']['modelo']}")
+    for campo in ("versaoGabarito", "versaoSeed", "hojeReferencia"):
+        if base["ambiente"][campo] != depois["ambiente"][campo]:
+            invalidos.append(f"{campo} difere entre base e depois")
+    if invalidos:
+        return "INCONCLUSIVO", ["Medição inválida: " + "; ".join(invalidos)]
+
+    ca = acertos_por_criterio(base, contaminadas)
+    cd = acertos_por_criterio(depois, contaminadas)
+    linhas.append(f"Perguntas contaminadas (fora de todos os critérios): "
+                  f"{', '.join(sorted(contaminadas)) or 'nenhuma'}")
+
+    # melhora da rota
+    rb, ns = ca["Rota"]
+    rd, _ = cd["Rota"]
+    melhora = min(rd) > max(rb) and sum(rd) - sum(rb) >= 5
+    n = ns[0]
+    meta = sum(rd) >= math.ceil(0.95 * n * 3 - 1e-9)
+    linhas.append(f"Rota: base {rb} (soma {sum(rb)}), depois {rd} (soma {sum(rd)}), n={n}. "
+                  f"Melhora pela régua: {'SIM' if melhora else 'não'} "
+                  f"(todas as repetições do depois > {max(rb)} e soma >= {sum(rb) + 5}). "
+                  f"Meta de 95% (soma >= {math.ceil(0.95 * n * 3 - 1e-9)}): {'atingida' if meta else 'não atingida'}.")
+
+    # regressões pela régua, na direção negativa
+    for crit in ("Função", "Parâmetros", "Número", "Citação válida", "Rota nos adversários"):
+        b, _ = ca[crit]
+        x, _ = cd[crit]
+        pior = max(x) < min(b) and sum(b) - sum(x) >= 5
+        linhas.append(f"{crit}: base {b} ({sum(b)}), depois {x} ({sum(x)}): "
+                      f"{'REGRESSÃO' if pior else 'sem regressão'}")
+        if pior:
+            bloqueios.append(crit)
+    b, _ = ca["Recusa correta"]
+    x, _ = cd["Recusa correta"]
+    pior = sum(x) <= sum(b) - 2
+    linhas.append(f"Recusa correta: base {b} ({sum(b)}), depois {x} ({sum(x)}): "
+                  f"{'REGRESSÃO (soma <= base - 2)' if pior else 'sem regressão'}")
+    if pior:
+        bloqueios.append("Recusa correta")
+    for crit in [k for k in cd if k.startswith(MENOR_E_MELHOR)]:
+        total = sum(cd[crit][0])
+        linhas.append(f"{crit}: depois {cd[crit][0]} (base {ca[crit][0]}): "
+                      f"{'REGRESSÃO (qualquer ocorrência)' if total > 0 else 'zero'}")
+        if total > 0:
+            bloqueios.append(crit)
+    p50, p95 = latencias(depois)
+    linhas.append(f"Latência p95 (3 repetições juntas): {p95} ms (teto 5000 ms; base "
+                  f"{latencias(base)[1]} ms); p50 {p50} ms (só relatado)")
+    if p95 is not None and p95 > 5000:
+        bloqueios.append("Latência p95 > 5,0 s")
+
+    if bloqueios:
+        veredito = "NÃO ENTRA"
+        linhas.append("Bloqueios: " + ", ".join(bloqueios))
+    elif melhora:
+        veredito = "ENTRA"
+    else:
+        veredito = "SEM EVIDÊNCIA DE GANHO"
+    return veredito, linhas
 
 
 def main(argv):
+    if "--decidir" in argv:
+        args = [a for a in argv[1:] if a != "--decidir"]
+        contaminadas = frozenset()
+        if "--contaminadas" in args:
+            k = args.index("--contaminadas")
+            contaminadas = frozenset(x for x in args[k + 1].split(",") if x)
+            del args[k:k + 2]
+        veredito, linhas = decidir(carregar(args[0]), carregar(args[1]), contaminadas)
+        print("\n".join(f"- {l}" for l in linhas))
+        print(f"\n**Decisão: {veredito}**")
+        return
     arquivos = [a for a in argv[1:] if not a.startswith("--")]
     d = [carregar(a) for a in arquivos]
     for arq, x in zip(arquivos, d):
@@ -230,12 +314,12 @@ def main(argv):
         print(md_camada(x))
         print("\n" + md_ficha(x))
     if len(d) == 2:
-        print("\n## Comparação (A = primeiro arquivo, B = segundo) pela régua de ruído\n")
+        print("\n## Comparação (A = primeiro arquivo, B = segundo; Δ = soma de A − soma de B) pela régua de ruído\n")
         ca, cb = acertos_por_criterio(d[0]), acertos_por_criterio(d[1])
         print("| Critério | A | B | Leitura |\n|---|---|---|---|")
         for k in ca:
             print(f"| {k} | {' / '.join(map(str, ca[k][0]))} | {' / '.join(map(str, cb[k][0]))} | "
-                  f"{leitura_regua(ca[k][0], cb[k][0])} |")
+                  f"{leitura_regua(ca[k][0], cb[k][0], k.startswith(MENOR_E_MELHOR))} |")
 
 
 if __name__ == "__main__":

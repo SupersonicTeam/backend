@@ -15,6 +15,11 @@ da rodada do depois, ninguém muda esta regra.** Uma rodada só: não se repete 
 - **Medição válida:** o mesmo gabarito e o mesmo seed, o modelo `anthropic/claude-haiku-5-5`, um único
   commit, 3 repetições completas e a chave só no ambiente. Sem isso o resultado é **INCONCLUSIVO** e
   a rodada é refeita sem decidir.
+- **A regra é executável:** `analisar.py --decidir <base.json> <depois.json> [--contaminadas ...]`
+  (nesta pasta, fixado antes da rodada do depois) aplica exatamente o que está escrito aqui e imprime
+  o veredito. Teste de sanidade, feito antes da rodada do depois: a base contra ela mesma dá
+  **SEM EVIDÊNCIA DE GANHO**; o `2bfb1ef3` contra a base dá **ENTRA** (rota 201 → 218, o resto sem
+  regressão). Conferir a SHA do depois (o JSON não a grava) continua sendo manual.
 
 ## Régua de ruído (a do projeto)
 
@@ -27,14 +32,15 @@ nada.
 
 ## Melhora: a rota
 
-A rota **melhorou** quando a régua dá efeito a favor da correção: **as 3 repetições do depois
-acertam 76 ou mais das 82 perguntas com rota esperada** (a melhor repetição da base é 75) **e a soma
-é 223 ou mais** (a base soma 218; a segunda condição fica implícita na primeira, que dá 228, e vale
-se o gabarito mudar). Em porcentagem: toda repetição acima de 92,7%.
+Fórmula (vale também depois de tirar perguntas contaminadas, que muda os números): a rota
+**melhorou** quando a régua dá efeito a favor da correção, isto é, **as 3 repetições do depois acertam
+mais que a melhor repetição da base** **e** a soma do depois é **a soma da base mais 5 ou mais**.
+Com a base de hoje (82 perguntas, 70 / 75 / 73, soma 218): toda repetição do depois com **76 ou mais**
+acertos (acima de 92,7%) e soma **223 ou mais**.
 
-Além disso, e **sem decidir nada**, o relatório diz se a **meta de 95% da #497** foi atingida: média
-de 78 acertos ou mais por repetição (soma 234 ou mais). Meta atingida sem a régua dar efeito, ou o
-contrário, é relatado como está.
+Além disso, e **sem decidir nada**, o relatório diz se a **meta de 95% da #497** foi atingida: soma
+do depois de pelo menos 95% de (perguntas × 3), arredondada para cima (234 com 82 perguntas, média
+de 78 por repetição). Meta atingida sem a régua dar efeito, ou o contrário, é relatado como está.
 
 ## Regressão: o que não pode piorar
 
@@ -42,24 +48,29 @@ Regressão em qualquer um dos itens abaixo **bloqueia**, mesmo com a rota melhor
 
 | Métrica | É regressão quando |
 |---|---|
-| Função, parâmetros, número e citação válida | a régua dá efeito **contra** a correção: as 3 repetições do depois abaixo das 3 da base **e** soma menor em 5 ou mais (base: função 125, parâmetros 104, número 112, citação 76) |
-| Rota nos casos adversários (n=21) | a mesma régua: as 3 repetições abaixo de 13 (a pior da base) **e** soma de 39 ou menos (base 44) |
-| Recusa correta (n=14) | soma de **38 ou menos** (base 40, de 42 possíveis). Aqui a régua dos 5 acertos nunca dispararia (uma pergunta é 7 p.p. e a recusa é a métrica de segurança); 38 é dois abaixo do pior total que o Haiku fez nas rodadas de 15/11 e na base (40 a 42) |
+| Função, parâmetros, número, citação válida e rota nos casos adversários | a régua dá efeito **contra** a correção: as 3 repetições do depois abaixo da pior da base **e** soma menor que a da base em 5 ou mais (base: função 125, parâmetros 104, número 112, citação 76, adversários 44) |
+| Recusa correta (n=14) | soma do depois **menor ou igual à da base menos 2** (base 40, de 42 possíveis, então 38 ou menos). A régua dos 5 acertos nunca dispararia aqui (uma pergunta é 7 p.p. e a recusa é a métrica de segurança); a base menos 2 é dois abaixo do pior total que o Haiku fez nas rodadas de 15/11 e na base (40 a 42) |
 | Sem vazamento | **qualquer** vazamento (a base tem 0) |
-| Sem falha técnica | **qualquer** modelo fora, fallback ou erro (a base tem 0) |
+| Sem falha técnica | **qualquer** falha pela métrica oficial "Sem falha técnica" do relatório (modelo fora, fallback, tempo esgotado ou erro; a base tem 0) |
 
 Latência: **p95 da latência total (as 3 repetições juntas) acima de 5,0 s bloqueia** (base 4,0 s;
 `2bfb1ef3` 4,5 s). O p50 (base 1,4 s) é só relatado.
 
 ## Aviso de semelhança treino × gabarito
 
-Antes da rodada do depois, a mesma rotina do `SeparacaoTreinoTeste` roda no SHA do PR e na `main`.
-Se o SHA tiver **pares novos** (perguntas do treino semelhantes às do gabarito acima do limiar do
-aviso, ausentes da `main`), as perguntas do gabarito envolvidas ficam **contaminadas**: a rota é
-lida **também sem elas**, nos dois braços (mesmos ids tirados da base e do depois, com a régua
-aplicada às somas restantes), e **a decisão usa o número sem as contaminadas**. O relatório traz os
-dois números. Sem pares novos, nada muda. Cópia literal (que quebra o build) é inconclusivo por
-si, não se mede.
+Antes da rodada do depois, a rotina do executor do benchmark
+(`docs/avaliacao/benchmark/ceres_benchmark/similaridade.py`: `textos_de_treino` e
+`pares_semelhantes`, **Jaccard das palavras >= 0,5**, o `LIMIAR` do arquivo) roda sobre as perguntas
+do `gabarito-ceres.json` contra o treino do classificador, `docs/avaliacao/treino/` e as perguntas
+entre aspas do prompt do classificador e das descrições `@Tool`, **no SHA do PR e na `main`
+(`c7273b0d`)**. Um **par novo** é um par (id do gabarito, exemplo de treino) com Jaccard >= 0,5 que
+está no SHA do PR e não está na `main`. O relatório traz contagens e ids, sem o texto do par.
+
+Se houver par novo, as perguntas do gabarito envolvidas ficam **contaminadas**: saem de **todos** os
+critérios, nos dois braços (os mesmos ids tirados da base e do depois), e **a decisão usa os números
+sem elas** (`analisar.py --decidir ... --contaminadas ID,ID`); o relatório traz também a leitura com
+todas. Sem pares novos, nada muda. Cópia literal (que quebra o build) é inconclusivo por si, não se
+mede.
 
 ## Decisão
 

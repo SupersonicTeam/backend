@@ -19,7 +19,7 @@ todas as tabelas a partir do `.json`, sem ler o mapa id → texto nem `execucao.
 | Embedding | `ollama/bge-m3`, local, em CPU |
 | Gabarito / seed | `2026-11-05.3` (87 perguntas) / v4, "hoje" da Ceres 2026-09-15 (padrão) |
 | Repetições | 3, uma rodada, 421 s |
-| Máquina | a mesma das rodadas de 15/11 (Windows 11, 16 núcleos lógicos, 31,7 GB); banco `agrocontabil` local com a base de lei (8.304 trechos) |
+| Máquina | Windows 11, 16 núcleos lógicos, 31,7 GB, Java 26.0.1 (as mesmas linhas de "Condições" do relatório de 15/11); banco `agrocontabil` local com a base de lei (8.304 trechos) |
 | Flags | **todas nos padrões do código**: fidelidade da rota de lei, juiz, resgate, continuidade da conversa e explicação **desligadas**. A VPS roda com a fidelidade ligada: esta rodada **não** é a configuração da VPS, é a comparável com a do `2bfb1ef3`. O braço extra com a configuração da VPS (bônus) não foi rodado |
 | Chave | `ANTHROPIC_API_KEY` lida do `.env` do checkout principal só dentro do processo da rodada (como as rodadas da continuidade); nunca impressa nem gravada em arquivo, log ou relatório |
 
