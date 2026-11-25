@@ -69,9 +69,10 @@ P03, X01, X15 e X16; na base o P02 era decidido pela embedding.
 | #626: pausas (`PRAZO_VENCIDO` no relatório; batem com as 10 linhas do log) | 4 | 3 | 3 | **10** |
 | #626: perguntas `EM_PAUSA` | 27 | 21 | 24 | 72 |
 | #626: sem o voto das embeddings (`PRAZO_VENCIDO` + `EM_PAUSA`) | 31 | 24 | 27 | 82 |
-| Base: perguntas dentro de janela de pausa (método do log, não comparável uma a uma) | 28 | 25 | 7 | 60 |
 
-Prazo de 500 ms (padrão do código) nos dois lados.
+Prazo de 500 ms (padrão do código) nos dois lados. A base não tinha o rastro por pergunta (#625); pelo método do
+log, 28, 25 e 7 perguntas dela caíram dentro de janela de pausa. **Esse número não se subtrai das linhas do
+#626**, porque o método de contagem é outro.
 
 **As pausas explicam o resultado? A falta de ganho, não.** O #626 teve mais pausas (10 contra 7) e a embedding
 decidiu menos (1 / 5 / 2 contra 2 / 3 / 10). Mas, nesta rodada, os 5 erros estáveis foram decididos pelo modelo, e o
@@ -94,7 +95,7 @@ na `main` e no #626.
   R01, T02 e T11. Sem cópia literal normalizada. **Nenhum dos quatro mudou de lado:** os quatro acertam a rota nas
   3 repetições da base e do #626.
 - **Gabarito × `rota-dev/perguntas-rota-dev.json`** (130 perguntas, o da #497): os mesmos 8 pares ≥ 0,5 de antes
-  (L01, L02, P01, T02, T08, T11, X02, X17). O P01 e os outros sete seguem como na base; nenhum mudou de lado.
+  (L01, L02, P01, T02, T08, T11, X02, X17). Os oito acertam a rota nas 3 repetições da base e do #626.
 
 ## Limites
 
