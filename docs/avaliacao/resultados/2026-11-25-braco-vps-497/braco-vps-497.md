@@ -39,8 +39,12 @@ da aplicação (fila cheia: zero nos dois lados):
 | PR #617 | 2 / 0 / 0 | 2 (00h55m41s, 00h57m28s) |
 
 Mesmo com o modelo aquecido e o prazo de 3 s a chamada de embedding passou do prazo algumas vezes (cerca de
-uma por minuto e meio nas repetições afetadas); a causa **não foi identificada** pela medição. Nenhuma pergunta
-decidida pela EMBEDDING caiu dentro de janela de pausa. As repetições **sem pausa** são a 1 do código da base e
+uma por minuto e meio nas repetições afetadas); a causa **não foi identificada** pela medição. Um confundidor
+possível, **não separado**: o reaquecimento a cada 60 s (uma chamada de embedding do próprio `curl`) disputa o
+mesmo Ollama com as chamadas da rodada. Nenhuma pergunta
+decidida pela EMBEDDING caiu dentro de janela de pausa (método: o fim de cada pergunta vem da linha do
+executor no log, o início é o fim menos a latência, e a pergunta está "dentro" se o início cai entre 3,1 s antes
+do INFO da pausa e 30 s depois dele; só entram as que chegaram à camada, de camada EMBEDDING ou LLM). As repetições **sem pausa** são a 1 do código da base e
 as 2 e 3 do PR; as demais têm 1 a 2 janelas de 30 s.
 
 ## Métricas, lado a lado
@@ -91,8 +95,9 @@ p95 4,4 s).
 Leituras:
 
 - **Código da base:** com a embedding ativa, ela decide 29 / 23 / 12 perguntas e erra 12 / 10 / 5; a rota cai
-  (207 contra 218 na oficial). A cada pausa a camada sai e a rota melhora, o que explica a subida de 66 para
-  73 ao longo das repetições.
+  (207 contra 218 na oficial). A subida de 66 para 73 ao longo das repetições é compatível com as pausas
+  (0, 1 e 2 janelas de 30 s, que cobriram 0, 9 e 17 perguntas que chegaram à camada, todas pelo modelo), mas a
+  medição não testou essa relação.
 - **PR #617:** a embedding passa a decidir só 4 a 10 perguntas, com 2 erros por repetição; a rota fica em
   76 / 76 / 76. Nas repetições 2 e 3, **sem nenhuma pausa**, a camada decide 10 perguntas e acerta 76, o
   mesmo que na repetição 3 oficial (10 decisões, 76). Ou seja, o PR perde pouco quando a embedding funciona
@@ -126,8 +131,8 @@ em que a embedding decide cedo).
 - Diz que o ganho do PR **não depende de a camada de embeddings estar em pausa**: com ela ativa a rota do PR
   fica em 92,7% (contra 84,1% do código da base).
 - Mostra um ponto do PR para a sessão de código: com a embedding ativa, **P02 e X13 são votos ≥ 0,9 errados
-  e estáveis**; o limiar de 0,9 não os barra. Na VPS, onde a embedding responde em dezenas de milissegundos,
-  essa é a composição esperada.
+  e estáveis**; o limiar de 0,9 não os barra. Segundo a sessão de código, na VPS a embedding responde em 38 a 54 ms
+  (número dela, **não medido aqui**), o que tornaria essa a composição esperada.
 - **Não atingiu a validade** (pausas ≠ 0): trate os números como uma estimativa, não como uma segunda medição
   oficial. A latência local com o `bge-m3` aquecido (p50 1,4 s, p95 4,4 a 4,5 s) é de uma máquina e **não é a
   da VPS**.
