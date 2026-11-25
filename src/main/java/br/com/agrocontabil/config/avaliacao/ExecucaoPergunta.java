@@ -4,6 +4,7 @@ import br.com.agrocontabil.assistente.FonteDado;
 import br.com.agrocontabil.assistente.orquestracao.Intencao;
 import br.com.agrocontabil.assistente.rag.CitacaoLegal;
 import br.com.agrocontabil.model.DesfechoInteracao;
+import br.com.agrocontabil.model.EstadoEmbeddingClassificacao;
 import java.util.List;
 
 /**
@@ -22,6 +23,8 @@ import java.util.List;
  * @param perguntaLeiReescrita no MISTO, se a parte de lei recebeu a pergunta legal separada pelo
  *                     classificador
  * @param camadaClassificacao camada que decidiu a rota (#265); nula se a pergunta acabou antes
+ * @param embeddingClassificacao estado do embedding da camada de embeddings (#624): o rastro da
+ *                     pausa; nulo se a camada não foi consultada
  */
 public record ExecucaoPergunta(
     Intencao rota,
@@ -35,12 +38,22 @@ public record ExecucaoPergunta(
     DesfechoInteracao desfechoDados,
     DesfechoInteracao desfechoLegislacao,
     Boolean perguntaLeiReescrita,
-    String camadaClassificacao) {
+    String camadaClassificacao,
+    EstadoEmbeddingClassificacao embeddingClassificacao) {
 
   /** Cópias defensivas. */
   public ExecucaoPergunta {
     citacoes = citacoes == null ? List.of() : List.copyOf(citacoes);
     fontes = fontes == null ? List.of() : List.copyOf(fontes);
+  }
+
+  /** Execução sem o estado do embedding da classificação (#624). */
+  public ExecucaoPergunta(Intencao rota, String texto, DesfechoInteracao desfecho,
+      List<CitacaoLegal> citacoes, List<FonteDado> fontes, boolean modoFallback, long latenciaMs,
+      String erro, DesfechoInteracao desfechoDados, DesfechoInteracao desfechoLegislacao,
+      Boolean perguntaLeiReescrita, String camadaClassificacao) {
+    this(rota, texto, desfecho, citacoes, fontes, modoFallback, latenciaMs, erro, desfechoDados,
+        desfechoLegislacao, perguntaLeiReescrita, camadaClassificacao, null);
   }
 
   /** Execução sem as partes do MISTO. */

@@ -92,7 +92,9 @@ public class AuditoriaAssistente {
         juiz == null ? null : juiz.latenciaMs(),
         juiz == null ? null : juiz.tokensEntrada(),
         juiz == null ? null : juiz.tokensSaida(),
-        contexto.reconferenciaLei()));
+        contexto.reconferenciaLei(),
+        contexto.embeddingClassificacao(),
+        contexto.latenciaEmbeddingClassificacaoMs()));
   }
 
   /**

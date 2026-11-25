@@ -785,7 +785,22 @@ O `ClassificadorIntencao` devolve a intenção, a confiança e **qual camada dec
    comando de avaliação os calcula antes da 1ª rodada e para se não conseguir). O embedding da
    pergunta tem prazo próprio (`AI_CLASSIFICACAO_TIMEOUT_EMBEDDING`, 500 ms; o read-timeout do
    cliente de IA é de minutos): vencido ou falhado, a camada não decide e pausa por
-   `AI_CLASSIFICACAO_PAUSA_APOS_FALHA` (30 s), sem chamar o embedding.
+   `AI_CLASSIFICACAO_PAUSA_APOS_FALHA` (30 s), sem chamar o embedding. **A pausa deixa rastro
+   (#624):** cada pergunta que chega à camada grava o estado do embedding em
+   `assistente_interacao.embedding_classificacao` (`RESPONDEU`, `PRAZO_VENCIDO`, `FALHA`,
+   `EM_PAUSA`, `FILA_CHEIA`, `SEM_VETORES`, `INTERROMPIDA`; nulo quando a camada não foi
+   consultada) e a espera em `latencia_embedding_ms` (changeSet 0067). A camada `LLM` com estado
+   fora de `RESPONDEU` veio da pausa, não de um voto fraco. O início da pausa e a fila cheia saem em
+   WARN (com o total de pausas desde a subida), a volta da camada em INFO (com quantas perguntas
+   foram ao modelo durante a pausa), e o Micrometer conta as consultas por estado
+   (`ceres.classificacao.embedding`, tag `estado`) e mede a espera das que voltaram no prazo
+   (`ceres.classificacao.embedding.latencia`); o `/actuator/metrics` não está exposto, então a
+   leitura é pelo log e pela auditoria. Consulta para uma rodada:
+   `SELECT embedding_classificacao, camada_classificacao, count(*) FROM assistente_interacao
+   WHERE criado_em > ... GROUP BY 1, 2`. O comando de avaliação não grava auditoria: o relatório
+   dele traz o estado por rodada ("Embedding da classificação (#624)") e, no topo, as respostas que
+   ficaram sem o voto das embeddings em cada rodada ("Pausa da camada de embeddings (#624)"), a
+   condição de validade das medições de rota. Causa das pausas e o que mudar: issue #624.
 4. **`LlmClassificadorIntencao`** (Fase 1): **só no desempate**, e no MISTO votado pelas
    embeddings para separar a `perguntaLei`; desde a #497, nesse caso a rota também é a dele (com
    confiança abaixo de `AI_CONFIANCA_MINIMA` ou resposta ilegível, fica o MISTO das embeddings). Sem decisão das

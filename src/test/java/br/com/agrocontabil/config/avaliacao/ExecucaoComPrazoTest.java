@@ -47,6 +47,27 @@ class ExecucaoComPrazoTest {
       assertThat(r.desfecho()).isEqualTo(DesfechoInteracao.RESPONDIDA);
       assertThat(r.fontes()).extracting(f -> f.funcao()).containsExactly("listarNotas");
       assertThat(r.erro()).isNull();
+      assertThat(r.embeddingClassificacao()).isNull();
+    }
+  }
+
+  @Test
+  @DisplayName("#624: o estado do embedding da classificacao vai a execucao, na resposta e na falha")
+  void estadoDoEmbedding() {
+    try (ExecucaoComPrazo ok = new ExecucaoComPrazo((p, c, rota) -> {
+      c.registrarEmbeddingClassificacao(
+          br.com.agrocontabil.model.EstadoEmbeddingClassificacao.EM_PAUSA, null);
+      return respondida(Intencao.DADOS);
+    }, PRAZO);
+        ExecucaoComPrazo falha = new ExecucaoComPrazo((p, c, rota) -> {
+          c.registrarEmbeddingClassificacao(
+              br.com.agrocontabil.model.EstadoEmbeddingClassificacao.PRAZO_VENCIDO, 600);
+          throw new IllegalStateException("detalhe interno");
+        }, PRAZO)) {
+      assertThat(ok.executar("quanto vendi?", contexto()).embeddingClassificacao())
+          .isEqualTo(br.com.agrocontabil.model.EstadoEmbeddingClassificacao.EM_PAUSA);
+      assertThat(falha.executar("quanto vendi?", contexto()).embeddingClassificacao())
+          .isEqualTo(br.com.agrocontabil.model.EstadoEmbeddingClassificacao.PRAZO_VENCIDO);
     }
   }
 

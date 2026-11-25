@@ -132,4 +132,50 @@ class RelatorioAvaliacaoTest {
     return new ResultadoPergunta(id, Categoria.DADOS, execucao, List.of(), acertou, null, null,
         null, null, null, null);
   }
+
+  private static ResultadoPergunta comEmbedding(String id, String camada,
+      br.com.agrocontabil.model.EstadoEmbeddingClassificacao estado) {
+    ExecucaoPergunta execucao = new ExecucaoPergunta(Intencao.DADOS, "texto",
+        DesfechoInteracao.RESPONDIDA, List.of(), List.of(), false, 1, null, null, null, null,
+        camada, estado);
+    return new ResultadoPergunta(id, Categoria.DADOS, execucao, List.of(), true, null, null,
+        null, null, null, null);
+  }
+
+  @Test
+  @DisplayName("#624: o relatorio conta o estado do embedding e lista as perguntas sem o voto dele")
+  void embeddingDaClassificacao() {
+    List<ResultadoPergunta> resultados = List.of(
+        comEmbedding("D01", "REGRA", null),
+        comEmbedding("D02", "EMBEDDING",
+            br.com.agrocontabil.model.EstadoEmbeddingClassificacao.RESPONDEU),
+        comEmbedding("D03", "LLM",
+            br.com.agrocontabil.model.EstadoEmbeddingClassificacao.PRAZO_VENCIDO),
+        comEmbedding("D04", "LLM",
+            br.com.agrocontabil.model.EstadoEmbeddingClassificacao.EM_PAUSA),
+        comEmbedding("D05", "LLM",
+            br.com.agrocontabil.model.EstadoEmbeddingClassificacao.EM_PAUSA));
+
+    RelatorioAvaliacao r = relatorio(resultados);
+
+    assertThat(r.semVotoDoEmbedding()).containsExactly("D03", "D04", "D05");
+    assertThat(r.markdown())
+        .contains("## Embedding da classificação (#624)")
+        .contains("| RESPONDEU | 1 |")
+        .contains("| PRAZO_VENCIDO | 1 |")
+        .contains("| EM_PAUSA | 2 |")
+        .contains("| não consultado | 1 |")
+        .contains("Sem o voto das embeddings (pausa, falha, fila ou sem vetores): D03, D04, D05.");
+  }
+
+  @Test
+  @DisplayName("#624: sem pausa, o relatorio diz que todas as consultadas tiveram o voto")
+  void embeddingSemPausa() {
+    RelatorioAvaliacao r = relatorio(List.of(comEmbedding("D01", "EMBEDDING",
+        br.com.agrocontabil.model.EstadoEmbeddingClassificacao.RESPONDEU)));
+
+    assertThat(r.semVotoDoEmbedding()).isEmpty();
+    assertThat(r.markdown()).contains(
+        "Nenhuma pergunta ficou sem o voto das embeddings por pausa, falha ou fila.");
+  }
 }

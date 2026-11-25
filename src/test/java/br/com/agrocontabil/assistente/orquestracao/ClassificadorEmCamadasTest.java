@@ -14,6 +14,7 @@ import br.com.agrocontabil.assistente.ContextoAssistente;
 import br.com.agrocontabil.assistente.llm.DisponibilidadeModelo;
 import br.com.agrocontabil.config.AssistenteProperties;
 import br.com.agrocontabil.exception.AssistenteIndisponivelException;
+import br.com.agrocontabil.model.EstadoEmbeddingClassificacao;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,7 +50,7 @@ class ClassificadorEmCamadasTest {
 
     assertThat(c.intencao()).isEqualTo(Intencao.LEGISLACAO);
     assertThat(c.camada()).isEqualTo(CamadaClassificacao.REGRA);
-    verify(embeddings, never()).classificar(anyString());
+    verify(embeddings, never()).consultar(anyString());
     verify(llm, never()).classificar(anyString(), any());
   }
 
@@ -58,27 +59,27 @@ class ClassificadorEmCamadasTest {
   void notaNomeadaPeloNumero() {
     String pergunta = "A nota número 3191 está com o CST do ICMS definido?";
     // Na VPS, de 24/11, os vizinhos do treino (CST do IBS, fim do ICMS) davam LEGISLACAO.
-    when(embeddings.classificar(anyString())).thenReturn(Optional.of(
+    when(embeddings.consultar(anyString())).thenReturn(respondeu(
         new ClassificacaoIntencao(Intencao.LEGISLACAO, 0.9, null, CamadaClassificacao.EMBEDDING)));
 
     ClassificacaoIntencao c = classificador.classificar(pergunta, contexto);
 
     assertThat(c.intencao()).isEqualTo(Intencao.DADOS);
     assertThat(c.camada()).isEqualTo(CamadaClassificacao.REGRA);
-    verify(embeddings, never()).classificar(anyString());
+    verify(embeddings, never()).consultar(anyString());
     verify(llm, never()).classificar(anyString(), any());
   }
 
   @Test
   @DisplayName("embeddings acima do limiar decidem; abaixo, o modelo desempata")
   void embeddingsEDesempate() {
-    when(embeddings.classificar("A soja tem reducao?")).thenReturn(Optional.of(
+    when(embeddings.consultar("A soja tem reducao?")).thenReturn(respondeu(
         new ClassificacaoIntencao(Intencao.DADOS, 0.95, null, CamadaClassificacao.EMBEDDING)));
     assertThat(classificador.classificar("A soja tem reducao?", contexto).camada())
         .isEqualTo(CamadaClassificacao.EMBEDDING);
     verify(llm, never()).classificar(anyString(), any());
 
-    when(embeddings.classificar("E o adubo?")).thenReturn(Optional.of(
+    when(embeddings.consultar("E o adubo?")).thenReturn(respondeu(
         new ClassificacaoIntencao(Intencao.DADOS, 0.4, null, CamadaClassificacao.EMBEDDING)));
     when(llm.classificar("E o adubo?", contexto))
         .thenReturn(new ClassificacaoIntencao(Intencao.DADOS, 0.9));
@@ -90,7 +91,7 @@ class ClassificadorEmCamadasTest {
   @DisplayName("MISTO das embeddings: so a pergunta de lei vem do modelo; sem ele, a inteira")
   void misto() {
     String pergunta = "Quanto vendi de cafe e cafe tem reducao?";
-    when(embeddings.classificar(pergunta)).thenReturn(Optional.of(
+    when(embeddings.consultar(pergunta)).thenReturn(respondeu(
         new ClassificacaoIntencao(Intencao.MISTO, 0.9, null, CamadaClassificacao.EMBEDDING)));
     when(llm.classificar(pergunta, contexto)).thenReturn(
         new ClassificacaoIntencao(Intencao.MISTO, 0.7, "cafe tem reducao?"));
@@ -109,7 +110,7 @@ class ClassificadorEmCamadasTest {
   @DisplayName("#497: com o modelo no ar o limiar e 0,9; com ele em pausa, o de antes (0,6)")
   void limiarPorDisponibilidade() {
     String pergunta = "E o adubo?";
-    when(embeddings.classificar(pergunta)).thenReturn(Optional.of(
+    when(embeddings.consultar(pergunta)).thenReturn(respondeu(
         new ClassificacaoIntencao(Intencao.DADOS, 0.8, null, CamadaClassificacao.EMBEDDING)));
     when(llm.classificar(pergunta, contexto))
         .thenReturn(new ClassificacaoIntencao(Intencao.MISTO, 0.9, "adubo tem reducao?"));
@@ -127,7 +128,7 @@ class ClassificadorEmCamadasTest {
   @DisplayName("#497: MISTO das embeddings com outra rota do modelo: vale a do modelo")
   void mistoComOutraRotaDoModelo() {
     String pergunta = "Quanto eu devo de Funrural?";
-    when(embeddings.classificar(pergunta)).thenReturn(Optional.of(
+    when(embeddings.consultar(pergunta)).thenReturn(respondeu(
         new ClassificacaoIntencao(Intencao.MISTO, 0.95, null, CamadaClassificacao.EMBEDDING)));
     when(llm.classificar(pergunta, contexto))
         .thenReturn(new ClassificacaoIntencao(Intencao.DADOS, 0.9));
@@ -143,7 +144,7 @@ class ClassificadorEmCamadasTest {
   @DisplayName("#497: MISTO das embeddings com o modelo inseguro ou ilegivel: fica o MISTO")
   void mistoComModeloInseguro() {
     String pergunta = "Quanto eu devo de Funrural?";
-    when(embeddings.classificar(pergunta)).thenReturn(Optional.of(
+    when(embeddings.consultar(pergunta)).thenReturn(respondeu(
         new ClassificacaoIntencao(Intencao.MISTO, 0.95, null, CamadaClassificacao.EMBEDDING)));
     when(llm.classificar(pergunta, contexto)).thenReturn(ClassificacaoIntencao.indeterminada());
 
@@ -158,7 +159,7 @@ class ClassificadorEmCamadasTest {
   void leiComDadoDoProdutor() {
     String comDado = "As minhas compras de fertilizante dao credito de IBS?";
     String semDado = "Fertilizante da credito de IBS?";
-    when(embeddings.classificar(anyString())).thenReturn(Optional.of(
+    when(embeddings.consultar(anyString())).thenReturn(respondeu(
         new ClassificacaoIntencao(Intencao.LEGISLACAO, 1, null, CamadaClassificacao.EMBEDDING)));
     when(llm.classificar(comDado, contexto))
         .thenReturn(new ClassificacaoIntencao(Intencao.MISTO, 0.9, "fertilizante da credito?"));
@@ -180,9 +181,9 @@ class ClassificadorEmCamadasTest {
   @DisplayName("#497: modelo falha no desempate: vale o voto das embeddings acima de 0,6; abaixo,"
       + " indisponivel")
   void modeloFalhaNoDesempate() {
-    when(embeddings.classificar("E o adubo?")).thenReturn(Optional.of(
+    when(embeddings.consultar("E o adubo?")).thenReturn(respondeu(
         new ClassificacaoIntencao(Intencao.DADOS, 0.8, null, CamadaClassificacao.EMBEDDING)));
-    when(embeddings.classificar("E o calcario?")).thenReturn(Optional.of(
+    when(embeddings.consultar("E o calcario?")).thenReturn(respondeu(
         new ClassificacaoIntencao(Intencao.DADOS, 0.5, null, CamadaClassificacao.EMBEDDING)));
     when(llm.classificar(anyString(), any()))
         .thenThrow(new AssistenteIndisponivelException("queda", null));
@@ -198,7 +199,7 @@ class ClassificadorEmCamadasTest {
   @DisplayName("sem decisao das camadas e modelo em pausa: indisponivel (orquestrador cai no fallback)")
   void semModelo() {
     when(disponibilidade.disponivel()).thenReturn(false);
-    when(embeddings.classificar(anyString())).thenReturn(Optional.empty());
+    when(embeddings.consultar(anyString())).thenReturn(respondeu(null));
 
     assertThatThrownBy(() -> classificador.classificar("E o adubo?", contexto))
         .isInstanceOf(AssistenteIndisponivelException.class);
@@ -224,7 +225,7 @@ class ClassificadorEmCamadasTest {
     assertThat(classificador.classificar(dados, contexto))
         .extracting(ClassificacaoIntencao::intencao, ClassificacaoIntencao::camada)
         .containsExactly(Intencao.DADOS, CamadaClassificacao.LLM);
-    verify(embeddings, never()).classificar(anyString());
+    verify(embeddings, never()).consultar(anyString());
   }
 
   @Test
@@ -255,6 +256,49 @@ class ClassificadorEmCamadasTest {
 
     assertThat(classificador.classificar("me fala do split payment", contexto).camada())
         .isEqualTo(CamadaClassificacao.LLM);
-    verify(embeddings, never()).classificar(anyString());
+    verify(embeddings, never()).consultar(anyString());
+  }
+
+  /** Embedding que respondeu no prazo, com o voto (nulo = sem vizinho parecido). */
+  private static EmbeddingClassificadorIntencao.Consulta respondeu(ClassificacaoIntencao voto) {
+    return new EmbeddingClassificadorIntencao.Consulta(Optional.ofNullable(voto),
+        EstadoEmbeddingClassificacao.RESPONDEU, 42);
+  }
+
+  @Test
+  @DisplayName("#624: o estado e a latencia do embedding vao ao contexto, mesmo com o voto decidindo")
+  void estadoDoEmbeddingNoContexto() {
+    when(embeddings.consultar("A soja tem reducao?")).thenReturn(respondeu(
+        new ClassificacaoIntencao(Intencao.DADOS, 0.95, null, CamadaClassificacao.EMBEDDING)));
+
+    classificador.classificar("A soja tem reducao?", contexto);
+
+    assertThat(contexto.embeddingClassificacao())
+        .isEqualTo(EstadoEmbeddingClassificacao.RESPONDEU);
+    assertThat(contexto.latenciaEmbeddingClassificacaoMs()).isEqualTo(42);
+  }
+
+  @Test
+  @DisplayName("#624: com a camada em pausa o modelo decide, e o contexto guarda EM_PAUSA")
+  void pausaDeixaRastroNoContexto() {
+    when(embeddings.consultar("E o adubo?")).thenReturn(new EmbeddingClassificadorIntencao
+        .Consulta(Optional.empty(), EstadoEmbeddingClassificacao.EM_PAUSA, null));
+    when(llm.classificar("E o adubo?", contexto))
+        .thenReturn(new ClassificacaoIntencao(Intencao.DADOS, 0.9));
+
+    assertThat(classificador.classificar("E o adubo?", contexto).camada())
+        .isEqualTo(CamadaClassificacao.LLM);
+    assertThat(contexto.embeddingClassificacao())
+        .isEqualTo(EstadoEmbeddingClassificacao.EM_PAUSA);
+    assertThat(contexto.latenciaEmbeddingClassificacaoMs()).isNull();
+  }
+
+  @Test
+  @DisplayName("#624: regra, desempate direto ou camadas desligadas: o embedding nao roda e fica nulo")
+  void semConsultaSemEstado() {
+    classificador.classificar("me fala do split payment", contexto);
+
+    assertThat(contexto.embeddingClassificacao()).isNull();
+    assertThat(contexto.latenciaEmbeddingClassificacaoMs()).isNull();
   }
 }

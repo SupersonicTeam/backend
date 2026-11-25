@@ -138,3 +138,5 @@ databaseChangeLog:
       file: db/changelog/changes/0065-assistente-interacao-fidelidade-lei.xml
   - include:
       file: db/changelog/changes/0066-assistente-interacao-reconferencia-lei.xml
+  - include:
+      file: db/changelog/changes/0067-assistente-interacao-embedding-classificacao.xml

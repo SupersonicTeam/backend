@@ -4,6 +4,7 @@ import br.com.agrocontabil.model.BuscaReconferenciaLei;
 import br.com.agrocontabil.model.DesfechoExplicacao;
 import br.com.agrocontabil.model.DesfechoFidelidadeLei;
 import br.com.agrocontabil.model.DesfechoInteracao;
+import br.com.agrocontabil.model.EstadoEmbeddingClassificacao;
 import br.com.agrocontabil.model.MotivoReconferenciaLei;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -75,7 +76,25 @@ public interface AuditoriaPorta {
       Integer tokensEntrada, Integer tokensSaida, boolean tokensEstimados, int tamanhoPergunta,
       OffsetDateTime criadoEm, DesfechoFidelidadeLei fidelidadeLei, Long latenciaJuizMs,
       Integer tokensEntradaJuiz, Integer tokensSaidaJuiz,
-      RegistroReconferenciaLei reconferenciaLei) {
+      RegistroReconferenciaLei reconferenciaLei,
+      EstadoEmbeddingClassificacao embeddingClassificacao,
+      Integer latenciaEmbeddingClassificacaoMs) {
+
+    /** Registro sem o embedding da classificação (#624): a forma de antes da instrumentação. */
+    public RegistroInteracao(
+        UUID produtorId, String rota, DesfechoInteracao desfecho,
+        DesfechoInteracao desfechoDados, DesfechoInteracao desfechoLegislacao,
+        Boolean perguntaLeiReescrita, String camadaClassificacao, String funcoesJson,
+        int chamadasFuncao, String trechosCitadosJson, String modelo, long latenciaMs,
+        Integer tokensEntrada, Integer tokensSaida, boolean tokensEstimados, int tamanhoPergunta,
+        OffsetDateTime criadoEm, DesfechoFidelidadeLei fidelidadeLei, Long latenciaJuizMs,
+        Integer tokensEntradaJuiz, Integer tokensSaidaJuiz,
+        RegistroReconferenciaLei reconferenciaLei) {
+      this(produtorId, rota, desfecho, desfechoDados, desfechoLegislacao, perguntaLeiReescrita,
+          camadaClassificacao, funcoesJson, chamadasFuncao, trechosCitadosJson, modelo, latenciaMs,
+          tokensEntrada, tokensSaida, tokensEstimados, tamanhoPergunta, criadoEm, fidelidadeLei,
+          latenciaJuizMs, tokensEntradaJuiz, tokensSaidaJuiz, reconferenciaLei, null, null);
+    }
 
     /** Registro sem a reconferência de lei (#584): a forma de antes da instrumentação. */
     public RegistroInteracao(

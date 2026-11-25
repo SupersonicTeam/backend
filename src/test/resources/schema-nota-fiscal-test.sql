@@ -428,6 +428,10 @@ ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS reconferencia_caracter
 ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS reconferencia_tokens_concordancia INTEGER;
 ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS reconferencia_concordancia VARCHAR(40);
 
+-- Estado do embedding da classificacao de rota — Ceres issue #624 (migration 0067). Idempotente.
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS embedding_classificacao VARCHAR(20);
+ALTER TABLE assistente_interacao ADD COLUMN IF NOT EXISTS latencia_embedding_ms INTEGER;
+
 -- Cota semanal de creditos da Ceres — Sprint 7 issue #166 (migration 0029). Manter sincronizado
 -- com 0029-assistente-uso-semanal.xml.
 CREATE TABLE IF NOT EXISTS assistente_uso_semanal (
