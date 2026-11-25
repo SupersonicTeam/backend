@@ -1,26 +1,28 @@
-# Diagnóstico de rota no conjunto de desenvolvimento (#624)
+# Diagnóstico de rota no conjunto de desenvolvimento
+
+Conjunto: `perguntas-rota-dev-2.json`, versão 2026-11-25.2.
 
 Configuração: limiar 0.9, vizinhos 7, similaridade mínima 0.5, treino 262 exemplos.
 
-**Decididas antes do modelo:** 65 de 65, com 56 certas; 0 vão ao modelo.
+**Decididas antes do modelo:** 65 de 65, com 57 certas; 0 vão ao modelo.
 
 | camada | n | certas | erradas | ao modelo |
 |---|---|---|---|---|
 | EMBEDDING | 5 | 4 | 1 | 0 |
-| LLM | 41 | 36 | 5 | 0 |
+| LLM | 41 | 37 | 4 | 0 |
 | REGRA | 15 | 12 | 3 | 0 |
 | SINAL_RECUSA_FIRME | 4 | 4 | 0 | 0 |
 
 | rota esperada | n | certas antes do modelo | erradas | ao modelo |
 |---|---|---|---|---|
-| DADOS | 18 | 14 | 4 | 0 |
-| LEGISLACAO | 13 | 11 | 2 | 0 |
+| DADOS | 19 | 15 | 4 | 0 |
+| LEGISLACAO | 12 | 11 | 1 | 0 |
 | MISTO | 11 | 10 | 1 | 0 |
 | FORA_DE_ESCOPO | 23 | 21 | 2 | 0 |
 
 Chamadas ao classificador por modelo no caminho de produção (desempate e pergunta de lei do MISTO): 41.
 
-Latência da chamada de classificação ao modelo (92 chamadas, desta máquina até a API): p50 748 ms, p95 1307 ms.
+Latência da chamada de classificação ao modelo (92 chamadas, desta máquina até a API): p50 751 ms, p95 1304 ms.
 
 ## Por pergunta
 
@@ -83,7 +85,7 @@ Latência da chamada de classificação ao modelo (92 chamadas, desta máquina a
 | C16 | curta-fora | FORA | LLM | FORA | ok | FORA,FORA | LEI | 0.41 | 0.61 | LEI 0.61 «Como funciona a nota fiscal de entrada emitida pelo comprador?» LEI 0.60 «Quem está no regime regular emite nota com destaque de imposto?» FORA 0.59 «Como abrir uma conta no Instagram?» |
 | K01 | voto-knn | DADOS | LLM | DADOS | ok | DADOS,DADOS | MISTO | 0.77 | 0.86 | MISTO 0.86 «Qual o débito de IBS das minhas vendas de café e qual alíquota foi usada?» DADOS 0.76 «Quanto faturei com café no ano passado?» MISTO 0.75 «Quanto de IBS municipal saiu nas minhas notas e quem fica com esse dinheiro?» |
 | K02 | voto-knn | DADOS | LLM | MISTO | ERRO | MISTO,MISTO | MISTO | 0.65 | 0.72 | MISTO 0.72 «Quanto vendi de sorgo e o sorgo tem redução de 60%?» DADOS 0.64 «O leite que eu vendo tem alíquota reduzida?» MISTO 0.64 «Minhas notas de outubro estão com o cClassTrib certo para a soja? Quanto vendi?» |
-| K03 | voto-knn | LEI | LLM | DADOS | ERRO | DADOS,DADOS | MISTO | 0.67 | 0.73 | MISTO 0.73 «Quanto vendi de sorgo e o sorgo tem redução de 60%?» DADOS 0.61 «O leite que eu vendo tem alíquota reduzida?» MISTO 0.59 «O valor de IBS das minhas vendas de milho respeita a redução do produto in natura?» |
+| K03 | voto-knn | DADOS | LLM | DADOS | ok | DADOS,DADOS | MISTO | 0.67 | 0.73 | MISTO 0.73 «Quanto vendi de sorgo e o sorgo tem redução de 60%?» DADOS 0.61 «O leite que eu vendo tem alíquota reduzida?» MISTO 0.59 «O valor de IBS das minhas vendas de milho respeita a redução do produto in natura?» |
 | K04 | voto-knn | DADOS | LLM | MISTO | ERRO | MISTO,MISTO | MISTO | 0.75 | 0.63 | MISTO 0.63 «Quanto paguei de frete nas compras e frete gera crédito?» MISTO 0.63 «Quanto comprei da cooperativa e a compra de cooperativa tem crédito?» MISTO 0.62 «Qual o total das minhas compras de peças e peça de máquina gera crédito de CBS?» |
 | K05 | voto-knn | LEI | EMBEDDING | LEI | ok | MISTO,MISTO | LEI | 0.91 | 0.72 | LEI 0.72 «Venda de imóvel rural tem IBS?» LEI 0.71 «Doação de produtos agrícolas paga IBS?» LEI 0.67 «Combustível dá direito a crédito de IBS?» |
 | K06 | voto-knn | DADOS | LLM | DADOS | ok | DADOS,DADOS | MISTO | 0.62 | 0.65 | MISTO 0.65 «Minhas vendas ao exterior pagaram Funrural? A lei manda pagar?» LEI 0.62 «O Funrural incide sobre a venda de sementes para plantio?» MISTO 0.62 «Quanto recolhi de Funrural este ano e qual a alíquota da lei?» |
@@ -113,12 +115,12 @@ Célula = acerto % / perguntas ao modelo.
 
 | sim1 \ limiar | 0.60 | 0.70 | 0.80 | 0.85 | 0.90 | 0.95 | 0.99 | só modelo |
 |---|---|---|---|---|---|---|---|---|
-| 0.50 | 84.6 / 36 | 84.6 / 38 | 84.6 / 40 | 86.2 / 41 | 86.2 / 41 | 86.2 / 44 | 86.2 / 44 | 86.2 / 46 |
-| 0.60 | 84.6 / 36 | 84.6 / 38 | 84.6 / 40 | 86.2 / 41 | 86.2 / 41 | 86.2 / 44 | 86.2 / 44 | 86.2 / 46 |
-| 0.65 | 86.2 / 40 | 86.2 / 41 | 86.2 / 41 | 87.7 / 42 | 87.7 / 42 | 86.2 / 44 | 86.2 / 44 | 86.2 / 46 |
-| 0.70 | 87.7 / 43 | 87.7 / 43 | 87.7 / 43 | 87.7 / 43 | 87.7 / 43 | 86.2 / 45 | 86.2 / 45 | 86.2 / 46 |
-| 0.75 | 86.2 / 46 | 86.2 / 46 | 86.2 / 46 | 86.2 / 46 | 86.2 / 46 | 86.2 / 46 | 86.2 / 46 | 86.2 / 46 |
-| 0.80 | 86.2 / 46 | 86.2 / 46 | 86.2 / 46 | 86.2 / 46 | 86.2 / 46 | 86.2 / 46 | 86.2 / 46 | 86.2 / 46 |
+| 0.50 | 86.2 / 36 | 86.2 / 38 | 86.2 / 40 | 87.7 / 41 | 87.7 / 41 | 87.7 / 44 | 87.7 / 44 | 87.7 / 46 |
+| 0.60 | 86.2 / 36 | 86.2 / 38 | 86.2 / 40 | 87.7 / 41 | 87.7 / 41 | 87.7 / 44 | 87.7 / 44 | 87.7 / 46 |
+| 0.65 | 87.7 / 40 | 87.7 / 41 | 87.7 / 41 | 89.2 / 42 | 89.2 / 42 | 87.7 / 44 | 87.7 / 44 | 87.7 / 46 |
+| 0.70 | 89.2 / 43 | 89.2 / 43 | 89.2 / 43 | 89.2 / 43 | 89.2 / 43 | 87.7 / 45 | 87.7 / 45 | 87.7 / 46 |
+| 0.75 | 87.7 / 46 | 87.7 / 46 | 87.7 / 46 | 87.7 / 46 | 87.7 / 46 | 87.7 / 46 | 87.7 / 46 | 87.7 / 46 |
+| 0.80 | 87.7 / 46 | 87.7 / 46 | 87.7 / 46 | 87.7 / 46 | 87.7 / 46 | 87.7 / 46 | 87.7 / 46 | 87.7 / 46 |
 
 ## Varredura em deixar-um-de-fora no treino (exemplos que chegam às embeddings)
 

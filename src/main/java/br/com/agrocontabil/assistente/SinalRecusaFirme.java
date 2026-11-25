@@ -153,14 +153,22 @@ public final class SinalRecusaFirme {
    * modelo os lê como fora de escopo. Só no começo (depois de um vocativo ou "por favor"), para não
    * pegar a pergunta sobre a ação ("quais notas eu posso cancelar?", "quando o comprador cancela
    * a nota..."); "me mostra", "me lista" e "me manda o resumo" são pedidos de ver o dado e ficam de
-   * fora. Só leva ao desempate: nunca recusa antes do classificador.
+   * fora. O verbo precisa de um objeto do sistema logo depois (só artigos ou possessivos entre
+   * eles, até três): "muda o meu
+   * regime", "altera o valor da nota"; sem ele, a 3ª pessoa da pergunta de lei ("Muda alguma coisa
+   * no Funrural?", "Altera a LC 227 o crédito presumido?") segue pelas camadas. O texto chega
+   * normalizado, sem hífen ("e-mail" vira "e mail"). Só leva ao desempate: nunca recusa antes do
+   * classificador.
    */
   private static final Pattern ACAO_NO_SISTEMA = Pattern.compile(
-      "^\\W*(?:(?:ceres|oi|ola|por favor|pfv?)\\W+)*(?:cancela|cancele|exclui|exclua|apaga"
+      "^\\W*(?:(?:ceres|oi|ola|por favor|pfv?)\\W+)*(?:(?:cancela|cancele|exclui|exclua|apaga"
           + "|apague|deleta|delete|remove|remova|altera|altere|muda|mude|edita|edite|corrige"
           + "|corrija|marca|marque|aprova|aprove|emite|emita|zera|zere|reseta|resete|lanca|lance"
-          + "|cadastra|cadastre|transmite|transmita|desbloqueia|desbloqueie|libera|libere"
-          + "|(?:manda|mande|envia|envie) (?:um |uma )?(?:e-?mail|mensagem|whats\\w*|zap|sms))\\b");
+          + "|cadastra|cadastre|transmite|transmita|desbloqueia|desbloqueie|libera|libere)"
+          + " (?:(?:o|a|os|as|um|uma|meu|minha|meus|minhas|esse|essa|este|esta|todos|todas"
+          + "|de|da|do|pra|para|mim|me) ){0,3}(?:notas?|guias?|compras?|vendas?|valor|valores|regime|limite"
+          + "|cadastro|conta|dados|senha|telefone|endereco|pendencias?|pedidos?|apuracao)"
+          + "|(?:manda|mande|envia|envie) (?:um |uma )?(?:e ?mail|mensagem|whats\\w*|zap|sms))\\b");
 
   /** Depois de "o texto anterior": não é a redação antiga da lei ("o texto anterior da LC 214"). */
   private static final String NAO_E_DA_LEI = "(?! (?:\\w+ )?(?:lei|leis|lc|ec|emenda|artigos?"

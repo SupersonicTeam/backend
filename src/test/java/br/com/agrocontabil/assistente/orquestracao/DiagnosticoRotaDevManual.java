@@ -157,7 +157,9 @@ class DiagnosticoRotaDevManual {
     }
 
     StringBuilder md = new StringBuilder();
-    md.append("# Diagnóstico de rota no conjunto de desenvolvimento (#497)\n\n");
+    md.append("# Diagnóstico de rota no conjunto de desenvolvimento\n\nConjunto: `")
+        .append(CONJUNTO.getFileName()).append("`, versão ")
+        .append(conjunto.path("versao").asText("?")).append(".\n\n");
     md.append("Configuração: limiar ").append(config.getLimiarConfianca()).append(", vizinhos ")
         .append(config.getVizinhos()).append(", similaridade mínima ")
         .append(config.getSimilaridadeMinima()).append(", treino ").append(exemplos.size())

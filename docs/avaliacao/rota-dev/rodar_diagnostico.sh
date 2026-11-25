@@ -20,7 +20,7 @@ TRAVA=/c/Users/surik/AppData/Local/Temp/agroconia-ollama-lock
 ENV_FILE='/d/Faculdade/Projetos/SuperSonicTeam - ShowRural2026/backend-tcc/.env'
 
 while ! mkdir "$TRAVA" 2>/dev/null; do sleep 30; done
-echo "sessao: diagnostico de rota da #497 (rota-dev), inicio $(date -Iseconds)" > "$TRAVA/dono.txt"
+echo "sessao: diagnostico de rota (rota-dev, ${CONJUNTO:-perguntas-rota-dev.json}), inicio $(date -Iseconds)" > "$TRAVA/dono.txt"
 trap 'rm -rf "$TRAVA"' EXIT
 
 (

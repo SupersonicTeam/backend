@@ -493,6 +493,7 @@ class SinalRecusaFirmeTest {
       "Ceres, cancela a nota 12",
       "por favor, exclua a guia de agosto",
       "manda um email pro meu contador com as minhas notas",
+      "Manda um e-mail pro meu contador com as notas",
       "envie uma mensagem para o escritório",
       "emite uma nota de venda de 30 toneladas de milho",
       "zera o meu limite de uso da ceres",
@@ -514,6 +515,13 @@ class SinalRecusaFirmeTest {
       "Alguma venda minha foi cancelada em outubro?",
       "a marca do trator interfere no credito?",
       "o contador aprova a nota em quanto tempo?",
+      // verbo na 3a pessoa no comeco de pergunta de lei, sem objeto do sistema
+      "Muda alguma coisa no Funrural em 2027?",
+      "Muda o IBS para o produtor rural em 2027?",
+      "Altera a LC 227 o crédito presumido?",
+      "Emite-se nota com CBS na venda a pessoa física?",
+      "Libera o crédito do IBS quando?",
+      "Corrige a inflação o valor do Funrural?",
       "Quanto vendi de soja no mês passado?"})
   @DisplayName("#624: pergunta sobre a ação, pedido de ver ou verbo no meio não é ordem ao sistema")
   void naoEOrdemDeAcao(String pergunta) {

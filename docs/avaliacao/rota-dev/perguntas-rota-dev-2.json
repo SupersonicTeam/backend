@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-25.1",
+  "versao": "2026-11-25.2",
   "descricao": "Segundo conjunto de DESENVOLVIMENTO do classificador de rota da Ceres (#624, item 2), escrito as cegas em 2026-11-25 por uma sessao de codigo que nunca leu o gabarito nem o benchmark. Foco nos padroes de erro que sobraram da #497: terceiros (com e sem leitura legitima), ordem ao sistema, perguntas mistas curtas e perguntas curtas que o kNN pode puxar para o lado errado. Pode ser lido por sessao de codigo. NAO e teste da banca e NAO entra em pasta de treino.",
   "perguntas": [
     {"id": "T01", "tipo": "terceiro", "rota": "FORA_DE_ESCOPO", "pergunta": "quanto o meu cunhado vendeu de soja esse ano?"},
@@ -63,7 +63,7 @@
 
     {"id": "K01", "tipo": "voto-knn", "rota": "DADOS", "pergunta": "quanto de IBS saiu nas minhas notas de venda de cafe?"},
     {"id": "K02", "tipo": "voto-knn", "rota": "DADOS", "pergunta": "as minhas notas de soja estao com a reducao de 60 por cento?"},
-    {"id": "K03", "tipo": "voto-knn", "rota": "LEGISLACAO", "pergunta": "a reducao de 60 por cento vale pra soja vendida a industria?"},
+    {"id": "K03", "tipo": "voto-knn", "rota": "DADOS", "pergunta": "a reducao de 60 por cento vale pra soja vendida a industria?"},
     {"id": "K04", "tipo": "voto-knn", "rota": "DADOS", "pergunta": "quanto de credito eu tive nas compras de defensivo?"},
     {"id": "K05", "tipo": "voto-knn", "rota": "LEGISLACAO", "pergunta": "compra de defensivo agricola gera credito de IBS?"},
     {"id": "K06", "tipo": "voto-knn", "rota": "DADOS", "pergunta": "qual foi o funrural retido nas minhas vendas de gado?"},

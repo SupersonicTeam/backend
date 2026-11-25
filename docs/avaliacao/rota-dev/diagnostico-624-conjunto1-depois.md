@@ -1,4 +1,6 @@
-# Diagnóstico de rota no conjunto de desenvolvimento (#624)
+# Diagnóstico de rota no conjunto de desenvolvimento
+
+Conjunto: `perguntas-rota-dev.json`, versão 2026-11-24.1.
 
 Configuração: limiar 0.9, vizinhos 7, similaridade mínima 0.5, treino 262 exemplos.
 
@@ -22,7 +24,7 @@ Configuração: limiar 0.9, vizinhos 7, similaridade mínima 0.5, treino 262 exe
 
 Chamadas ao classificador por modelo no caminho de produção (desempate e pergunta de lei do MISTO): 66.
 
-Latência da chamada de classificação ao modelo (158 chamadas, desta máquina até a API): p50 708 ms, p95 1283 ms.
+Latência da chamada de classificação ao modelo (158 chamadas, desta máquina até a API): p50 673 ms, p95 1554 ms.
 
 ## Por pergunta
 
