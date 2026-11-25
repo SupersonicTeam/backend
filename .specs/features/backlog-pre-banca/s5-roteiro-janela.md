@@ -20,7 +20,7 @@ como registro.
 A rota de lei ainda pode mudar até 2026-11-19 (#436, PR #425). Por isso a S5 começa pelo que não
 depende dela.
 
-- **Fase A (até a rota de lei fechar):** k6 da #153 (passo 7), `prompt_eval_count` com cache e efeito
+- **Fase A (até a rota de lei fechar):** k6 da #153 (passo 7; feito em 2026-11-25, #585), `prompt_eval_count` com cache e efeito
   na cota (passo 3), latência do classificador com o Ollama ocioso e ocupado (passo 6, parte
   numérica) e as comparações **relativas** de configuração (passos 1, 2, 4 e 5). Cada variante tem o
   **seu passo 0 na mesma noite e no mesmo SHA**, e o registro diz o SHA. Número absoluto da Fase A
@@ -205,7 +205,7 @@ API e ficam aqui como registro, para o caso de uma reversão. Pelo mesmo motivo,
 falam de `AI_CHAT_MODEL`, do cache de prefixo, de `OLLAMA_NUM_PARALLEL=1` como vaga do chat e do
 `ollama-init` com o modelo de chat, leia como texto da época do Ollama. O passo 5
 (`AI_TETO_LEGISLACAO`) não foi revisto para o Haiku. O passo 7 (k6 da #153) não é da Ceres e não
-muda.
+muda (feito em 2026-11-25, #585).
 
 **As contas de créditos das regras 5 e 8 estão desatualizadas.** Elas são anteriores à #511: hoje
 1 crédito é 1 token ponderado, a cota do produtor é de 1.000.000 por semana e a reserva por

@@ -122,7 +122,7 @@ de projeto e não são tocados.
 ## O que registrar
 
 p95 (e p50) por endpoint, o volume (`notas`), VUs, duração, SHA do backend e `docker stats`.
-Comentar na #153. **Se algum p95 passar de 2 s, abrir issue — não otimizar na janela.** Cache da
+Comentar na #585 (o registro da medição de 25/11; a #153 só preparou o benchmark). **Se algum p95 passar de 2 s, abrir issue — não otimizar na janela.** Cache da
 apuração e a exposição de `/actuator/metrics` são issues à parte (ver o relatório da S5).
 
 ## Limites do que isto mede
@@ -135,9 +135,9 @@ apuração e a exposição de `/actuator/metrics` são issues à parte (ver o re
 
 ## Medição de 25/11/2026 (VPS, issue #585)
 
-**RNF001 atendido com folga: o maior p95 foi de 47 ms, contra o limite de 2.000 ms.** As três execuções
+**RNF001 atendido com folga nos quatro endpoints medidos, com 10 usuários simultâneos: o maior p95 foi de 47 ms, contra o limite de 2.000 ms.** As três execuções
 terminaram com código 0 (nenhum limite do `carga.js` violado). Feita das 08h25 às 08h37, pelo passo a
-passo acima, sem desvio.
+passo acima, sem desvio (segundo o registro da #585, de quem rodou a medição; os dados abaixo são o dele).
 
 **Condições**
 
@@ -149,7 +149,7 @@ passo acima, sem desvio.
   (conferido no banco).
 - k6 1.0.0, 10 usuários virtuais, 30 s de subida, 3 min de patamar e 15 s de descida, três execuções
   seguidas. Sem Ceres e sem ClamAV, como o guia prevê.
-- Nenhum merge na `main` durante a janela; nada foi otimizado nela.
+- Segundo o registro da #585: nenhum merge na `main` durante a janela e nada foi otimizado nela.
 
 **Resultado por endpoint (ms; p50 / p95 / máximo)**
 
