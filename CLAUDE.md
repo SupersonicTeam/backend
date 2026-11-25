@@ -102,7 +102,7 @@ Avaliação da Ceres com gabarito (#158, modelo real, grava seed fictício; só 
 `docs/avaliacao/README.md`. Desde a #264, 3 repetições por padrão (`--avaliacao.repeticoes`),
 casos adversários de rota, latência e clareza por rota, CSV cego para o avaliador externo e
 harness da API publicada (`docs/avaliacao/harness-api/`). Linha de base da Ceres 2.0 em
-`docs/avaliacao/linha-de-base-ceres-2-0.md` (**pendente de rodar com o modelo real**); a antiga em
+`docs/avaliacao/linha-de-base-ceres-2-0.md` (**histórica: nunca foi rodada nem será; decisão de 2026-11-24, #583: valem o benchmark de 14/11 e a medição auditável do Haiku, PR #568**); a antiga em
 `docs/avaliacao/linha-de-base-2026-10-14.md`. O gabarito é teste, nunca treino:
 `docs/avaliacao/treino/` não pode conter pergunta dele (o build quebra).
 
@@ -176,7 +176,7 @@ testado na CI) monta o relatório com o recorte comum e o gabarito inteiro. Guia
 repetições, Ceres 2.0 em `2bfb1ef3`); **resultados e como lê-los em
 `docs/avaliacao/benchmark/resultados-2026-11-14.md`** (capacidade comum de 118 perguntas × conjunto
 inteiro, régua de ruído, o que não vale e a célula da fidelidade); o relatório completo fica no cego
-privado e não entra no backend; o exemplo versionado é de dados fictícios. O comando de avaliação não mudou. **A célula por API**
+privado e não entra no backend; o exemplo versionado é de dados fictícios. **O benchmark não roda de novo antes da banca (decisão de 2026-11-24, #583):** os números são do `2bfb1ef3`, com a base de lei de antes da correção do fatiador (#607, base reingerida na VPS em 23/11) e sem a fidelidade da rota de lei (ligada na VPS); o que mudou depois está na seção "O que mudou depois da rodada" do mesmo arquivo. O comando de avaliação não mudou. **A célula por API**
 não usa Ollama para o chat, desliga o raciocínio e o prova na API, e lê `ANTHROPIC_API_KEY` só do
 ambiente (nunca em arquivo; oculta em log, erro e relatório; o executor recusa a rodada sem ela e
 faz uma prova antes de começar). A latência dela é de API pela rede: sai marcada **(API)** e fora da

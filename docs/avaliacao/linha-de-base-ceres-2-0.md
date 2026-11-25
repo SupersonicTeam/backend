@@ -1,8 +1,18 @@
 # Linha de base da Ceres 2.0 (issue #264)
 
-> **Pendente: rodar com o modelo real.** O ambiente em que a régua foi implementada não tinha o
-> Ollama com `qwen3:4b-instruct` e `bge-m3`, então nenhum número abaixo foi medido. **Não
-> preencha à mão nem estime:** rode o comando e cole as tabelas do relatório gerado.
+> **Histórica: esta linha de base nunca foi executada e não será.** Ela previa uma medição no commit
+> da #264, com o `qwen3:4b-instruct`, e nenhum número abaixo foi medido. **Não preencha à mão nem
+> estime.** Pela decisão de 24/11/2026 (#583), o benchmark não roda de novo e valem estas medições:
+>
+> - a **rodada oficial do benchmark de 14/11/2026** (Ceres 1 × Ceres 2.0, três modelos locais e o
+>   Haiku 5.5, no `2bfb1ef3`): [benchmark/resultados-2026-11-14.md](benchmark/resultados-2026-11-14.md),
+>   com a seção "O que mudou depois da rodada";
+> - a **avaliação com gabarito do Haiku 5.5 no `2bfb1ef3`**, comparada por id com o qwen (PR #568):
+>   [relatório](resultados/2026-11-15-0614-anthropic-claude-haiku-5-5.md) e
+>   [comparação nos casos adversários](resultados/2026-11-15-comparacao-haiku-qwen-adversarios.md).
+>
+> O que esta página previa e essas duas medições não trazem (p95 do classificador com o Ollama ocioso e
+> ocupado, proporção de desempate) não consta dessas duas medições. O texto abaixo fica como registro do plano.
 
 É o ponto de comparação das etapas 2 a 8 da milestone Ceres 2.0. Toda etapa registra a tabela
 "antes/depois" contra esta linha de base, **no mesmo gabarito e no mesmo seed**, com 3 repetições.
@@ -44,7 +54,7 @@ export DB_PASSWORD=...   # sem o docker-compose do Spring, o dev não lê o .env
 
 ## Resultado
 
-*Pendente.* Cole aqui, do relatório gerado:
+*Nunca preenchido (ver o aviso no topo).* O plano era colar aqui, do relatório gerado:
 
 1. **Condições** (modelo, embedding, hardware, gabarito, seed, repetições).
 2. **Métricas** — média (faixa) de rota, função, parâmetros, número, citação, recusa, vazamento,
