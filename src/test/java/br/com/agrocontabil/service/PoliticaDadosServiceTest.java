@@ -28,7 +28,7 @@ class PoliticaDadosServiceTest {
           + "referencia|aplicacao|escritorio|inscricao|apuracoes|tributarios)\\b");
 
   private final PoliticaDadosService service =
-      new PoliticaDadosService(new LgpdProperties("GWNext", ENCARREGADO, "2026-11-17"));
+      new PoliticaDadosService(new LgpdProperties("GWNext", ENCARREGADO, "2026-11-24"));
 
   private OperadorExternoResponse operador(String nome) {
     return service.politica().operadoresExternos().stream()
@@ -40,7 +40,7 @@ class PoliticaDadosServiceTest {
   void cabecalho() {
     PoliticaDadosResponse politica = service.politica();
 
-    assertThat(politica.versao()).isEqualTo("2026-11-17");
+    assertThat(politica.versao()).isEqualTo("2026-11-24");
     assertThat(politica.controlador()).isEqualTo("GWNext");
     assertThat(politica.contatoEncarregado()).isEqualTo(ENCARREGADO);
     assertThat(politica.comoExercer()).contains("/api/usuarios/{id}/dados").contains(ENCARREGADO);
@@ -86,13 +86,16 @@ class PoliticaDadosServiceTest {
   }
 
   @Test
-  @DisplayName("Anthropic: prazo da conta fica como pendente, sem prometer retenção zero")
+  @DisplayName("Anthropic: 30 dias conferidos no Console, 2 anos se sinalizado, sem prometer retenção zero")
   void anthropic() {
     OperadorExternoResponse anthropic = operador("Anthropic");
 
     assertThat(anthropic.retencao())
-        .contains("Em verificação").contains("30 dias").contains("2 anos")
-        .contains("não promete retenção zero");
+        .contains("30 dias").contains("segurança e proteção").contains("24/11/2026")
+        .contains("a retenção zero não está ativa").contains("2 anos")
+        .contains("não promete retenção zero").doesNotContain("Em verificação");
+    assertThat(anthropic.localizacao())
+        .contains("Fora do Brasil").contains("roteamento global").contains("Estados Unidos");
     assertThat(anthropic.dadosEnviados())
         .anyMatch(d -> d.contains("continuidade da conversa") && d.contains("motivo de uma devolução"))
         .anyMatch(d -> d.contains("não retira um nome escrito por extenso"));

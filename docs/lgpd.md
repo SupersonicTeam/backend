@@ -97,7 +97,7 @@ O que não vai: nome, documento, contato e endereço do produtor, e o XML das no
 `DataSanitizer` não pega:** o que o produtor escreve na própria pergunta, como um nome por
 extenso ("a safra do seu João"), vai ao provedor.
 
-A política pública (`GET /api/politica-dados`, versão 2026-11-17, #498) cita a **Anthropic pelo
+A política pública (`GET /api/politica-dados`, versão 2026-11-24, #498) cita a **Anthropic pelo
 nome** como operadora fora do Brasil (campo `operadoresExternos` e as listas de compartilhamento e
 retenção), com o que sai, o que não sai, a hipótese do art. 33 e a retenção. A Ceres é opcional:
 quem não a usa não tem dado enviado.
@@ -112,16 +112,27 @@ conta: o que vale é o que a conta do AgroConIA aceitou (Termos Comerciais e DPA
 | Ponto | O que está publicado | O que isso permite afirmar |
 |---|---|---|
 | Papel | O DPA diz que o cliente é controlador e a Anthropic é a operadora, que trata os dados só para prestar o serviço e conforme as instruções do cliente | Operadora (LGPD, art. 5º, VII) |
-| Retenção padrão | **As duas páginas oficiais não dizem a mesma coisa.** A central de privacidade diz que apaga entradas e saídas em até **30 dias**. A documentação da plataforma diz, em inglês, que o conteúdo (prompts e saídas) não é retido por padrão (paráfrase nossa), com exceção dos modelos de retenção obrigatória de 30 dias (hoje a família Fable e Mythos; o Haiku 5.5, que a Ceres usa, não está na lista) | Nenhuma das duas é a configuração **da nossa conta**. A política diz "em verificação" e cita o prazo de até 30 dias; nunca "retenção zero" |
+| Retenção padrão | **As duas páginas oficiais não dizem a mesma coisa.** A central de privacidade diz que apaga entradas e saídas em até **30 dias**. A documentação da plataforma diz, em inglês, que o conteúdo (prompts e saídas) não é retido por padrão (paráfrase nossa), com exceção dos modelos de retenção obrigatória de 30 dias (hoje a família Fable e Mythos; o Haiku 5.5, que a Ceres usa, não está na lista) | Nenhuma das duas é a configuração da conta; a conta foi conferida no Console (abaixo): **retenção ativada, 30 dias**. A política nunca promete "retenção zero" |
 | Retenção zero (ZDR) | Só por acordo com a equipe comercial, por organização; não é self-serve | Não temos o acordo; não prometer |
 | Conteúdo sinalizado | Se os sistemas automáticos de segurança sinalizarem violação da política de uso: entradas e saídas por até **2 anos**, mesmo com ZDR (documentação da plataforma); a central de privacidade acrescenta pontuações de classificação por até **7 anos** | Entra na política (2 anos) |
 | Transferência | O DPA incorpora as cláusulas-padrão da UE (módulos 2 e 3, lei irlandesa), o adendo do Reino Unido e o suíço. Na leitura que fizemos (resumo da página, não o texto integral nem o contrato da conta), **não cita o Brasil nem a LGPD** e não lista os países de processamento nem os subprocessadores (remete a uma lista online) | O DPA público não traz cláusula-padrão da ANPD nem mecanismo próprio da LGPD. **Conferir o texto integral e o contrato da conta** antes de afirmar mais que isso |
 | Fim do contrato | Devolve e apaga os dados em até 30 dias do término | — |
 
-**Pendente (o Murillo, no Console, antes de ligar a continuidade na VPS):** em
-`platform.claude.com/settings/privacy`, ver a retenção da organização e do workspace usado pela Ceres
-e anotar aqui o valor e a data da conferência. Até lá, o prazo da conta fica escrito como "em
-verificação" na política, e este documento não afirma retenção zero nem 30 dias como fato da conta.
+**Conferido no Console em 2026-11-24** (`platform.claude.com/settings/privacy`, "Controles de
+dados", organização da equipe, pelo navegador do Murillo):
+
+- **Retenção de dados: ativada, 30 dias** (padrão da organização). Texto do Console: as entradas, as
+  saídas e outros dados ficam retidos por 30 dias por padrão e podem ser acessados pela Anthropic
+  para fins de segurança e proteção.
+- **Zero Data Retention: não está ativo** (só por contato com o suporte).
+- **Geografia de inferência:** sem restrição, roteamento global. **Geografia do espaço de trabalho:**
+  Estados Unidos.
+
+**Ressalva que continua aberta:** não se conferiu que a chave de API em uso na VPS
+(`ANTHROPIC_API_KEY`, ligada a um workspace, `deploy/README.md`) é **dessa** organização, e nada no
+repositório liga a chave a ela. Por isso a política diz "organização da equipe" e não "conta do
+AgroConIA". Quem trocar a chave por uma de outra organização refaz a conferência no Console dela e
+atualiza `RETENCAO_ANTHROPIC` e a versão da política.
 
 ### Continuidade da conversa (#499)
 
@@ -144,10 +155,10 @@ histórico, por decisão do Murillo, para qualquer conta, inclusive as do cadast
 (#148) **não alcança o que já foi enviado** ao provedor.
 
 É item do relatório de impacto (art. 38). Ligar a flag na VPS exige antes: a política nova no ar
-(`app.lgpd.versao-politica` 2026-11-17: descreve o fluxo, o provedor pelo nome e o art. 33), o aviso
-na tela da Ceres (`GET /api/assistente/uso` devolve `conversaVaiAoProvedor`, frontend#183) e o
-**prazo de retenção da conta** conferido no Console (pendente, acima; a política o diz "em
-verificação" até lá). A subida registra um `WARN` com a flag ligada e o provedor por API fora de
+(`app.lgpd.versao-politica` 2026-11-24: descreve o fluxo, o provedor pelo nome, o art. 33 e a retenção
+de 30 dias conferida no Console) e o aviso na tela da Ceres (`GET /api/assistente/uso` devolve
+`conversaVaiAoProvedor`, frontend#183). O prazo de retenção deixou de ser pendência (conferido em
+2026-11-24, com a ressalva da chave, acima). A subida registra um `WARN` com a flag ligada e o provedor por API fora de
 `dev`/`test` (`config/AvisoContinuidadeConfig`). O mecanismo do art. 33 da #498 cobre este fluxo no
 mesmo texto (hipótese 1, abaixo), mas é aqui que ele fica mais exposto: texto livre escrito por
 terceiros (o escritório) vai ao provedor, e a hipótese de "necessidade" é mais difícil de sustentar
@@ -213,8 +224,8 @@ que a base é suficiente.
 com verdade hoje, sem prometer um aceite que não existe. Ela só afirma a base em que a GWNext se
 apoia, junto de tudo que a limita: a política diz que a GWNext "entende" a transferência como
 necessária (não que ela esteja provada), que as cláusulas-padrão da ANPD não foram assinadas pela
-Resend nem constam no DPA público da Anthropic, que a retenção da Anthropic está em verificação e
-que a exclusão não alcança os operadores. **A 3 é o reforço natural da Ceres** (a parte mais exposta), e o aviso do
+Resend nem constam no DPA público da Anthropic, que a retenção da Anthropic é de 30 dias (conferida no
+Console, sem retenção zero) e que a exclusão não alcança os operadores. **A 3 é o reforço natural da Ceres** (a parte mais exposta), e o aviso do
 frontend#183 (`conversaVaiAoProvedor`) já é metade dela; o que falta é o texto de consentimento, o
 registro do aceite e a recusa. Se o risco da 1 para o e-mail não for aceito, a saída é trocar para o
 SES em `sa-east-1` (sem transferência), não o consentimento.

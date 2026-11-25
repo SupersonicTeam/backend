@@ -279,10 +279,12 @@ inclusive as do cadastro público, vão inteiras à Anthropic, fora do Brasil: v
 números de nota e o texto livre que o escritório escreve, como o título de um pedido e o motivo de
 uma devolução; ver `docs/lgpd.md`, "Continuidade da conversa"):
 
-1. A política de dados nova no ar (`GET /api/politica-dados`, versão 2026-11-11 ou posterior).
+1. A política de dados nova no ar (`GET /api/politica-dados`, versão 2026-11-24 ou posterior).
 2. O aviso na tela da Ceres (o Angular lê `conversaVaiAoProvedor` de `GET /api/assistente/uso`).
-3. O prazo de retenção no provedor escrito na política e no `docs/lgpd.md` (conferir os termos da
-   organização no Console e pedir retenção zero, se houver).
+3. O prazo de retenção no provedor escrito na política e no `docs/lgpd.md`: **feito em 2026-11-24**
+   (Console da organização da equipe: retenção ativada, 30 dias; retenção zero não está ativa).
+   Falta só conferir que a `ANTHROPIC_API_KEY` da VPS é dessa organização (ressalva em
+   `docs/lgpd.md`).
 4. A medição da #499 e o OK do Murillo (o código está na `main` com a flag desligada, #505).
 5. A base legal da transferência internacional (LGPD, art. 33) e o contrato, da #498, resolvidos,
    como exige o `docs/lgpd.md`, "Continuidade da conversa".

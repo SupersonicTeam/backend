@@ -35,12 +35,18 @@ public class PoliticaDadosService {
       "30 dias para os registros de envio e o corpo do e-mail, com o link; até 90 dias depois "
           + "de a conta do AgroConIA ser encerrada na Resend.";
 
-  /** Retenção na Anthropic: pendente da conferência no Console; uma redação só. */
+  /**
+   * Retenção na Anthropic, conferida no Console da organização da equipe em 2026-11-24 (retenção
+   * ativada, 30 dias; retenção zero inativa); uma redação só. Não liga a chave da VPS a essa
+   * organização: se a chave for de outra, o texto muda e a versão sobe.
+   */
   static final String RETENCAO_ANTHROPIC =
-      "Em verificação para a conta do AgroConIA. O provedor publica que apaga as entradas e "
-          + "saídas em até 30 dias e que o que os sistemas automáticos de segurança dele "
-          + "sinalizarem como violação da política de uso pode ficar por até 2 anos. Esta "
-          + "política não promete retenção zero.";
+      "30 dias para as entradas e as saídas, que a Anthropic pode acessar para fins de "
+          + "segurança e proteção (retenção ativada na organização da equipe, conferida no "
+          + "Console em 24/11/2026; a retenção zero não está ativa). O que os sistemas "
+          + "automáticos de segurança do provedor sinalizarem como violação da política de uso "
+          + "pode ficar por até 2 anos, segundo o provedor. Esta política não promete retenção "
+          + "zero.";
 
   private final LgpdProperties propriedades;
 
@@ -177,8 +183,10 @@ public class PoliticaDadosService {
         "Anthropic",
         "Modelo de linguagem Claude, pela API, que entende a pergunta à Ceres e redige a "
             + "resposta de lei.",
-        "Fora do Brasil. O provedor tem sede nos Estados Unidos, e o contrato dele não lista os "
-            + "países onde processa os dados nem os dos subprocessadores.",
+        "Fora do Brasil. O provedor tem sede nos Estados Unidos; na organização da equipe, o "
+            + "processamento não tem restrição de geografia (roteamento global) e o espaço de "
+            + "trabalho fica nos Estados Unidos (Console, 24/11/2026). O contrato do provedor "
+            + "não lista os países de processamento nem os dos subprocessadores.",
         "Responder às perguntas que o produtor faz à Ceres.",
         List.of(
             "A pergunta escrita pelo produtor, depois de o AgroConIA retirar CPF, CNPJ, chave de "
