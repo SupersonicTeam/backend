@@ -760,7 +760,7 @@ O `ClassificadorIntencao` devolve a intenção, a confiança e **qual camada dec
    Termo de lei **da reforma ou do Funrural** (IBS, CBS, split payment, Funrural, crédito presumido,
    Anexo, LC 214, regime regular...) sem marcador de dados, sem produto específico, sem quantia ou
    período do produtor ("quanto", "devo", "saldo", mês e ano) e sem fato ou presença dele na operação
-   ("vendi", "emiti", "retiveram de mim", "eu tenho algum", #497) → `LEGISLACAO`. Marcador de dados
+   ("vendi", "emiti", "retiveram de mim", "tenho algum", #497) → `LEGISLACAO`. Marcador de dados
    ancorado ("minhas notas", "quanto vendi", "quanto gastei com defensivos", "a nota 107", "tenho
    alguma guia", "o que vence este mês") sem termo de lei nem palavra de lei genérica → `DADOS`.
    Palavra genérica ("lei", "artigo", "alíquota", "redução", "isenção") nunca decide `LEGISLACAO`

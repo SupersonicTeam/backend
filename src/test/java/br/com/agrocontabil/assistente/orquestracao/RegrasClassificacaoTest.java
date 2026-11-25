@@ -31,6 +31,11 @@ class RegrasClassificacaoTest {
       "Pelas notas que eu emiti, ja pago IBS?                     | NADA",
       "O credito que aparece pra mim vem de qual regra da LC 214? | NADA",
       "O que e credito presumido? Eu tenho algum?                 | NADA",
+      "As compras que eu fiz dao credito presumido?               | NADA",
+      // conversa, obrigacao e "tive/fiz" soltos nao sao fato do produtor (#497)
+      "Explica pra mim como funciona o split payment              | LEGISLACAO",
+      "Eu tenho que pagar IBS sendo pessoa fisica?                | LEGISLACAO",
+      "Tive uma duvida sobre o credito presumido                  | LEGISLACAO",
       // dados, sem termo de lei
       "Quanto vendi de cafe no ano passado?                       | DADOS",
       "Quais foram as minhas 5 ultimas compras?                   | DADOS",

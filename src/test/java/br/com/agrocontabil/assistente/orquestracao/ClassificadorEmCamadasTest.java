@@ -177,6 +177,24 @@ class ClassificadorEmCamadasTest {
   }
 
   @Test
+  @DisplayName("#497: modelo falha no desempate: vale o voto das embeddings acima de 0,6; abaixo,"
+      + " indisponivel")
+  void modeloFalhaNoDesempate() {
+    when(embeddings.classificar("E o adubo?")).thenReturn(Optional.of(
+        new ClassificacaoIntencao(Intencao.DADOS, 0.8, null, CamadaClassificacao.EMBEDDING)));
+    when(embeddings.classificar("E o calcario?")).thenReturn(Optional.of(
+        new ClassificacaoIntencao(Intencao.DADOS, 0.5, null, CamadaClassificacao.EMBEDDING)));
+    when(llm.classificar(anyString(), any()))
+        .thenThrow(new AssistenteIndisponivelException("queda", null));
+
+    assertThat(classificador.classificar("E o adubo?", contexto))
+        .extracting(ClassificacaoIntencao::intencao, ClassificacaoIntencao::camada)
+        .containsExactly(Intencao.DADOS, CamadaClassificacao.EMBEDDING);
+    assertThatThrownBy(() -> classificador.classificar("E o calcario?", contexto))
+        .isInstanceOf(AssistenteIndisponivelException.class);
+  }
+
+  @Test
   @DisplayName("sem decisao das camadas e modelo em pausa: indisponivel (orquestrador cai no fallback)")
   void semModelo() {
     when(disponibilidade.disponivel()).thenReturn(false);

@@ -9,7 +9,9 @@
 # - Respeita a trava do Ollama das sessões locais: espera a pasta sumir e a cria enquanto roda.
 set -u
 
-SAIDA=$1
+[ $# -ge 1 ] || { echo "uso: $0 <arquivo-saida.md> [--modelo]"; exit 2; }
+mkdir -p "$(dirname "$1")" || exit 1
+SAIDA="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 MODELO=false
 [ "${2:-}" = "--modelo" ] && MODELO=true
 RAIZ=$(cd "$(dirname "$0")/../../.." && pwd) || exit 1

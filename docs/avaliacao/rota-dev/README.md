@@ -56,16 +56,16 @@ uma ou duas perguntas mudam de uma rodada para outra.
 
 | | antes | depois |
 |---|---|---|
-| Acerto de rota (130 perguntas) | 81,5% (simulado, média das repetições) | 94,6% nesta rodada; 95,4% na média das repetições |
+| Acerto de rota (130 perguntas) | 81,5% (simulado, média das repetições) | 96,2% nesta rodada; 95,8% na média das repetições |
 | DADOS (47) | 29 certas antes do modelo, 4 erradas, 14 ao modelo | 44 certas, 3 erradas |
 | LEGISLACAO (36) | 32 certas, 2 erradas, 2 ao modelo | 36 certas |
-| MISTO (19) | 6 certas, 10 erradas, 3 ao modelo | 17 certas, 2 erradas (o modelo varia entre as repetições) |
+| MISTO (19) | 6 certas, 10 erradas, 3 ao modelo | 19 certas |
 | FORA_DE_ESCOPO (28) | 16 certas, 6 erradas, 6 ao modelo | 26 certas, 2 erradas |
 | Regras | 46 decididas, 6 erradas | 40 decididas, 0 erradas |
 | Embeddings | 48 decididas, 16 erradas | 18 decididas, 1 errada |
 | Chamadas ao classificador por modelo | 38 (25 desempates + 13 MISTO das embeddings) | 65 |
 
-A chamada de classificação ao Haiku levou p50 637 ms e p95 914 ms desta máquina até a API (158
+A chamada de classificação ao Haiku levou p50 626 ms e p95 933 ms desta máquina até a API (158
 chamadas). As 27 chamadas a mais em 130 perguntas (21% das perguntas) custam esse tempo cada, e
 cerca de 600 créditos por chamada (prompt de classificação de ~470 tokens de entrada e ~25 de
 saída, peso 4 na saída), contra a cota semanal de 1.000.000; a reserva da pergunta já incluía a

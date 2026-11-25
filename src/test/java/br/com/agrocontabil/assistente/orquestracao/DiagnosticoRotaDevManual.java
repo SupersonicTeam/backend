@@ -336,9 +336,12 @@ class DiagnosticoRotaDevManual {
     int aoModelo = 0;
     for (Linha l : linhas) {
       if (!l.chegaAsEmbeddings) {
+        // Fora das embeddings, o modelo so decide pela marca de outra pessoa (pedeDesempate).
+        if (l.camada.equals("LLM")) {
+          aoModelo++;
+        }
         if (l.rota.equals("MODELO")) {
           certas += taxa(l);
-          aoModelo++;
         } else if (l.rota.equals(l.esperada.name())) {
           certas++;
         }

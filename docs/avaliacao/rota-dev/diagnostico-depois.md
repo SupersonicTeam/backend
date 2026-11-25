@@ -2,14 +2,14 @@
 
 Configuração: limiar 0.9, vizinhos 7, similaridade mínima 0.5, treino 262 exemplos.
 
-**Decididas antes do modelo:** 130 de 130, com 123 certas; 0 vão ao modelo.
+**Decididas antes do modelo:** 130 de 130, com 125 certas; 0 vão ao modelo.
 
 | camada | n | certas | erradas | ao modelo |
 |---|---|---|---|---|
 | ATALHO_DEFINICAO | 1 | 1 | 0 | 0 |
 | CONVERSA_LEVE | 2 | 2 | 0 | 0 |
 | EMBEDDING | 18 | 17 | 1 | 0 |
-| LLM | 61 | 55 | 6 | 0 |
+| LLM | 61 | 57 | 4 | 0 |
 | REGRA | 40 | 40 | 0 | 0 |
 | SINAL_RECUSA_FIRME | 8 | 8 | 0 | 0 |
 
@@ -17,12 +17,12 @@ Configuração: limiar 0.9, vizinhos 7, similaridade mínima 0.5, treino 262 exe
 |---|---|---|---|---|
 | DADOS | 47 | 44 | 3 | 0 |
 | LEGISLACAO | 36 | 36 | 0 | 0 |
-| MISTO | 19 | 17 | 2 | 0 |
+| MISTO | 19 | 19 | 0 | 0 |
 | FORA_DE_ESCOPO | 28 | 26 | 2 | 0 |
 
 Chamadas ao classificador por modelo no caminho de produção (desempate e pergunta de lei do MISTO): 65.
 
-Latência da chamada de classificação ao modelo (158 chamadas, desta máquina até a API): p50 637 ms, p95 914 ms.
+Latência da chamada de classificação ao modelo (158 chamadas, desta máquina até a API): p50 626 ms, p95 933 ms.
 
 ## Por pergunta
 
@@ -91,7 +91,7 @@ Latência da chamada de classificação ao modelo (158 chamadas, desta máquina 
 | M07 | misto | MISTO | LLM | MISTO | ok | MISTO,MISTO | MISTO | 0.52 | 0.75 | MISTO 0.75 «Qual o total das minhas compras de peças e peça de máquina gera crédito de CBS?» MISTO 0.72 «Quanto paguei de diesel no ano e diesel gera crédito de CBS?» LEI 0.72 «Como pedir ressarcimento de saldo credor de CBS?» |
 | M08 | misto | MISTO | LLM | MISTO | ok | MISTO,MISTO | MISTO | 0.56 | 0.71 | MISTO 0.71 «Minhas vendas ao exterior pagaram Funrural? A lei manda pagar?» DADOS 0.68 «Quanto vendi para fora do estado este ano?» MISTO 0.65 «Minhas notas de venda de tomate saíram com alíquota zero como a lei prevê?» |
 | M09 | misto | MISTO | LLM | MISTO | ok | MISTO,MISTO | DADOS | 0.46 | 0.75 | DADOS 0.75 «Tenho saldo credor de IBS?» MISTO 0.74 «Quanto ficou de saldo a pagar de IBS e quando vence pela lei?» MISTO 0.72 «Tenho guia de IBS para pagar e qual o prazo legal de recolhimento?» |
-| M10 | misto | MISTO | LLM | LEI | ERRO | LEI,MISTO | MISTO | 0.63 | 0.80 | MISTO 0.80 «Tenho guia de Funrural vencida e qual a multa prevista na lei?» DADOS 0.67 «Qual guia de Funrural eu paguei por último?» MISTO 0.66 «Minhas vendas ao exterior pagaram Funrural? A lei manda pagar?» |
+| M10 | misto | MISTO | LLM | MISTO | ok | MISTO,MISTO | MISTO | 0.63 | 0.80 | MISTO 0.80 «Tenho guia de Funrural vencida e qual a multa prevista na lei?» DADOS 0.67 «Qual guia de Funrural eu paguei por último?» MISTO 0.66 «Minhas vendas ao exterior pagaram Funrural? A lei manda pagar?» |
 | M11 | misto | MISTO | LLM | MISTO | ok | MISTO,MISTO | LEI | 1.00 | 0.72 | LEI 0.72 «Precisa destacar IBS e CBS na nota de venda de gado?» LEI 0.71 «Venda de imóvel rural tem IBS?» LEI 0.70 «Doação de produtos agrícolas paga IBS?» |
 | M12 | misto | MISTO | EMBEDDING | MISTO | ok | MISTO,MISTO | MISTO | 1.00 | 0.67 | MISTO 0.67 «A redução que aparece nas minhas notas de café está certa pela LC 214?» MISTO 0.65 «Quanto comprei de máquina este ano e a lei dá crédito na compra de máquina?» MISTO 0.64 «Minha apuração do mês tem saldo credor; a lei permite transferir esse crédito?» |
 | M13 | misto | MISTO | LLM | MISTO | ok | MISTO,MISTO | LEI | 0.73 | 0.77 | LEI 0.77 «O split payment vale para pagamento em dinheiro?» LEI 0.75 «O split payment começa a valer em que ano?» LEI 0.71 «O produtor precisa ter conta em banco para o split payment?» |
@@ -124,7 +124,7 @@ Latência da chamada de classificação ao modelo (158 chamadas, desta máquina 
 | R12 | recusa | FORA | SINAL_RECUSA_FIRME | FORA | ok |  | DADOS | 0.54 | 0.64 | DADOS 0.64 «Me da um panorama do que esta em aberto na minha conta» MISTO 0.59 «Minha apuração do mês tem saldo credor; a lei permite transferir esse crédito?» DADOS 0.57 «Tem alguma pendência na minha conta?» |
 | A01 | adversario | DADOS | LLM | DADOS | ok | DADOS,DADOS | DADOS | 0.52 | 0.68 | DADOS 0.68 «Quanto eu recebi de vendas no ano passado?» MISTO 0.67 «Vendi soja para outro estado; quanto foi e o IBS fica com qual estado?» DADOS 0.66 «Quantas vendas eu fiz para a cooperativa este ano?» |
 | A02 | adversario | LEI | LLM | LEI | ok | LEI,LEI | MISTO | 0.62 | 0.60 | MISTO 0.60 «Tenho guia de Funrural vencida e qual a multa prevista na lei?» MISTO 0.60 «Minhas vendas ao exterior pagaram Funrural? A lei manda pagar?» DADOS 0.58 «Qual guia de Funrural eu paguei por último?» |
-| A03 | adversario | MISTO | LLM | LEI | ERRO | LEI,MISTO | LEI | 0.66 | 0.83 | LEI 0.83 «Como é calculado o valor do crédito presumido?» LEI 0.82 «O crédito presumido tem limite de valor?» MISTO 0.72 «As minhas compras de ureia de outubro geram crédito presumido?» |
+| A03 | adversario | MISTO | LLM | MISTO | ok | MISTO,MISTO | LEI | 0.66 | 0.83 | LEI 0.83 «Como é calculado o valor do crédito presumido?» LEI 0.82 «O crédito presumido tem limite de valor?» MISTO 0.72 «As minhas compras de ureia de outubro geram crédito presumido?» |
 | A04 | adversario | DADOS | LLM | DADOS | ok | DADOS,DADOS | LEI | 0.55 | 0.61 | LEI 0.61 «Precisa destacar IBS e CBS na nota de venda de gado?» LEI 0.58 «O IBS incide sobre exportação?» DADOS 0.57 «Como ficou a minha apuração de IBS mês a mês neste ano?» |
 | A05 | adversario | DADOS | LLM | DADOS | ok | DADOS,DADOS | MISTO | 0.58 | 0.79 | MISTO 0.79 «O IBS da minha apuração de outubro considera a redução dos insumos? Quanto deu?» MISTO 0.75 «Qual o débito de IBS das minhas vendas de café e qual alíquota foi usada?» DADOS 0.71 «Em qual mês do ano eu recolhi mais IBS?» |
 | A06 | adversario | DADOS | REGRA | DADOS | ok |  | DADOS | 1.00 | 0.67 | DADOS 0.67 «Minhas guias de outubro já foram pagas?» DADOS 0.66 «Qual foi o valor da última guia que eu paguei?» DADOS 0.65 «Quanto paguei de guias no ano passado?» |
@@ -143,7 +143,7 @@ Latência da chamada de classificação ao modelo (158 chamadas, desta máquina 
 | A19 | adversario | LEI | REGRA | LEI | ok |  | MISTO | 0.65 | 0.71 | MISTO 0.71 «Minhas vendas ao exterior pagaram Funrural? A lei manda pagar?» LEI 0.63 «O Funrural incide sobre a venda de sementes para plantio?» LEI 0.62 «O que é o Funrural pela Lei 8.212?» |
 | A20 | adversario | FORA | LLM | FORA | ok | FORA,FORA | MISTO | 0.85 | 0.51 | MISTO 0.51 «Minhas vendas de laranja do trimestre: quanto foram e laranja tem alíquota zero?» DADOS 0.48 «Quanto eu recebi de vendas no ano passado?» MISTO 0.47 «As vendas de frutas que eu fiz em setembro têm isenção? Quanto foram?» |
 | A21 | adversario | DADOS | LLM | DADOS | ok | DADOS,DADOS | MISTO | 0.53 | 0.62 | DADOS 0.62 «O NCM 0713.33.19 tem redução?» MISTO 0.54 «Quanto vendi de sorgo e o sorgo tem redução de 60%?» MISTO 0.53 «Quanto comprei de medicamento veterinário e tem redução de alíquota?» |
-| A22 | adversario | DADOS | LLM | DADOS | ok | DADOS,DADOS | MISTO | 0.57 | 0.66 | MISTO 0.66 «A redução de alíquota vale para o café que vendi neste trimestre? E quanto foi?» MISTO 0.60 «A redução que aparece nas minhas notas de café está certa pela LC 214?» DADOS 0.57 «Quanto faturei com café no ano passado?» |
+| A22 | adversario | DADOS | LLM | DADOS | ok | DADOS,LEI | MISTO | 0.57 | 0.66 | MISTO 0.66 «A redução de alíquota vale para o café que vendi neste trimestre? E quanto foi?» MISTO 0.60 «A redução que aparece nas minhas notas de café está certa pela LC 214?» DADOS 0.57 «Quanto faturei com café no ano passado?» |
 | A23 | adversario | LEI | REGRA | LEI | ok |  | LEI | 0.59 | 0.70 | LEI 0.70 «Como é calculado o valor do crédito presumido?» MISTO 0.69 «Quanto foi o crédito presumido das minhas compras de produtor rural e qual a regra?» LEI 0.68 «O crédito presumido tem limite de valor?» |
 | A24 | adversario | DADOS | REGRA | DADOS | ok |  | MISTO | 0.62 | 0.72 | MISTO 0.72 «Quanto paguei de energia elétrica e posso tomar crédito disso?» MISTO 0.68 «Quanto paguei de frete nas compras e frete gera crédito?» MISTO 0.68 «Quanto comprei da cooperativa e a compra de cooperativa tem crédito?» |
 | A25 | adversario | LEI | REGRA | LEI | ok |  | MISTO | 0.41 | 0.69 | DADOS 0.69 «Tenho saldo credor de IBS?» LEI 0.67 «Quando começa a cobrança integral do IBS?» MISTO 0.67 «Tenho guia de IBS para pagar e qual o prazo legal de recolhimento?» |
@@ -180,12 +180,12 @@ Célula = acerto % / perguntas ao modelo.
 
 | sim1 \ limiar | 0.60 | 0.70 | 0.80 | 0.85 | 0.90 | 0.95 | 0.99 | só modelo |
 |---|---|---|---|---|---|---|---|---|
-| 0.50 | 93.8 / 47 | 93.8 / 54 | 93.8 / 59 | 94.6 / 61 | 95.4 / 64 | 94.6 / 68 | 94.6 / 69 | 95.4 / 78 |
-| 0.60 | 93.1 / 52 | 93.8 / 57 | 93.8 / 61 | 94.6 / 62 | 95.4 / 64 | 94.6 / 68 | 94.6 / 69 | 95.4 / 78 |
-| 0.65 | 94.6 / 58 | 94.6 / 61 | 94.6 / 63 | 95.4 / 64 | 95.4 / 64 | 94.6 / 68 | 94.6 / 69 | 95.4 / 78 |
-| 0.70 | 96.2 / 65 | 96.2 / 66 | 96.2 / 67 | 96.2 / 67 | 96.2 / 67 | 95.4 / 70 | 95.4 / 71 | 95.4 / 78 |
-| 0.75 | 96.2 / 72 | 96.2 / 72 | 96.2 / 72 | 96.2 / 72 | 96.2 / 72 | 95.4 / 74 | 95.4 / 74 | 95.4 / 78 |
-| 0.80 | 96.2 / 72 | 96.2 / 72 | 96.2 / 72 | 96.2 / 72 | 96.2 / 72 | 95.4 / 74 | 95.4 / 74 | 95.4 / 78 |
+| 0.50 | 94.2 / 48 | 94.2 / 55 | 94.2 / 60 | 95.0 / 62 | 95.8 / 65 | 95.0 / 69 | 95.0 / 70 | 95.8 / 79 |
+| 0.60 | 93.5 / 53 | 94.2 / 58 | 94.2 / 62 | 95.0 / 63 | 95.8 / 65 | 95.0 / 69 | 95.0 / 70 | 95.8 / 79 |
+| 0.65 | 95.0 / 59 | 95.0 / 62 | 95.0 / 64 | 95.8 / 65 | 95.8 / 65 | 95.0 / 69 | 95.0 / 70 | 95.8 / 79 |
+| 0.70 | 96.5 / 66 | 96.5 / 67 | 96.5 / 68 | 96.5 / 68 | 96.5 / 68 | 95.8 / 71 | 95.8 / 72 | 95.8 / 79 |
+| 0.75 | 96.5 / 73 | 96.5 / 73 | 96.5 / 73 | 96.5 / 73 | 96.5 / 73 | 95.8 / 75 | 95.8 / 75 | 95.8 / 79 |
+| 0.80 | 96.5 / 73 | 96.5 / 73 | 96.5 / 73 | 96.5 / 73 | 96.5 / 73 | 95.8 / 75 | 95.8 / 75 | 95.8 / 79 |
 
 ## Varredura em deixar-um-de-fora no treino (exemplos que chegam às embeddings)
 
@@ -193,14 +193,14 @@ Célula = decididas / erradas (as demais vão ao modelo).
 
 | sim1 \ limiar | 0.60 | 0.70 | 0.80 | 0.85 | 0.90 | 0.95 | 0.99 |
 |---|---|---|---|---|---|---|---|
-| 0.50 | 135 / 19 | 110 / 10 | 91 / 6 | 78 / 2 | 66 / 1 | 49 / 0 | 43 / 0 |
-| 0.60 | 104 / 17 | 85 / 8 | 71 / 5 | 60 / 2 | 50 / 1 | 35 / 0 | 29 / 0 |
-| 0.65 | 85 / 11 | 68 / 4 | 56 / 3 | 48 / 1 | 40 / 1 | 29 / 0 | 24 / 0 |
-| 0.70 | 54 / 8 | 43 / 3 | 33 / 2 | 28 / 1 | 24 / 1 | 17 / 0 | 15 / 0 |
-| 0.75 | 27 / 3 | 24 / 1 | 20 / 1 | 15 / 0 | 13 / 0 | 11 / 0 | 10 / 0 |
-| 0.80 | 11 / 2 | 10 / 1 | 8 / 1 | 5 / 0 | 5 / 0 | 4 / 0 | 4 / 0 |
+| 0.50 | 134 / 19 | 109 / 10 | 90 / 6 | 78 / 2 | 66 / 1 | 49 / 0 | 43 / 0 |
+| 0.60 | 103 / 17 | 84 / 8 | 70 / 5 | 60 / 2 | 50 / 1 | 35 / 0 | 29 / 0 |
+| 0.65 | 84 / 11 | 67 / 4 | 55 / 3 | 48 / 1 | 40 / 1 | 29 / 0 | 24 / 0 |
+| 0.70 | 53 / 8 | 42 / 3 | 32 / 2 | 28 / 1 | 24 / 1 | 17 / 0 | 15 / 0 |
+| 0.75 | 26 / 3 | 23 / 1 | 19 / 1 | 15 / 0 | 13 / 0 | 11 / 0 | 10 / 0 |
+| 0.80 | 10 / 2 | 9 / 1 | 7 / 1 | 5 / 0 | 5 / 0 | 4 / 0 | 4 / 0 |
 
-(190 chegam às embeddings.)
+(189 chegam às embeddings.)
 
 ## Erros do deixar-um-de-fora com confiança >= 0,6
 

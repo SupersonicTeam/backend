@@ -58,6 +58,7 @@ public class ClassificadorEmCamadas implements ClassificadorIntencao {
 
   @Override
   public ClassificacaoIntencao classificar(String pergunta, ContextoAssistente contexto) {
+    Optional<ClassificacaoIntencao> voto = Optional.empty();
     if (propriedades.isCamadas() && !desempateDireto(pergunta)) {
       Optional<Intencao> regra = RegrasClassificacao.decidir(pergunta);
       if (regra.isPresent()) {
@@ -69,7 +70,8 @@ public class ClassificadorEmCamadas implements ClassificadorIntencao {
       boolean comModelo = disponibilidade.disponivel();
       double limiar = comModelo ? propriedades.getLimiarConfianca()
           : propriedades.getLimiarConfiancaSemModelo();
-      Optional<ClassificacaoIntencao> vizinhos = embeddings.classificar(pergunta)
+      voto = embeddings.classificar(pergunta);
+      Optional<ClassificacaoIntencao> vizinhos = voto
           .filter(c -> c.confianca() >= limiar)
           .filter(c -> !comModelo || !leiComDadosDoProdutor(c, pergunta));
       if (vizinhos.isPresent()) {
@@ -78,7 +80,7 @@ public class ClassificadorEmCamadas implements ClassificadorIntencao {
             : vizinhos.get();
       }
     }
-    return desempate(pergunta, contexto);
+    return desempate(pergunta, contexto, voto);
   }
 
   /**
@@ -94,8 +96,8 @@ public class ClassificadorEmCamadas implements ClassificadorIntencao {
 
   /**
    * Voto LEGISLACAO das embeddings numa pergunta com dado ou fato do produtor (#497): os vizinhos
-   * de lei puxavam "as minhas compras de fertilizante dão crédito de IBS?" e "explica o split payment
-   * com a minha venda de milho" para a regra geral, sem a parte dos dados. O modelo desempata.
+   * de lei puxavam "as minhas compras de fertilizante dão crédito de IBS?" e "explica o split
+   * payment com a minha venda de milho" para a regra geral, sem a parte dos dados. O modelo desempata.
    */
   private static boolean leiComDadosDoProdutor(ClassificacaoIntencao voto, String pergunta) {
     return voto.intencao() == Intencao.LEGISLACAO
@@ -130,11 +132,28 @@ public class ClassificadorEmCamadas implements ClassificadorIntencao {
     }
   }
 
-  private ClassificacaoIntencao desempate(String pergunta, ContextoAssistente contexto) {
+  /**
+   * O modelo desempata. Em pausa ou falhando na chamada, vale o voto das embeddings que passa do
+   * limiar sem modelo (#497: o limiar 0,9 e o voto de lei com dado do produtor mandam ao desempate
+   * votos que antes decidiam, e a falha do modelo não pode jogá-los nas palavras-chave do modo
+   * fallback); sem esse voto, {@link AssistenteIndisponivelException}, como antes.
+   */
+  private ClassificacaoIntencao desempate(String pergunta, ContextoAssistente contexto,
+      Optional<ClassificacaoIntencao> voto) {
+    Optional<ClassificacaoIntencao> semModelo = voto
+        .filter(c -> c.confianca() >= propriedades.getLimiarConfiancaSemModelo());
     if (!disponibilidade.disponivel()) {
-      throw new AssistenteIndisponivelException(
-          "Classificacao sem decisao das regras e das embeddings, com o modelo em pausa", null);
+      return semModelo.orElseThrow(() -> new AssistenteIndisponivelException(
+          "Classificacao sem decisao das regras e das embeddings, com o modelo em pausa", null));
     }
-    return llm.classificar(pergunta, contexto);
+    try {
+      return llm.classificar(pergunta, contexto);
+    } catch (AssistenteIndisponivelException e) {
+      if (semModelo.isEmpty()) {
+        throw e;
+      }
+      contexto.verificarAtiva();
+      return semModelo.get();
+    }
   }
 }
