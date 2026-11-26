@@ -52,11 +52,14 @@ import org.springframework.beans.factory.ObjectProvider;
  * treino. As tabelas de varredura mostram, por limiar, quantas perguntas as embeddings decidem e
  * quantas erram.
  *
- * <p>O conjunto é o {@code docs/avaliacao/rota-dev/perguntas-rota-dev.json}; nunca o gabarito.
+ * <p>O conjunto é o {@code docs/avaliacao/rota-dev/perguntas-rota-dev.json} ou outro da mesma
+ * pasta, por {@code -Ddiagnostico.conjunto=} (#624: {@code perguntas-rota-dev-2.json}); nunca o
+ * gabarito.
  */
 class DiagnosticoRotaDevManual {
 
-  private static final Path CONJUNTO = Path.of("docs/avaliacao/rota-dev/perguntas-rota-dev.json");
+  private static final Path CONJUNTO = Path.of(System.getProperty("diagnostico.conjunto",
+      "docs/avaliacao/rota-dev/perguntas-rota-dev.json"));
   private static final double[] LIMIARES = {0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.99};
   private static final List<Long> LATENCIAS_MS = new ArrayList<>();
   private static final double[] SIMILARIDADES = {0.5, 0.6, 0.65, 0.7, 0.75, 0.8};
@@ -154,7 +157,9 @@ class DiagnosticoRotaDevManual {
     }
 
     StringBuilder md = new StringBuilder();
-    md.append("# Diagnóstico de rota no conjunto de desenvolvimento (#497)\n\n");
+    md.append("# Diagnóstico de rota no conjunto de desenvolvimento\n\nConjunto: `")
+        .append(CONJUNTO.getFileName()).append("`, versão ")
+        .append(conjunto.path("versao").asText("?")).append(".\n\n");
     md.append("Configuração: limiar ").append(config.getLimiarConfianca()).append(", vizinhos ")
         .append(config.getVizinhos()).append(", similaridade mínima ")
         .append(config.getSimilaridadeMinima()).append(", treino ").append(exemplos.size())

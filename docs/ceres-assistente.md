@@ -747,7 +747,10 @@ O `ClassificadorIntencao` devolve a intenção, a confiança e **qual camada dec
    com termo de lei como `LEGISLACAO`. O prompt do classificador ganhou a linha de
    `FORA_DE_ESCOPO` sobre outra pessoa e ordem ao sistema, com a ressalva da contraparte e de quem
    contou a regra ("meu vizinho disse que..."). Com o modelo em pausa, as camadas decidem como
-   antes.
+   antes. Desde a #624, a **ordem de ação no sistema** no começo da mensagem ("cancela a nota 418",
+   "marca a guia como paga", "manda um e-mail pro contador") também vai ao desempate, e a pergunta
+   de direito ao crédito ("isso dá crédito?", "ressarcimento") junto do dado do produtor impede a
+   regra de decidir `DADOS` (candidata a MISTO). Diagnóstico em `docs/avaliacao/rota-dev/README.md`.
 
    **Recusa firme marcada pelo modelo:** quando o classificador por modelo decide
    `FORA_DE_ESCOPO` por pedido sobre outra pessoa ou ordem ao sistema, ele devolve

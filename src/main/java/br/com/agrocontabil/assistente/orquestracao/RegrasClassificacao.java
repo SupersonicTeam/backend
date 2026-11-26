@@ -57,7 +57,10 @@ public final class RegrasClassificacao {
    */
   private static final Pattern LEI_GENERICA = Pattern.compile("\\b(lei|legislacao|artigo|art"
       + "|aliquotas?|reducao|reduzidas?|isencao|isent[oa]s?|imunidade|imunes?|fato gerador"
-      + "|contribuintes?|regra|permite|pode)\\b");
+      + "|contribuintes?|regra|permite|pode"
+      // Pergunta de direito ao credito junto do dado (#624): "quanto comprei de diesel e isso da
+      // credito?", "tenho credito acumulado? posso pedir ressarcimento?" sao candidatos a MISTO.
+      + "|(?:da|dao|gera|geram|tomar|toma|aproveitar) (?:direito a )?creditos?|ressarcimento)\\b");
 
   /**
    * Quantia ou período do próprio produtor ("quanto de IBS eu devo?", "o saldo de CBS de agosto

@@ -76,3 +76,54 @@ do NCM 0901.11.10?" (pelo prompt, produto e NCM são DADOS); "qual o faturamento
 DADOS; "apaga as notas rejeitadas da minha conta" vai a DADOS pelas embeddings. Uma regra de
 tratamento de produto específico foi tentada e retirada: o teste de zero erros das regras no gabarito
 a recusou.
+
+## Segundo conjunto e resultado da #624 (2026-11-25)
+
+`perguntas-rota-dev-2.json` (versão `2026-11-25.2`: o K03 passou de LEGISLACAO a DADOS, pela
+convenção do produto específico) tem 65 perguntas escritas às cegas pela sessão de
+código da #624, que nunca leu o gabarito nem o benchmark, nos padrões de erro que sobraram da #497:
+terceiro com e sem leitura legítima (`terceiro`, `terceiro-legitimo`), ordem ao sistema (`ordem`,
+`ordem-legitima`), MISTO curto (`misto-curto`), pergunta curta (`curta-dados`, `curta-lei`,
+`curta-fora`) e votos do kNN entre dados e lei (`voto-knn`). As mesmas regras do primeiro: é
+desenvolvimento, não teste da banca, e nunca entra em pasta de treino. Para rodar:
+
+```
+CONJUNTO=docs/avaliacao/rota-dev/perguntas-rota-dev-2.json \
+  bash docs/avaliacao/rota-dev/rodar_diagnostico.sh <arquivo.md> --modelo
+```
+
+Correção (as duas só mandam a pergunta adiante; nenhuma decide rota nova):
+
+- **Ordem de ação no sistema vai ao desempate** (`SinalRecusaFirme.pedeDesempate`): "cancela a nota
+  418", "marca a guia como paga", "exclui as compras", "altera o valor da nota", "aprova a nota",
+  "manda um e-mail pro contador", no começo da mensagem e com um objeto do sistema logo depois do
+  verbo (só artigos ou possessivos entre eles). Regra e embeddings os punham em DADOS pelas palavras
+  "nota" e "guia"; o modelo os lê como fora de escopo. Sem o objeto, a pergunta de lei com verbo na
+  3ª pessoa ("Muda alguma coisa no Funrural em 2027?") segue pelas camadas.
+- **Pergunta de direito ao crédito impede a regra de decidir DADOS** (`RegrasClassificacao`,
+  `LEI_GENERICA`): "isso dá crédito?", "gera crédito", "ressarcimento" junto do dado do produtor são
+  candidatos a MISTO.
+
+Haiku nas perguntas que chegam ao desempate, 2 repetições, temperatura 1,0:
+
+| | antes (`main` em `df122843`) | depois |
+|---|---|---|
+| Conjunto 2 (65, versão `.2`) | 49 certas (75,4%) | 57 certas (87,7%) |
+| Conjunto 1 (130) | 125 certas (96,2%, rodada da #497) | 127 certas (97,7%) |
+| Regras, erros no conjunto 2 | 9 | 3 |
+| Chamadas ao classificador por modelo, conjunto 2 | 33 | 41 |
+| Chamadas ao classificador por modelo, conjunto 1 | 65 | 66 |
+
+Diagnósticos: `diagnostico-624-conjunto2-antes.md`, `diagnostico-624-conjunto2-depois.md` e
+`diagnostico-624-conjunto1-depois.md`. O R09 do conjunto 1 ("apaga as notas rejeitadas da minha
+conta") deixou de errar. Erros que ficam no conjunto 2: o modelo põe "meu crédito de CBS?" e "quanto
+de crédito eu tive nas compras de defensivo?" em MISTO e "minha guia de IBS vence quando e o que
+acontece se eu atrasar?" em DADOS; o kNN vota DADOS com 0,91 em "até quantos dias depois da emissão
+eu posso cancelar uma nota?"; a regra põe "a fazenda do lado" em lei, "e o funrural do mês?" em lei
+e "como calculo o ICMS da minha venda de gado?" em dados. O K02 ("as minhas notas de soja estão com
+a redução de 60 por cento?") é discutível: o modelo o lê como MISTO. O "antes" foi rodado com o
+`SinalRecusaFirme` e o `RegrasClassificacao` da `main` no mesmo checkout e no mesmo dia do "depois".
+O `ConjuntosRotaDevForaDoTreinoTest` recusa no treino da rota qualquer pergunta dos dois conjuntos.
+
+**Isto muda o que a banca mede:** entra só depois da medição pela regra da comparação da #497 e com o
+OK do Murillo.

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Diagnóstico do classificador de rota no conjunto de desenvolvimento (#497).
 # Uso: bash docs/avaliacao/rota-dev/rodar_diagnostico.sh <arquivo-saida.md> [--modelo]
+# O conjunto padrao e o perguntas-rota-dev.json; CONJUNTO=<arquivo> troca (#624: o -2).
 #
 # - Precisa do Ollama local com o bge-m3 (docker start agrocontabil-ollama).
 # - Com --modelo, as perguntas que chegam ao desempate vão ao Haiku pela API: a ANTHROPIC_API_KEY é
@@ -19,7 +20,7 @@ TRAVA=/c/Users/surik/AppData/Local/Temp/agroconia-ollama-lock
 ENV_FILE='/d/Faculdade/Projetos/SuperSonicTeam - ShowRural2026/backend-tcc/.env'
 
 while ! mkdir "$TRAVA" 2>/dev/null; do sleep 30; done
-echo "sessao: diagnostico de rota da #497 (rota-dev), inicio $(date -Iseconds)" > "$TRAVA/dono.txt"
+echo "sessao: diagnostico de rota (rota-dev, ${CONJUNTO:-perguntas-rota-dev.json}), inicio $(date -Iseconds)" > "$TRAVA/dono.txt"
 trap 'rm -rf "$TRAVA"' EXIT
 
 (
@@ -29,5 +30,6 @@ trap 'rm -rf "$TRAVA"' EXIT
     export ANTHROPIC_API_KEY
   fi
   ./mvnw -q test -Dtest=DiagnosticoRotaDevManual -Dsurefire.failIfNoSpecifiedTests=false \
-    -Djacoco.skip=true -Ddiagnostico.saida="$SAIDA" -Ddiagnostico.modelo="$MODELO"
+    -Djacoco.skip=true -Ddiagnostico.saida="$SAIDA" -Ddiagnostico.modelo="$MODELO" \
+    -Ddiagnostico.conjunto="${CONJUNTO:-docs/avaliacao/rota-dev/perguntas-rota-dev.json}"
 )
