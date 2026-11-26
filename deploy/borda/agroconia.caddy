@@ -1,7 +1,8 @@
 # AgroConIA na borda da VPS (GWNexT-Technologies/infra-borda). Instalado em
-# /opt/borda/sites/agroconia.caddy pelo script da borda (valida com o Caddyfile real, nome
+# /opt/borda/sites/agroconia.caddy pelo scripts/instalar-inquilino.sh da borda (valida, nome
 # temporario + mv, reload); nunca escrito direto na pasta: um arquivo invalido derruba a borda
-# inteira no proximo reinicio.
+# inteira no proximo reinicio. A borda aceita uma LISTA DE PERMITIDOS: diretiva nova aqui pode
+# exigir PR la antes (confira com o scripts/validar-inquilino.sh).
 #
 # So blocos de site, com os dominios literais: sem opcao global, sem porta, sem snippet, sem import
 # e sem variavel de ambiente. O roteamento e do agroconia-caddy (deploy/caddy/Caddyfile). Daqui sao

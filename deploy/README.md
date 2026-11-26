@@ -57,6 +57,7 @@ Internet ─► borda (Caddy: 80/443, TLS, HTTP/3, certificados) ─► rede bor
 | Portas, certificados, conta ACME (volume `agrocontabil_caddy_data`), catch-all neutro | borda | `infra-borda` |
 | O `ask` do certificado sob demanda (opção global, um por instância; exceção registrada) | borda | `infra-borda` |
 | Domínios do AgroConIA, TLS deles, HSTS e redirecionamentos | AgroConIA, instalado na borda | [`borda/agroconia.caddy`](borda/agroconia.caddy) |
+| Scripts de validar, instalar e conferir; contrato e lista de permitidos dos inquilinos | borda | `infra-borda`, `README.md` |
 | `/api`, `/jornada`, `/healthz`, demais cabeçalhos, `noindex`, log de acessos, ponte do `ask` (porta 8081) | AgroConIA | [`caddy/Caddyfile`](caddy/Caddyfile) |
 
 - **Rede `borda`:** `172.31.255.0/24`, o Caddy da borda fixo em `172.31.255.2`, inquilinos de `.128`
@@ -64,6 +65,9 @@ Internet ─► borda (Caddy: 80/443, TLS, HTTP/3, certificados) ─► rede bor
   Compose publica o nome do serviço na rede.
 - **IP do visitante:** o `agroconia-caddy` confia nos `X-Forwarded-*` só de `172.31.255.2/32`; o
   backend, só de proxy interno. Nunca troque pela faixa inteira: outro inquilino forjaria o IP.
+- **Contrato da borda no compose:** o `agroconia-caddy` roda com `cap_drop: [ALL]`,
+  `cap_add: [NET_BIND_SERVICE]`, `no-new-privileges` e sem porta publicada, no projeto
+  `agrocontabil`. O `conferir.sh` da borda recusa o que faltar.
 - **Cada cabeçalho em um lugar só:** HSTS no `borda/agroconia.caddy`, o resto no `caddy/Caddyfile`.
 - **`tls force_automate` e `tls { key_type p256 }` no `www` são obrigatórios** por causa do curinga
   `*.agroconia.com.br`; sem as duas, o `www` fica sem certificado (explicado no arquivo).
@@ -82,13 +86,21 @@ docker compose exec -w /etc/caddy agroconia-caddy caddy reload --config /etc/cad
 Se o `validate` ou o `reload` falhar, **restaure o arquivo na hora**: inválido no disco, o proxy não
 sobe no próximo reinício.
 
-**Tirar os endereços dos escritórios do ar** (o `www` segue): remova o bloco `*.agroconia.com.br`
-do `borda/agroconia.caddy` e instale o arquivo na borda. Sem o bloco, o `www` pode ficar como está.
-Apagar o registro `A *` na Hostinger também corta, mas só quando o TTL vencer.
+**Aplicar mudança no `borda/agroconia.caddy`:** copie o arquivo para `/opt/agrocontabil/borda/` e
+use o script da borda, que valida, instala em `/opt/borda/sites/`, recarrega sem queda e confere.
+Nunca copie direto para a pasta: um arquivo inválido derruba a borda inteira, com os outros
+sistemas, no próximo reinício. Rode dentro de um `tmux`.
 
-**Aplicar mudança no `borda/agroconia.caddy`:** pelo script do `infra-borda`, que valida com o
-Caddyfile real, instala em `/opt/borda/sites/` e recarrega. Nunca copie direto para a pasta: um
-arquivo inválido derruba a borda inteira, com os outros sistemas, no próximo reinício.
+```bash
+/opt/borda/scripts/instalar-inquilino.sh /opt/agrocontabil/borda/agroconia.caddy
+```
+
+Voltar à versão anterior: `/opt/borda/scripts/instalar-inquilino.sh --desfazer agroconia`. A borda
+aceita uma **lista de permitidos**: uma diretiva nova pode exigir PR no `infra-borda` antes.
+
+**Tirar os endereços dos escritórios do ar** (o `www` segue): remova o bloco `*.agroconia.com.br`
+do `borda/agroconia.caddy` e instale o arquivo como acima. Sem o bloco, o `www` pode ficar como
+está. Apagar o registro `A *` na Hostinger também corta, mas só quando o TTL vencer.
 
 ## Operação
 
@@ -608,7 +620,8 @@ echo $?   # 0 = verificado (ou ja estava); 1 = recusado, motivo no log
 A chave existe em **dois** `.env`, com o mesmo valor: `TLS_ASK_CHAVE` em `/opt/agrocontabil/.env`
 (backend) e `AGROCONIA_TLS_ASK_CHAVE` em `/opt/borda/.env`. Gere com `openssl rand -hex 32`
 (**hex, nunca Base64:** `+`, `/` e `=` chegam alterados na URL), troque nos dois e recrie o backend
-(`docker compose up -d --no-deps backend`) e o Caddy da borda. Rotação pela metade faz o `ask`
+(`docker compose up -d --no-deps backend`) e a borda (`docker compose up -d` em `/opt/borda`: o
+reload não troca a chave). Rotação pela metade faz o `ask`
 recusar tudo; os certificados já emitidos continuam valendo.
 
 A chave vai na URL do ask, porque o módulo de permissão do Caddy 2.10 não manda cabeçalho. Por
@@ -625,7 +638,7 @@ openssl rand -base64 48   # JWT_SECRET
 openssl rand -base64 32   # CRIPTO_CHAVE
 openssl rand -hex 32      # TLS_ASK_CHAVE (vai na URL do ask: hex, nunca base64); e SITE_DOMINIO=agroconia.com.br
 docker login ghcr.io -u <usuario-github>   # token clássico só com read:packages
-docker network inspect borda >/dev/null   # a rede e criada pela borda (infra-borda), antes
+docker network inspect borda >/dev/null   # antes, no infra-borda: scripts/criar-rede.sh
 docker compose up -d
 ```
 

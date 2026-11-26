@@ -66,13 +66,16 @@ for s in backend frontend; do
   docker run -d --name $P-$s --network $P-interna --network-alias $s \
     -v "$TMPW/$s.Caddyfile:/etc/caddy/Caddyfile:ro" "$IMAGEM" >/dev/null || exit 1
 done
+# As mesmas capacidades do compose.yaml (a borda de verdade exige as dos inquilinos).
 docker create --name $P-proxy --network $P-interna --network-alias agroconia-caddy \
+  --cap-drop ALL --cap-add NET_BIND_SERVICE --security-opt no-new-privileges \
   -e SITE_HOST=www.agroconia.com.br -e SITE_DOMINIO=agroconia.com.br \
   -v "$DEPLOY/caddy:/etc/caddy:ro" -v "$TMPW/jornada:/srv/jornada:ro" "$IMAGEM" >/dev/null || exit 1
 docker network connect --alias agroconia-caddy $P-borda $P-proxy || exit 1
 docker start $P-proxy >/dev/null || exit 1
 docker run -d --name $P-borda --network $P-borda --ip 172.31.255.2 \
   -p 127.0.0.1:18080:80 -p 127.0.0.1:18443:443 -e AGROCONIA_TLS_ASK_CHAVE=$CHAVE \
+  --cap-drop ALL --cap-add NET_BIND_SERVICE --security-opt no-new-privileges \
   -v "$AQUI/borda.Caddyfile:/etc/caddy/Caddyfile:ro" \
   -v "$DEPLOY/borda/agroconia.caddy:/etc/caddy/sites/agroconia.caddy:ro" \
   -v "$TMPW/vizinho.caddy:/etc/caddy/sites/vizinho.caddy:ro" "$IMAGEM" >/dev/null || exit 1
@@ -161,6 +164,14 @@ for h in agroconia.com.br agrocontabil.167-126-45-181.sslip.io; do
 done
 checar "porta 80 do www redireciona para https" bash -c \
   "curl -sI --max-time 10 -H 'Host: $W' http://127.0.0.1:18080/ | grep -qiF 'location: https://$W/'"
+
+codigo80() { curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H "Host: $1" http://127.0.0.1:18080/; }
+for h in $E agroconia.com.br agrocontabil.167-126-45-181.sslip.io www.vizinho.example; do
+  checar "porta 80 de $h redireciona (308)" test "$(codigo80 $h)" = 308
+done
+checar "porta 80 de host desconhecido: conexao fechada" test "$(codigo80 desconhecido.example)" = 000
+checar "o compose pede as mesmas capacidades do ensaio" bash -c \
+  'grep -qF "cap_drop: [ALL]" "$0" && grep -qF "cap_add: [NET_BIND_SERVICE]" "$0" && grep -qF "no-new-privileges:true" "$0"' "$DEPLOY/compose.yaml"
 
 echo "--- jornada"
 h=$(cabecalhos $W /jornada/v0.1/manifesto.json)

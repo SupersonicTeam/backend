@@ -590,7 +590,9 @@ br.com.agrocontabil
   AgroConIA é inquilino: `deploy/borda/agroconia.caddy` (domínios, TLS, HSTS, redirects; instalado
   na borda) e o proxy interno `agroconia-caddy` (`deploy/caddy/Caddyfile`: roteamento, cabeçalhos,
   `noindex` dos escritórios (frontend#175), log de acessos, ponte do "ask" na porta 8081; sem porta
-  publicada, e só ele entra na rede `borda`; confia em `X-Forwarded-*` só de `172.31.255.2/32`). O
+  publicada e com `cap_drop: [ALL]`, e só ele entra na rede `borda`; confia em `X-Forwarded-*` só
+  de `172.31.255.2/32`). A borda valida o arquivo do inquilino por lista de permitidos e o instala
+  por `scripts/instalar-inquilino.sh`. O
   `*.agroconia.com.br` com `on_demand` fica no arquivo do inquilino, e por isso o `www` precisa de
   `tls force_automate` **e** `tls { key_type p256 }` (sem as duas ele fica sem certificado).
   **Mudou um desses arquivos ou a imagem do Caddy: rode `bash deploy/ensaio-borda/ensaio.sh`.** A
