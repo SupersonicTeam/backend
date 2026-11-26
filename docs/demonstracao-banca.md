@@ -219,7 +219,10 @@ isso a linha `escritorio` do passo 1 tem de dar **1** antes do passo 2.
 Os dois scripts são os de `docs/demonstracao/` (os mesmos que o
 `ResetDemonstracaoPostgresIntegrationTest` roda contra o PostgreSQL 16: seed → ensaio com membro
 removido e contador convidado → reset → seed, com as contagens batendo e o que é de fora do seed
-intacto). Na VPS a pasta do deploy é **`/opt/agrocontabil`** (`deploy/README.md`).
+intacto). Na VPS a pasta do deploy é **`/opt/agrocontabil`** (`deploy/README.md`). Lá existe
+também um `reset-demonstracao.sh` que **não é deste repositório** e usa o serviço `caddy`: a janela
+da [migração para a borda](../deploy/migracao-borda.md) o renomeia para `*.antes-da-borda`, e depois
+dela valem só os passos abaixo.
 
 1. Copiar os scripts: `scp docs/demonstracao/reset-0*.sql <vps>:/opt/agrocontabil/` e, na VPS,
    `cd /opt/agrocontabil`.

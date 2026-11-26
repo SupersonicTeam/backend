@@ -42,6 +42,18 @@ docker compose ps --format 'table {{.Service}}\t{{.Image}}\t{{.Status}}\t{{.Port
 `www.agroconia.com.br`/`agroconia.com.br` (os três saem no passo 1 da borda; nunca rode `printenv`
 sem os nomes).
 
+**Scripts soltos na VPS que usam o serviço `caddy`.** Alguns não estão no repositório e quebram
+depois da migração. Liste os que citam `caddy` (só os nomes):
+
+```bash
+cd /opt/agrocontabil && grep -liw caddy *.sh
+```
+
+Conhecidos em 25/11/2026: `reset-demonstracao.sh`, `ativar_contas_demo.sh`, `caddy-staging.sh` e
+`caddy-producao.sh` (o 3.5 os aposenta), mais o `atualizar-caddy.sh` (apagado no fim). O
+`publicar-jornada.sh` pode aparecer só por comentário: ele não toca em contêiner. **Pare se
+aparecer outro:** veja como usa o `caddy` antes da janela.
+
 Se o `compose.yaml` da VPS não for o da `main` anterior a este PR, o novo leva junto o que faltava
 ao backend (vale no próximo `up` dele). Para comparar o arquivo, tire o CR antes (copiado de um
 checkout do Windows, ele chega com CRLF): `tr -d '\r' < compose.yaml | sha256sum` na VPS e
@@ -217,9 +229,19 @@ Só com tudo certo:
 
 ```bash
 mv compose.yaml.novo compose.yaml
+# aposenta os scripts que usam o servico caddy, para ninguem roda-los por engano (nada e apagado)
+for s in reset-demonstracao.sh ativar_contas_demo.sh caddy-staging.sh caddy-producao.sh; do [ ! -e "$s" ] || mv -n "$s" "$s.antes-da-borda"; done
+ls -1 *.antes-da-borda
 docker compose ps
 exit      # solta o lock
 ```
+
+**Não rode os `*.antes-da-borda` depois da migração.** Parte dos comandos deles cita o serviço
+`caddy`, que não existe mais, e só essas linhas foram lidas: não se sabe se param quando um comando
+falha. Para o reset da demonstração, vale o procedimento versionado de
+[`docs/demonstracao-banca.md`](../docs/demonstracao-banca.md). Querendo um dos scripts de volta, leia
+o arquivo inteiro e adapte antes: `caddy` passa a `agroconia-caddy`, e o teste do `ask` passa a ser o
+do 3.2 (a partir do `backend`, na porta 8081).
 
 ## Volta atrás
 
@@ -236,6 +258,8 @@ cd /opt/agrocontabil
 test -f compose.yaml.novo || cp -p compose.yaml compose.yaml.novo
 cp -p compose.yaml.antes-da-borda compose.yaml
 docker compose -f compose.yaml.novo rm -sf agroconia-caddy
+# devolve o nome aos scripts aposentados no 3.5 (nao faz nada se a volta atras veio antes dele)
+for s in *.sh.antes-da-borda; do [ ! -e "$s" ] || mv -n "$s" "${s%.antes-da-borda}"; done
 curl -sS --retry 10 --retry-delay 2 --retry-all-errors --resolve www.agroconia.com.br:443:127.0.0.1 https://www.agroconia.com.br/healthz; echo    # UP
 ```
 
@@ -248,6 +272,8 @@ este roteiro não altera.
 cd /opt/agrocontabil
 docker rm agrocontabil-caddy-1
 rm -f atualizar-caddy.sh trocar-compose.sh Caddyfile
+rm -f caddy-staging.sh.antes-da-borda caddy-producao.sh.antes-da-borda   # perderam a funcao: o certificado e da borda
+# reset-demonstracao.sh e ativar_contas_demo.sh ficam aposentados ate alguem decidir adaptar ou apagar
 ls -1 .env.bak-*      # cópias antigas do .env, com segredos: apagar as que não precisar mais
 ```
 
