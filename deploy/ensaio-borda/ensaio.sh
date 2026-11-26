@@ -161,6 +161,9 @@ for h in agroconia.com.br agrocontabil.167-126-45-181.sslip.io; do
   c=$(cabecalhos $h '/rota?a=1')
   checar "$h -> 301 para o www com caminho e query" bash -c \
     'grep -qE "^HTTP/[0-9.]+ 301" <<<"$0" && grep -qiF "location: https://www.agroconia.com.br/rota?a=1" <<<"$0"' "$c"
+  # Sem includeSubDomains: no dominio sem www ele valeria para todo subdominio, por um ano.
+  checar "$h: um HSTS no redirecionamento, sem includeSubDomains" bash -c \
+    '[ "$(grep -ciE "^strict-transport-security:" <<<"$0")" = 1 ] && grep -qixF "strict-transport-security: max-age=31536000" <<<"$0"' "$c"
 done
 checar "porta 80 do www redireciona para https" bash -c \
   "curl -sI --max-time 10 -H 'Host: $W' http://127.0.0.1:18080/ | grep -qiF 'location: https://$W/'"

@@ -198,7 +198,8 @@ c -sSI https://ruraloeste.agroconia.com.br/ | grep -iE '^(HTTP|x-robots|referrer
 c -s https://naoexiste.agroconia.com.br/ -o /dev/null; echo "saida $? (tem de ser diferente de 0)"
 ```
 
-O `conferir.sh` avisa que o bloco de redirecionamento não tem HSTS: é o comportamento de antes. A
+Na migração, o bloco de redirecionamento não tinha HSTS (o comportamento de antes), e o
+`conferir.sh` avisava; o arquivo de hoje manda um, sem `includeSubDomains`. A
 ordem dos cabeçalhos pode mudar no `diff`: o que importa são os mesmos nomes e valores, **uma vez
 cada**.
 

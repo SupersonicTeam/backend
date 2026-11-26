@@ -57,5 +57,9 @@ www.agroconia.com.br {
 
 # O dominio sem www e o endereco sslip.io antigo redirecionam para o principal.
 agroconia.com.br, agrocontabil.167-126-45-181.sslip.io {
+	# Sem includeSubDomains: no dominio sem www ele valeria para todo subdominio, e o navegador
+	# guarda a regra por um ano. Cada subdominio servido aqui ja manda o proprio HSTS.
+	header Strict-Transport-Security "max-age=31536000"
+
 	redir https://www.agroconia.com.br{uri} permanent
 }
