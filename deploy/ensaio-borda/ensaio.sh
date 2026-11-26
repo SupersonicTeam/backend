@@ -170,8 +170,12 @@ for h in $E agroconia.com.br agrocontabil.167-126-45-181.sslip.io www.vizinho.ex
   checar "porta 80 de $h redireciona (308)" test "$(codigo80 $h)" = 308
 done
 checar "porta 80 de host desconhecido: conexao fechada" test "$(codigo80 desconhecido.example)" = 000
-checar "o compose pede as mesmas capacidades do ensaio" bash -c \
-  'grep -qF "cap_drop: [ALL]" "$0" && grep -qF "cap_add: [NET_BIND_SERVICE]" "$0" && grep -qF "no-new-privileges:true" "$0"' "$DEPLOY/compose.yaml"
+# So o bloco do servico agroconia-caddy, ate o proximo servico ou o fim do arquivo.
+bloco=$(awk '/^  agroconia-caddy:/{f=1; print; next} f && /^  [a-z]/{f=0} f' "$DEPLOY/compose.yaml")
+capacidades() {
+  contem "$bloco" "cap_drop: [ALL]" && contem "$bloco" "cap_add: [NET_BIND_SERVICE]" && contem "$bloco" "no-new-privileges:true"
+}
+checar "o agroconia-caddy do compose pede as mesmas capacidades do ensaio" capacidades
 
 echo "--- jornada"
 h=$(cabecalhos $W /jornada/v0.1/manifesto.json)

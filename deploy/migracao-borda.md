@@ -43,8 +43,17 @@ docker compose ps --format 'table {{.Service}}\t{{.Image}}\t{{.Status}}\t{{.Port
 sem os nomes).
 
 Se o `compose.yaml` da VPS não for o da `main` anterior a este PR, o novo leva junto o que faltava
-ao backend (vale no próximo `up` dele). Compare o `sha256sum` com
-`git show <commit anterior ao merge>:deploy/compose.yaml | sha256sum`.
+ao backend (vale no próximo `up` dele). Para comparar o arquivo, tire o CR antes (copiado de um
+checkout do Windows, ele chega com CRLF): `tr -d '\r' < compose.yaml | sha256sum` na VPS e
+`git show <commit anterior ao merge>:deploy/compose.yaml | sha256sum` no PC. Depois do passo 2.1,
+veja se o **backend** muda: os dois comandos abaixo têm de dar o mesmo hash; se não derem, o
+próximo deploy o recria com ambiente diferente, e é preciso saber o que muda antes da janela.
+
+```bash
+cd /opt/agrocontabil
+docker compose config --hash backend
+docker compose -f compose.yaml.novo config --hash backend
+```
 
 ## 2. Preparação (sem efeito no ar)
 
@@ -53,6 +62,13 @@ ao backend (vale no próximo `up` dele). Compare o `sha256sum` com
 ```bash
 scp -i ~/.ssh/agrocontabil_lightsail deploy/compose.yaml ubuntu@<ip>:/opt/agrocontabil/compose.yaml.novo
 scp -i ~/.ssh/agrocontabil_lightsail -r deploy/caddy deploy/borda ubuntu@<ip>:/opt/agrocontabil/
+```
+
+Na VPS, garanta a leitura (o proxy roda sem `DAC_OVERRIDE`: não lê arquivo de outro dono sem
+permissão geral):
+
+```bash
+cd /opt/agrocontabil && chmod -R a+rX caddy borda
 ```
 
 **2.2. Borda:** passos 2 a 5 do runbook do `infra-borda`, nesta ordem: clonar em `/opt/borda` (dono
@@ -82,7 +98,7 @@ tmux new -s borda
 cd /opt/agrocontabil && flock -w 900 .deploy.lock bash
 ```
 
-As funções abaixo valem para a janela inteira e para a volta atrás:
+As funções abaixo valem para a janela inteira:
 
 ```bash
 mascara() { sed 's/chave=[^"&[:space:]]*/chave=<oculta>/g'; }   # toda saida do Caddy passa por aqui
@@ -96,7 +112,8 @@ c() { curl --max-time 20 --resolve www.agroconia.com.br:443:127.0.0.1 --resolve 
 ```bash
 ts=$(date +%Y%m%d-%H%M%S); mkdir -p backups
 cp -p compose.yaml "compose.yaml.bak-$ts"; cp -p Caddyfile "Caddyfile.bak-$ts"
-cp -p compose.yaml compose.yaml.antes-da-borda   # nome fixo: e este que a volta atras restaura
+# nome fixo: e este que a volta atras restaura. So grava enquanto o compose em uso ainda tem o caddy
+if docker compose config --services | grep -qx caddy; then cp -p compose.yaml compose.yaml.antes-da-borda; else echo 'PARE: o compose.yaml em uso ja nao tem o servico caddy'; fi
 docker run --rm -v agrocontabil_caddy_data:/d:ro -v "$PWD/backups:/b" caddy:2.10-alpine sh -c "umask 077; tar czf /b/caddy_data-$ts.tgz -C /d ."   # tem chaves privadas
 cert | tee backups/cert-antes.txt   # tem de mostrar emissor e impressao; vazio = pare
 c -sSI https://www.agroconia.com.br/ | grep -iE '^(HTTP|strict|x-content|referrer|alt-svc|server)' | tee backups/headers-antes.txt
@@ -136,8 +153,8 @@ então sem reload; entra a cópia validada):
 ```bash
 (cd /opt/borda && BORDA_VALIDADO=/tmp/agroconia.caddy.validado scripts/validar-inquilino.sh /opt/agrocontabil/borda/agroconia.caddy \
   && install -m 644 /tmp/agroconia.caddy.validado sites/.agroconia.caddy.novo \
-  && mv sites/.agroconia.caddy.novo sites/agroconia.caddy && rm -f /tmp/agroconia.caddy.validado)
-cmp /opt/agrocontabil/borda/agroconia.caddy /opt/borda/sites/agroconia.caddy && echo "arquivo na borda"
+  && mv sites/.agroconia.caddy.novo sites/agroconia.caddy && rm -f /tmp/agroconia.caddy.validado \
+  && cmp /opt/agrocontabil/borda/agroconia.caddy sites/agroconia.caddy && echo "arquivo na borda")
 ```
 
 **Sem o "arquivo na borda", não siga.** Parar o antigo, sem `rm` (começa a indisponibilidade, de
@@ -155,10 +172,12 @@ Subir a borda com o mesmo volume:
 
 ### 3.4 Conferências
 
+Primeiro esperar a borda atender (o `up -d` volta antes disso); só depois conferir:
+
 ```bash
-(cd /opt/borda && scripts/conferir.sh)                            # tudo "ok"; o primeiro certificado pode demorar alguns segundos
+c -sS --retry 15 --retry-delay 2 --retry-all-errors https://www.agroconia.com.br/healthz; echo   # UP
+(cd /opt/borda && scripts/conferir.sh)                            # tudo "ok"
 [ "$(sudo sed -n 's/^TLS_ASK_CHAVE=//p' /opt/agrocontabil/.env | sha256sum)" = "$(docker exec borda-caddy printenv AGROCONIA_TLS_ASK_CHAVE | sha256sum)" ] && echo "chave igual na borda"
-c -sS https://www.agroconia.com.br/healthz; echo                  # UP
 cert | diff - backups/cert-antes.txt && echo "mesmo certificado"
 c -sSI https://www.agroconia.com.br/ | grep -iE '^(HTTP|strict|x-content|referrer|alt-svc|server)' | diff - backups/headers-antes.txt && echo "mesmos cabeçalhos"
 c -sSI 'https://agroconia.com.br/x?a=1' | grep -iE '^(HTTP|location)'                       # 301 para o www
@@ -217,7 +236,7 @@ cd /opt/agrocontabil
 test -f compose.yaml.novo || cp -p compose.yaml compose.yaml.novo
 cp -p compose.yaml.antes-da-borda compose.yaml
 docker compose -f compose.yaml.novo rm -sf agroconia-caddy
-curl -sS https://www.agroconia.com.br/healthz; echo    # UP
+curl -sS --retry 10 --retry-delay 2 --retry-all-errors --resolve www.agroconia.com.br:443:127.0.0.1 https://www.agroconia.com.br/healthz; echo    # UP
 ```
 
 O contêiner antigo guarda a configuração com que foi criado e o `Caddyfile` da raiz da pasta, que
