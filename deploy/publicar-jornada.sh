@@ -4,8 +4,8 @@
 #   publicar-jornada.sh <zip> <versao>      ex.: publicar-jornada.sh /tmp/agroconia-jornada-v0.2.zip v0.2
 #
 # O zip e o da Release do repositorio dos quadros (uma pasta so no topo, com manifesto.json, etapas/
-# e parados/). Ele vira /opt/agrocontabil/jornada/<versao>/, que o Caddy serve em /jornada/<versao>/
-# (Caddyfile, handle_path /jornada/*). Nao mexe em container: a pasta nova ja aparece no Caddy.
+# e parados/). Ele vira /opt/agrocontabil/jornada/<versao>/, que o agroconia-caddy serve em /jornada/<versao>/
+# (caddy/Caddyfile, handle_path /jornada/*). Nao mexe em container: a pasta nova ja aparece no proxy.
 #
 # - Versao publicada nao muda: o navegador guarda os arquivos por um ano (Cache-Control immutable),
 #   entao o script recusa uma versao que ja existe. Pacote novo = versao nova.

@@ -14,9 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code {slug}.agroconia.com.br}, o Caddy pergunta aqui se o domínio é de um escritório. 200
  * emite; 404 recusa.
  *
- * <p>Fora de {@code /api}: o Caddy só repassa {@code /api/*} e o backend não publica porta, então a
- * rota só é alcançável pela rede interna do compose. Ainda assim exige a chave compartilhada
- * ({@code APP_ESCRITORIO_TLS_ASK_CHAVE}), conferida em tempo constante; sem ela, a mesma recusa.
+ * <p>Fora de {@code /api}: o proxy só repassa {@code /api/*} ao tráfego público e o backend não
+ * publica porta. A borda da VPS chega aqui pela porta 8081 do {@code agroconia-caddy}
+ * ({@code deploy/caddy/Caddyfile}), que recusa os outros contêineres da rede da borda. Ainda assim
+ * exige a chave compartilhada ({@code APP_ESCRITORIO_TLS_ASK_CHAVE}), conferida em tempo
+ * constante; sem ela, a mesma recusa.
  * Fora do Swagger, sem auditoria e sem corpo: o Caddy olha só o status.
  */
 @RestController

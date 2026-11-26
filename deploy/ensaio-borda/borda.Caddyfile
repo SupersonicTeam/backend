@@ -1,0 +1,25 @@
+# Borda DE ENSAIO, so para o ensaio.sh desta pasta. A de verdade e do repositorio
+# GWNexT-Technologies/infra-borda; este arquivo imita o caddy/Caddyfile dela (afa9619) no que o
+# AgroConIA depende: o "ask" na parte global, os catch-all neutros e o import dos inquilinos.
+{
+	# So no ensaio: certificados de uma CA interna, sem falar com o Let's Encrypt.
+	local_certs
+	skip_install_trust
+
+	admin localhost:2019
+
+	on_demand_tls {
+		ask http://agroconia-caddy:8081/interno/tls/permitido?chave={$AGROCONIA_TLS_ASK_CHAVE}
+	}
+}
+
+# Catch-all neutros: host desconhecido tem a conexao fechada na 80 e nao ganha certificado na 443.
+http:// {
+	abort
+}
+
+https:// {
+	abort
+}
+
+import sites/*.caddy

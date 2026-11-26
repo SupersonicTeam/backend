@@ -55,13 +55,13 @@ A versão para o titular é servida em `GET /api/politica-dados` (versão 2026-1
   base64 de 14 caracteres terminado em 2 dígitos viraria `[CNPJ]`) e só em maiúsculas, o formato
   da RFB e do XML: o log carrega hash em hex minúsculo. Caminho típico: a mensagem do validador do
   XSD sobre um XML importado com o CNPJ novo, que o leiaute em uso ainda não aceita.
-- **Acessos da página inicial no Caddy (#484)**, para contar o QR do cartão de visita:
+- **Acessos da página inicial no proxy `agroconia-caddy` (#484)**, para contar o QR do cartão de visita:
   - **o que entra:** só a raiz `/` do `www`, sem IP, porta, cabeçalhos (cookies inclusive) e sem
     `/api` (que leva CPF/CNPJ na busca), `/healthz` ou as rotas do SPA. Ficam data, URI, status e o
     user agent;
   - **dado pessoal:** nenhum, então não há item na política de dados;
   - **retenção:** 1 MiB no arquivo ativo (~3.000 acessos) e no máximo 3 antigos, apagados 30 dias
-    depois (`deploy/Caddyfile`, `deploy/README.md`);
+    depois (`deploy/caddy/Caddyfile`, `deploy/README.md`);
   - **atenção:** reintroduzir IP ou cabeçalhos exige rever a política de dados.
 - O IP dos logs de limite de tentativas sai truncado pelos bytes (último octeto / após o /64; IPv4 mapeado em IPv6 vira IPv4 truncado).
 - Senha, token e hash nunca são logados nem ecoados em erro (`@Sensivel`, `toString` dos DTOs).

@@ -17,7 +17,7 @@ export AGRO_API_URL='https://<host da demonstração>'   # o nome final (www.), 
                                                     # o urllib troca POST por GET num 301
 export AGRO_EMAIL='<conta de produtor>'
 read -rs AGRO_SENHA && export AGRO_SENHA
-# Só se o host tiver o Basic Auth do Caddy (deploy/Caddyfile): o login passa por ele.
+# Só se o host tiver o Basic Auth do Caddy (o deploy/Caddyfile da época): o login passa por ele.
 export AGRO_BASIC_USUARIO='<usuário>'; read -rs AGRO_BASIC_SENHA && export AGRO_BASIC_SENHA
 python3 -I docs/avaliacao/harness-api/harness.py
 ```

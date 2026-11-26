@@ -1,15 +1,16 @@
 # Deploy — VPS Oracle Cloud (Always Free)
 
 Ambiente de demonstração do AgroContábil: backend, frontend, Postgres + pgvector, Ollama (embedding e modelo local da Ceres; desde 2026-11-10 o chat vai pela API da Anthropic),
-ClamAV e Caddy (HTTPS automático) numa VM só.
+ClamAV e o proxy `agroconia-caddy` numa VM só. A VM é compartilhada: o HTTPS e as portas são da
+**borda** (repositório `GWNexT-Technologies/infra-borda`), em que o AgroConIA é um inquilino.
 
 | Item | Valor |
 |------|-------|
 | VM | `agrocontabil`, Oracle Cloud, Brazil Southeast (Vinhedo), VM.Standard.A1.Flex (Ampere **arm64**), 8 OCPU / 47 GiB de RAM, disco de 96 GB (conferido em 2026-11-06), Ubuntu 24.04 |
-| Endereço | `https://www.agroconia.com.br` (`SITE_HOST`). `agroconia.com.br` e o antigo `agrocontabil.<ip-com-hífens>.sslip.io` redirecionam para ele (`SITE_REDIRECIONA`) |
-| DNS | Hostinger (`dns-parking.com`): registro `A` de `@` e de `www` para o IP da VPS, sem `AAAA` (a VM não tem IPv6). O `A *` dos endereços dos escritórios entra pela seção [Endereço próprio do escritório](#endereço-próprio-do-escritório-464) |
+| Endereço | `https://www.agroconia.com.br` (`SITE_HOST`). `agroconia.com.br` e o antigo `agrocontabil.<ip-com-hífens>.sslip.io` redirecionam para ele ([`borda/agroconia.caddy`](borda/agroconia.caddy)) |
+| DNS | Hostinger (`dns-parking.com`): registro `A` de `@` e de `www` para o IP da VPS, sem `AAAA` (a VM não tem IPv6). O `A *` serve os [endereços dos escritórios](#endereço-próprio-do-escritório-464) |
 | Acesso SSH | `ssh -i ~/.ssh/agrocontabil_lightsail ubuntu@<ip>` (a chave privada fica só no PC de quem fez o deploy) |
-| Pasta na VM | `/opt/agrocontabil` — `compose.yaml`, `Caddyfile`, `.env` (600), `certs/nfe-teste.p12`, `jornada/` (quadros da landing, seção [Jornada da landing](#jornada-da-landing-frontend174)) |
+| Pasta na VM | `/opt/agrocontabil` — `compose.yaml`, `caddy/`, `.env` (600), `certs/nfe-teste.p12`, `jornada/` (quadros da landing, seção [Jornada da landing](#jornada-da-landing-frontend174)) |
 | Imagens | `ghcr.io/supersonicteam/backend` e `ghcr.io/supersonicteam/frontend` (workflow `docker-publish.yml` de cada repo, amd64 + arm64) |
 
 ## Profile `homolog`, sem senha no Caddy
@@ -38,8 +39,68 @@ abaixo) e deixar o seed recriar as contas.
 - Security list da VCN `agrocontabil-vcn`: entrada TCP 22, 80 e 443.
 - `iptables` da imagem Ubuntu da Oracle (REJECT no fim do INPUT): 80/443 TCP e 443 UDP liberados e
   salvos com `netfilter-persistent` (cloud-init da VM).
-- Só o Caddy publica porta. Backend, Postgres, Ollama e ClamAV ficam na rede interna do compose; o
-  Actuator não é exposto (o Caddy só repassa `/api/*`).
+- Nenhum contêiner do AgroConIA publica porta: 80, 443 e 443/udp são do Caddy da borda. Backend,
+  Postgres, Ollama e ClamAV ficam na rede interna do compose; o Actuator não é exposto (o proxy só
+  repassa `/api/*`).
+
+## Borda e proxy
+
+> **A migração é feita uma vez, pelo [`migracao-borda.md`](migracao-borda.md).** Até essa janela, a
+> VPS segue com o serviço `caddy` antigo, e os comandos com `agroconia-caddy` ainda não valem.
+
+```
+Internet ─► borda (Caddy: 80/443, TLS, HTTP/3, certificados) ─► rede borda ─► agroconia-caddy:80 ─► backend:8080 | frontend:80 | jornada/
+```
+
+| O quê | De quem | Arquivo |
+|-------|---------|---------|
+| Portas, certificados, conta ACME (volume `agrocontabil_caddy_data`), catch-all neutro | borda | `infra-borda` |
+| O `ask` do certificado sob demanda (opção global, um por instância; exceção registrada) | borda | `infra-borda` |
+| Domínios do AgroConIA, TLS deles, HSTS e redirecionamentos | AgroConIA, instalado na borda | [`borda/agroconia.caddy`](borda/agroconia.caddy) |
+| Scripts de validar, instalar e conferir; contrato e lista de permitidos dos inquilinos | borda | `infra-borda`, `README.md` |
+| `/api`, `/jornada`, `/healthz`, demais cabeçalhos, `noindex`, log de acessos, ponte do `ask` (porta 8081) | AgroConIA | [`caddy/Caddyfile`](caddy/Caddyfile) |
+
+- **Rede `borda`:** `172.31.255.0/24`, o Caddy da borda fixo em `172.31.255.2`, inquilinos de `.128`
+  a `.254`. Do AgroConIA entra **só o `agroconia-caddy`**: `backend` e `frontend` nunca, porque o
+  Compose publica o nome do serviço na rede.
+- **IP do visitante:** o `agroconia-caddy` confia nos `X-Forwarded-*` só de `172.31.255.2/32`; o
+  backend, só de proxy interno. Nunca troque pela faixa inteira: outro inquilino forjaria o IP.
+- **Contrato da borda no compose:** o `agroconia-caddy` roda com `cap_drop: [ALL]`,
+  `cap_add: [NET_BIND_SERVICE]`, `no-new-privileges` e sem porta publicada, no projeto
+  `agrocontabil`. O `conferir.sh` da borda recusa o que faltar.
+- **Cada cabeçalho em um lugar só:** HSTS no `borda/agroconia.caddy`, o resto no `caddy/Caddyfile`.
+- **`tls force_automate` e `tls { key_type p256 }` no `www` são obrigatórios** por causa do curinga
+  `*.agroconia.com.br`; sem as duas, o `www` fica sem certificado (explicado no arquivo).
+- **Antes de mudar um dos dois arquivos ou a imagem do Caddy:**
+  `bash deploy/ensaio-borda/ensaio.sh` (dois Caddy de verdade, local, só precisa de Docker).
+
+**Aplicar mudança no `caddy/Caddyfile`** (sem queda; arquivo inválido é recusado e o anterior segue):
+
+```bash
+cd /opt/agrocontabil && cp -p caddy/Caddyfile Caddyfile.proxy-anterior
+# copiar o novo para caddy/Caddyfile
+docker compose exec -w /etc/caddy agroconia-caddy caddy validate --config /etc/caddy/Caddyfile
+docker compose exec -w /etc/caddy agroconia-caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+Se o `validate` ou o `reload` falhar, **restaure o arquivo na hora**: inválido no disco, o proxy não
+sobe no próximo reinício.
+
+**Aplicar mudança no `borda/agroconia.caddy`:** copie o arquivo para `/opt/agrocontabil/borda/` e
+use o script da borda, que valida, instala em `/opt/borda/sites/`, recarrega sem queda e confere.
+Nunca copie direto para a pasta: um arquivo inválido derruba a borda inteira, com os outros
+sistemas, no próximo reinício. Rode dentro de um `tmux`.
+
+```bash
+/opt/borda/scripts/instalar-inquilino.sh /opt/agrocontabil/borda/agroconia.caddy
+```
+
+Voltar à versão anterior: `/opt/borda/scripts/instalar-inquilino.sh --desfazer agroconia`. A borda
+aceita uma **lista de permitidos**: uma diretiva nova pode exigir PR no `infra-borda` antes.
+
+**Tirar os endereços dos escritórios do ar** (o `www` segue): remova o bloco `*.agroconia.com.br`
+do `borda/agroconia.caddy` e instale o arquivo como acima. Sem o bloco, o `www` pode ficar como
+está. Apagar o registro `A *` na Hostinger também corta, mas só quando o TTL vencer.
 
 ## Operação
 
@@ -54,8 +115,11 @@ abaixo) e deixar o seed recriar as contas.
 - **SSH:** só chave (sem senha, root sem senha) e `fail2ban` no jail `sshd` (5 falhas em 10 min →
   1 h de bloqueio). No Ubuntu 24.04 a unidade é `ssh.service`, então o
   `/etc/fail2ban/jail.d/sshd.local` fixa o `journalmatch` — o padrão do fail2ban nunca casaria.
-- **Arquivos de configuração** (`compose.yaml`, `Caddyfile`, scripts) não vão pelo CD, que só troca
-  imagem: ao mudar algum, copie para `/opt/agrocontabil` e rode `docker compose up -d`.
+- **Arquivos de configuração** (`compose.yaml`, `caddy/`, `borda/`, scripts) não vão pelo CD, que só troca
+  imagem. `compose.yaml` e scripts: copie para `/opt/agrocontabil` e rode `docker compose up -d`. Os
+  dois arquivos do Caddy **não** entram com o `up`: siga [Borda e proxy](#borda-e-proxy). **Até a
+  [janela da migração](migracao-borda.md), não copie o `compose.yaml` novo:** ele não tem o serviço
+  `caddy` que está no ar.
 
 ## E-mail (#460)
 
@@ -346,8 +410,10 @@ reescrita (44 créditos) mais um; o job da segunda-feira e a subida ajustam a se
 ## Acessos da página inicial (#484)
 
 O QR do cartão de visita leva a `https://www.agroconia.com.br/?utm_source=cartao`. Para contar as
-escaneadas, o Caddy registra os acessos à página inicial do `www`, num arquivo do volume
-`caddy_data`, que sobrevive aos deploys. Conta acessos, não pessoas: a mesma pessoa que escaneia
+escaneadas, o `agroconia-caddy` registra os acessos à página inicial do `www`, num arquivo do volume
+`acessos`, que sobrevive aos deploys. Os registros de antes da migração para a borda ficam em
+`/data/acessos` do volume `agrocontabil_caddy_data`, que passou a ser da borda (o roteiro da migração
+manda contar e apagar). Conta acessos, não pessoas: a mesma pessoa que escaneia
 duas vezes conta duas.
 
 **O que entra (minimizado, sem dado pessoal):**
@@ -379,52 +445,31 @@ nem cookie.
 Total de escaneadas do cartão, no ativo e nos antigos:
 
 ```bash
-docker compose exec -T caddy sh -c "{ cat /data/acessos/www.log; zcat /data/acessos/www-*.log.gz 2>/dev/null; } | grep -c 'utm_source=cartao'"
+docker compose exec -T agroconia-caddy sh -c "{ cat /data/acessos/www.log; zcat /data/acessos/www-*.log.gz 2>/dev/null; } | grep -c 'utm_source=cartao'"
 ```
 
 Por dia, em Brasília:
 
 ```bash
-docker compose exec -T caddy sh -c "{ cat /data/acessos/www.log; zcat /data/acessos/www-*.log.gz 2>/dev/null; } | grep 'utm_source=cartao' | sed 's/.*\"ts\":\([0-9]*\).*/\1/' | TZ=UTC+3 awk '{ print strftime(\"%Y-%m-%d\", \$1) }' | sort | uniq -c"
+docker compose exec -T agroconia-caddy sh -c "{ cat /data/acessos/www.log; zcat /data/acessos/www-*.log.gz 2>/dev/null; } | grep 'utm_source=cartao' | sed 's/.*\"ts\":\([0-9]*\).*/\1/' | TZ=UTC+3 awk '{ print strftime(\"%Y-%m-%d\", \$1) }' | sort | uniq -c"
 ```
 
 Trocar `utm_source=cartao` por outra origem conta outra campanha. Sem filtro, o primeiro comando
 conta os acessos à página inicial.
 
-### Aplicar na VPS
-
-Desde 2026-11-10, a VPS roda o `Caddyfile` da `main`, que já traz o registro. Num Caddyfile mais
-antigo, entram só as linhas do `log` no bloco `{$SITE_HOST}`: o bloco `log { ... }`, o
-`@foraDaContagem`, o `log_skip` e o `log_append`.
-
-```bash
-cd /opt/agrocontabil && cp Caddyfile Caddyfile.anterior
-# editar o Caddyfile (bloco {$SITE_HOST})
-docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
-docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
-```
-
-- **Sem queda:** o `reload` troca a configuração sem reiniciar o Caddy. Com o arquivo inválido, ele
-  recusa e segue com a anterior.
-- **Conferir:**
-  1. abrir `https://www.agroconia.com.br/?utm_source=cartao`;
-  2. rodar o primeiro comando de contagem;
-  3. ver com `docker compose exec caddy cat /data/acessos/www.log` que a linha não tem IP.
-- **Reverter:** `cp Caddyfile.anterior Caddyfile` e o mesmo `reload`.
-
 ## Jornada da landing (frontend#174)
 
 A landing tem uma seção 3D: uma sequência de imagens que anda com a rolagem. Os quadros **não vão
 na imagem do frontend** (seriam 81 MB a mais em cada imagem; decisão de 2026-11-09). Ficam na VPS,
-em `/opt/agrocontabil/jornada/<versão>/`, e o Caddy os serve em `/jornada/<versão>/`, no mesmo host
+em `/opt/agrocontabil/jornada/<versão>/`, e o `agroconia-caddy` os serve em `/jornada/<versão>/`, no mesmo host
 do site. O player lê `/jornada/v0.1/manifesto.json` e tira dele os caminhos dos quadros.
 
 - **Pacote:** o zip da Release do repositório privado `luizGervazio/Animation-Agroconia`
   (`agroconia-jornada-v0.1.zip`: 75 MB, 2.442 arquivos, em AVIF e em WebP, a reserva para navegador
   sem AVIF). No ar desde 2026-11-12: a `v0.1`.
-- **No Caddy:** o `handle_path /jornada/*` do snippet `(app)` serve a pasta `/srv/jornada`, que o
+- **No proxy:** o `handle_path /jornada/*` do snippet `(app)` serve a pasta `/srv/jornada`, que o
   `compose.yaml` monta de `./jornada`, só para leitura. Vale também nos endereços dos escritórios
-  (o mesmo snippet). O `nginx.conf` do frontend não entra nisso: o Caddy responde antes.
+  (o mesmo snippet). O `nginx.conf` do frontend não entra nisso: o proxy responde antes.
 - **Cache de um ano** (`Cache-Control: public, max-age=31536000, immutable`), só em arquivo que
   existe. Por isso **uma versão publicada nunca muda**: pacote novo entra como pasta nova (`v0.2`).
   Um arquivo trocado dentro da `v0.1` não chegaria a quem já visitou. O 404 sai sem o cabeçalho,
@@ -470,65 +515,52 @@ Uma aba aberta antes do deploy continua pedindo a versão antiga.
 
 ### Primeira vez num ambiente
 
-A montagem da pasta só entra quando o container do Caddy é recriado; o `reload` não basta.
+A montagem da pasta só entra quando o contêiner do `agroconia-caddy` é recriado; o `reload` não
+basta.
 
 ```bash
 cd /opt/agrocontabil
 mkdir -p jornada                                  # antes do up: se faltar, o Docker cria a pasta vazia e do root
-# copiar compose.yaml, Caddyfile e publicar-jornada.sh do repositório; publicar o pacote (acima)
-docker compose config -q                          # o compose novo com o .env real
-docker compose run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile   # Valid configuration
-docker compose up -d --no-deps caddy              # recria só o Caddy; o HTTPS cai por alguns segundos
+docker compose run --rm --no-deps agroconia-caddy caddy validate --config /etc/caddy/Caddyfile   # Valid configuration; senao, pare
+docker compose up -d --no-deps agroconia-caddy    # recria só o proxy; o site cai por alguns segundos
 curl -s https://www.agroconia.com.br/healthz      # UP
 ```
 
-- **Validar antes de recriar:** com o Caddyfile inválido, o container novo não sobe e o site cai. O
-  `run` valida num container à parte, com o arquivo e as variáveis que o novo vai usar.
 - **`--no-deps`:** evita recriar o backend e o frontend quando o `compose.yaml` copiado também
   mudou para eles. Essas mudanças entram no próximo deploy de cada um.
-- **Certificados:** ficam no volume `caddy_data` e sobrevivem à recriação.
-- **Reverter:** voltar o `compose.yaml` e o `Caddyfile` anteriores e repetir o `up`.
 
 ## Endereço próprio do escritório (#464)
 
 Cada escritório pode ter o próprio endereço, `{slug}.agroconia.com.br`. O produtor continua em
-`www`. O backend já serve o recurso: slug, endpoint público, o "ask" do Caddy e o login no
-subdomínio. Desde 2026-11-10, a VPS já roda o `Caddyfile` e o `compose.yaml` da `main`, com o
-bloco `https://` e o "ask" no ar, e o `.env` já tem `SITE_DOMINIO` e `TLS_ASK_CHAVE`. O recurso
-segue **dormente** só porque falta o registro `A *`: sem ele, nenhum subdomínio resolve, e o `www`
-não muda.
-
-**Quando ligar:** só com o backend e o frontend (modo escritório) prontos e ensaiados. Se não
-estiver pronto até o congelamento (26/11), fica para depois da banca (03/12). Todos os passos são
-manuais e do Murillo, na VPS e na Hostinger.
+`www`. O registro `A *` já existe na Hostinger (conferido em 25/11/2026), e o `.env` tem
+`SITE_DOMINIO` e `TLS_ASK_CHAVE`.
 
 ### Como funciona
 
-- **Certificados sob demanda:** o Caddy pede um certificado por slug, no primeiro acesso, via
-  On-Demand TLS. Antes de pedir, ele pergunta ao backend: `GET
-  http://backend:8080/interno/tls/permitido?chave=...&domain=...`. Essa rota fica fora de `/api`,
-  então só a rede interna a alcança.
+- **Certificados sob demanda:** a borda pede um certificado por slug, no primeiro acesso, via
+  On-Demand TLS. Antes de pedir, ela pergunta: `GET
+  http://agroconia-caddy:8081/interno/tls/permitido?chave=...&domain=...`. O `agroconia-caddy`
+  repassa ao backend (que não entra na rede `borda`). A porta 8081 não recebe tráfego de visitante,
+  e a rota é fora de `/api`: pela internet ela não chega ao backend.
 - **Quem o backend autoriza:** só responde 200 com a `TLS_ASK_CHAVE` certa e um slug servido
   (ativo, ou em carência com redirecionamento) de escritório com o **CNPJ verificado** (#520, seção
   abaixo). Slug inexistente, reservado (inclusive o `www`) ou de escritório não verificado nunca
   ganha certificado, e o handshake falha.
-- **Site catch-all, nunca o curinga:** o bloco é `https://`, e não `*.{$SITE_DOMINIO}`. Testado em
-  2026-11-09 com o `caddy:2.10-alpine`: com o site curinga, o Caddy **deixa de emitir o certificado
-  do `www`** (passa a esperar o certificado curinga, que o `on_demand` nunca emite), e o `www` cai.
-  Com o catch-all, os sites com nome (`www`, os redirecionamentos) seguem com o certificado próprio,
-  e o matcher `host *.{$SITE_DOMINIO}` mais o `abort` barram o resto.
-- **Cabeçalhos:** o site dos escritórios importa o mesmo snippet `(app)` do `www` (HSTS, `nosniff`,
-  `Referrer-Policy: no-referrer`, sem `Server`). Sem o `no-referrer`, o slug iria no `Referer` para
-  as fontes externas. Ele também leva `X-Robots-Tag: noindex`, porque o endereço do escritório não
-  entra em buscador (frontend#175).
+- **Curinga no arquivo do inquilino:** o `*.agroconia.com.br` com `tls { on_demand }` está no
+  `borda/agroconia.caddy`, e o catch-all da borda é neutro. Com o curinga, o `www` precisa de `tls
+  force_automate` **e** `tls { key_type p256 }`: sem a primeira, o Caddy 2.10 não emite o
+  certificado dele; só com ela, qualquer outro bloco no Caddyfile da borda o joga na política sob
+  demanda, e o `ask` o recusa (reproduzido em 25/11/2026; o ensaio confere).
+- **Cabeçalhos:** o `agroconia-caddy` serve o mesmo snippet `(app)` do `www` (`nosniff`,
+  `Referrer-Policy: no-referrer`, sem `Server`), e o HSTS vem da borda. Sem o `no-referrer`, o slug
+  iria no `Referer` para as fontes externas. O endereço do escritório leva `X-Robots-Tag: noindex`,
+  porque não entra em buscador (frontend#175).
 - **Exposição:** cada slug emitido vai para os registros públicos de Certificate Transparency
   (crt.sh), de forma permanente. Por isso o `PUT /api/escritorio/endereco` exige a ciência do
   administrador e o CNPJ do escritório.
-- **Limites do Let's Encrypt:**
-  - 50 certificados novos por domínio registrado a cada 7 dias (renovações não contam);
-  - 5 validações com falha por nome por hora.
-
-  Por isso o primeiro teste é na CA de staging.
+- **Limites do Let's Encrypt:** 50 certificados novos por domínio registrado a cada 7 dias
+  (renovações não contam) e 5 validações com falha por nome por hora. Mudança no certificado sob
+  demanda se testa antes na CA de staging.
 
 ### Verificação do CNPJ (#520)
 
@@ -553,11 +585,11 @@ teste deixam de ser, de propósito):
 
 ```bash
 docker compose logs backend | grep -iE "CNPJ do escritorio" | tail -3
-docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=ruraloeste.agroconia.com.br" 2>&1 | head -1'   # 200
+docker compose exec backend sh -c 'wget -qSO /dev/null "http://agroconia-caddy:8081/interno/tls/permitido?chave=$APP_ESCRITORIO_TLS_ASK_CHAVE&domain=ruraloeste.agroconia.com.br" 2>&1 | head -1'   # 200
 ```
 
 O seed roda logo depois de o backend aceitar conexões: nos primeiros segundos da subida, o ask do
-`ruraloeste` ainda responde 404. Com o certificado já emitido e guardado pelo Caddy, nada muda para
+`ruraloeste` ainda responde 404. Com o certificado já emitido e guardado pela borda, nada muda para
 quem acessa. Sem o 200 depois disso, verifique pelo comando abaixo, com o id e o CNPJ do escritório
 da demonstração.
 
@@ -576,128 +608,26 @@ echo $?   # 0 = verificado (ou ja estava); 1 = recusado, motivo no log
 - Um CNPJ fica verificado em um escritório só (`CNPJ_VERIFICADO_EM_OUTRO_ESCRITORIO`). Numa
   contestação, revogue o errado antes de verificar o outro.
 - **Revogar:** `--verificacao.escritorio=<id> --verificacao.revogar=true`. O endereço sai do ar na
-  hora. O certificado já emitido continua no cache do Caddy até vencer, mas o login pelo
+  hora. O certificado já emitido continua no cache da borda até vencer, mas o login pelo
   subdomínio e a página pública param. **No escritório da demonstração a revogação não dura:** a
   próxima subida do backend o verifica de novo pelo seed. Para tirá-lo do ar, remova o endereço
   (`DELETE /api/escritorio/endereco`, com a administradora) ou desligue o seed.
 - Local: `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,verificacao-cnpj
   -Dspring-boot.run.arguments="--verificacao.escritorio=<id> --verificacao.cnpj=<cnpj>"`.
 
-### Passo a passo
-
-**A ordem importa.** O bloco `https://` já está no ar: no instante em que o registro `A *`
-existir, o primeiro acesso a um slug servido pede o certificado. Por isso a CA de staging entra
-**antes** do DNS. Na ordem inversa, o primeiro certificado sai direto em produção, e um erro gasta
-a cota de falhas do Let's Encrypt.
-
-1. **Pré-requisitos:**
-   - o backend com a #464 já no ar (o CD implanta a `main`);
-   - o frontend com o modo escritório;
-   - o reset da demonstração ([`docs/demonstracao-banca.md`](../docs/demonstracao-banca.md)), que
-     dá o slug `ruraloeste` à Contabilidade Rural Oeste.
-2. **Conferir o `.env`** (já preenchido desde 2026-11-10):
-
-   ```bash
-   cd /opt/agrocontabil
-   grep -q '^SITE_DOMINIO=agroconia.com.br$' .env && echo "dominio ok"
-   grep -qE '^TLS_ASK_CHAVE=[A-Za-z0-9_-]{32,}$' .env && echo "chave ok"
-   ```
-
-   **Hex, nunca Base64.** Uma chave com `+`, `/` ou `=` chega alterada na URL do ask. O backend
-   sobe assim mesmo, mas avisa em ERROR no log e o ask recusa todos os certificados. Para gerar uma
-   nova: `openssl rand -hex 32` (e veja "Rotação da chave do ask").
-3. **Conferir os arquivos**, já os da `main` desde 2026-11-10. O `Caddyfile` tem de ter o bloco
-   `https://` com `tls { on_demand }` e o `on_demand_tls` com o ask. O `compose.yaml` tem de
-   repassar a chave ao backend (`APP_ESCRITORIO_TLS_ASK_CHAVE`) e ao Caddy (`TLS_ASK_CHAVE`). Guardar
-   uma cópia do Caddyfile para reverter:
-
-   ```bash
-   grep -n "on_demand" Caddyfile
-   grep -n "TLS_ASK_CHAVE" compose.yaml   # duas linhas: backend e caddy
-   cp Caddyfile Caddyfile.anterior
-   ```
-
-4. **CA de staging, antes do DNS.** No `Caddyfile` da VPS, dentro do bloco `https://`,
-   acrescentar a linha da CA de staging ao `tls`:
-
-   ```caddyfile
-   tls {
-   	on_demand
-   	ca https://acme-staging-v02.api.letsencrypt.org/directory
-   }
-   ```
-
-5. **Validar, aplicar e conferir o ask, ainda sem DNS.**
-
-   ```bash
-   docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
-   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
-   docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=ruraloeste.agroconia.com.br" 2>&1 | head -1'   # 200
-   docker compose exec caddy sh -c 'wget -qSO- "http://backend:8080/interno/tls/permitido?chave=$TLS_ASK_CHAVE&domain=naoexiste.agroconia.com.br" 2>&1 | head -1'    # 404
-   ```
-
-   - O `validate` precisa dizer `Valid configuration`.
-   - O `reload` troca a configuração sem derrubar o `www`. Com o arquivo inválido, ele recusa e
-     segue com a anterior.
-   - Um editor que grava o arquivo novo por cima, com outro inode, deixa o container com o antigo.
-     Nesse caso, `docker compose restart caddy`.
-   - Sem o 200 no `ruraloeste`, pare aqui: a chave não bate entre o backend e o Caddy, ou falta o
-     reset da demonstração. Com o DNS ainda sem o `A *`, nada mudou para fora.
-6. **DNS na Hostinger**, só agora:
-   - **criar:** registro `A`, nome `*`, apontando para o IP da VPS, com o TTL padrão;
-   - **não criar:** registro `AAAA`;
-   - **manter:** os registros de `@` e de `www` (o curinga não os sobrepõe).
-
-   Conferir, de fora da VPS:
-
-   ```bash
-   dig +short qualquercoisa.agroconia.com.br   # o IP da VPS
-   dig +short ruraloeste.agroconia.com.br      # o IP da VPS
-   dig +short www.agroconia.com.br             # o IP da VPS, como antes
-   ```
-
-   A Hostinger ressalva que domínio *hospedado* nela exige criar cada subdomínio. Aqui só o DNS
-   está lá, e o `dig` tira a dúvida.
-7. **Conferir.** O `sed` do último comando mascara a chave do ask: com o backend fora do ar, o
-   Caddy loga em ERROR a URL inteira do ask, com a chave.
-
-   ```bash
-   curl -s https://www.agroconia.com.br/healthz        # UP: o www segue igual
-   curl -vk https://ruraloeste.agroconia.com.br/ 2>&1 | grep -i "issuer"   # (STAGING); o 1o acesso espera alguns segundos
-   curl -skI https://ruraloeste.agroconia.com.br/ | grep -iE "x-robots-tag|referrer-policy"   # noindex e no-referrer
-   curl -v https://naoexiste.agroconia.com.br/ 2>&1 | tail -2              # falha no handshake
-   docker compose logs caddy | grep -iE "on_demand|obtain|error" | sed -E 's/chave=[^&" ]+/chave=***/g' | tail
-   ```
-
-   Depois, o login de `ruraloeste.agroconia.com.br` com a administradora da demonstração. Pelo
-   `www`, todas as contas entram como sempre.
-8. **Produção.**
-   - Tirar a linha `ca` do `Caddyfile`, validar de novo (passo 5) e reiniciar o Caddy:
-     `docker compose restart caddy`. O reinício limpa o certificado de staging da memória, e o
-     próximo acesso pede o de produção.
-   - Conferir com `curl -v https://ruraloeste.agroconia.com.br/ 2>&1 | grep -i issuer`: o emissor
-     tem de ser o Let's Encrypt, sem "STAGING".
-9. **Reverter**, se algo der errado: apagar o registro `A *` na Hostinger. Sem ele, nenhum
-   subdomínio resolve, e o `www` segue igual. O efeito não é imediato: os resolvedores guardam a
-   resposta até o TTL vencer.
-   - **Cortar na hora:** comentar com `#` todas as linhas do bloco `https://` do Caddyfile e
-     aplicar como no passo 5 (`validate` e `reload`). Sem o bloco, o Caddy não atende os
-     subdomínios.
-   - **Voltar o Caddyfile ao de antes do passo 4** (com o bloco, sem a CA de staging):
-
-     ```bash
-     cp Caddyfile.anterior Caddyfile && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
-     ```
-
 ### Rotação da chave do ask
 
-Trocar a `TLS_ASK_CHAVE` no `.env` e rodar `docker compose up -d backend caddy`. Os dois leem a
-mesma variável. Os certificados já emitidos continuam valendo; só os slugs novos dependem do ask.
+A chave existe em **dois** `.env`, com o mesmo valor: `TLS_ASK_CHAVE` em `/opt/agrocontabil/.env`
+(backend) e `AGROCONIA_TLS_ASK_CHAVE` em `/opt/borda/.env`. Gere com `openssl rand -hex 32`
+(**hex, nunca Base64:** `+`, `/` e `=` chegam alterados na URL), troque nos dois e recrie o backend
+(`docker compose up -d --no-deps backend`) e a borda (`docker compose up -d` em `/opt/borda`: o
+reload não troca a chave). Rotação pela metade faz o `ask`
+recusar tudo; os certificados já emitidos continuam valendo.
 
 A chave vai na URL do ask, porque o módulo de permissão do Caddy 2.10 não manda cabeçalho. Por
-isso ela fica na configuração do Caddy (a API de admin, só dentro do container) e pode aparecer nos
-logs dele quando o ask falha. Ela só vale na rede interna do compose, mas não a cole em chat nem em
-issue. Se vazar, rotacione.
+isso ela fica na configuração do Caddy da borda e pode aparecer nos logs dele, e nos do
+`agroconia-caddy`, quando o ask falha. Não cole esses logs em chat nem em issue sem mascarar
+(`sed -E 's/chave=[^&\" ]+/chave=***/g'`). Se vazar, rotacione.
 
 ## Primeira subida
 
@@ -708,6 +638,7 @@ openssl rand -base64 48   # JWT_SECRET
 openssl rand -base64 32   # CRIPTO_CHAVE
 openssl rand -hex 32      # TLS_ASK_CHAVE (vai na URL do ask: hex, nunca base64); e SITE_DOMINIO=agroconia.com.br
 docker login ghcr.io -u <usuario-github>   # token clássico só com read:packages
+docker network inspect borda >/dev/null   # antes, no infra-borda: scripts/criar-rede.sh
 docker compose up -d
 ```
 

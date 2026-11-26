@@ -90,6 +90,44 @@ class HostEncaminhadoIntegrationTest {
     }
   }
 
+  /**
+   * Os dois saltos da VPS: a borda e o agroconia-caddy. O backend recebe
+   * {@code X-Forwarded-For: visitante, ip-da-borda}; o limite por IP tem de ser o do visitante.
+   * Se o Tomcat parasse no último endereço, todos os visitantes dividiriam o IP da borda.
+   */
+  @Nested
+  @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+      properties = {"server.forward-headers-strategy=native",
+          "app.escritorio.publico.por-minuto=2"})
+  @Import(TestDatabaseCleaner.class)
+  @ActiveProfiles("test")
+  @Sql(scripts = "classpath:schema-nota-fiscal-test.sql",
+      executionPhase = ExecutionPhase.BEFORE_TEST_CLASS)
+  @DisplayName("atras de dois proxies internos (borda e agroconia-caddy)")
+  class AtrasDeDoisProxies extends Base {
+
+    private int consultarComo(String visitante) throws Exception {
+      HttpRequest requisicao = HttpRequest.newBuilder(
+              URI.create("http://127.0.0.1:" + porta + "/api/publico/escritorios/ruraloeste"))
+          .header("X-Forwarded-For", visitante + ", 172.31.255.2")
+          .header("X-Forwarded-Proto", "https")
+          .GET()
+          .build();
+      try (HttpClient cliente = HttpClient.newHttpClient()) {
+        return cliente.send(requisicao, HttpResponse.BodyHandlers.discarding()).statusCode();
+      }
+    }
+
+    @Test
+    @DisplayName("o limite por IP e o do visitante, nao o do proxy")
+    void limitePorVisitante() throws Exception {
+      assertThat(consultarComo("203.0.113.7")).isEqualTo(200);
+      assertThat(consultarComo("203.0.113.7")).isEqualTo(200);
+      assertThat(consultarComo("203.0.113.7")).isEqualTo(429);
+      assertThat(consultarComo("198.51.100.9")).isEqualTo(200);
+    }
+  }
+
   @Nested
   @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
       properties = {"server.forward-headers-strategy=native",
